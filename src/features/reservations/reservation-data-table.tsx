@@ -12,7 +12,6 @@ export function ReservationDataTable({ data }: ReservationDataTableProps) {
       columns={reservationColumns}
       data={data}
       emptyMessage="No reservations found."
-      enableRowSelection
       entityLabel="reservations"
       pageSize={12}
     />

@@ -5,6 +5,10 @@ import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
 import { checkInRecords } from "@/data/check-in"
 import { showOptions } from "@/data/reservation"
+import {
+  CheckInTabs,
+  type CheckInTab,
+} from "@/features/check-in/check-in-tabs"
 import { CheckInDataTable } from "@/features/check-in/data-table"
 import { CheckInExpressPanel } from "@/features/check-in/express-panel"
 import { CheckInSearchCriteria } from "@/features/check-in/search-criteria"
@@ -16,12 +20,13 @@ import { filterCheckInRecords } from "@/lib/filter-check-in"
 /**
  * Check-In page — door/booth workflow for the active show.
  *
- * Layout (top → bottom):
- * 1. Toolbar  — show context, actions, live seat counts
- * 2. Work panel — search existing guests + express walk-up sale
- * 3. Table    — status legend + guest list
+ * Two tabs:
+ * - Check-In    — toolbar, search, express walk-up
+ * - Reservation — guest list and status legend
  */
 export function CheckIn() {
+  const [activeTab, setActiveTab] = useState<CheckInTab>("check-in")
+
   // --- Show context (which performance is being checked in) ---
   const [showDate, setShowDate] = useState("2026-06-18")
   const [showTime, setShowTime] = useState(showOptions[0]?.id ?? "")
@@ -59,64 +64,63 @@ export function CheckIn() {
   }
 
   return (
-    <div className="space-y-2.5">
-      {/* Page header with output actions */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Check In
-        </h1>
-        <div className="flex shrink-0 gap-2">
-          <Button variant="outline" size="sm" className="h-8 gap-1.5">
-            <Printer className="size-3.5" />
-            Print
-          </Button>
-          <Button size="sm" className="h-8 gap-1.5">
-            <FileDown className="size-3.5" />
-            Export
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-2">
+      <CheckInTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        checkInPanel={
+          <div className="space-y-2">
+            <CheckInToolbar
+              showDate={showDate}
+              onShowDateChange={setShowDate}
+              showTime={showTime}
+              onShowTimeChange={setShowTime}
+              refreshValue={refreshValue}
+              onRefreshValueChange={setRefreshValue}
+              cancelled={cancelled}
+              onCancelledChange={setCancelled}
+              displayCheckedIn={displayCheckedIn}
+              onDisplayCheckedInChange={setDisplayCheckedIn}
+              cancelledShow={cancelledShow}
+              onCancelledShowChange={setCancelledShow}
+              onAddReservation={() => setAddOpen(true)}
+            />
 
-      {/* Show filters, booth actions, and live seat counts */}
-      <CheckInToolbar
-        showDate={showDate}
-        onShowDateChange={setShowDate}
-        showTime={showTime}
-        onShowTimeChange={setShowTime}
-        refreshValue={refreshValue}
-        onRefreshValueChange={setRefreshValue}
-        cancelled={cancelled}
-        onCancelledChange={setCancelled}
-        displayCheckedIn={displayCheckedIn}
-        onDisplayCheckedInChange={setDisplayCheckedIn}
-        cancelledShow={cancelledShow}
-        onCancelledShowChange={setCancelledShow}
-        onAddReservation={() => setAddOpen(true)}
+            <PanelCard>
+              <CheckInSearchCriteria
+                lastName={lastName}
+                onLastNameChange={setLastName}
+                firstName={firstName}
+                onFirstNameChange={setFirstName}
+                ccLast4={ccLast4}
+                onCcLast4Change={setCcLast4}
+                tableNo={tableNo}
+                onTableNoChange={setTableNo}
+                phoneNo={phoneNo}
+                onPhoneNoChange={setPhoneNo}
+                onClear={clearSearch}
+              />
+              <CheckInExpressPanel />
+            </PanelCard>
+          </div>
+        }
+        reservationPanel={
+          <PanelCard>
+            <div className="flex items-center justify-end gap-2 border-b px-2.5 py-2 lg:px-3">
+              <Button variant="outline" size="sm" className="h-8 gap-1.5">
+                <Printer className="size-3.5" />
+                Print
+              </Button>
+              <Button size="sm" className="h-8 gap-1.5">
+                <FileDown className="size-3.5" />
+                Export
+              </Button>
+            </div>
+            <CheckInStatusLegend recordCount={filteredRecords.length} />
+            <CheckInDataTable data={filteredRecords} />
+          </PanelCard>
+        }
       />
-
-      {/* Search existing guests (top) + express walk-up sale (bottom) */}
-      <PanelCard>
-        <CheckInSearchCriteria
-          lastName={lastName}
-          onLastNameChange={setLastName}
-          firstName={firstName}
-          onFirstNameChange={setFirstName}
-          ccLast4={ccLast4}
-          onCcLast4Change={setCcLast4}
-          tableNo={tableNo}
-          onTableNoChange={setTableNo}
-          phoneNo={phoneNo}
-          onPhoneNoChange={setPhoneNo}
-          onClear={clearSearch}
-        />
-        <CheckInExpressPanel />
-      </PanelCard>
-
-      {/* Guest list with status legend */}
-      <PanelCard>
-        <CheckInStatusLegend recordCount={filteredRecords.length} />
-        <CheckInDataTable data={filteredRecords} />
-      </PanelCard>
 
       <AddReservationDialog open={addOpen} onOpenChange={setAddOpen} />
     </div>

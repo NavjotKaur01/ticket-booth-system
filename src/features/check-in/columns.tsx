@@ -1,6 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
+import { RowActionsMenu } from "@/components/common/row-actions-menu"
 import { CheckInStatusIcon } from "@/features/check-in/status-legend"
 import type { CheckInRecord } from "@/types/check-in"
 import { cn } from "@/lib/utils"
@@ -189,5 +190,12 @@ export const checkInColumns: ColumnDef<CheckInRecord>[] = [
         {row.original.lastUpdateBy || "—"}
       </span>
     ),
+  },
+  {
+    id: "actions",
+    header: "Action",
+    enableSorting: false,
+    meta: { sticky: "right" },
+    cell: () => <RowActionsMenu />,
   },
 ]

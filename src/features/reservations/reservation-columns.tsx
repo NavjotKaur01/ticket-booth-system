@@ -1,13 +1,12 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { createSelectColumn } from "@/components/data-table/data-table-select-column"
+import { RowActionsMenu } from "@/components/common/row-actions-menu"
 import type { Reservation } from "@/types/reservation"
 import { cn } from "@/lib/utils"
 
 /** Column definitions for the reservations table — extend here when adding fields. */
 export const reservationColumns: ColumnDef<Reservation>[] = [
-  createSelectColumn<Reservation>(),
   {
     id: "guest",
     accessorFn: (row) => `${row.firstName} ${row.lastName}`,
@@ -118,5 +117,12 @@ export const reservationColumns: ColumnDef<Reservation>[] = [
         {row.original.seated}
       </span>
     ),
+  },
+  {
+    id: "actions",
+    header: "Action",
+    enableSorting: false,
+    meta: { sticky: "right" },
+    cell: () => <RowActionsMenu />,
   },
 ]
