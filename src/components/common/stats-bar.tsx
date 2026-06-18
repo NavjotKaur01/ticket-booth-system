@@ -10,11 +10,11 @@ type StatsBarProps = {
 /** Horizontal stat summary strip for filter panels and dashboards. */
 export function StatsBar({ items }: StatsBarProps) {
   return (
-    <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:w-auto lg:flex-nowrap lg:gap-0 lg:overflow-x-auto lg:rounded-sm lg:bg-muted/30 lg:shadow-xs lg:divide-x lg:divide-border/50">
+    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-fit sm:max-w-full sm:flex-nowrap sm:gap-0 sm:overflow-x-auto sm:rounded-sm sm:bg-muted/30 sm:shadow-xs sm:divide-x sm:divide-border/50">
       {items.map((stat) => (
         <div
           key={stat.label}
-          className="shrink-0 rounded-sm bg-muted/40 px-2.5 py-1.5 text-center lg:min-w-[5.75rem] lg:rounded-none lg:bg-transparent"
+          className="shrink-0 rounded-sm bg-muted/40 px-2.5 py-1.5 text-center sm:rounded-none sm:bg-transparent"
         >
           <p className="text-[10px] font-medium tracking-wide whitespace-nowrap text-muted-foreground uppercase">
             {stat.label}

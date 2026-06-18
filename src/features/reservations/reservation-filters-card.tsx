@@ -125,7 +125,7 @@ export function ReservationFiltersCard({
           </div>
         </div>
 
-        <div className="w-full shrink-0 min-[1500px]:ml-auto min-[1500px]:w-auto">
+        <div className="w-fit shrink-0 min-[1500px]:ml-auto">
           <StatsBar items={statItems} />
         </div>
       </div>
