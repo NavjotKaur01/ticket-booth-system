@@ -21,8 +21,8 @@ export function FormSection({
   className?: string
 }) {
   return (
-    <section className={cn("space-y-3", className)}>
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+    <section className={cn("space-y-2", className)}>
+      <h3 className="text-xs font-semibold text-foreground">{title}</h3>
       {children}
     </section>
   )
@@ -42,7 +42,7 @@ export function FormField({
 }) {
   return (
     <div className={className}>
-      <Label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium">
+      <Label htmlFor={htmlFor} className="mb-1 block text-xs font-medium">
         {label}
       </Label>
       {children}
