@@ -1,6 +1,7 @@
 import { Menu } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Breadcrumb,
@@ -69,34 +70,37 @@ export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
         {session.organization}
       </p>
 
-      <p className="hidden text-sm text-muted-foreground sm:block">
-        Welcome ({session.username})
-      </p>
+      <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        <ThemeToggle />
+        <p className="hidden text-sm text-muted-foreground sm:block">
+          Welcome ({session.username})
+        </p>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 gap-2 px-2">
-            <Avatar className="size-7">
-              <AvatarFallback className="bg-primary text-xs text-primary-foreground">
-                {getInitials(session.username)}
-              </AvatarFallback>
-            </Avatar>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuLabel>
-            <p>{session.username}</p>
-            <p className="text-xs font-normal text-muted-foreground">
-              {session.organization}
-            </p>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>My Account</DropdownMenuItem>
-          <DropdownMenuItem>System Defaults</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Sign out</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 gap-2 px-2">
+              <Avatar className="size-7">
+                <AvatarFallback className="bg-primary text-xs text-primary-foreground">
+                  {getInitials(session.username)}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel>
+              <p>{session.username}</p>
+              <p className="text-xs font-normal text-muted-foreground">
+                {session.organization}
+              </p>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>My Account</DropdownMenuItem>
+            <DropdownMenuItem>System Defaults</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>Sign out</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   )
 }

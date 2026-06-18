@@ -22,10 +22,22 @@ const statIcons: Record<string, LucideIcon> = {
 }
 
 const statStyles: Record<string, { bg: string; icon: string }> = {
-  yesterday: { bg: "bg-sky-100", icon: "text-sky-600" },
-  today: { bg: "bg-emerald-100", icon: "text-emerald-600" },
-  week: { bg: "bg-violet-100", icon: "text-violet-600" },
-  month: { bg: "bg-orange-100", icon: "text-orange-600" },
+  yesterday: {
+    bg: "bg-sky-100 dark:bg-sky-950/40",
+    icon: "text-sky-600 dark:text-sky-400",
+  },
+  today: {
+    bg: "bg-emerald-100 dark:bg-emerald-950/40",
+    icon: "text-emerald-600 dark:text-emerald-400",
+  },
+  week: {
+    bg: "bg-violet-100 dark:bg-violet-950/40",
+    icon: "text-violet-600 dark:text-violet-400",
+  },
+  month: {
+    bg: "bg-orange-100 dark:bg-orange-950/40",
+    icon: "text-orange-600 dark:text-orange-400",
+  },
 }
 
 export function StatsSummary({ stats }: StatsSummaryProps) {
