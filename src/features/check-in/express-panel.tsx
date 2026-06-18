@@ -80,11 +80,7 @@ function CompactTotal({ label, value }: { label: string; value: string }) {
   )
 }
 
-/**
- * Express walk-up panel — sell tickets on the spot without a reservation.
- * Staff pick section, promo, passes, then tap a cash/credit quantity grid.
- * Totals appear below the payment grids once calculated.
- */
+// Express walk-up sales: section, promo, passes, then cash/credit quantity grids.
 export function CheckInExpressPanel() {
   const [section, setSection] = useState(sectionOptions[0]?.id ?? "")
   const [passes, setPasses] = useState("1")

@@ -57,12 +57,7 @@ function formatDayName(isoDate: string) {
   return date.toLocaleDateString("en-US", { weekday: "long" })
 }
 
-/**
- * Top toolbar for the Check-In page.
- *
- * Row 1 — Show context: date, time, auto-refresh, display toggles
- * Row 2 — Booth actions: add reservation, express walkup, live stats
- */
+// Check-In page toolbar: show context, booth actions, and live seat stats.
 export function CheckInToolbar({
   showDate,
   onShowDateChange,

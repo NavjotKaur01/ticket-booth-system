@@ -1,10 +1,6 @@
 import type { CheckInCounts, CheckInRecord } from "@/types/check-in"
 
-/**
- * Static check-in data for the booth UI.
- * Replace with API calls when the backend is wired up — counts and records
- * should refresh when show date/time changes.
- */
+// Static check-in mock data — replace with API when backend is wired up.
 
 /** Live seat counts for the currently selected show. */
 export const checkInCounts: CheckInCounts = {

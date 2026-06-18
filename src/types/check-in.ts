@@ -1,8 +1,4 @@
-/**
- * Check-In domain types.
- * Mirrors the legacy ClubMan check-in screen: guest status, reservation rows,
- * and live seat counts for the selected show.
- */
+// Check-in domain types: guest status, table rows, and seat counts.
 
 /** Visual status shown in the first column of the check-in table. */
 export type CheckInStatus =

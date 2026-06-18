@@ -22,13 +22,7 @@ type CheckInSearchCriteriaProps = {
   onClear: () => void
 }
 
-/**
- * Search panel for finding an existing reservation at the booth.
- * Used when a guest arrives and staff need to look them up before check-in.
- *
- * Icon actions match the reservation dialog pattern:
- * Search, Clear, Swipe Card (card reader), Cash Drawer (open drawer).
- */
+// Booth reservation lookup by name, card last 4, table, or phone.
 export function CheckInSearchCriteria({
   lastName,
   onLastNameChange,

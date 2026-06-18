@@ -44,10 +44,7 @@ function stickyColumnClass(sticky: "left" | "right" | undefined, isHeader: boole
   return undefined
 }
 
-/**
- * Reusable data table built on TanStack Table.
- * Supports sorting, pagination, optional row selection, and sticky columns via column meta.
- */
+// Shared TanStack table with sorting, pagination, row selection, and sticky columns.
 type DataTableProps<TData> = {
   columns: ColumnDef<TData>[]
   data: TData[]

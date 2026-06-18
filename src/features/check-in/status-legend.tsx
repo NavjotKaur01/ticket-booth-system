@@ -8,10 +8,7 @@ import {
 import type { CheckInStatus } from "@/types/check-in"
 import { cn } from "@/lib/utils"
 
-/**
- * Maps each check-in status to its icon, label, and color.
- * Used in both the table rows and the legend above the table.
- */
+// Check-in status icons, labels, and colors for table rows and legend.
 const STATUS_CONFIG: Record<
   CheckInStatus,
   { icon: typeof CheckCircle2; label: string; className: string }
@@ -55,10 +52,7 @@ type CheckInStatusLegendProps = {
   recordCount?: number
 }
 
-/**
- * Legend bar above the check-in table.
- * Explains what each status icon means + shows filtered record count.
- */
+// Status icon legend and filtered record count above the check-in table.
 export function CheckInStatusLegend({ recordCount }: CheckInStatusLegendProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b px-2.5 py-2 lg:px-3">

@@ -6,10 +6,7 @@ import { CheckInStatusIcon } from "@/features/check-in/status-legend"
 import type { CheckInRecord } from "@/types/check-in"
 import { cn } from "@/lib/utils"
 
-/**
- * Column definitions for the check-in guest table.
- * Matches the legacy ClubMan check-in grid — extend here when adding fields.
- */
+// Check-in guest table columns — extend here when adding fields.
 export const checkInColumns: ColumnDef<CheckInRecord>[] = [
   {
     id: "status",

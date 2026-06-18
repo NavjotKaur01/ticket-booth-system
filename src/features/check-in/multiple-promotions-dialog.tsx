@@ -117,10 +117,7 @@ function PromotionRow({ showDivider }: { showDivider: boolean }) {
   )
 }
 
-/**
- * Multiple Promotions dialog — opened from the Express panel + button.
- * Lets staff split a party across up to five promotions before checkout.
- */
+// Split a party across up to five promotions before express checkout.
 export function MultiplePromotionsDialog({
   open,
   onOpenChange,

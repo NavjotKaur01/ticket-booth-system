@@ -8,11 +8,7 @@ type CheckInSearchCriteria = {
   phoneNo: string
 }
 
-/**
- * Client-side filter for the check-in table.
- * Matches partial name/table values; ccLast4 and phoneNo are reserved for
- * future API integration (not yet applied to mock data).
- */
+// Client-side check-in table filter by name and table (ccLast4/phone reserved for API).
 export function filterCheckInRecords(
   records: CheckInRecord[],
   criteria: CheckInSearchCriteria

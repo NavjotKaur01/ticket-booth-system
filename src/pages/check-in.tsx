@@ -17,13 +17,7 @@ import { CheckInToolbar } from "@/features/check-in/toolbar"
 import { AddReservationDialog } from "@/features/reservations/add-reservation-dialog"
 import { filterCheckInRecords } from "@/lib/filter-check-in"
 
-/**
- * Check-In page — door/booth workflow for the active show.
- *
- * Two tabs:
- * - Check-In    — toolbar, search, express walk-up
- * - Reservation — guest list and status legend
- */
+// Check-In page: booth tools tab and reservation guest-list tab.
 export function CheckIn() {
   const [activeTab, setActiveTab] = useState<CheckInTab>("check-in")
 

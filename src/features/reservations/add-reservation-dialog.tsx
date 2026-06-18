@@ -46,10 +46,7 @@ type AddReservationDialogProps = {
   onOpenChange: (open: boolean) => void
 }
 
-/**
- * Multi-step reservation form shown from the Reservations page.
- * Layout mirrors the legacy ClubMan booth workflow: show → booking → customer → notes.
- */
+// Multi-step reservation form: show → booking → customer → notes.
 export function AddReservationDialog({
   open,
   onOpenChange,
