@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { sectionOptions } from "@/data/reservation"
+import { MultiplePromotionsDialog } from "@/features/check-in/multiple-promotions-dialog"
 import { cn } from "@/lib/utils"
 
 /** Quick-select ticket quantities (1–15) for cash or card payment. */
@@ -89,6 +90,7 @@ export function CheckInExpressPanel() {
   const [passes, setPasses] = useState("1")
   const [cashAmount, setCashAmount] = useState<number | null>(null)
   const [creditAmount, setCreditAmount] = useState<number | null>(null)
+  const [promotionsOpen, setPromotionsOpen] = useState(false)
 
   return (
     <div className="bg-muted/15 px-2.5 py-2 lg:px-3">
@@ -131,9 +133,14 @@ export function CheckInExpressPanel() {
                   onChange={(e) => setPasses(e.target.value)}
                   className="h-8 flex-1 text-xs"
                 />
-                <Button type="button" size="icon-sm" variant="outline">
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="outline"
+                  onClick={() => setPromotionsOpen(true)}
+                >
                   <Plus className="size-3.5" />
-                  <span className="sr-only">Add pass</span>
+                  <span className="sr-only">Multiple promotions</span>
                 </Button>
               </div>
             </FormField>
@@ -166,6 +173,11 @@ export function CheckInExpressPanel() {
           </div>
         </div>
       </FormSection>
+
+      <MultiplePromotionsDialog
+        open={promotionsOpen}
+        onOpenChange={setPromotionsOpen}
+      />
     </div>
   )
 }

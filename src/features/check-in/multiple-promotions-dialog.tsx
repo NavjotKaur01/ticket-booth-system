@@ -1,0 +1,186 @@
+import { useState } from "react"
+
+import {
+  FormField,
+  FormSection,
+  ReadOnlyValue,
+} from "@/components/forms/form-fields"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { cn } from "@/lib/utils"
+
+const PARTY_NUMBERS = Array.from({ length: 15 }, (_, i) => i + 1)
+
+const PROMO_OPTIONS = [
+  { id: "select", label: "Select" },
+  { id: "admit2", label: "Admit2" },
+  { id: "admit4", label: "Admit4" },
+  { id: "buy1get1", label: "Buy1Get1" },
+] as const
+
+const PROMOTION_ROWS = Array.from({ length: 5 }, (_, i) => i)
+
+const RESERVATION_DETAIL_FIELDS = [
+  { label: "Subtotal", value: "$0.00" },
+  { label: "SVC", value: "$0.00" },
+  { label: "Disc", value: "$0.00" },
+  { label: "Taxes", value: "$0.00" },
+  { label: "Total", value: "$0.00" },
+  { label: "Party Number", value: "0" },
+  { label: "Price Per Ticket", value: "$10.00" },
+  { label: "UnDiscount", value: "0" },
+] as const
+
+type MultiplePromotionsDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+/** Party-size picker (1–15) — matches the desktop booth app. */
+function PartyNumberGrid({
+  selected,
+  onSelect,
+}: {
+  selected: number | null
+  onSelect: (value: number) => void
+}) {
+  return (
+    <div className="grid w-full grid-cols-5 gap-1.5">
+      {PARTY_NUMBERS.map((num) => (
+        <Button
+          key={num}
+          type="button"
+          variant={selected === num ? "default" : "outline"}
+          size="sm"
+          className="h-8 min-w-0 px-0 tabular-nums"
+          onClick={() => onSelect(num)}
+        >
+          {num}
+        </Button>
+      ))}
+    </div>
+  )
+}
+
+/** One promo row: select + passes/discount + paid/comp/disc summary. */
+function PromotionRow({ showDivider }: { showDivider: boolean }) {
+  return (
+    <div className={cn("space-y-2", showDivider && "border-t pt-3")}>
+      <div className="grid gap-2 xl:grid-cols-10 xl:items-end">
+        <div className="xl:col-span-6">
+          <Select defaultValue="select">
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select" />
+            </SelectTrigger>
+            <SelectContent>
+              {PROMO_OPTIONS.map((opt) => (
+                <SelectItem key={opt.id} value={opt.id}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2 xl:col-span-4">
+          <FormField label="Passes">
+            <Input type="number" defaultValue={0} min={0} />
+          </FormField>
+          <FormField label="Discount">
+            <ReadOnlyValue value="$0.00" />
+          </FormField>
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Paid : <span className="font-semibold text-foreground">0</span>
+        <span className="mx-3">Comp :</span>
+        <span className="font-semibold text-foreground">0</span>
+        <span className="mx-3">Disc :</span>
+        <span className="font-semibold text-foreground">0</span>
+      </p>
+    </div>
+  )
+}
+
+/**
+ * Multiple Promotions dialog — opened from the Express panel + button.
+ * Lets staff split a party across up to five promotions before checkout.
+ */
+export function MultiplePromotionsDialog({
+  open,
+  onOpenChange,
+}: MultiplePromotionsDialogProps) {
+  const [partyNumber, setPartyNumber] = useState<number | null>(null)
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        showCloseButton
+        className="flex max-h-[92vh] max-w-3xl flex-col overflow-hidden sm:max-w-3xl"
+      >
+        <DialogHeader className="shrink-0 gap-0 border-b px-4 py-3 pr-12">
+          <DialogTitle className="text-lg leading-snug font-normal">
+            <span className="font-semibold text-foreground">
+              Multiple Promotions
+            </span>
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-3 overflow-y-auto px-4 py-3">
+          <FormSection title="Party Number">
+            <PartyNumberGrid
+              selected={partyNumber}
+              onSelect={setPartyNumber}
+            />
+          </FormSection>
+
+          <FormSection title="Promotions">
+            <div className="space-y-3">
+              {PROMOTION_ROWS.map((index) => (
+                <PromotionRow key={index} showDivider={index > 0} />
+              ))}
+            </div>
+          </FormSection>
+
+          <FormSection title="Reservation Details">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {RESERVATION_DETAIL_FIELDS.map((field) => (
+                <FormField key={field.label} label={field.label}>
+                  <ReadOnlyValue value={field.value} />
+                </FormField>
+              ))}
+            </div>
+          </FormSection>
+        </div>
+
+        <DialogFooter className="shrink-0 border-t px-4 py-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button type="button" onClick={() => onOpenChange(false)}>
+            OK
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

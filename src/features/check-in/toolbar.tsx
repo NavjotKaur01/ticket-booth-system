@@ -179,13 +179,17 @@ export function CheckInToolbar({
         <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
-            className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+            className="h-8 gap-1.5"
             onClick={onAddReservation}
           >
             <Plus className="size-3.5" />
             Add Reservation
           </Button>
-          <Button size="sm" className="h-8 gap-1.5">
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-8 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+          >
             <Zap className="size-3.5" />
             Express Walkup
           </Button>
