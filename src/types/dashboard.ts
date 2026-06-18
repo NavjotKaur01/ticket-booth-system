@@ -2,7 +2,6 @@ export type StatSummary = {
   id: string
   label: string
   value: number
-  accentClass: string
 }
 
 export type ServiceFees = {
@@ -16,6 +15,7 @@ export type NewsItem = {
   title: string
   date: string
   description?: string
+  imageUrl?: string
   fees?: ServiceFees
 }
 

@@ -5,6 +5,7 @@ import type {
   StatSummary,
   UserSession,
 } from "@/types/dashboard"
+import { dashboardNewsImage } from "@/constants/assets"
 
 export const userSession: UserSession = {
   username: "admin",
@@ -17,25 +18,21 @@ export const statSummaries: StatSummary[] = [
     id: "yesterday",
     label: "Yesterday Ticket Sold",
     value: 1,
-    accentClass: "bg-sky-400",
   },
   {
     id: "today",
     label: "Today Sold",
     value: 1,
-    accentClass: "bg-emerald-500",
   },
   {
     id: "week",
     label: "This Week Sold",
     value: 2,
-    accentClass: "bg-violet-500",
   },
   {
     id: "month",
     label: "This Month Sold",
     value: 40,
-    accentClass: "bg-orange-500",
   },
 ]
 
@@ -59,58 +56,49 @@ export const quickLinks: QuickLink[] = [
 export const newsItems: NewsItem[] = [
   {
     id: "1",
-    title: "New Seating Chart Designer",
-    date: "2/5/2025",
+    title: "New Custom Sliders",
+    date: "2/5/2025 12:00:00 AM",
+    imageUrl: dashboardNewsImage(1),
     description:
-      "Design and manage venue seating layouts with the updated drag-and-drop chart editor.",
+      "We can customize from self loading to custom made onto your website",
   },
   {
     id: "2",
-    title: "Mobile Check-In App",
-    date: "1/18/2025",
+    title: "Online Seating",
+    date: "2/20/2021 12:00:00 AM",
+    imageUrl: dashboardNewsImage(2),
     description:
-      "Scan tickets at the door with the ClubMan mobile check-in app for iOS and Android.",
+      "You can now let customers pick their own seat online",
   },
   {
     id: "3",
-    title: "Updated Ticket Printing",
-    date: "12/10/2024",
+    title: "Limit Tickets purchased for a show",
+    date: "10/31/2023 12:00:00 AM",
+    imageUrl: dashboardNewsImage(3),
     description:
-      "Print branded tickets with barcodes and custom layouts directly from the ticket booth.",
+      "Steps to Setup Max Tickets for a show STEP 1: Go to Calendar and click the show for the date you want to set up. STEP 2: Right mouse click to bring up menu Select Reservation or from top menu click Reservation. STEP 3: Set Max Ticket in top right corner. Set up here any value more than 0 to make it work for reservations.",
   },
   {
     id: "4",
-    title: "Service Fee Reference",
-    date: "11/2/2024",
-    description: "Current default service fees by sales channel.",
+    title: "Section Fees",
+    date: "3/19/2019 12:00:00 AM",
+    imageUrl: dashboardNewsImage(4),
+    description: "New Section Fees",
     fees: serviceFees,
   },
   {
     id: "5",
-    title: "Quick View Sales Report",
-    date: "10/15/2024",
+    title: "Scanner iOS 2.0",
+    date: "9/4/2018 12:00:00 AM",
+    imageUrl: dashboardNewsImage(5),
     description:
-      "Access real-time sales totals from the Quick Links sidebar without leaving the dashboard.",
+      "New Features Include: 1. Three Icons per Row - This allows us to enlarge the action buttons at the bottom. 2. Auto-close on confirmation - No need to manually close successful scans.",
   },
   {
     id: "6",
-    title: "Reservation Calendar Tips",
-    date: "9/8/2024",
-    description:
-      "Use color-coded calendar entries to track holds, confirmed reservations, and comp tickets.",
-  },
-  {
-    id: "7",
-    title: "Door Checkout Workflow",
-    date: "8/22/2024",
-    description:
-      "End-of-night door checkout reconciles cash, card, and comp totals in one step.",
-  },
-  {
-    id: "8",
-    title: "Online Dashboard Sync",
-    date: "7/4/2024",
-    description:
-      "The online dashboard now syncs inventory and sales data every five minutes.",
+    title: "Ticket Text Changes",
+    date: "1/18/2018 12:00:00 AM",
+    imageUrl: dashboardNewsImage(6),
+    description: "Customize your ticket message here!",
   },
 ]

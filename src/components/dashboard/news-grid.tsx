@@ -1,10 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -13,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { cn } from "@/lib/utils"
 import type { NewsItem } from "@/types/dashboard"
 
 type NewsCardProps = {
@@ -21,42 +16,66 @@ type NewsCardProps = {
 
 function NewsCard({ item }: NewsCardProps) {
   return (
-    <Card className="h-full shadow-sm">
-      <CardHeader className="gap-1 pb-2">
-        <CardTitle className="text-sm font-medium">
+    <Card className="flex w-full flex-col overflow-hidden rounded-xl border-0 bg-card py-0 shadow-sm ring-0 transition-shadow hover:shadow-md">
+      {item.imageUrl && (
+        <div className="flex h-44 shrink-0 items-center justify-center bg-muted/50 p-2 sm:h-48">
+          <img
+            src={item.imageUrl}
+            alt={item.title}
+            className="max-h-full max-w-full object-contain"
+            loading="lazy"
+          />
+        </div>
+      )}
+
+      <CardContent className="flex flex-col px-4 pt-3 pb-5">
+        <div>
           <a
             href="#"
-            className="text-primary underline-offset-4 hover:underline"
+            className="line-clamp-2 text-sm font-semibold leading-snug text-primary underline-offset-4 hover:underline"
           >
             {item.title}
           </a>
-        </CardTitle>
-        <CardDescription>{item.date}</CardDescription>
-      </CardHeader>
+          <p className="mt-1 text-xs text-muted-foreground">{item.date}</p>
+        </div>
 
-      <CardContent className="space-y-3">
-        {item.description && (
-          <p className="text-sm text-muted-foreground">{item.description}</p>
-        )}
+        <div className="mt-2.5 space-y-2">
+          {item.description && (
+            <p
+              className={cn(
+                "text-sm leading-snug text-muted-foreground",
+                !item.fees && "line-clamp-5"
+              )}
+            >
+              {item.description}
+            </p>
+          )}
 
-        {item.fees && (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Walkup fee</TableHead>
-                <TableHead>Phone fee</TableHead>
-                <TableHead>Web fee</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow>
-                <TableCell>{item.fees.walkup}</TableCell>
-                <TableCell>{item.fees.phone}</TableCell>
-                <TableCell>{item.fees.web}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        )}
+          {item.fees && (
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="h-8 px-2 text-xs">Walkup Fee</TableHead>
+                  <TableHead className="h-8 px-2 text-xs">Phone Fee</TableHead>
+                  <TableHead className="h-8 px-2 text-xs">Web Fee</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow className="hover:bg-transparent">
+                  <TableCell className="px-2 py-1.5 text-sm font-medium">
+                    {item.fees.walkup}
+                  </TableCell>
+                  <TableCell className="px-2 py-1.5 text-sm font-medium">
+                    {item.fees.phone}
+                  </TableCell>
+                  <TableCell className="px-2 py-1.5 text-sm font-medium">
+                    {item.fees.web}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          )}
+        </div>
       </CardContent>
     </Card>
   )
@@ -69,19 +88,17 @@ type NewsGridProps = {
 export function NewsGrid({ items }: NewsGridProps) {
   return (
     <section aria-labelledby="news-heading">
-      <div className="mb-4">
-        <h2
-          id="news-heading"
-          className="text-base font-semibold text-emerald-600"
-        >
-          News, Features and Tips
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Click on a title to see details and instructions
-        </p>
-      </div>
+      <h2
+        id="news-heading"
+        className="mb-5 text-xl font-semibold leading-snug text-primary"
+      >
+        News, Features and Tips{" "}
+        <span className="text-sm font-normal text-muted-foreground">
+          (Click on title to see details and instructions)
+        </span>
+      </h2>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {items.map((item) => (
           <NewsCard key={item.id} item={item} />
         ))}

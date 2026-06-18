@@ -2,7 +2,6 @@ import { ChevronLeft, ChevronRight, Ticket } from "lucide-react"
 
 import { SIDEBAR_NAV_ITEMS } from "@/constants/navigation"
 import { quickLinks } from "@/data/dashboard-data"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import {
   Tooltip,
@@ -35,14 +34,14 @@ function NavLink({
     <a
       href={item.href}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
         active
-          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
         collapsed && "justify-center px-2"
       )}
     >
-      <Icon className="size-4 shrink-0" />
+      <Icon className={cn("size-4 shrink-0", active && "text-primary")} />
       {!collapsed && <span className="truncate">{item.label}</span>}
     </a>
   )
@@ -68,22 +67,24 @@ export function AppSidebar({
   return (
     <aside
       className={cn(
-        "flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-300",
+        "flex h-full flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm transition-[width] duration-300",
         collapsed ? "w-[68px]" : "w-64"
       )}
     >
       <a
         href="#"
         className={cn(
-          "flex h-14 items-center border-b border-sidebar-border px-4 transition-colors hover:bg-sidebar-accent",
+          "flex h-16 shrink-0 items-center border-b border-sidebar-border px-4 transition-colors hover:bg-accent/50",
           collapsed && "justify-center px-2"
         )}
       >
-        <Ticket className="size-6 shrink-0 text-sidebar-primary" />
+        <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
+          <Ticket className="size-5 shrink-0 text-primary" />
+        </div>
         {!collapsed && (
-          <div className="ml-2.5 min-w-0">
-            <p className="truncate text-sm font-bold">ClubMan</p>
-            <p className="truncate text-[10px] text-muted-foreground">
+          <div className="ml-3 min-w-0">
+            <p className="truncate text-sm font-bold text-foreground">ClubMan</p>
+            <p className="truncate text-xs text-muted-foreground">
               {session.organization}
             </p>
           </div>
@@ -91,15 +92,17 @@ export function AppSidebar({
       </a>
 
       {!collapsed && (
-        <div className="border-b border-sidebar-border px-4 py-3 text-xs">
-          <p className="font-medium">Welcome {session.username}</p>
-          <p className="mt-0.5 text-muted-foreground">
+        <div className="shrink-0 border-b border-sidebar-border bg-muted/40 px-4 py-3">
+          <p className="text-sm font-medium text-foreground">
+            Welcome {session.username}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
             Last login {session.lastLogin}
           </p>
         </div>
       )}
 
-      <ScrollArea className="flex-1 py-3">
+      <div className="min-h-0 flex-1 overflow-y-auto py-4">
         <nav className="space-y-0.5 px-3" aria-label="Main navigation">
           {SIDEBAR_NAV_ITEMS.map((item) => (
             <NavLink
@@ -114,16 +117,16 @@ export function AppSidebar({
         {!collapsed && (
           <>
             <Separator className="my-4" />
-            <nav className="px-4 pb-2" aria-label="Quick links">
-              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <nav className="px-4" aria-label="Quick links">
+              <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Quick Links
               </h2>
-              <ul className="space-y-1.5">
+              <ul className="space-y-2">
                 {quickLinks.map((link) => (
                   <li key={link.label}>
                     <a
                       href={link.href}
-                      className="text-xs text-primary underline-offset-4 hover:underline"
+                      className="text-xs font-medium text-primary underline-offset-4 hover:underline"
                     >
                       {link.label}
                     </a>
@@ -133,15 +136,13 @@ export function AppSidebar({
             </nav>
           </>
         )}
-      </ScrollArea>
+      </div>
 
-      <Separator />
-
-      <div className="p-3">
+      <div className="mt-auto shrink-0 border-t border-sidebar-border p-3">
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="flex w-full items-center justify-center rounded-lg border border-sidebar-border p-2 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          className="flex w-full items-center justify-center rounded-lg border border-sidebar-border bg-background p-2.5 text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? (

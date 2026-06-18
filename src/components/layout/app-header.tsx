@@ -31,7 +31,7 @@ function getInitials(username: string) {
 
 export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
   return (
-    <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur lg:px-6">
+    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-4 border-b border-border/60 bg-background px-4 lg:px-8">
       <Button
         variant="ghost"
         size="icon-sm"
@@ -45,24 +45,33 @@ export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
       <Breadcrumb className="hidden sm:block">
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="#">Home</BreadcrumbLink>
+            <BreadcrumbLink href="#" className="text-muted-foreground">
+              Home
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Dashboard</BreadcrumbPage>
+            <BreadcrumbPage className="font-medium text-primary">
+              Dashboard
+            </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
-      <p className="hidden flex-1 text-center text-sm font-medium md:block">
+      <p className="hidden flex-1 text-center text-sm font-semibold text-foreground md:block">
         {session.organization}
       </p>
 
-      <p className="text-sm text-muted-foreground">
+      <p className="hidden text-sm text-muted-foreground sm:block">
         Welcome ({session.username})
       </p>
 
-      <Button variant="ghost" size="icon-sm" asChild>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="text-muted-foreground hover:text-primary"
+        asChild
+      >
         <a href="#">
           <Search className="size-4" />
           <span className="sr-only">Search</span>
@@ -72,8 +81,8 @@ export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-9 gap-2 px-2">
-            <Avatar className="size-7">
-              <AvatarFallback className="text-xs">
+            <Avatar className="size-8">
+              <AvatarFallback className="bg-primary text-xs text-primary-foreground">
                 {getInitials(session.username)}
               </AvatarFallback>
             </Avatar>

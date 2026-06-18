@@ -17,7 +17,7 @@ export function AppLayout({ session, children }: AppLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-muted/40">
+    <div className="flex h-screen overflow-hidden bg-muted">
       <div
         className={cn(
           "fixed inset-0 z-40 bg-black/40 lg:hidden",
@@ -29,7 +29,7 @@ export function AppLayout({ session, children }: AppLayoutProps) {
 
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 lg:static lg:z-auto",
+          "fixed inset-y-0 left-0 z-50 h-full shrink-0 lg:static lg:z-auto",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
           "transition-transform duration-300"
         )}
@@ -41,14 +41,14 @@ export function AppLayout({ session, children }: AppLayoutProps) {
         />
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <AppHeader
           session={session}
           onMenuClick={() => setMobileOpen((prev) => !prev)}
         />
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-[1600px] p-4 lg:p-6">{children}</div>
+        <main className="min-h-0 flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-[1600px] p-4 lg:p-8">{children}</div>
         </main>
 
         <AppFooter organization={session.organization} />
