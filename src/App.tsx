@@ -1,9 +1,9 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom"
 
-import { DashboardPage } from "@/components/dashboard/dashboard-page"
+import { Dashboard } from "@/components/dashboard/dashboard"
 import { AppLayout } from "@/components/layout/app-layout"
-import { ReservationsPage } from "@/pages/reservations-page"
-import { userSession } from "@/data/dashboard-data"
+import { Reservations } from "@/pages/reservations"
+import { userSession } from "@/data/dashboard"
 
 /** Root router — all pages share AppLayout (sidebar + header). */
 function App() {
@@ -11,8 +11,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<AppLayout session={userSession} />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="reservation" element={<ReservationsPage />} />
+          <Route index element={<Dashboard />} />
+          <Route path="reservation" element={<Reservations />} />
         </Route>
       </Routes>
     </BrowserRouter>

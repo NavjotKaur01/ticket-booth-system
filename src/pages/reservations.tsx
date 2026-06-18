@@ -5,14 +5,14 @@ import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { reservations, showOptions } from "@/data/reservation-data"
+import { reservations, showOptions } from "@/data/reservation"
 import { AddReservationDialog } from "@/features/reservations/add-reservation-dialog"
 import { ReservationDataTable } from "@/features/reservations/reservation-data-table"
 import { ReservationFiltersCard } from "@/features/reservations/reservation-filters-card"
 import { filterReservations } from "@/lib/filter-reservations"
 
 /** Reservations list with show filters and add-reservation workflow. */
-export function ReservationsPage() {
+export function Reservations() {
   const [showDate, setShowDate] = useState("2026-06-18")
   const [showTime, setShowTime] = useState(showOptions[0]?.id ?? "")
   const [refreshValue, setRefreshValue] = useState("999")

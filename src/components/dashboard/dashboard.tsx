@@ -1,8 +1,8 @@
 import { StatsSummary } from "@/components/dashboard/stats-summary"
 import { NewsGrid } from "@/components/dashboard/news-grid"
-import { newsItems, statSummaries, userSession } from "@/data/dashboard-data"
+import { newsItems, statSummaries, userSession } from "@/data/dashboard"
 
-export function DashboardPage() {
+export function Dashboard() {
   return (
     <div className="space-y-4">
       <div>

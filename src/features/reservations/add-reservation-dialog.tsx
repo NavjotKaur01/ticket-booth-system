@@ -39,7 +39,7 @@ import {
   reservationShowMeta,
   sectionOptions,
   showOptions,
-} from "@/data/reservation-data"
+} from "@/data/reservation"
 
 type AddReservationDialogProps = {
   open: boolean
