@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { useState } from "react"
+import { Outlet } from "react-router-dom"
 
 import { AppFooter } from "@/components/layout/app-footer"
 import { AppHeader } from "@/components/layout/app-header"
@@ -9,10 +10,10 @@ import type { UserSession } from "@/types/dashboard"
 
 type AppLayoutProps = {
   session: UserSession
-  children: ReactNode
+  children?: ReactNode
 }
 
-export function AppLayout({ session, children }: AppLayoutProps) {
+export function AppLayout({ session }: AppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -38,6 +39,7 @@ export function AppLayout({ session, children }: AppLayoutProps) {
           session={session}
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+          onNavigate={() => setMobileOpen(false)}
         />
       </div>
 
@@ -48,7 +50,9 @@ export function AppLayout({ session, children }: AppLayoutProps) {
         />
 
         <main className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-[1600px] p-4 lg:p-8">{children}</div>
+          <div className="mx-auto max-w-[1600px] p-4 lg:p-8">
+            <Outlet />
+          </div>
         </main>
 
         <AppFooter organization={session.organization} />

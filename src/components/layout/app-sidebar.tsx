@@ -1,6 +1,8 @@
 import { ChevronLeft, ChevronRight, Ticket } from "lucide-react"
+import { Link, useLocation } from "react-router-dom"
 
 import { SIDEBAR_NAV_ITEMS } from "@/constants/navigation"
+import { ROUTES } from "@/constants/routes"
 import { quickLinks } from "@/data/dashboard-data"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -16,35 +18,53 @@ type AppSidebarProps = {
   session: UserSession
   collapsed: boolean
   onToggleCollapse: () => void
-  activeItemId?: string
+  onNavigate?: () => void
 }
 
-function NavLink({
+/** Exact path match for in-app routes; dashboard is only active on `/`. */
+function isNavActive(pathname: string, href: string) {
+  if (href === ROUTES.dashboard) return pathname === ROUTES.dashboard
+  if (href.startsWith("/")) return pathname === href
+  return false
+}
+
+function NavLinkItem({
   item,
   collapsed,
   active,
+  onNavigate,
 }: {
   item: NavItem
   collapsed: boolean
   active: boolean
+  onNavigate?: () => void
 }) {
   const Icon = item.icon
+  const className = cn(
+    "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+    active
+      ? "bg-primary/10 text-primary"
+      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+    collapsed && "justify-center px-2"
+  )
 
-  const link = (
-    <a
-      href={item.href}
-      className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-        active
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-        collapsed && "justify-center px-2"
-      )}
-    >
+  const content = (
+    <>
       <Icon className={cn("size-4 shrink-0", active && "text-primary")} />
       {!collapsed && <span className="truncate">{item.label}</span>}
-    </a>
+    </>
   )
+
+  const link =
+    item.href.startsWith("/") ? (
+      <Link to={item.href} className={className} onClick={onNavigate}>
+        {content}
+      </Link>
+    ) : (
+      <a href={item.href} className={className}>
+        {content}
+      </a>
+    )
 
   if (collapsed) {
     return (
@@ -62,8 +82,10 @@ export function AppSidebar({
   session,
   collapsed,
   onToggleCollapse,
-  activeItemId = "dashboard",
+  onNavigate,
 }: AppSidebarProps) {
+  const { pathname } = useLocation()
+
   return (
     <aside
       className={cn(
@@ -71,8 +93,9 @@ export function AppSidebar({
         collapsed ? "w-[68px]" : "w-64"
       )}
     >
-      <a
-        href="#"
+      <Link
+        to={ROUTES.dashboard}
+        onClick={onNavigate}
         className={cn(
           "flex h-16 shrink-0 items-center border-b border-sidebar-border px-4 transition-colors hover:bg-accent/50",
           collapsed && "justify-center px-2"
@@ -89,7 +112,7 @@ export function AppSidebar({
             </p>
           </div>
         )}
-      </a>
+      </Link>
 
       {!collapsed && (
         <div className="shrink-0 border-b border-sidebar-border bg-muted/40 px-4 py-3">
@@ -105,11 +128,12 @@ export function AppSidebar({
       <div className="min-h-0 flex-1 overflow-y-auto py-4">
         <nav className="space-y-0.5 px-3" aria-label="Main navigation">
           {SIDEBAR_NAV_ITEMS.map((item) => (
-            <NavLink
+            <NavLinkItem
               key={item.id}
               item={item}
               collapsed={collapsed}
-              active={item.id === activeItemId}
+              active={isNavActive(pathname, item.href)}
+              onNavigate={onNavigate}
             />
           ))}
         </nav>

@@ -39,10 +39,7 @@ export function StatsSummary({ stats }: StatsSummaryProps) {
         const style = statStyles[stat.id] ?? statStyles.yesterday
 
         return (
-          <Card
-            key={stat.id}
-            className="rounded-xl border-0 bg-card py-0 shadow-sm ring-0 transition-shadow hover:shadow-md"
-          >
+          <Card key={stat.id} className="py-0 transition-shadow hover:shadow-md">
             <CardContent className="p-5">
               <div
                 className={cn(

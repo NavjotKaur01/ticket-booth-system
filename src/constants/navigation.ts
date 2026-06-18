@@ -11,15 +11,16 @@ import {
   UserCheck,
 } from "lucide-react"
 
+import { ROUTES } from "@/constants/routes"
 import type { NavItem } from "@/types/navigation"
 
 export const SIDEBAR_NAV_ITEMS: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", href: "#", icon: LayoutDashboard },
+  { id: "dashboard", label: "Dashboard", href: ROUTES.dashboard, icon: LayoutDashboard },
   { id: "administrator", label: "Administrator", href: "#", icon: Settings },
   { id: "ticketbooth", label: "Ticketbooth", href: "#", icon: Ticket },
   { id: "reports", label: "Reports", href: "#", icon: BarChart3 },
   { id: "calendar", label: "Calendar", href: "#", icon: Calendar },
-  { id: "reservation", label: "Reservation", href: "#", icon: Bookmark },
+  { id: "reservation", label: "Reservation", href: ROUTES.reservation, icon: Bookmark },
   { id: "check-in", label: "Check-In", href: "#", icon: UserCheck },
   { id: "transactions", label: "Transactions", href: "#", icon: Receipt },
   { id: "search", label: "Search", href: "#", icon: Search },

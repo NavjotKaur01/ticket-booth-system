@@ -1,4 +1,5 @@
 import { Menu, Search } from "lucide-react"
+import { Link, useLocation } from "react-router-dom"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
@@ -18,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { ROUTES, getRouteLabel } from "@/constants/routes"
 import type { UserSession } from "@/types/dashboard"
 
 type AppHeaderProps = {
@@ -30,6 +32,9 @@ function getInitials(username: string) {
 }
 
 export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
+  const { pathname } = useLocation()
+  const pageLabel = getRouteLabel(pathname)
+
   return (
     <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-4 border-b border-border/60 bg-background px-4 lg:px-8">
       <Button
@@ -45,14 +50,16 @@ export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
       <Breadcrumb className="hidden sm:block">
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="#" className="text-muted-foreground">
-              Home
+            <BreadcrumbLink asChild>
+              <Link to={ROUTES.dashboard} className="text-muted-foreground">
+                Home
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbPage className="font-medium text-primary">
-              Dashboard
+              {pageLabel}
             </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
@@ -72,10 +79,10 @@ export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
         className="text-muted-foreground hover:text-primary"
         asChild
       >
-        <a href="#">
+        <Link to="#">
           <Search className="size-4" />
           <span className="sr-only">Search</span>
-        </a>
+        </Link>
       </Button>
 
       <DropdownMenu>

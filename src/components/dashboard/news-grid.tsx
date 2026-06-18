@@ -16,7 +16,7 @@ type NewsCardProps = {
 
 function NewsCard({ item }: NewsCardProps) {
   return (
-    <Card className="flex w-full flex-col overflow-hidden rounded-xl border-0 bg-card py-0 shadow-sm ring-0 transition-shadow hover:shadow-md">
+    <Card className="flex w-full flex-col overflow-hidden py-0 transition-shadow hover:shadow-md">
       {item.imageUrl && (
         <div className="flex h-44 shrink-0 items-center justify-center bg-muted/50 p-2 sm:h-48">
           <img

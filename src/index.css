@@ -112,4 +112,20 @@
   html {
     @apply font-sans;
   }
+  a,
+  button,
+  [role="button"],
+  [role="link"],
+  [role="menuitem"],
+  [role="option"],
+  [role="tab"],
+  summary {
+    cursor: pointer;
+  }
+  label:has(input),
+  label:has(button),
+  label:has([role="checkbox"]),
+  label:has([role="radio"]) {
+    cursor: pointer;
+  }
 }
