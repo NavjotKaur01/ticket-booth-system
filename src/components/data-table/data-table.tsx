@@ -75,7 +75,7 @@ export function DataTable<TData>({
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="h-11 whitespace-nowrap px-4 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase"
+                    className="h-9 whitespace-nowrap px-3 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
                   >
                     {header.isPlaceholder
                       ? null
@@ -99,7 +99,7 @@ export function DataTable<TData>({
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className="whitespace-nowrap px-4 py-3.5 text-sm"
+                      className="whitespace-nowrap px-3 py-2 text-sm"
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
@@ -113,7 +113,7 @@ export function DataTable<TData>({
               <TableRow className="hover:bg-transparent">
                 <TableCell
                   colSpan={columns.length}
-                  className="h-32 text-center text-sm text-muted-foreground"
+                  className="h-24 text-center text-sm text-muted-foreground"
                 >
                   {emptyMessage}
                 </TableCell>

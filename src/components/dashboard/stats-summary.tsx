@@ -32,7 +32,7 @@ export function StatsSummary({ stats }: StatsSummaryProps) {
   return (
     <section
       aria-label="Ticket sales summary"
-      className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+      className="grid grid-cols-2 gap-3 lg:grid-cols-4"
     >
       {stats.map((stat) => {
         const Icon = statIcons[stat.id] ?? Ticket
@@ -40,22 +40,22 @@ export function StatsSummary({ stats }: StatsSummaryProps) {
 
         return (
           <Card key={stat.id} className="py-0 transition-shadow hover:shadow-md">
-            <CardContent className="p-5">
+            <CardContent className="p-3.5">
               <div
                 className={cn(
-                  "flex size-11 items-center justify-center rounded-full",
+                  "flex size-9 items-center justify-center rounded-full",
                   style.bg
                 )}
               >
                 <Icon
-                  className={cn("size-5", style.icon)}
+                  className={cn("size-4", style.icon)}
                   strokeWidth={1.75}
                 />
               </div>
-              <p className="mt-4 text-sm font-medium text-muted-foreground">
+              <p className="mt-2.5 text-xs font-medium text-muted-foreground">
                 {stat.label}
               </p>
-              <p className="mt-1.5 text-[1.625rem] font-bold tabular-nums leading-none tracking-tight">
+              <p className="mt-1 text-2xl font-bold tabular-nums leading-none tracking-tight">
                 {stat.value}
               </p>
             </CardContent>

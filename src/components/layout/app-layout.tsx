@@ -50,7 +50,7 @@ export function AppLayout({ session }: AppLayoutProps) {
         />
 
         <main className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-[1600px] p-4 lg:p-8">
+          <div className="mx-auto max-w-[1600px] p-3 lg:p-4">
             <Outlet />
           </div>
         </main>

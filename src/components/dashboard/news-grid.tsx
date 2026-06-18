@@ -18,7 +18,7 @@ function NewsCard({ item }: NewsCardProps) {
   return (
     <Card className="flex w-full flex-col overflow-hidden py-0 transition-shadow hover:shadow-md">
       {item.imageUrl && (
-        <div className="flex h-44 shrink-0 items-center justify-center bg-muted/50 p-2 sm:h-48">
+        <div className="flex h-36 shrink-0 items-center justify-center bg-muted/50 p-2 sm:h-40">
           <img
             src={item.imageUrl}
             alt={item.title}
@@ -90,7 +90,7 @@ export function NewsGrid({ items }: NewsGridProps) {
     <section aria-labelledby="news-heading">
       <h2
         id="news-heading"
-        className="mb-5 text-xl font-semibold leading-snug text-primary"
+        className="mb-3 text-lg font-semibold leading-snug text-primary"
       >
         News, Features and Tips{" "}
         <span className="text-sm font-normal text-muted-foreground">
@@ -98,7 +98,7 @@ export function NewsGrid({ items }: NewsGridProps) {
         </span>
       </h2>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {items.map((item) => (
           <NewsCard key={item.id} item={item} />
         ))}

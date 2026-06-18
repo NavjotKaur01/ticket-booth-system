@@ -22,7 +22,7 @@ function SortableHeader({
     <Button
       variant="ghost"
       size="sm"
-      className="-ml-3 h-8 gap-1 px-3 text-[11px] font-semibold tracking-wider uppercase hover:bg-transparent"
+      className="-ml-3 h-7 gap-1 px-2 text-[10px] font-semibold tracking-wider uppercase hover:bg-transparent"
       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
     >
       {label}
@@ -66,9 +66,9 @@ export const reservationColumns: ColumnDef<Reservation>[] = [
     cell: ({ row }) => {
       const { firstName, lastName } = row.original
       return (
-        <div className="flex items-center gap-3">
-          <Avatar className="size-8">
-            <AvatarFallback className="bg-primary/10 text-xs font-medium text-primary">
+        <div className="flex items-center gap-2.5">
+          <Avatar className="size-7">
+            <AvatarFallback className="bg-primary/10 text-[10px] font-medium text-primary">
               {getInitials(firstName, lastName)}
             </AvatarFallback>
           </Avatar>

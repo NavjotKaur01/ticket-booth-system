@@ -67,7 +67,7 @@ export function AddReservationDialog({
           showCloseButton
           className="flex max-h-[92vh] max-w-5xl flex-col overflow-hidden sm:max-w-5xl"
         >
-          <DialogHeader className="shrink-0 border-b px-8 pt-8 pb-6">
+          <DialogHeader className="shrink-0 border-b px-6 pt-5 pb-4">
             <DialogTitle>Add Reservation</DialogTitle>
             <DialogDescription>
               {reservationShowMeta.comicName} · {reservationShowMeta.showDate}.
@@ -75,9 +75,9 @@ export function AddReservationDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-8 overflow-y-auto px-8 py-6">
+          <div className="space-y-5 overflow-y-auto px-6 py-4">
             <FormSection title="Show Details">
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <FormField label="Show Date" htmlFor="add-show-date">
                   <Input
                     id="add-show-date"
@@ -121,7 +121,7 @@ export function AddReservationDialog({
                   <Button
                     type="button"
                     variant="secondary"
-                    className="h-10 w-full gap-2"
+                    className="w-full gap-2"
                   >
                     <Info className="size-4" />
                     Comic Info
@@ -131,7 +131,7 @@ export function AddReservationDialog({
             </FormSection>
 
             <FormSection title="Reservation Details">
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <FormField label="Origin">
                   <Select defaultValue="phone">
                     <SelectTrigger className="w-full">
@@ -162,7 +162,7 @@ export function AddReservationDialog({
                 </FormField>
               </div>
 
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 <FormField label="Subtotal">
                   <ReadOnlyValue value="$0.00" />
                 </FormField>
@@ -193,7 +193,7 @@ export function AddReservationDialog({
             </FormSection>
 
             <FormSection title="Customer Details">
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <FormField label="Last Name">
                   <Input />
                 </FormField>
@@ -214,21 +214,19 @@ export function AddReservationDialog({
             </FormSection>
 
             <FormSection title="Search Criteria">
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-                <RadioGroup
-                  value={searchType}
-                  onValueChange={setSearchType}
-                  className="flex flex-row items-center gap-5"
-                >
-                  <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-                    <RadioGroupItem value="customer" id="search-customer" />
-                    Customer
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-                    <RadioGroupItem value="business" id="search-business" />
-                    Business
-                  </label>
-                </RadioGroup>
+              <RadioGroup
+                value={searchType}
+                onValueChange={setSearchType}
+                className="flex w-auto flex-row flex-wrap items-center gap-x-5 gap-y-2"
+              >
+                <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+                  <RadioGroupItem value="customer" id="search-customer" />
+                  Customer
+                </label>
+                <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+                  <RadioGroupItem value="business" id="search-business" />
+                  Business
+                </label>
 
                 <div className="flex items-center gap-2">
                   <IconActionButton
@@ -240,7 +238,7 @@ export function AddReservationDialog({
                   <IconActionButton label="Swipe Card" icon={CreditCard} />
                   <IconActionButton label="Clear" icon={X} variant="outline" />
                 </div>
-              </div>
+              </RadioGroup>
             </FormSection>
 
             <FormSection title="Notes / Request">
@@ -248,7 +246,7 @@ export function AddReservationDialog({
             </FormSection>
           </div>
 
-          <DialogFooter className="shrink-0 border-t px-8 py-5">
+          <DialogFooter className="shrink-0 border-t px-6 py-3">
             <Button
               type="button"
               variant="outline"

@@ -24,11 +24,11 @@ export function DataTablePagination<TData>({
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between",
+        "flex flex-col gap-2 border-t px-3 py-2 sm:flex-row sm:items-center sm:justify-between",
         className
       )}
     >
-      <p className="text-sm text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         {total === 0 ? (
           "No records"
         ) : (

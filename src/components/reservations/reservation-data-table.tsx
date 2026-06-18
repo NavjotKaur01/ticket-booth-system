@@ -14,7 +14,7 @@ export function ReservationDataTable({ data }: ReservationDataTableProps) {
       data={data}
       emptyMessage="No reservations found."
       enableRowSelection
-      pageSize={10}
+      pageSize={12}
     />
   )
 }

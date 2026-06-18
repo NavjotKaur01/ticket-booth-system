@@ -36,7 +36,7 @@ export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
   const pageLabel = getRouteLabel(pathname)
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-4 border-b border-border/60 bg-background px-4 lg:px-8">
+    <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-3 border-b border-border/60 bg-background px-3 lg:px-4">
       <Button
         variant="ghost"
         size="icon-sm"
@@ -87,8 +87,8 @@ export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-9 gap-2 px-2">
-            <Avatar className="size-8">
+          <Button variant="ghost" className="h-8 gap-2 px-2">
+            <Avatar className="size-7">
               <AvatarFallback className="bg-primary text-xs text-primary-foreground">
                 {getInitials(session.username)}
               </AvatarFallback>

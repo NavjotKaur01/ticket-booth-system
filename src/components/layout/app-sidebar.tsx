@@ -41,7 +41,7 @@ function NavLinkItem({
 }) {
   const Icon = item.icon
   const className = cn(
-    "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+    "flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-all",
     active
       ? "bg-primary/10 text-primary"
       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",

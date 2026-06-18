@@ -63,6 +63,9 @@
   --input: #e2e8f0;
   --ring: #3874ff;
   --radius: 0.75rem;
+  /* Compact control sizing — tuned for tablet-first booth usage */
+  --control-h: 2.25rem;
+  --control-h-sm: 2rem;
   --sidebar: #ffffff;
   --sidebar-foreground: #334155;
   --sidebar-primary: #3874ff;
