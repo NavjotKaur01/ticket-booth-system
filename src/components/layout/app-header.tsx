@@ -1,4 +1,4 @@
-import { Menu, Search } from "lucide-react"
+import { Menu } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -72,18 +72,6 @@ export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
       <p className="hidden text-sm text-muted-foreground sm:block">
         Welcome ({session.username})
       </p>
-
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="text-muted-foreground hover:text-primary"
-        asChild
-      >
-        <Link to="#">
-          <Search className="size-4" />
-          <span className="sr-only">Search</span>
-        </Link>
-      </Button>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

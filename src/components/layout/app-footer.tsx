@@ -1,7 +1,5 @@
 import { Ticket } from "lucide-react"
 
-import { APP_VERSION } from "@/constants/navigation"
-
 type AppFooterProps = {
   organization: string
 }
@@ -24,9 +22,8 @@ export function AppFooter({ organization }: AppFooterProps) {
         © standupmedia, Inc. All rights reserved.
       </span>
       <div className="flex w-full items-center justify-end gap-3 sm:w-auto">
-        <span>v{APP_VERSION}</span>
         <span>{today}</span>
-        <span>{organization}</span>
+        <span className="font-semibold text-foreground">{organization}</span>
       </div>
     </footer>
   )
