@@ -64,10 +64,12 @@ export function IconActionButton({
   label,
   icon: Icon,
   variant = "outline",
+  onClick,
 }: {
   label: string
   icon: LucideIcon
   variant?: "outline" | "default" | "secondary" | "ghost"
+  onClick?: () => void
 }) {
   return (
     <Tooltip>
@@ -77,6 +79,7 @@ export function IconActionButton({
           variant={variant}
           size="icon-sm"
           aria-label={label}
+          onClick={onClick}
         >
           <Icon className="size-4" />
         </Button>
