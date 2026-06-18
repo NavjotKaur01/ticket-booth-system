@@ -53,8 +53,6 @@ export function Reservations() {
       <ReservationFiltersCard
         showDate={showDate}
         onShowDateChange={setShowDate}
-        cancelledShow={cancelledShow}
-        onCancelledShowChange={setCancelledShow}
         showTime={showTime}
         onShowTimeChange={setShowTime}
         refreshValue={refreshValue}
@@ -74,6 +72,13 @@ export function Reservations() {
           </div>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 xl:flex-1 xl:justify-center">
+            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground">
+              <Checkbox
+                checked={cancelledShow}
+                onCheckedChange={(v) => setCancelledShow(v === true)}
+              />
+              Cancelled Show
+            </label>
             <label className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground">
               <Checkbox
                 checked={showCancelled}

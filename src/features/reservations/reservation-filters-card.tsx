@@ -3,7 +3,6 @@ import { RefreshCw } from "lucide-react"
 import { PanelCard } from "@/components/common/panel-card"
 import { StatsBar } from "@/components/common/stats-bar"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -27,8 +26,6 @@ const statItems = [
 type ReservationFiltersCardProps = {
   showDate: string
   onShowDateChange: (value: string) => void
-  cancelledShow: boolean
-  onCancelledShowChange: (value: boolean) => void
   showTime: string
   onShowTimeChange: (value: string) => void
   refreshValue: string
@@ -40,8 +37,6 @@ type ReservationFiltersCardProps = {
 export function ReservationFiltersCard({
   showDate,
   onShowDateChange,
-  cancelledShow,
-  onCancelledShowChange,
   showTime,
   onShowTimeChange,
   refreshValue,
@@ -53,24 +48,9 @@ export function ReservationFiltersCard({
       <div className="flex flex-col gap-3 p-3 min-[1500px]:flex-row min-[1500px]:items-end min-[1500px]:justify-between min-[1500px]:gap-3">
         <div className="flex min-w-0 flex-1 flex-wrap items-end gap-x-3 gap-y-3 min-[1500px]:flex-nowrap">
           <div className="shrink-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-              <Label htmlFor="show-date" className="text-xs font-medium">
-                Show Date
-              </Label>
-              <label
-                htmlFor="cancelled-show"
-                className="flex cursor-pointer items-center gap-1 text-xs whitespace-nowrap text-foreground"
-              >
-                <span className="text-muted-foreground">(</span>
-                <Checkbox
-                  id="cancelled-show"
-                  checked={cancelledShow}
-                  onCheckedChange={(v) => onCancelledShowChange(v === true)}
-                />
-                <span>Cancelled Show</span>
-                <span className="text-muted-foreground">)</span>
-              </label>
-            </div>
+            <Label htmlFor="show-date" className="text-xs font-medium">
+              Show Date
+            </Label>
             <Input
               id="show-date"
               type="date"
