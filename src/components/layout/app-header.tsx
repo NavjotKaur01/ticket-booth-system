@@ -1,0 +1,98 @@
+import { Menu, Search } from "lucide-react"
+
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import type { UserSession } from "@/types/dashboard"
+
+type AppHeaderProps = {
+  session: UserSession
+  onMenuClick?: () => void
+}
+
+function getInitials(username: string) {
+  return username.slice(0, 2).toUpperCase()
+}
+
+export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
+  return (
+    <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur lg:px-6">
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="lg:hidden"
+        onClick={onMenuClick}
+      >
+        <Menu className="size-5" />
+        <span className="sr-only">Toggle menu</span>
+      </Button>
+
+      <Breadcrumb className="hidden sm:block">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="#">Home</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Dashboard</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <p className="hidden flex-1 text-center text-sm font-medium md:block">
+        {session.organization}
+      </p>
+
+      <p className="text-sm text-muted-foreground">
+        Welcome ({session.username})
+      </p>
+
+      <Button variant="ghost" size="icon-sm" asChild>
+        <a href="#">
+          <Search className="size-4" />
+          <span className="sr-only">Search</span>
+        </a>
+      </Button>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-9 gap-2 px-2">
+            <Avatar className="size-7">
+              <AvatarFallback className="text-xs">
+                {getInitials(session.username)}
+              </AvatarFallback>
+            </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuLabel>
+            <p>{session.username}</p>
+            <p className="text-xs font-normal text-muted-foreground">
+              {session.organization}
+            </p>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem>My Account</DropdownMenuItem>
+          <DropdownMenuItem>System Defaults</DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem>Sign out</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </header>
+  )
+}

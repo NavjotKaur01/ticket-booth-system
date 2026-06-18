@@ -1,11 +1,13 @@
-import { Button } from "./components/ui/button";
+import { DashboardPage } from "@/components/dashboard/dashboard-page"
+import { AppLayout } from "@/components/layout/app-layout"
+import { userSession } from "@/data/dashboard-data"
 
 function App() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Button>Click Me</Button>
-    </div>
-  );
+    <AppLayout session={userSession}>
+      <DashboardPage />
+    </AppLayout>
+  )
 }
 
-export default App;
+export default App
