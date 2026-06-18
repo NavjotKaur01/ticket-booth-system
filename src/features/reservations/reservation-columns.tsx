@@ -2,14 +2,8 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { createSelectColumn } from "@/components/data-table/data-table-select-column"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { Reservation } from "@/types/reservation"
 import { cn } from "@/lib/utils"
-
-/** Guest initials for the avatar fallback when no photo is available. */
-function getInitials(firstName: string, lastName: string) {
-  return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
-}
 
 /** Column definitions for the reservations table — extend here when adding fields. */
 export const reservationColumns: ColumnDef<Reservation>[] = [
@@ -21,24 +15,15 @@ export const reservationColumns: ColumnDef<Reservation>[] = [
       <DataTableColumnHeader label="Guest" column={column} />
     ),
     cell: ({ row }) => {
-      const { firstName, lastName } = row.original
+      const { firstName, lastName, businessName } = row.original
       return (
-        <div className="flex items-center gap-2.5">
-          <Avatar className="size-7">
-            <AvatarFallback className="bg-primary/10 text-[10px] font-medium text-primary">
-              {getInitials(firstName, lastName)}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-medium text-foreground">
-              {firstName} {lastName}
-            </p>
-            {row.original.businessName && (
-              <p className="text-xs text-muted-foreground">
-                {row.original.businessName}
-              </p>
-            )}
-          </div>
+        <div>
+          <p className="font-medium text-foreground">
+            {firstName} {lastName}
+          </p>
+          {businessName && (
+            <p className="text-xs text-muted-foreground">{businessName}</p>
+          )}
         </div>
       )
     },
