@@ -66,7 +66,7 @@ export function AddReservationDialog({
           showCloseButton
           className="flex max-h-[92vh] max-w-5xl flex-col overflow-hidden sm:max-w-5xl"
         >
-          <DialogHeader className="shrink-0 gap-0 border-b px-4 pt-3 pb-2">
+          <DialogHeader className="shrink-0 gap-0 border-b px-4 py-3 pr-12">
             <DialogTitle className="text-lg leading-snug font-normal">
               <span className="font-semibold text-foreground mr-2">
                 Add Reservation

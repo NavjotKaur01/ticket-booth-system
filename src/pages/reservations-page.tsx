@@ -64,14 +64,14 @@ export function ReservationsPage() {
                 checked={showCancelled}
                 onCheckedChange={(v) => setShowCancelled(v === true)}
               />
-              Cancel
+              Cancelled Reservation
             </label>
             <label className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground">
               <Checkbox
                 checked={displayNone}
                 onCheckedChange={(v) => setDisplayNone(v === true)}
               />
-              Display None
+              Display Phone
             </label>
           </div>
 
