@@ -1,12 +1,11 @@
 import { DataTable } from "@/components/data-table/data-table"
-import { reservationColumns } from "@/components/reservations/reservation-columns"
+import { reservationColumns } from "@/features/reservations/reservation-columns"
 import type { Reservation } from "@/types/reservation"
 
 type ReservationDataTableProps = {
   data: Reservation[]
 }
 
-/** Reservations-specific wrapper around the shared DataTable component. */
 export function ReservationDataTable({ data }: ReservationDataTableProps) {
   return (
     <DataTable
@@ -14,6 +13,7 @@ export function ReservationDataTable({ data }: ReservationDataTableProps) {
       data={data}
       emptyMessage="No reservations found."
       enableRowSelection
+      entityLabel="reservations"
       pageSize={12}
     />
   )

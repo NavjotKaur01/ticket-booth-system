@@ -33,6 +33,8 @@ type DataTableProps<TData> = {
   pageSize?: number
   enablePagination?: boolean
   enableRowSelection?: boolean
+  /** Noun shown in pagination, e.g. "records" or "reservations". */
+  entityLabel?: string
 }
 
 export function DataTable<TData>({
@@ -43,6 +45,7 @@ export function DataTable<TData>({
   pageSize = 10,
   enablePagination = true,
   enableRowSelection = false,
+  entityLabel = "records",
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
@@ -124,7 +127,7 @@ export function DataTable<TData>({
       </div>
 
       {enablePagination && total > 0 && (
-        <DataTablePagination table={table} />
+        <DataTablePagination table={table} entityLabel={entityLabel} />
       )}
     </div>
   )

@@ -1,35 +1,10 @@
 import type { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown } from "lucide-react"
 
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
+import { createSelectColumn } from "@/components/data-table/data-table-select-column"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import type { Reservation } from "@/types/reservation"
 import { cn } from "@/lib/utils"
-
-/** Column header with sort toggle — used for guest-facing reservation fields. */
-function SortableHeader({
-  label,
-  column,
-}: {
-  label: string
-  column: {
-    toggleSorting: (desc?: boolean) => void
-    getIsSorted: () => false | "asc" | "desc"
-  }
-}) {
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="-ml-3 h-7 gap-1 px-2 text-[10px] font-semibold tracking-wider uppercase hover:bg-transparent"
-      onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-    >
-      {label}
-      <ArrowUpDown className="size-3.5 opacity-50" />
-    </Button>
-  )
-}
 
 /** Guest initials for the avatar fallback when no photo is available. */
 function getInitials(firstName: string, lastName: string) {
@@ -38,31 +13,13 @@ function getInitials(firstName: string, lastName: string) {
 
 /** Column definitions for the reservations table — extend here when adding fields. */
 export const reservationColumns: ColumnDef<Reservation>[] = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-  },
+  createSelectColumn<Reservation>(),
   {
     id: "guest",
     accessorFn: (row) => `${row.firstName} ${row.lastName}`,
-    header: ({ column }) => <SortableHeader label="Guest" column={column} />,
+    header: ({ column }) => (
+      <DataTableColumnHeader label="Guest" column={column} />
+    ),
     cell: ({ row }) => {
       const { firstName, lastName } = row.original
       return (
@@ -88,7 +45,9 @@ export const reservationColumns: ColumnDef<Reservation>[] = [
   },
   {
     accessorKey: "email",
-    header: ({ column }) => <SortableHeader label="Email" column={column} />,
+    header: ({ column }) => (
+      <DataTableColumnHeader label="Email" column={column} />
+    ),
     cell: ({ row }) => (
       <a
         href={`mailto:${row.original.email}`}
@@ -100,7 +59,9 @@ export const reservationColumns: ColumnDef<Reservation>[] = [
   },
   {
     accessorKey: "source",
-    header: ({ column }) => <SortableHeader label="Source" column={column} />,
+    header: ({ column }) => (
+      <DataTableColumnHeader label="Source" column={column} />
+    ),
     cell: ({ row }) => (
       <span
         className={cn(
@@ -119,28 +80,36 @@ export const reservationColumns: ColumnDef<Reservation>[] = [
   },
   {
     accessorKey: "section",
-    header: ({ column }) => <SortableHeader label="Section" column={column} />,
+    header: ({ column }) => (
+      <DataTableColumnHeader label="Section" column={column} />
+    ),
     cell: ({ row }) => (
       <span className="text-muted-foreground">{row.original.section}</span>
     ),
   },
   {
     accessorKey: "qty",
-    header: ({ column }) => <SortableHeader label="Qty" column={column} />,
+    header: ({ column }) => (
+      <DataTableColumnHeader label="Qty" column={column} />
+    ),
     cell: ({ row }) => (
       <span className="font-medium tabular-nums">{row.original.qty}</span>
     ),
   },
   {
     accessorKey: "total",
-    header: ({ column }) => <SortableHeader label="Total" column={column} />,
+    header: ({ column }) => (
+      <DataTableColumnHeader label="Total" column={column} />
+    ),
     cell: ({ row }) => (
       <span className="font-semibold tabular-nums">{row.original.total}</span>
     ),
   },
   {
     accessorKey: "paid",
-    header: ({ column }) => <SortableHeader label="Paid" column={column} />,
+    header: ({ column }) => (
+      <DataTableColumnHeader label="Paid" column={column} />
+    ),
     cell: ({ row }) => (
       <span className="font-medium tabular-nums text-emerald-600">
         {row.original.paid}
@@ -149,7 +118,9 @@ export const reservationColumns: ColumnDef<Reservation>[] = [
   },
   {
     accessorKey: "createdDt",
-    header: ({ column }) => <SortableHeader label="Created" column={column} />,
+    header: ({ column }) => (
+      <DataTableColumnHeader label="Created" column={column} />
+    ),
     cell: ({ row }) => (
       <span className="text-muted-foreground">{row.original.createdDt}</span>
     ),

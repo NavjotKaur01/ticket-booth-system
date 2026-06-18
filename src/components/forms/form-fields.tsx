@@ -28,7 +28,7 @@ export function FormSection({
   )
 }
 
-/** Standard label + control wrapper used across the reservation form. */
+/** Standard label + control wrapper for dialog and page forms. */
 export function FormField({
   label,
   children,

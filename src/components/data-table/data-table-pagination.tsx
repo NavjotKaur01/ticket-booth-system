@@ -7,12 +7,15 @@ import { cn } from "@/lib/utils"
 type DataTablePaginationProps<TData> = {
   table: Table<TData>
   className?: string
+  /** Noun shown in the record count, e.g. "records" or "reservations". */
+  entityLabel?: string
 }
 
 /** Page controls rendered below the table when pagination is enabled. */
 export function DataTablePagination<TData>({
   table,
   className,
+  entityLabel = "records",
 }: DataTablePaginationProps<TData>) {
   const pageIndex = table.getState().pagination.pageIndex
   const pageSize = table.getState().pagination.pageSize
@@ -36,7 +39,7 @@ export function DataTablePagination<TData>({
             <span className="font-medium text-foreground">
               {from}–{to}
             </span>{" "}
-            of {total} reservations
+            of {total} {entityLabel}
           </>
         )}
       </p>

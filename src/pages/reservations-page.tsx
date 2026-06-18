@@ -1,17 +1,14 @@
 import { FileDown, Plus, Search } from "lucide-react"
 import { useMemo, useState } from "react"
 
-import { AddReservationDialog } from "@/components/reservations/add-reservation-dialog"
-import {
-  RESERVATION_PANEL_CLASS,
-  ReservationFiltersCard,
-} from "@/components/reservations/reservation-filters-card"
-import { ReservationDataTable } from "@/components/reservations/reservation-data-table"
+import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { reservations, showOptions } from "@/data/reservation-data"
+import { AddReservationDialog } from "@/features/reservations/add-reservation-dialog"
+import { ReservationDataTable } from "@/features/reservations/reservation-data-table"
+import { ReservationFiltersCard } from "@/features/reservations/reservation-filters-card"
 import { filterReservations } from "@/lib/filter-reservations"
 
 /** Reservations list with show filters and add-reservation workflow. */
@@ -49,7 +46,7 @@ export function ReservationsPage() {
         onRefreshValueChange={setRefreshValue}
       />
 
-      <Card className={RESERVATION_PANEL_CLASS}>
+      <PanelCard>
         <div className="flex flex-col gap-2 border-b p-3 lg:flex-row lg:items-center lg:gap-3">
           <div className="relative w-full max-w-sm shrink-0">
             <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -91,7 +88,7 @@ export function ReservationsPage() {
         </div>
 
         <ReservationDataTable data={filteredReservations} />
-      </Card>
+      </PanelCard>
 
       <AddReservationDialog open={addOpen} onOpenChange={setAddOpen} />
     </div>

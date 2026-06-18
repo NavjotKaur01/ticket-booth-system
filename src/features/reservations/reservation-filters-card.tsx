@@ -1,7 +1,8 @@
 import { RefreshCw } from "lucide-react"
 
+import { PanelCard } from "@/components/common/panel-card"
+import { StatsBar } from "@/components/common/stats-bar"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,9 +15,6 @@ import {
 } from "@/components/ui/select"
 import { reservationCounts, showOptions } from "@/data/reservation-data"
 import type { ShowOption } from "@/types/reservation"
-
-/** Shared card styling: shadow only, no extra padding from Card defaults. */
-export const RESERVATION_PANEL_CLASS = "gap-0 py-0"
 
 const statItems = [
   { label: "Seats", value: reservationCounts.seats },
@@ -59,7 +57,7 @@ export function ReservationFiltersCard({
   shows = showOptions,
 }: ReservationFiltersCardProps) {
   return (
-    <Card className={RESERVATION_PANEL_CLASS}>
+    <PanelCard>
       <div className="flex flex-col gap-3 p-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex flex-1 flex-wrap items-end gap-3">
           <Button
@@ -142,22 +140,8 @@ export function ReservationFiltersCard({
           </div>
         </div>
 
-        <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:w-auto lg:gap-0 lg:overflow-hidden lg:rounded-sm lg:bg-muted/30 lg:shadow-xs lg:divide-x lg:divide-border/50">
-          {statItems.map((stat) => (
-            <div
-              key={stat.label}
-              className="rounded-sm bg-muted/40 px-3 py-1.5 text-center lg:min-w-[4.5rem] lg:rounded-none lg:bg-transparent"
-            >
-              <p className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
-                {stat.label}
-              </p>
-              <p className="mt-0.5 text-base font-semibold tabular-nums text-foreground">
-                {stat.value}
-              </p>
-            </div>
-          ))}
-        </div>
+        <StatsBar items={statItems} />
       </div>
-    </Card>
+    </PanelCard>
   )
 }
