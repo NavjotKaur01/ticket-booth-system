@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { reservationCounts, showOptions } from "@/data/reservation-data"
+import { reservationCounts, showOptions } from "@/data/reservation"
 import type { ShowOption } from "@/types/reservation"
 
 const statItems = [

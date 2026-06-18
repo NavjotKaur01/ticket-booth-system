@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom"
 
 import { SIDEBAR_NAV_ITEMS } from "@/constants/navigation"
 import { ROUTES } from "@/constants/routes"
-import { quickLinks } from "@/data/dashboard-data"
+import { quickLinks } from "@/data/dashboard"
 import { Separator } from "@/components/ui/separator"
 import {
   Tooltip,
