@@ -36,15 +36,7 @@ type ReservationFiltersCardProps = {
   shows?: ShowOption[]
 }
 
-/** ISO date string (yyyy-mm-dd) for the local calendar day. */
-function todayDateValue() {
-  const date = new Date()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  return `${date.getFullYear()}-${month}-${day}`
-}
-
-/** Top panel: show selectors, live seat counts, and view toggles. */
+/** Top panel: show selectors, auto-refresh, and live seat counts. */
 export function ReservationFiltersCard({
   showDate,
   onShowDateChange,
@@ -58,44 +50,37 @@ export function ReservationFiltersCard({
 }: ReservationFiltersCardProps) {
   return (
     <PanelCard>
-      <div className="flex flex-col gap-3 p-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex flex-1 flex-wrap items-end gap-3">
-          <Button
-            variant="outline"
-            type="button"
-            size="sm"
-            className="h-9 shrink-0 px-3 shadow-xs"
-            onClick={() => onShowDateChange(todayDateValue())}
-          >
-            Today
-          </Button>
-
-          <div className="space-y-1">
-            <Label htmlFor="show-date" className="text-xs font-medium">
-              Show Date
-            </Label>
+      <div className="flex flex-col gap-3 p-3 min-[1500px]:flex-row min-[1500px]:items-end min-[1500px]:justify-between min-[1500px]:gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-end gap-x-3 gap-y-3 min-[1500px]:flex-nowrap">
+          <div className="shrink-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              <Label htmlFor="show-date" className="text-xs font-medium">
+                Show Date
+              </Label>
+              <label
+                htmlFor="cancelled-show"
+                className="flex cursor-pointer items-center gap-1 text-xs whitespace-nowrap text-foreground"
+              >
+                <span className="text-muted-foreground">(</span>
+                <Checkbox
+                  id="cancelled-show"
+                  checked={cancelledShow}
+                  onCheckedChange={(v) => onCancelledShowChange(v === true)}
+                />
+                <span>Cancelled Show</span>
+                <span className="text-muted-foreground">)</span>
+              </label>
+            </div>
             <Input
               id="show-date"
               type="date"
               value={showDate}
               onChange={(e) => onShowDateChange(e.target.value)}
-              className="w-[10.5rem]"
+              className="w-[12rem]"
             />
           </div>
 
-          <label
-            htmlFor="cancelled-show"
-            className="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 text-xs text-foreground"
-          >
-            <Checkbox
-              id="cancelled-show"
-              checked={cancelledShow}
-              onCheckedChange={(v) => onCancelledShowChange(v === true)}
-            />
-            Cancelled Show
-          </label>
-
-          <div className="min-w-[12rem] flex-1 space-y-1 sm:max-w-xs lg:max-w-sm">
+          <div className="w-full shrink-0 space-y-1 sm:w-60">
             <Label htmlFor="show-time" className="text-xs font-medium">
               Show Time
             </Label>
@@ -113,14 +98,14 @@ export function ReservationFiltersCard({
             </Select>
           </div>
 
-          <div className="space-y-1">
+          <div className="shrink-0 space-y-1">
             <Label htmlFor="refresh-interval" className="text-xs font-medium">
               Auto Refresh
               <span className="ml-1 font-normal text-muted-foreground">
                 (seconds)
               </span>
             </Label>
-            <div className="flex max-w-xs">
+            <div className="flex w-[9.5rem]">
               <Input
                 id="refresh-interval"
                 value={refreshValue}
@@ -140,7 +125,9 @@ export function ReservationFiltersCard({
           </div>
         </div>
 
-        <StatsBar items={statItems} />
+        <div className="w-full shrink-0 min-[1500px]:ml-auto min-[1500px]:w-auto">
+          <StatsBar items={statItems} />
+        </div>
       </div>
     </PanelCard>
   )

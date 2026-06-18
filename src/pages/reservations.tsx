@@ -11,6 +11,14 @@ import { ReservationDataTable } from "@/features/reservations/reservation-data-t
 import { ReservationFiltersCard } from "@/features/reservations/reservation-filters-card"
 import { filterReservations } from "@/lib/filter-reservations"
 
+/** ISO date string (yyyy-mm-dd) for the local calendar day. */
+function todayDateValue() {
+  const date = new Date()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
 /** Reservations list with show filters and add-reservation workflow. */
 export function Reservations() {
   const [showDate, setShowDate] = useState("2026-06-18")
@@ -29,10 +37,17 @@ export function Reservations() {
 
   return (
     <div className="space-y-3">
-      <div>
+      <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           Reservations
         </h1>
+        <button
+          type="button"
+          onClick={() => setShowDate(todayDateValue())}
+          className="inline-flex cursor-pointer items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700 transition-opacity hover:opacity-80 dark:bg-blue-950/50 dark:text-blue-300"
+        >
+          Today
+        </button>
       </div>
 
       <ReservationFiltersCard
@@ -47,8 +62,8 @@ export function Reservations() {
       />
 
       <PanelCard>
-        <div className="flex flex-col gap-2 border-b p-3 lg:flex-row lg:items-center lg:gap-3">
-          <div className="relative w-full max-w-sm shrink-0">
+        <div className="flex flex-col gap-2 border-b p-3 xl:flex-row xl:items-center xl:gap-3">
+          <div className="relative w-full shrink-0 xl:max-w-sm">
             <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search reservations..."
@@ -58,7 +73,7 @@ export function Reservations() {
             />
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 lg:flex-1">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 xl:flex-1 xl:justify-center">
             <label className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground">
               <Checkbox
                 checked={showCancelled}
