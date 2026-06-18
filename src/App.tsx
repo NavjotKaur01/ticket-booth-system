@@ -13,7 +13,7 @@ function App() {
       <Routes>
         <Route element={<AppLayout session={userSession} />}>
           <Route index element={<Dashboard />} />
-          <Route path="reservation" element={<Reservations />} />
+          <Route path="reservations" element={<Reservations />} />
           <Route path="check-in" element={<CheckIn />} />
         </Route>
       </Routes>

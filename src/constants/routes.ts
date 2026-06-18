@@ -1,14 +1,14 @@
 /** Application route paths — keep in sync with App.tsx route definitions. */
 export const ROUTES = {
   dashboard: "/",
-  reservation: "/reservation",
+  reservations: "/reservations",
   checkIn: "/check-in",
 } as const
 
 /** Human-readable labels used in breadcrumbs and page titles. */
 export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.dashboard]: "Dashboard",
-  [ROUTES.reservation]: "Reservations",
+  [ROUTES.reservations]: "Reservations",
   [ROUTES.checkIn]: "Check In",
 }
 
@@ -18,7 +18,7 @@ export function getRouteLabel(pathname: string) {
 
 /** Maps the current URL to the sidebar nav item id for active styling. */
 export function getActiveNavId(pathname: string) {
-  if (pathname === ROUTES.reservation) return "reservation"
+  if (pathname === ROUTES.reservations) return "reservations"
   if (pathname === ROUTES.checkIn) return "check-in"
   if (pathname === ROUTES.dashboard) return "dashboard"
   return "dashboard"

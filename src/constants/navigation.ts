@@ -20,7 +20,7 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
   { id: "ticketbooth", label: "Ticketbooth", href: "#", icon: Ticket },
   { id: "reports", label: "Reports", href: "#", icon: BarChart3 },
   { id: "calendar", label: "Calendar", href: "#", icon: Calendar },
-  { id: "reservation", label: "Reservation", href: ROUTES.reservation, icon: Bookmark },
+  { id: "reservations", label: "Reservations", href: ROUTES.reservations, icon: Bookmark },
   { id: "check-in", label: "Check-In", href: ROUTES.checkIn, icon: UserCheck },
   { id: "transactions", label: "Transactions", href: "#", icon: Receipt },
   { id: "search", label: "Search", href: "#", icon: Search },
