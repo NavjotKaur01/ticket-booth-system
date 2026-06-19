@@ -10,6 +10,7 @@ import {
 import { ManagerCheckoutShowReport } from "@/features/reports/manager-checkout-show-report"
 import { PastCustomerReport } from "@/features/reports/past-customer-report"
 import { ReportFiltersToolbar } from "@/features/reports/report-filters-toolbar"
+import { TodaySalesReport } from "@/features/reports/today-sales-report"
 import { EMPTY_REPORT_FILTERS, type ReportFilters } from "@/types/manager-checkout-report"
 
 function getReportTypeFromParams(searchParams: URLSearchParams) {
@@ -47,11 +48,25 @@ export function Reports() {
 
   useEffect(() => {
     const reportType = getReportTypeFromParams(searchParams)
+    const paramReport = searchParams.get("report")
+
     setDraftFilters((current) =>
       current.reportType === reportType
         ? current
         : { ...current, reportType }
     )
+
+    if (paramReport) {
+      const today = isoDateValue(new Date())
+      const filters: ReportFilters = {
+        ...EMPTY_REPORT_FILTERS,
+        reportType,
+        dateFrom: today,
+        dateTo: today,
+      }
+      setDraftFilters(filters)
+      setAppliedFilters(filters)
+    }
   }, [searchParams])
 
   const selectedReportLabel = useMemo(
@@ -100,6 +115,9 @@ export function Reports() {
   const showPastCustomers =
     appliedFilters?.reportType === "past-customers" && appliedFilters != null
 
+  const showTodaySales =
+    appliedFilters?.reportType === "today-sales" && appliedFilters != null
+
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-semibold tracking-tight text-foreground">
@@ -130,6 +148,16 @@ export function Reports() {
             </p>
           </div>
         </PanelCard>
+      ) : showTodaySales ? (
+        <TodaySalesReport
+          location={appliedFilters.location}
+          onLocationChange={(location) => {
+            setDraftFilters((current) => ({ ...current, location }))
+            setAppliedFilters((current) =>
+              current ? { ...current, location } : current
+            )
+          }}
+        />
       ) : showPastCustomers ? (
         <PastCustomerReport
           dateFrom={appliedFilters.dateFrom}
@@ -176,8 +204,8 @@ export function Reports() {
               {selectedReportLabel} is not available yet.
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Past Customers and Manager Checkout are fully supported. Other
-              report types are coming soon.
+              Past Customers, Today Sales, and Manager Checkout are fully
+              supported. Other report types are coming soon.
             </p>
           </div>
         </PanelCard>

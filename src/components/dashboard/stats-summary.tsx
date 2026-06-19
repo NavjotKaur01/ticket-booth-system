@@ -5,6 +5,7 @@ import {
   TrendingUp,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
+import { Link } from "react-router-dom"
 
 import type { StatSummary } from "@/types/dashboard"
 import { Card, CardContent } from "@/components/ui/card"
@@ -40,40 +41,55 @@ const statStyles: Record<string, { bg: string; icon: string }> = {
   },
 }
 
+function StatCard({ stat }: { stat: StatSummary }) {
+  const Icon = statIcons[stat.id] ?? Ticket
+  const style = statStyles[stat.id] ?? statStyles.yesterday
+
+  const content = (
+    <CardContent className="p-3.5">
+      <div
+        className={cn(
+          "flex size-9 items-center justify-center rounded-full",
+          style.bg
+        )}
+      >
+        <Icon className={cn("size-4", style.icon)} strokeWidth={1.75} />
+      </div>
+      <p className="mt-2.5 text-xs font-medium text-muted-foreground">
+        {stat.label}
+      </p>
+      <p className="mt-1 text-2xl font-bold tabular-nums leading-none tracking-tight">
+        {stat.value}
+      </p>
+    </CardContent>
+  )
+
+  if (stat.href) {
+    return (
+      <Link to={stat.href} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <Card className="py-0 transition-shadow hover:border-primary/30 hover:shadow-md">
+          {content}
+        </Card>
+      </Link>
+    )
+  }
+
+  return (
+    <Card className="py-0 transition-shadow hover:shadow-md">
+      {content}
+    </Card>
+  )
+}
+
 export function StatsSummary({ stats }: StatsSummaryProps) {
   return (
     <section
       aria-label="Ticket sales summary"
       className="grid grid-cols-2 gap-3 lg:grid-cols-4"
     >
-      {stats.map((stat) => {
-        const Icon = statIcons[stat.id] ?? Ticket
-        const style = statStyles[stat.id] ?? statStyles.yesterday
-
-        return (
-          <Card key={stat.id} className="py-0 transition-shadow hover:shadow-md">
-            <CardContent className="p-3.5">
-              <div
-                className={cn(
-                  "flex size-9 items-center justify-center rounded-full",
-                  style.bg
-                )}
-              >
-                <Icon
-                  className={cn("size-4", style.icon)}
-                  strokeWidth={1.75}
-                />
-              </div>
-              <p className="mt-2.5 text-xs font-medium text-muted-foreground">
-                {stat.label}
-              </p>
-              <p className="mt-1 text-2xl font-bold tabular-nums leading-none tracking-tight">
-                {stat.value}
-              </p>
-            </CardContent>
-          </Card>
-        )
-      })}
+      {stats.map((stat) => (
+        <StatCard key={stat.id} stat={stat} />
+      ))}
     </section>
   )
 }

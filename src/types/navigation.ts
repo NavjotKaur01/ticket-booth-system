@@ -2,7 +2,6 @@ import type { LucideIcon } from "lucide-react"
 
 export type NavSubItemAction =
   | "adjust-fees"
-  | "open-log-folder"
   | "search-reservations"
   | "search-payments"
 

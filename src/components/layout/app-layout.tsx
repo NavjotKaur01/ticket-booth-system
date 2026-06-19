@@ -8,7 +8,6 @@ import { AppSidebar } from "@/components/layout/app-sidebar"
 import { AdjustFeesDialog } from "@/features/administrator/adjust-fees-dialog"
 import { PaymentHistoryDialog } from "@/features/search/payment-history-dialog"
 import { SearchReservationDialog } from "@/features/search/search-reservation-dialog"
-import { openLogFolder } from "@/lib/open-log-folder"
 import { cn } from "@/lib/utils"
 import type { NavSubItemAction } from "@/types/navigation"
 import type { UserSession } from "@/types/dashboard"
@@ -26,11 +25,6 @@ function handleSubMenuAction(
 ) {
   if (action === "adjust-fees") {
     setAdjustFeesOpen(true)
-    return
-  }
-
-  if (action === "open-log-folder") {
-    void openLogFolder()
     return
   }
 

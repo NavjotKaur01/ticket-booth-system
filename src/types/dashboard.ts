@@ -2,6 +2,7 @@ export type StatSummary = {
   id: string
   label: string
   value: number
+  href?: string
 }
 
 export type ServiceFees = {

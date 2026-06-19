@@ -77,12 +77,8 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
     items: [
       { id: "my-account", label: "My Account" },
       { id: "app-updates", label: "App Updates" },
-      { id: "touch", label: "Touch", href: ROUTES.touch },
       { id: "ticket-default", label: "Ticket Default", href: ROUTES.ticketDefault },
       { id: "change-password", label: "Change Password", href: ROUTES.changePassword },
-      { id: "open-log-folder", label: "Open Log Folder", action: "open-log-folder" },
-      { id: "logout", label: "Logout" },
-      { id: "exit", label: "Exit" },
     ],
   },
 ]
