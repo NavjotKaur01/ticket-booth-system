@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Ticket } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useLocation } from "react-router-dom"
 
 import {
@@ -34,6 +34,19 @@ function isNavActive(pathname: string, href: string) {
   return false
 }
 
+function getParentMenuIdForPath(pathname: string) {
+  for (const item of SIDEBAR_NAV_ITEMS) {
+    if (
+      item.items?.some(
+        (subItem) => subItem.href && isNavActive(pathname, subItem.href)
+      )
+    ) {
+      return item.id
+    }
+  }
+  return null
+}
+
 function navButtonClassName(active: boolean, collapsed: boolean) {
   return cn(
     "flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-all",
@@ -41,6 +54,15 @@ function navButtonClassName(active: boolean, collapsed: boolean) {
       ? "bg-primary/10 text-primary"
       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
     collapsed && "justify-center px-2"
+  )
+}
+
+function subLinkClassName(active: boolean) {
+  return cn(
+    "block rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+    active
+      ? "text-primary"
+      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
   )
 }
 
@@ -90,6 +112,7 @@ function NavLinkItem({
 function NavCollapsibleItem({
   item,
   collapsed,
+  pathname,
   openMenuId,
   onOpenMenuChange,
   onNavigate,
@@ -97,6 +120,7 @@ function NavCollapsibleItem({
 }: {
   item: NavItem
   collapsed: boolean
+  pathname: string
   openMenuId: string | null
   onOpenMenuChange: (id: string | null) => void
   onNavigate?: () => void
@@ -104,6 +128,9 @@ function NavCollapsibleItem({
 }) {
   const Icon = item.icon
   const isOpen = openMenuId === item.id
+  const hasActiveChild = item.items?.some(
+    (subItem) => subItem.href && isNavActive(pathname, subItem.href)
+  )
 
   if (collapsed) {
     return (
@@ -125,21 +152,33 @@ function NavCollapsibleItem({
       className="group/collapsible"
     >
       <CollapsibleTrigger asChild>
-        <button type="button" className={navButtonClassName(false, collapsed)}>
-          <Icon className="size-4 shrink-0" />
+        <button
+          type="button"
+          className={navButtonClassName(hasActiveChild ?? false, collapsed)}
+        >
+          <Icon
+            className={cn(
+              "size-4 shrink-0",
+              hasActiveChild && "text-primary"
+            )}
+          />
           <span className="truncate">{item.label}</span>
           <ChevronRight className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="ml-4 space-y-0.5 border-l border-sidebar-border py-0.5 pl-2.5">
-          {item.items?.map((subItem) =>
-            subItem.href ? (
+          {item.items?.map((subItem) => {
+            const subActive = subItem.href
+              ? isNavActive(pathname, subItem.href)
+              : false
+
+            return subItem.href ? (
               <Link
                 key={subItem.id}
                 to={subItem.href}
                 onClick={onNavigate}
-                className="block rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                className={subLinkClassName(subActive)}
               >
                 {subItem.label}
               </Link>
@@ -153,12 +192,15 @@ function NavCollapsibleItem({
                   }
                   onNavigate?.()
                 }}
-                className="block w-full rounded-md px-2.5 py-1.5 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                className={cn(
+                  subLinkClassName(false),
+                  "w-full text-left"
+                )}
               >
                 {subItem.label}
               </button>
             )
-          )}
+          })}
         </div>
       </CollapsibleContent>
     </Collapsible>
@@ -173,7 +215,16 @@ export function AppSidebar({
   onSubMenuAction,
 }: AppSidebarProps) {
   const { pathname } = useLocation()
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(() =>
+    getParentMenuIdForPath(pathname)
+  )
+
+  useEffect(() => {
+    const parentMenuId = getParentMenuIdForPath(pathname)
+    if (parentMenuId) {
+      setOpenMenuId(parentMenuId)
+    }
+  }, [pathname])
 
   return (
     <aside
@@ -222,6 +273,7 @@ export function AppSidebar({
                 key={item.id}
                 item={item}
                 collapsed={collapsed}
+                pathname={pathname}
                 openMenuId={openMenuId}
                 onOpenMenuChange={setOpenMenuId}
                 onNavigate={onNavigate}

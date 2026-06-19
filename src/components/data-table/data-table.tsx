@@ -26,6 +26,8 @@ declare module "@tanstack/react-table" {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface ColumnMeta<TData, TValue> {
     sticky?: "left" | "right"
+    /** Return 0 to skip the cell, or a number for rowSpan. */
+    getRowSpan?: (row: { id: string; original: TData }) => number
   }
 }
 
@@ -135,20 +137,30 @@ export function DataTable<TData>({
                   data-state={row.getIsSelected() && "selected"}
                   className="group border-b last:border-0 hover:bg-muted/40"
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className={cn(
-                        "whitespace-nowrap px-3 py-2 text-sm",
-                        stickyColumnClass(cell.column.columnDef.meta?.sticky, false)
-                      )}
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const rowSpan = cell.column.columnDef.meta?.getRowSpan?.(row)
+                    if (rowSpan === 0) return null
+
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        rowSpan={rowSpan && rowSpan > 1 ? rowSpan : undefined}
+                        className={cn(
+                          "whitespace-nowrap px-3 py-2 text-sm",
+                          rowSpan && rowSpan > 1 && "align-middle",
+                          stickyColumnClass(
+                            cell.column.columnDef.meta?.sticky,
+                            false
+                          )
+                        )}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    )
+                  })}
                 </TableRow>
               ))
             ) : (
