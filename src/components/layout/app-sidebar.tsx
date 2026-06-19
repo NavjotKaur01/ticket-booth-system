@@ -1,15 +1,21 @@
 import { ChevronLeft, ChevronRight, Ticket } from "lucide-react"
+import { useState } from "react"
 import { Link, useLocation } from "react-router-dom"
 
-import { SIDEBAR_NAV_ITEMS } from "@/constants/navigation"
-import { ROUTES } from "@/constants/routes"
-import { quickLinks } from "@/data/dashboard"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { Separator } from "@/components/ui/separator"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { SIDEBAR_NAV_ITEMS } from "@/constants/navigation"
+import { ROUTES } from "@/constants/routes"
+import { quickLinks } from "@/data/dashboard"
 import { cn } from "@/lib/utils"
 import type { NavItem } from "@/types/navigation"
 import type { UserSession } from "@/types/dashboard"
@@ -21,11 +27,20 @@ type AppSidebarProps = {
   onNavigate?: () => void
 }
 
-/** Exact path match for in-app routes; dashboard is only active on `/`. */
 function isNavActive(pathname: string, href: string) {
   if (href === ROUTES.dashboard) return pathname === ROUTES.dashboard
   if (href.startsWith("/")) return pathname === href
   return false
+}
+
+function navButtonClassName(active: boolean, collapsed: boolean) {
+  return cn(
+    "flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-all",
+    active
+      ? "bg-primary/10 text-primary"
+      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+    collapsed && "justify-center px-2"
+  )
 }
 
 function NavLinkItem({
@@ -40,13 +55,7 @@ function NavLinkItem({
   onNavigate?: () => void
 }) {
   const Icon = item.icon
-  const className = cn(
-    "flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-all",
-    active
-      ? "bg-primary/10 text-primary"
-      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-    collapsed && "justify-center px-2"
-  )
+  const className = navButtonClassName(active, collapsed)
 
   const content = (
     <>
@@ -55,16 +64,15 @@ function NavLinkItem({
     </>
   )
 
-  const link =
-    item.href.startsWith("/") ? (
-      <Link to={item.href} className={className} onClick={onNavigate}>
-        {content}
-      </Link>
-    ) : (
-      <a href={item.href} className={className}>
-        {content}
-      </a>
-    )
+  const link = item.href.startsWith("/") ? (
+    <Link to={item.href} className={className} onClick={onNavigate}>
+      {content}
+    </Link>
+  ) : (
+    <a href={item.href} className={className}>
+      {content}
+    </a>
+  )
 
   if (collapsed) {
     return (
@@ -78,6 +86,77 @@ function NavLinkItem({
   return link
 }
 
+function NavCollapsibleItem({
+  item,
+  collapsed,
+  openMenuId,
+  onOpenMenuChange,
+  onNavigate,
+}: {
+  item: NavItem
+  collapsed: boolean
+  openMenuId: string | null
+  onOpenMenuChange: (id: string | null) => void
+  onNavigate?: () => void
+}) {
+  const Icon = item.icon
+  const isOpen = openMenuId === item.id
+
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button type="button" className={navButtonClassName(false, collapsed)}>
+            <Icon className="size-4 shrink-0" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">{item.label}</TooltipContent>
+      </Tooltip>
+    )
+  }
+
+  return (
+    <Collapsible
+      open={isOpen}
+      onOpenChange={(open) => onOpenMenuChange(open ? item.id : null)}
+      className="group/collapsible"
+    >
+      <CollapsibleTrigger asChild>
+        <button type="button" className={navButtonClassName(false, collapsed)}>
+          <Icon className="size-4 shrink-0" />
+          <span className="truncate">{item.label}</span>
+          <ChevronRight className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="ml-4 space-y-0.5 border-l border-sidebar-border py-0.5 pl-2.5">
+          {item.items?.map((subItem) =>
+            subItem.href ? (
+              <Link
+                key={subItem.id}
+                to={subItem.href}
+                onClick={onNavigate}
+                className="block rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                {subItem.label}
+              </Link>
+            ) : (
+              <button
+                key={subItem.id}
+                type="button"
+                onClick={onNavigate}
+                className="block w-full rounded-md px-2.5 py-1.5 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                {subItem.label}
+              </button>
+            )
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
 export function AppSidebar({
   session,
   collapsed,
@@ -85,6 +164,7 @@ export function AppSidebar({
   onNavigate,
 }: AppSidebarProps) {
   const { pathname } = useLocation()
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
   return (
     <aside
@@ -127,15 +207,26 @@ export function AppSidebar({
 
       <div className="min-h-0 flex-1 overflow-y-auto py-4">
         <nav className="space-y-0.5 px-3" aria-label="Main navigation">
-          {SIDEBAR_NAV_ITEMS.map((item) => (
-            <NavLinkItem
-              key={item.id}
-              item={item}
-              collapsed={collapsed}
-              active={isNavActive(pathname, item.href)}
-              onNavigate={onNavigate}
-            />
-          ))}
+          {SIDEBAR_NAV_ITEMS.map((item) =>
+            item.items?.length ? (
+              <NavCollapsibleItem
+                key={item.id}
+                item={item}
+                collapsed={collapsed}
+                openMenuId={openMenuId}
+                onOpenMenuChange={setOpenMenuId}
+                onNavigate={onNavigate}
+              />
+            ) : (
+              <NavLinkItem
+                key={item.id}
+                item={item}
+                collapsed={collapsed}
+                active={isNavActive(pathname, item.href)}
+                onNavigate={onNavigate}
+              />
+            )
+          )}
         </nav>
 
         {!collapsed && (
