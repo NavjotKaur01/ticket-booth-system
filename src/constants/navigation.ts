@@ -26,7 +26,7 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
       { id: "comedians", label: "Comedians", href: ROUTES.performers },
       { id: "customer", label: "Customer", href: ROUTES.searchCustomer },
       { id: "marketing-filter", label: "Marketing Filter", href: ROUTES.marketingFilter },
-      { id: "promotions", label: "Promotions" },
+      { id: "promotions", label: "Promotions", href: ROUTES.promotions },
       { id: "show-times", label: "Show Times" },
       { id: "pre-sale-private-show", label: "Pre-Sale Private Show" },
       { id: "system-defaults", label: "System Defaults" },

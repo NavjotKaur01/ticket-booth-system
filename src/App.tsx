@@ -4,6 +4,7 @@ import { Dashboard } from "@/components/dashboard/dashboard"
 import { AppLayout } from "@/components/layout/app-layout"
 import { MarketingFilter } from "@/pages/marketing-filter"
 import { Performers } from "@/pages/performers"
+import { Promotions } from "@/pages/promotions"
 import { CheckIn } from "@/pages/check-in"
 import { Reservations } from "@/pages/reservations"
 import { SearchCustomer } from "@/pages/search-customer"
@@ -21,6 +22,7 @@ function App() {
           <Route path="customers" element={<SearchCustomer />} />
           <Route path="performers" element={<Performers />} />
           <Route path="marketing-filter" element={<MarketingFilter />} />
+          <Route path="promotions" element={<Promotions />} />
         </Route>
       </Routes>
     </BrowserRouter>
