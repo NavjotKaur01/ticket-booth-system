@@ -50,7 +50,7 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
       { id: "gift-certificate", label: "Gift Certificate" },
     ],
   },
-  { id: "reports", label: "Reports", href: "#", icon: BarChart3 },
+  { id: "reports", label: "Reports", href: ROUTES.reports, icon: BarChart3 },
   { id: "calendar", label: "Calendar", href: "#", icon: Calendar },
   { id: "reservations", label: "Reservations", href: ROUTES.reservations, icon: Bookmark },
   { id: "check-in", label: "Check-In", href: ROUTES.checkIn, icon: UserCheck },
