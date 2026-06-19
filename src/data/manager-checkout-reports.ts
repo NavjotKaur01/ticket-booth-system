@@ -5,6 +5,7 @@ export const reportTypeOptions = [
   { id: "past-customers", label: "Past Customers" },
   { id: "manager-checkout", label: "Manager Checkout" },
   { id: "door-checkout", label: "Door Checkout" },
+  { id: "quick-view-sales", label: "Quick View Sales" },
   { id: "revenue", label: "Revenue" },
   { id: "sales-by-show", label: "Sales By Show" },
   { id: "sales-by-day", label: "Sales By Day" },

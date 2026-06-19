@@ -46,8 +46,8 @@ export const serviceFees: ServiceFees = {
 export const quickLinks: QuickLink[] = [
   { label: "Standupmedia Support", href: "#" },
   { label: "Email Support", href: "#" },
-  { label: "Manager Checkout", href: "#" },
-  { label: "Quick View Sales", href: "#" },
+  { label: "Manager Checkout", href: reportViewerUrl("manager-checkout") },
+  { label: "Quick View Sales", href: reportViewerUrl("quick-view-sales") },
   { label: "Door Checkout", href: reportViewerUrl("door-checkout") },
   { label: "System Defaults", href: ROUTES.systemDefaults },
   { label: "Online Dashboard", href: "#" },
