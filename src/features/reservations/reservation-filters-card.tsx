@@ -12,16 +12,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { reservationCounts, showOptions } from "@/data/reservation"
+import type { StatItem } from "@/components/common/stats-bar"
+import { reservationCounts } from "@/data/reservation"
 import type { ShowOption } from "@/types/reservation"
 
-const statItems = [
+const defaultStatItems: StatItem[] = [
   { label: "Seats", value: reservationCounts.seats },
   { label: "Reserved", value: reservationCounts.reservation },
   { label: "Available", value: reservationCounts.available },
   { label: "Seated", value: reservationCounts.seated },
   { label: "Scanned", value: reservationCounts.scanned },
-] as const
+]
 
 type ReservationFiltersCardProps = {
   showDate: string
@@ -31,6 +32,9 @@ type ReservationFiltersCardProps = {
   refreshValue: string
   onRefreshValueChange: (value: string) => void
   shows?: ShowOption[]
+  showsLoading?: boolean
+  showsError?: string | null
+  statItems?: StatItem[]
 }
 
 /** Top panel: show selectors, auto-refresh, and live seat counts. */
@@ -41,13 +45,16 @@ export function ReservationFiltersCard({
   onShowTimeChange,
   refreshValue,
   onRefreshValueChange,
-  shows = showOptions,
+  shows = [],
+  showsLoading = false,
+  showsError = null,
+  statItems = defaultStatItems,
 }: ReservationFiltersCardProps) {
   return (
     <PanelCard>
       <div className="flex flex-col gap-3 p-3 min-[1200px]:flex-row min-[1200px]:items-end min-[1200px]:justify-between">
-        <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-[11rem_minmax(0,1fr)_9.5rem] sm:items-end">
-          <div className="min-w-0 space-y-1">
+        <div className="flex min-w-0 flex-1 flex-wrap items-end gap-3">
+          <div className="w-full min-w-0 space-y-1 sm:w-44">
             <Label htmlFor="show-date" className="text-xs font-medium">
               Show Date
             </Label>
@@ -60,13 +67,28 @@ export function ReservationFiltersCard({
             />
           </div>
 
-          <div className="min-w-0 space-y-1">
+          <div className="w-full min-w-0 space-y-1 sm:w-44">
             <Label htmlFor="show-time" className="text-xs font-medium">
               Show Time
             </Label>
-            <Select value={showTime} onValueChange={onShowTimeChange}>
-              <SelectTrigger id="show-time" className="w-full min-w-0">
-                <SelectValue placeholder="Select show" />
+            <Select
+              value={showTime || undefined}
+              onValueChange={onShowTimeChange}
+              disabled={showsLoading || shows.length === 0}
+            >
+              <SelectTrigger
+                id="show-time"
+                className="w-full min-w-0 max-w-full"
+              >
+                <SelectValue
+                  placeholder={
+                    showsLoading
+                      ? "Loading shows..."
+                      : shows.length === 0
+                        ? "No shows found"
+                        : "Select show"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {shows.map((show) => (
@@ -76,9 +98,12 @@ export function ReservationFiltersCard({
                 ))}
               </SelectContent>
             </Select>
+            {showsError ? (
+              <p className="text-xs text-destructive">{showsError}</p>
+            ) : null}
           </div>
 
-          <div className="min-w-0 space-y-1">
+          <div className="w-full min-w-0 space-y-1 sm:w-[9.5rem]">
             <Label htmlFor="refresh-interval" className="text-xs font-medium">
               Auto Refresh
               <span className="ml-1 font-normal text-muted-foreground">

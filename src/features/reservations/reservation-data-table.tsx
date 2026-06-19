@@ -4,14 +4,18 @@ import type { Reservation } from "@/types/reservation"
 
 type ReservationDataTableProps = {
   data: Reservation[]
+  loading?: boolean
 }
 
-export function ReservationDataTable({ data }: ReservationDataTableProps) {
+export function ReservationDataTable({
+  data,
+  loading = false,
+}: ReservationDataTableProps) {
   return (
     <DataTable
       columns={reservationColumns}
       data={data}
-      emptyMessage="No reservations found."
+      emptyMessage={loading ? "Loading reservations..." : "No reservations found."}
       entityLabel="reservations"
       pageSize={12}
     />

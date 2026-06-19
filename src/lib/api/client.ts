@@ -31,4 +31,4 @@ export async function apiRequest<T>(
   return body.Data
 }
 
-export { clubApiPath, reportApiPath } from "@/lib/api/paths"
+export { clubApiPath, reportApiPath, reservationApiPath } from "@/lib/api/paths"
