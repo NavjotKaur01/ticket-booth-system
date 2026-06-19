@@ -130,7 +130,7 @@ export function AddComicDialog({
               }
               className="min-w-0 flex-1"
             />
-            <div className="flex items-center gap-1.5 sm:ml-auto">
+            <div className="flex items-center gap-1.5">
               <IconActionButton
                 label="Search"
                 icon={Search}

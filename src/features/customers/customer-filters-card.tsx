@@ -63,14 +63,12 @@ export function CustomerFiltersCard({
           className={FILTER_PHONE_CLASS}
         />
 
-        <div className="sm:ml-auto">
-          <IconActionButton
-            label="Search"
-            icon={Search}
-            variant="default"
-            onClick={onSearch}
-          />
-        </div>
+        <IconActionButton
+          label="Search"
+          icon={Search}
+          variant="default"
+          onClick={onSearch}
+        />
       </div>
     </PanelCard>
   )

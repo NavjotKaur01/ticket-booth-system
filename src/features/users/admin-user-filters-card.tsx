@@ -91,7 +91,7 @@ export function AdminUserFiltersCard({
           </SelectContent>
         </Select>
 
-        <div className="flex items-center gap-1.5 sm:ml-auto">
+        <div className="flex items-center gap-1.5">
           <IconActionButton
             label="Search"
             icon={Search}
