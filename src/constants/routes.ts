@@ -4,6 +4,7 @@ export const ROUTES = {
   reservations: "/reservations",
   checkIn: "/check-in",
   searchCustomer: "/customers",
+  performers: "/performers",
 } as const
 
 /** Human-readable labels used in breadcrumbs and page titles. */
@@ -12,6 +13,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.reservations]: "Reservations",
   [ROUTES.checkIn]: "Check In",
   [ROUTES.searchCustomer]: "Search Customer",
+  [ROUTES.performers]: "Performers",
 }
 
 export function getRouteLabel(pathname: string) {

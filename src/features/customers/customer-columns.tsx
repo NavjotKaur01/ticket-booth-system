@@ -1,7 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import { CircleHelp } from "lucide-react"
 
-import { RowActionsMenu } from "@/components/common/row-actions-menu"
+import { CustomerRowActionsMenu } from "@/features/customers/customer-row-actions-menu"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import type { Customer } from "@/types/customer"
 
@@ -44,7 +44,9 @@ export const customerColumns: ColumnDef<Customer>[] = [
       </div>
     ),
     cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.original.password}</span>
+      <span className="text-muted-foreground">
+        {row.original.password || "\u00A0"}
+      </span>
     ),
   },
   {
@@ -76,6 +78,6 @@ export const customerColumns: ColumnDef<Customer>[] = [
     header: "Action",
     enableSorting: false,
     meta: { sticky: "right" },
-    cell: () => <RowActionsMenu />,
+    cell: () => <CustomerRowActionsMenu />,
   },
 ]

@@ -13,7 +13,7 @@ export function CustomerDataTable({ data }: CustomerDataTableProps) {
       data={data}
       emptyMessage="No record found"
       entityLabel="records"
-      pageSize={12}
+      pageSize={10}
     />
   )
 }

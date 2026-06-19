@@ -5,6 +5,7 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type OnChangeFn,
   type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table"
@@ -53,6 +54,10 @@ type DataTableProps<TData> = {
   pageSize?: number
   enablePagination?: boolean
   enableRowSelection?: boolean
+  enableMultiRowSelection?: boolean
+  rowSelection?: RowSelectionState
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>
+  getRowId?: (originalRow: TData, index: number) => string
   /** Noun shown in pagination, e.g. "records" or "reservations". */
   entityLabel?: string
 }
@@ -65,18 +70,26 @@ export function DataTable<TData>({
   pageSize = 10,
   enablePagination = true,
   enableRowSelection = false,
+  enableMultiRowSelection = true,
+  rowSelection: rowSelectionProp,
+  onRowSelectionChange,
+  getRowId,
   entityLabel = "records",
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([])
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [internalRowSelection, setInternalRowSelection] =
+    useState<RowSelectionState>({})
+  const rowSelection = rowSelectionProp ?? internalRowSelection
 
   const table = useReactTable({
     data,
     columns,
     state: { sorting, rowSelection },
     enableRowSelection,
+    enableMultiRowSelection,
     onSortingChange: setSorting,
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: onRowSelectionChange ?? setInternalRowSelection,
+    getRowId,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

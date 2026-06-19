@@ -23,7 +23,7 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
     icon: Settings,
     items: [
       { id: "adjust-fees", label: "Adjust Fees", action: "adjust-fees" },
-      { id: "comedians", label: "Comedians" },
+      { id: "comedians", label: "Comedians", href: ROUTES.performers },
       { id: "customer", label: "Customer", href: ROUTES.searchCustomer },
       { id: "marketing-filter", label: "Marketing Filter" },
       { id: "promotions", label: "Promotions" },
