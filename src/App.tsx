@@ -13,6 +13,8 @@ import { SearchCustomer } from "@/pages/search-customer"
 import { SystemDefaults } from "@/pages/system-defaults"
 import { UserAccess } from "@/pages/user-access"
 import { Users } from "@/pages/users"
+import { BusinessContacts } from "@/pages/business-contacts"
+import { CommentCards } from "@/pages/comment-cards"
 import { userSession } from "@/data/dashboard"
 
 /** Root router — all pages share AppLayout (sidebar + header). */
@@ -36,6 +38,8 @@ function App() {
           <Route path="system-defaults" element={<SystemDefaults />} />
           <Route path="user-access" element={<UserAccess />} />
           <Route path="users" element={<Users />} />
+          <Route path="business-contacts" element={<BusinessContacts />} />
+          <Route path="comment-cards" element={<CommentCards />} />
         </Route>
       </Routes>
     </BrowserRouter>

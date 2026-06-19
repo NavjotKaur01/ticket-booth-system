@@ -12,6 +12,8 @@ export const ROUTES = {
   systemDefaults: "/system-defaults",
   userAccess: "/user-access",
   users: "/users",
+  businessContacts: "/business-contacts",
+  commentCards: "/comment-cards",
 } as const
 
 /** Human-readable labels used in breadcrumbs and page titles. */
@@ -28,6 +30,8 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.systemDefaults]: "System Defaults",
   [ROUTES.userAccess]: "User Access",
   [ROUTES.users]: "User",
+  [ROUTES.businessContacts]: "Business Contacts",
+  [ROUTES.commentCards]: "Comment Cards",
 }
 
 export function getRouteLabel(pathname: string) {
