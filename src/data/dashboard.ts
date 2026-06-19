@@ -11,6 +11,7 @@ import { ROUTES, reportViewerUrl } from "@/constants/routes"
 export const userSession: UserSession = {
   username: "admin",
   organization: "Standupmedia",
+  clubSlug: "standupmedia",
   lastLogin: "9/21/2016",
 }
 

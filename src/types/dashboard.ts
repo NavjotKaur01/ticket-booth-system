@@ -23,6 +23,7 @@ export type NewsItem = {
 export type UserSession = {
   username: string
   organization: string
+  clubSlug: string
   lastLogin: string
 }
 

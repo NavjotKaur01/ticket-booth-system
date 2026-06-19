@@ -1,6 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
-import { dataTableActionsColumn } from "@/components/data-table/data-table-actions-column"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { formatCurrency } from "@/lib/format-currency"
 import type { RecentSalesActivityRecord } from "@/types/today-sales-report"
@@ -88,7 +87,4 @@ export const recentSalesActivityColumns: ColumnDef<RecentSalesActivityRecord>[] 
       ),
       cell: ({ row }) => emptyCell(row.original.comment),
     },
-    dataTableActionsColumn<RecentSalesActivityRecord>({
-      ariaLabel: "Recent sale actions",
-    }),
   ]

@@ -1,6 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
-import { dataTableActionsColumn } from "@/components/data-table/data-table-actions-column"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { formatCurrency } from "@/lib/format-currency"
 import type { TodayShowRecord } from "@/types/today-sales-report"
@@ -63,7 +62,4 @@ export const todayShowsColumns: ColumnDef<TodayShowRecord>[] = [
       </span>
     ),
   },
-  dataTableActionsColumn<TodayShowRecord>({
-    ariaLabel: "Today's show actions",
-  }),
 ]

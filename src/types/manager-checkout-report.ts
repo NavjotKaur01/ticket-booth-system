@@ -78,7 +78,7 @@ export type ReportFilters = {
 
 export const EMPTY_REPORT_FILTERS: ReportFilters = {
   reportType: "manager-checkout",
-  location: "standupmedia",
+  location: "",
   dateFrom: "2026-06-18",
   dateTo: "2026-06-18",
 }
