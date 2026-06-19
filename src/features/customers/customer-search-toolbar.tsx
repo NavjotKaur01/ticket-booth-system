@@ -1,6 +1,13 @@
 import { Search, X } from "lucide-react"
 
-import { IconActionButton } from "@/components/forms/form-fields"
+import {
+  FILTER_AREA_CLASS,
+  FILTER_EMAIL_CLASS,
+  FILTER_INPUT_CLASS,
+  FILTER_PHONE_CLASS,
+  FILTER_ROW_CLASS,
+  IconActionButton,
+} from "@/components/forms/form-fields"
 import { Input } from "@/components/ui/input"
 import type { CustomerSearchFilters } from "@/types/customer"
 
@@ -18,45 +25,45 @@ export function CustomerSearchToolbar({
   onClear,
 }: CustomerSearchToolbarProps) {
   return (
-    <div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-end xl:gap-2">
+    <div className={FILTER_ROW_CLASS}>
       <Input
         placeholder="Last Name"
         value={filters.lastName}
         onChange={(event) => onFilterChange("lastName", event.target.value)}
-        className="xl:max-w-36"
+        className={FILTER_INPUT_CLASS}
       />
       <Input
         placeholder="First Name"
         value={filters.firstName}
         onChange={(event) => onFilterChange("firstName", event.target.value)}
-        className="xl:max-w-36"
+        className={FILTER_INPUT_CLASS}
       />
       <Input
         placeholder="Email"
         value={filters.email}
         onChange={(event) => onFilterChange("email", event.target.value)}
-        className="min-w-0 flex-1"
+        className={FILTER_EMAIL_CLASS}
       />
       <Input
         placeholder="Area Code"
         value={filters.areaCode}
         onChange={(event) => onFilterChange("areaCode", event.target.value)}
-        className="xl:max-w-28"
+        className={FILTER_AREA_CLASS}
       />
       <Input
         placeholder="Phone1"
         value={filters.phone1}
         onChange={(event) => onFilterChange("phone1", event.target.value)}
-        className="xl:max-w-32"
+        className={FILTER_PHONE_CLASS}
       />
       <Input
         placeholder="Phone2"
         value={filters.phone2}
         onChange={(event) => onFilterChange("phone2", event.target.value)}
-        className="xl:max-w-32"
+        className={FILTER_PHONE_CLASS}
       />
 
-      <div className="flex items-center gap-1.5 xl:ml-auto">
+      <div className="flex items-center gap-1.5 sm:ml-auto">
         <IconActionButton
           label="Search"
           icon={Search}

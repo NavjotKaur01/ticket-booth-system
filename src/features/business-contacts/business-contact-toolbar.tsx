@@ -1,6 +1,11 @@
 import { Search, X } from "lucide-react"
 
-import { IconActionButton } from "@/components/forms/form-fields"
+import {
+  FILTER_EMAIL_CLASS,
+  FILTER_INPUT_CLASS,
+  FILTER_ROW_CLASS,
+  IconActionButton,
+} from "@/components/forms/form-fields"
 import { Input } from "@/components/ui/input"
 import type { BusinessContactSearchFilters } from "@/types/business-contact"
 
@@ -21,35 +26,35 @@ export function BusinessContactToolbar({
   onClear,
 }: BusinessContactToolbarProps) {
   return (
-    <div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-end xl:gap-2">
+    <div className={FILTER_ROW_CLASS}>
       <Input
         placeholder="Business Name"
         value={filters.businessName}
         onChange={(event) =>
           onFilterChange("businessName", event.target.value)
         }
-        className="min-w-0 flex-1"
+        className={FILTER_EMAIL_CLASS}
       />
       <Input
         placeholder="Last Name"
         value={filters.lastName}
         onChange={(event) => onFilterChange("lastName", event.target.value)}
-        className="xl:max-w-36"
+        className={FILTER_INPUT_CLASS}
       />
       <Input
         placeholder="First Name"
         value={filters.firstName}
         onChange={(event) => onFilterChange("firstName", event.target.value)}
-        className="xl:max-w-36"
+        className={FILTER_INPUT_CLASS}
       />
       <Input
         placeholder="Email"
         value={filters.email}
         onChange={(event) => onFilterChange("email", event.target.value)}
-        className="min-w-0 flex-1"
+        className={FILTER_EMAIL_CLASS}
       />
 
-      <div className="flex items-center gap-1.5 xl:ml-auto">
+      <div className="flex items-center gap-1.5 sm:ml-auto">
         <IconActionButton
           label="Search"
           icon={Search}

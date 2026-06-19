@@ -1,7 +1,13 @@
 import { Search, X } from "lucide-react"
 
 import { PanelCard } from "@/components/common/panel-card"
-import { IconActionButton } from "@/components/forms/form-fields"
+import {
+  FILTER_EMAIL_CLASS,
+  FILTER_INPUT_CLASS,
+  FILTER_ROW_INNER_CLASS,
+  FILTER_SELECT_CLASS,
+  IconActionButton,
+} from "@/components/forms/form-fields"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import {
@@ -33,14 +39,14 @@ export function PromotionFiltersCard({
   return (
     <PanelCard>
       <div className="space-y-3 p-3">
-        <div className="flex flex-wrap items-end gap-2">
+        <div className={FILTER_ROW_INNER_CLASS}>
           <Input
             placeholder="Promotion Name"
             value={filters.promotionName}
             onChange={(event) =>
               onFilterChange("promotionName", event.target.value)
             }
-            className="min-w-0 w-full basis-full sm:basis-auto sm:max-w-48 sm:flex-1"
+            className={FILTER_EMAIL_CLASS}
           />
           <Input
             placeholder="Promotion Code"
@@ -48,13 +54,13 @@ export function PromotionFiltersCard({
             onChange={(event) =>
               onFilterChange("promotionCode", event.target.value)
             }
-            className="min-w-0 w-full basis-full sm:basis-auto sm:max-w-44 sm:flex-1"
+            className={FILTER_INPUT_CLASS}
           />
           <Select
             value={filters.promoScope}
             onValueChange={(value) => onFilterChange("promoScope", value)}
           >
-            <SelectTrigger className="w-full sm:w-40 sm:shrink-0">
+            <SelectTrigger className={FILTER_SELECT_CLASS}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

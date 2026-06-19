@@ -1,4 +1,8 @@
 import { PanelCard } from "@/components/common/panel-card"
+import {
+  FILTER_INPUT_CLASS,
+  FILTER_ROW_CLASS,
+} from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -26,29 +30,29 @@ export function PerformerFiltersCard({
 }: PerformerFiltersCardProps) {
   return (
     <PanelCard>
-      <div className="flex flex-col gap-3 border-b p-3 xl:flex-row xl:items-end xl:gap-2">
+      <div className={`${FILTER_ROW_CLASS} border-b`}>
         <Input
           placeholder="First Name"
           value={filters.firstName}
           onChange={(event) => onFilterChange("firstName", event.target.value)}
-          className="xl:max-w-36"
+          className={FILTER_INPUT_CLASS}
         />
         <Input
           placeholder="Last Name"
           value={filters.lastName}
           onChange={(event) => onFilterChange("lastName", event.target.value)}
-          className="xl:max-w-36"
+          className={FILTER_INPUT_CLASS}
         />
         <Input
           placeholder="Stage Name"
           value={filters.stageName}
           onChange={(event) => onFilterChange("stageName", event.target.value)}
-          className="min-w-0 flex-1"
+          className="h-9 w-full sm:w-48"
         />
       </div>
 
       <div className="flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <label className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground">
             <Checkbox
               checked={filters.showInactive}

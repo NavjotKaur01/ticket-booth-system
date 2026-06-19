@@ -1,7 +1,11 @@
 import { Search, X } from "lucide-react"
 
 import { PanelCard } from "@/components/common/panel-card"
-import { IconActionButton } from "@/components/forms/form-fields"
+import {
+  FILTER_ROW_INNER_CLASS,
+  FILTER_SELECT_CLASS,
+  IconActionButton,
+} from "@/components/forms/form-fields"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -32,12 +36,12 @@ export function ShowTimeFiltersCard({
   return (
     <PanelCard>
       <div className="space-y-2 p-3">
-        <div className="flex flex-wrap items-end gap-2">
+        <div className={FILTER_ROW_INNER_CLASS}>
           <Select
             value={filters.dayOfWeek}
             onValueChange={(value) => onFilterChange("dayOfWeek", value)}
           >
-            <SelectTrigger className="w-full sm:w-40 sm:shrink-0">
+            <SelectTrigger className={FILTER_SELECT_CLASS}>
               <SelectValue placeholder="Day Of Week" />
             </SelectTrigger>
             <SelectContent>

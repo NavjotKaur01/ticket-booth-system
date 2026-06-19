@@ -1,7 +1,14 @@
 import { Plus, Search, X } from "lucide-react"
 
 import { PanelCard } from "@/components/common/panel-card"
-import { IconActionButton } from "@/components/forms/form-fields"
+import {
+  FILTER_AREA_CLASS,
+  FILTER_EMAIL_CLASS,
+  FILTER_INPUT_CLASS,
+  FILTER_ROW_INNER_CLASS,
+  FILTER_SELECT_CLASS,
+  IconActionButton,
+} from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -77,14 +84,14 @@ export function MarketingFilterFiltersCard({
   return (
     <PanelCard>
       <div className="space-y-3 p-3">
-        <div className="flex flex-wrap items-end gap-2">
+        <div className={FILTER_ROW_INNER_CLASS}>
           <Input
             placeholder="Last Name"
             value={filters.lastName}
             onChange={(event) =>
               onFilterChange("lastName", event.target.value)
             }
-            className="w-[calc(50%-0.25rem)] min-w-[6.5rem] sm:w-32 sm:shrink-0"
+            className={FILTER_INPUT_CLASS}
           />
           <Input
             placeholder="First Name"
@@ -92,19 +99,19 @@ export function MarketingFilterFiltersCard({
             onChange={(event) =>
               onFilterChange("firstName", event.target.value)
             }
-            className="w-[calc(50%-0.25rem)] min-w-[6.5rem] sm:w-32 sm:shrink-0"
+            className={FILTER_INPUT_CLASS}
           />
           <Input
             placeholder="Email"
             value={filters.email}
             onChange={(event) => onFilterChange("email", event.target.value)}
-            className="min-w-0 w-full basis-full sm:basis-auto sm:max-w-56 sm:flex-1"
+            className={FILTER_EMAIL_CLASS}
           />
           <Select
             value={filters.birthMonth || undefined}
             onValueChange={(value) => onFilterChange("birthMonth", value)}
           >
-            <SelectTrigger className="w-full sm:w-40 sm:shrink-0">
+            <SelectTrigger className={FILTER_SELECT_CLASS}>
               <SelectValue placeholder="Select a month" />
             </SelectTrigger>
             <SelectContent>
@@ -121,7 +128,7 @@ export function MarketingFilterFiltersCard({
             onChange={(event) =>
               onFilterChange("areaCode", event.target.value)
             }
-            className="w-28 shrink-0"
+            className={FILTER_AREA_CLASS}
           />
           <div className="flex flex-wrap items-center gap-1.5">
             {filters.zipCodes.map((zipCode, index) => (

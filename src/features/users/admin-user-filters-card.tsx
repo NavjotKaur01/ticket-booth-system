@@ -1,7 +1,12 @@
 import { Search, X } from "lucide-react"
 
 import { PanelCard } from "@/components/common/panel-card"
-import { IconActionButton } from "@/components/forms/form-fields"
+import {
+  FILTER_INPUT_CLASS,
+  FILTER_ROW_CLASS,
+  FILTER_SELECT_CLASS,
+  IconActionButton,
+} from "@/components/forms/form-fields"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -28,24 +33,24 @@ export function AdminUserFiltersCard({
 }: AdminUserFiltersCardProps) {
   return (
     <PanelCard>
-      <div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-end xl:gap-2">
+      <div className={FILTER_ROW_CLASS}>
         <Input
           placeholder="Last Name"
           value={filters.lastName}
           onChange={(event) => onFilterChange("lastName", event.target.value)}
-          className="xl:max-w-36"
+          className={FILTER_INPUT_CLASS}
         />
         <Input
           placeholder="First Name"
           value={filters.firstName}
           onChange={(event) => onFilterChange("firstName", event.target.value)}
-          className="xl:max-w-36"
+          className={FILTER_INPUT_CLASS}
         />
         <Input
           placeholder="User Name"
           value={filters.userName}
           onChange={(event) => onFilterChange("userName", event.target.value)}
-          className="xl:max-w-36"
+          className={FILTER_INPUT_CLASS}
         />
 
         <Select
@@ -54,7 +59,7 @@ export function AdminUserFiltersCard({
             onFilterChange("securityLevel", value === "all" ? "" : value)
           }
         >
-          <SelectTrigger className="w-full xl:max-w-40">
+          <SelectTrigger className={FILTER_SELECT_CLASS}>
             <SelectValue placeholder="Security Level" />
           </SelectTrigger>
           <SelectContent>
@@ -73,7 +78,7 @@ export function AdminUserFiltersCard({
             onFilterChange("active", value === "all" ? "" : value)
           }
         >
-          <SelectTrigger className="w-full xl:max-w-32">
+          <SelectTrigger className={FILTER_INPUT_CLASS}>
             <SelectValue placeholder="Active" />
           </SelectTrigger>
           <SelectContent>
@@ -86,7 +91,7 @@ export function AdminUserFiltersCard({
           </SelectContent>
         </Select>
 
-        <div className="flex items-center gap-1.5 xl:ml-auto">
+        <div className="flex items-center gap-1.5 sm:ml-auto">
           <IconActionButton
             label="Search"
             icon={Search}

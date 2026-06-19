@@ -10,6 +10,21 @@ import {
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
+/** Shared compact layout for page filter toolbars. */
+export const FILTER_ROW_CLASS =
+  "flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-2"
+
+/** Same as FILTER_ROW_CLASS without outer padding (nested inside padded panels). */
+export const FILTER_ROW_INNER_CLASS =
+  "flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-2"
+
+export const FILTER_INPUT_CLASS = "h-9 w-full sm:w-44"
+export const FILTER_EMAIL_CLASS = "h-9 w-full sm:w-48"
+export const FILTER_PHONE_CLASS = "h-9 w-full sm:w-32"
+export const FILTER_AREA_CLASS = "h-9 w-full sm:w-28"
+export const FILTER_SELECT_CLASS = "h-9 w-full sm:w-44"
+export const FILTER_SELECT_WIDE_CLASS = "h-9 w-full sm:w-48"
+
 /** Groups related form controls under a section heading. */
 export function FormSection({
   title,
