@@ -5,7 +5,9 @@ import { Outlet } from "react-router-dom"
 import { AppFooter } from "@/components/layout/app-footer"
 import { AppHeader } from "@/components/layout/app-header"
 import { AppSidebar } from "@/components/layout/app-sidebar"
+import { AdjustFeesDialog } from "@/features/administrator/adjust-fees-dialog"
 import { cn } from "@/lib/utils"
+import type { NavSubItemAction } from "@/types/navigation"
 import type { UserSession } from "@/types/dashboard"
 
 type AppLayoutProps = {
@@ -13,9 +15,19 @@ type AppLayoutProps = {
   children?: ReactNode
 }
 
+function handleSubMenuAction(
+  action: NavSubItemAction,
+  setAdjustFeesOpen: (open: boolean) => void
+) {
+  if (action === "adjust-fees") {
+    setAdjustFeesOpen(true)
+  }
+}
+
 export function AppLayout({ session }: AppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [adjustFeesOpen, setAdjustFeesOpen] = useState(false)
 
   return (
     <div className="flex h-screen overflow-hidden bg-muted">
@@ -40,10 +52,17 @@ export function AppLayout({ session }: AppLayoutProps) {
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
           onNavigate={() => setMobileOpen(false)}
+          onSubMenuAction={(action) =>
+            handleSubMenuAction(action, setAdjustFeesOpen)
+          }
         />
       </div>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <AdjustFeesDialog
+          open={adjustFeesOpen}
+          onOpenChange={setAdjustFeesOpen}
+        />
         <AppHeader
           session={session}
           onMenuClick={() => setMobileOpen((prev) => !prev)}

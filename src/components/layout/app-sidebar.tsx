@@ -17,7 +17,7 @@ import { SIDEBAR_NAV_ITEMS } from "@/constants/navigation"
 import { ROUTES } from "@/constants/routes"
 import { quickLinks } from "@/data/dashboard"
 import { cn } from "@/lib/utils"
-import type { NavItem } from "@/types/navigation"
+import type { NavItem, NavSubItemAction } from "@/types/navigation"
 import type { UserSession } from "@/types/dashboard"
 
 type AppSidebarProps = {
@@ -25,6 +25,7 @@ type AppSidebarProps = {
   collapsed: boolean
   onToggleCollapse: () => void
   onNavigate?: () => void
+  onSubMenuAction?: (action: NavSubItemAction) => void
 }
 
 function isNavActive(pathname: string, href: string) {
@@ -92,12 +93,14 @@ function NavCollapsibleItem({
   openMenuId,
   onOpenMenuChange,
   onNavigate,
+  onSubMenuAction,
 }: {
   item: NavItem
   collapsed: boolean
   openMenuId: string | null
   onOpenMenuChange: (id: string | null) => void
   onNavigate?: () => void
+  onSubMenuAction?: (action: NavSubItemAction) => void
 }) {
   const Icon = item.icon
   const isOpen = openMenuId === item.id
@@ -144,7 +147,12 @@ function NavCollapsibleItem({
               <button
                 key={subItem.id}
                 type="button"
-                onClick={onNavigate}
+                onClick={() => {
+                  if (subItem.action) {
+                    onSubMenuAction?.(subItem.action)
+                  }
+                  onNavigate?.()
+                }}
                 className="block w-full rounded-md px-2.5 py-1.5 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               >
                 {subItem.label}
@@ -162,6 +170,7 @@ export function AppSidebar({
   collapsed,
   onToggleCollapse,
   onNavigate,
+  onSubMenuAction,
 }: AppSidebarProps) {
   const { pathname } = useLocation()
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
@@ -216,6 +225,7 @@ export function AppSidebar({
                 openMenuId={openMenuId}
                 onOpenMenuChange={setOpenMenuId}
                 onNavigate={onNavigate}
+                onSubMenuAction={onSubMenuAction}
               />
             ) : (
               <NavLinkItem
