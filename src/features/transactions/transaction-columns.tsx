@@ -1,6 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
+import { dataTableActionsColumn } from "@/components/data-table/data-table-actions-column"
 import { formatCurrency } from "@/lib/format-currency"
 import { cn } from "@/lib/utils"
 import type { Transaction } from "@/types/transaction"
@@ -86,4 +87,7 @@ export const transactionColumns: ColumnDef<Transaction>[] = [
       </span>
     ),
   },
+  dataTableActionsColumn<Transaction>({
+    ariaLabel: "Transaction actions",
+  }),
 ]

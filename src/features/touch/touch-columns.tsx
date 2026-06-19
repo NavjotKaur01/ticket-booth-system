@@ -1,6 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
+import { dataTableActionsColumn } from "@/components/data-table/data-table-actions-column"
 import type { TouchReservation } from "@/types/touch"
 
 export const touchColumns: ColumnDef<TouchReservation>[] = [
@@ -118,4 +119,7 @@ export const touchColumns: ColumnDef<TouchReservation>[] = [
       <span className="whitespace-nowrap tabular-nums">{row.original.createdDt}</span>
     ),
   },
+  dataTableActionsColumn<TouchReservation>({
+    ariaLabel: "Reservation actions",
+  }),
 ]

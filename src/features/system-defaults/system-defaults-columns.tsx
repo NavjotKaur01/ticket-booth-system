@@ -1,6 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
+import { dataTableActionsColumn } from "@/components/data-table/data-table-actions-column"
 import type { SystemDefault } from "@/types/system-default"
 
 export const systemDefaultColumns: ColumnDef<SystemDefault>[] = [
@@ -47,4 +48,7 @@ export const systemDefaultColumns: ColumnDef<SystemDefault>[] = [
       </span>
     ),
   },
+  dataTableActionsColumn<SystemDefault>({
+    ariaLabel: "System default actions",
+  }),
 ]

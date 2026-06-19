@@ -1,6 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
+import { dataTableActionsColumn } from "@/components/data-table/data-table-actions-column"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { Performer } from "@/types/performer"
 
@@ -55,4 +56,7 @@ export const performerColumns: ColumnDef<Performer>[] = [
       <span className="font-medium text-foreground">{row.original.stageName}</span>
     ),
   },
+  dataTableActionsColumn<Performer>({
+    ariaLabel: "Performer actions",
+  }),
 ]
