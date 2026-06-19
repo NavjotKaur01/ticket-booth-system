@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 
 import { PanelCard } from "@/components/common/panel-card"
 import {
@@ -9,6 +10,18 @@ import {
 import { ManagerCheckoutShowReport } from "@/features/reports/manager-checkout-show-report"
 import { ReportFiltersToolbar } from "@/features/reports/report-filters-toolbar"
 import { EMPTY_REPORT_FILTERS, type ReportFilters } from "@/types/manager-checkout-report"
+
+function getReportTypeFromParams(searchParams: URLSearchParams) {
+  const reportType = searchParams.get("report")
+  if (
+    reportType &&
+    reportTypeOptions.some((option) => option.id === reportType)
+  ) {
+    return reportType
+  }
+
+  return EMPTY_REPORT_FILTERS.reportType
+}
 
 function isoDateValue(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0")
@@ -23,10 +36,22 @@ function shiftDate(days: number) {
 }
 
 export function Reports() {
-  const [draftFilters, setDraftFilters] = useState<ReportFilters>(
-    EMPTY_REPORT_FILTERS
-  )
+  const [searchParams] = useSearchParams()
+  const initialReportType = getReportTypeFromParams(searchParams)
+  const [draftFilters, setDraftFilters] = useState<ReportFilters>({
+    ...EMPTY_REPORT_FILTERS,
+    reportType: initialReportType,
+  })
   const [appliedFilters, setAppliedFilters] = useState<ReportFilters | null>(null)
+
+  useEffect(() => {
+    const reportType = getReportTypeFromParams(searchParams)
+    setDraftFilters((current) =>
+      current.reportType === reportType
+        ? current
+        : { ...current, reportType }
+    )
+  }, [searchParams])
 
   const selectedReportLabel = useMemo(
     () =>

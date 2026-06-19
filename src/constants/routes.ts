@@ -25,6 +25,14 @@ export const ROUTES = {
   changePassword: "/my-account/change-password",
 } as const
 
+export function reportViewerUrl(reportType?: string) {
+  if (!reportType) {
+    return ROUTES.reports
+  }
+
+  return `${ROUTES.reports}?report=${reportType}`
+}
+
 /** Human-readable labels used in breadcrumbs and page titles. */
 export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.dashboard]: "Dashboard",
