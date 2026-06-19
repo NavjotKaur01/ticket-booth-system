@@ -2,6 +2,7 @@ import type { ManagerCheckoutShow } from "@/types/manager-checkout-report"
 import { ZERO_PAYMENTS } from "@/types/manager-checkout-report"
 
 export const reportTypeOptions = [
+  { id: "past-customers", label: "Past Customers" },
   { id: "manager-checkout", label: "Manager Checkout" },
   { id: "door-checkout", label: "Door Checkout" },
   { id: "revenue", label: "Revenue" },

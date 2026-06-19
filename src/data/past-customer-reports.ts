@@ -1,0 +1,43 @@
+import type { PastCustomerRecord } from "@/types/past-customer-report"
+
+export const pastCustomerRecords: PastCustomerRecord[] = [
+  {
+    id: "1",
+    lastName: "sandee",
+    firstName: "test",
+    addr1: "",
+    addr2: "",
+    city: "",
+    state: "OK",
+    zip: "918 111 1111",
+    country: "",
+    phone: "918 111 1111",
+    emailAddress: "sandeep@yopmail.com",
+  },
+  {
+    id: "2",
+    lastName: "Rider",
+    firstName: "Max",
+    addr1: "Worthington",
+    addr2: "test",
+    city: "Columbus",
+    state: "OH",
+    zip: "121 212 1212",
+    country: "",
+    phone: "121 212 1212",
+    emailAddress: "maxridersum@gmail.com",
+  },
+  {
+    id: "3",
+    lastName: "kumar",
+    firstName: "Sandeep",
+    addr1: "max",
+    addr2: "Worthington",
+    city: "Test",
+    state: "OH",
+    zip: "121-121-2111",
+    country: "",
+    phone: "121-121-2111",
+    emailAddress: "sandeepchilana467@gmail.com",
+  },
+]

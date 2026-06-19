@@ -8,6 +8,7 @@ import {
   reportTypeOptions,
 } from "@/data/manager-checkout-reports"
 import { ManagerCheckoutShowReport } from "@/features/reports/manager-checkout-show-report"
+import { PastCustomerReport } from "@/features/reports/past-customer-report"
 import { ReportFiltersToolbar } from "@/features/reports/report-filters-toolbar"
 import { EMPTY_REPORT_FILTERS, type ReportFilters } from "@/types/manager-checkout-report"
 
@@ -96,6 +97,9 @@ export function Reports() {
   const showManagerCheckout =
     appliedFilters?.reportType === "manager-checkout" && appliedFilters != null
 
+  const showPastCustomers =
+    appliedFilters?.reportType === "past-customers" && appliedFilters != null
+
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-semibold tracking-tight text-foreground">
@@ -126,6 +130,11 @@ export function Reports() {
             </p>
           </div>
         </PanelCard>
+      ) : showPastCustomers ? (
+        <PastCustomerReport
+          dateFrom={appliedFilters.dateFrom}
+          dateTo={appliedFilters.dateTo}
+        />
       ) : showManagerCheckout ? (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-2 px-1">
@@ -167,8 +176,8 @@ export function Reports() {
               {selectedReportLabel} is not available yet.
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Manager Checkout is fully supported. Other report types are coming
-              soon.
+              Past Customers and Manager Checkout are fully supported. Other
+              report types are coming soon.
             </p>
           </div>
         </PanelCard>

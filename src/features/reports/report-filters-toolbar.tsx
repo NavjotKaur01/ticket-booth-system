@@ -31,6 +31,9 @@ type ReportFiltersToolbarProps = {
   onPdf: () => void
 }
 
+const compactFieldClassName = "h-9 w-44"
+const compactSelectClassName = "h-9 w-48"
+
 export function ReportFiltersToolbar({
   filters,
   onFilterChange,
@@ -43,8 +46,8 @@ export function ReportFiltersToolbar({
 }: ReportFiltersToolbarProps) {
   return (
     <>
-      <div className="flex flex-col gap-3 border-b p-3 xl:flex-row xl:items-end xl:gap-2">
-        <div className="min-w-0 flex-1 space-y-1">
+      <div className="flex flex-col gap-3 border-b p-3 lg:flex-row lg:flex-wrap lg:items-end lg:gap-2">
+        <div className="space-y-1">
           <Label htmlFor="report-type" className="text-xs font-medium">
             Report
           </Label>
@@ -52,7 +55,7 @@ export function ReportFiltersToolbar({
             value={filters.reportType}
             onValueChange={(value) => onFilterChange("reportType", value)}
           >
-            <SelectTrigger id="report-type" className="w-full">
+            <SelectTrigger id="report-type" className={compactSelectClassName}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -65,7 +68,7 @@ export function ReportFiltersToolbar({
           </Select>
         </div>
 
-        <div className="space-y-1 xl:max-w-40">
+        <div className="space-y-1">
           <Label htmlFor="report-date-from" className="text-xs font-medium">
             From
           </Label>
@@ -74,10 +77,11 @@ export function ReportFiltersToolbar({
             type="date"
             value={filters.dateFrom}
             onChange={(event) => onFilterChange("dateFrom", event.target.value)}
+            className={compactFieldClassName}
           />
         </div>
 
-        <div className="space-y-1 xl:max-w-40">
+        <div className="space-y-1">
           <Label htmlFor="report-date-to" className="text-xs font-medium">
             To
           </Label>
@@ -86,10 +90,11 @@ export function ReportFiltersToolbar({
             type="date"
             value={filters.dateTo}
             onChange={(event) => onFilterChange("dateTo", event.target.value)}
+            className={compactFieldClassName}
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 xl:ml-auto">
+        <div className="flex flex-wrap items-center gap-1.5 lg:ml-auto">
           <IconActionButton
             label="Generate Report"
             icon={Search}
@@ -105,8 +110,8 @@ export function ReportFiltersToolbar({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 border-b p-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0 space-y-1 sm:max-w-xs">
+      <div className="flex flex-col gap-3 border-b p-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-2">
+        <div className="space-y-1">
           <Label htmlFor="report-location" className="text-xs font-medium">
             Location
           </Label>
@@ -114,7 +119,7 @@ export function ReportFiltersToolbar({
             value={filters.location}
             onValueChange={(value) => onFilterChange("location", value)}
           >
-            <SelectTrigger id="report-location" className="w-full">
+            <SelectTrigger id="report-location" className={compactSelectClassName}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -127,7 +132,7 @@ export function ReportFiltersToolbar({
           </Select>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
           <Button
             type="button"
             variant="outline"
