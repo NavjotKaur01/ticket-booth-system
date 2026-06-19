@@ -5,6 +5,10 @@ function matches(value: string, query: string) {
   return value.toLowerCase().includes(query.trim().toLowerCase())
 }
 
+export function getComicName(performer: Performer) {
+  return performer.stageName || `${performer.firstName} ${performer.lastName}`.trim()
+}
+
 export function filterPerformers(
   rows: Performer[],
   filters: PerformerFilters

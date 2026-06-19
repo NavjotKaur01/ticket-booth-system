@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom"
 
 import { Dashboard } from "@/components/dashboard/dashboard"
 import { AppLayout } from "@/components/layout/app-layout"
+import { MarketingFilter } from "@/pages/marketing-filter"
 import { Performers } from "@/pages/performers"
 import { CheckIn } from "@/pages/check-in"
 import { Reservations } from "@/pages/reservations"
@@ -19,6 +20,7 @@ function App() {
           <Route path="check-in" element={<CheckIn />} />
           <Route path="customers" element={<SearchCustomer />} />
           <Route path="performers" element={<Performers />} />
+          <Route path="marketing-filter" element={<MarketingFilter />} />
         </Route>
       </Routes>
     </BrowserRouter>

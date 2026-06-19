@@ -25,7 +25,7 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
       { id: "adjust-fees", label: "Adjust Fees", action: "adjust-fees" },
       { id: "comedians", label: "Comedians", href: ROUTES.performers },
       { id: "customer", label: "Customer", href: ROUTES.searchCustomer },
-      { id: "marketing-filter", label: "Marketing Filter" },
+      { id: "marketing-filter", label: "Marketing Filter", href: ROUTES.marketingFilter },
       { id: "promotions", label: "Promotions" },
       { id: "show-times", label: "Show Times" },
       { id: "pre-sale-private-show", label: "Pre-Sale Private Show" },
