@@ -54,7 +54,7 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
   { id: "calendar", label: "Calendar", href: "#", icon: Calendar },
   { id: "reservations", label: "Reservations", href: ROUTES.reservations, icon: Bookmark },
   { id: "check-in", label: "Check-In", href: ROUTES.checkIn, icon: UserCheck },
-  { id: "transactions", label: "Transactions", href: "#", icon: Receipt },
+  { id: "transactions", label: "Transactions", href: ROUTES.transactions, icon: Receipt },
   {
     id: "search",
     label: "Search",

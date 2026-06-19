@@ -17,6 +17,7 @@ import { BusinessContacts } from "@/pages/business-contacts"
 import { CommentCards } from "@/pages/comment-cards"
 import { GiftCards } from "@/pages/gift-cards"
 import { Reports } from "@/pages/reports"
+import { Transactions } from "@/pages/transactions"
 import { userSession } from "@/data/dashboard"
 
 /** Root router — all pages share AppLayout (sidebar + header). */
@@ -29,6 +30,7 @@ function App() {
           <Route path="reservations" element={<Reservations />} />
           <Route path="check-in" element={<CheckIn />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="transactions" element={<Transactions />} />
 
           <Route path="administrator">
             <Route path="customers" element={<SearchCustomer />} />

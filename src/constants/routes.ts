@@ -18,6 +18,7 @@ export const ROUTES = {
   commentCards: "/ticketbooth/comment-cards",
   giftCards: "/ticketbooth/gift-cards",
   reports: "/reports",
+  transactions: "/transactions",
 } as const
 
 /** Human-readable labels used in breadcrumbs and page titles. */
@@ -38,6 +39,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.commentCards]: "Comment Cards",
   [ROUTES.giftCards]: "Gift Cards",
   [ROUTES.reports]: "Reports",
+  [ROUTES.transactions]: "Transactions",
 }
 
 export function getRouteLabel(pathname: string) {
@@ -49,6 +51,7 @@ export function getActiveNavId(pathname: string) {
   if (pathname === ROUTES.reservations) return "reservations"
   if (pathname === ROUTES.checkIn) return "check-in"
   if (pathname === ROUTES.reports) return "reports"
+  if (pathname === ROUTES.transactions) return "transactions"
   if (pathname === ROUTES.dashboard) return "dashboard"
   return "dashboard"
 }
