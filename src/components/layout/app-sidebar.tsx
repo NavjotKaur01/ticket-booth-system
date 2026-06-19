@@ -301,12 +301,22 @@ export function AppSidebar({
               <ul className="space-y-2">
                 {quickLinks.map((link) => (
                   <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="text-xs font-medium text-primary underline-offset-4 hover:underline"
-                    >
-                      {link.label}
-                    </a>
+                    {link.href.startsWith("/") ? (
+                      <Link
+                        to={link.href}
+                        onClick={onNavigate}
+                        className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <a
+                        href={link.href}
+                        className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        {link.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>

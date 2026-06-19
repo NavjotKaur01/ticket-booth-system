@@ -6,6 +6,9 @@ import { AppFooter } from "@/components/layout/app-footer"
 import { AppHeader } from "@/components/layout/app-header"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { AdjustFeesDialog } from "@/features/administrator/adjust-fees-dialog"
+import { PaymentHistoryDialog } from "@/features/search/payment-history-dialog"
+import { SearchReservationDialog } from "@/features/search/search-reservation-dialog"
+import { openLogFolder } from "@/lib/open-log-folder"
 import { cn } from "@/lib/utils"
 import type { NavSubItemAction } from "@/types/navigation"
 import type { UserSession } from "@/types/dashboard"
@@ -17,10 +20,27 @@ type AppLayoutProps = {
 
 function handleSubMenuAction(
   action: NavSubItemAction,
-  setAdjustFeesOpen: (open: boolean) => void
+  setAdjustFeesOpen: (open: boolean) => void,
+  setSearchReservationOpen: (open: boolean) => void,
+  setPaymentHistoryOpen: (open: boolean) => void
 ) {
   if (action === "adjust-fees") {
     setAdjustFeesOpen(true)
+    return
+  }
+
+  if (action === "open-log-folder") {
+    void openLogFolder()
+    return
+  }
+
+  if (action === "search-reservations") {
+    setSearchReservationOpen(true)
+    return
+  }
+
+  if (action === "search-payments") {
+    setPaymentHistoryOpen(true)
   }
 }
 
@@ -28,6 +48,8 @@ export function AppLayout({ session }: AppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [adjustFeesOpen, setAdjustFeesOpen] = useState(false)
+  const [searchReservationOpen, setSearchReservationOpen] = useState(false)
+  const [paymentHistoryOpen, setPaymentHistoryOpen] = useState(false)
 
   return (
     <div className="flex h-screen overflow-hidden bg-muted">
@@ -53,7 +75,12 @@ export function AppLayout({ session }: AppLayoutProps) {
           onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
           onNavigate={() => setMobileOpen(false)}
           onSubMenuAction={(action) =>
-            handleSubMenuAction(action, setAdjustFeesOpen)
+            handleSubMenuAction(
+              action,
+              setAdjustFeesOpen,
+              setSearchReservationOpen,
+              setPaymentHistoryOpen
+            )
           }
         />
       </div>
@@ -62,6 +89,14 @@ export function AppLayout({ session }: AppLayoutProps) {
         <AdjustFeesDialog
           open={adjustFeesOpen}
           onOpenChange={setAdjustFeesOpen}
+        />
+        <SearchReservationDialog
+          open={searchReservationOpen}
+          onOpenChange={setSearchReservationOpen}
+        />
+        <PaymentHistoryDialog
+          open={paymentHistoryOpen}
+          onOpenChange={setPaymentHistoryOpen}
         />
         <AppHeader
           session={session}

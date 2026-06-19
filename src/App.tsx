@@ -18,6 +18,9 @@ import { CommentCards } from "@/pages/comment-cards"
 import { GiftCards } from "@/pages/gift-cards"
 import { Reports } from "@/pages/reports"
 import { Transactions } from "@/pages/transactions"
+import { Touch } from "@/pages/touch"
+import { TicketDefault } from "@/pages/ticket-default"
+import { ChangePassword } from "@/pages/change-password"
 import { userSession } from "@/data/dashboard"
 
 /** Root router — all pages share AppLayout (sidebar + header). */
@@ -31,6 +34,12 @@ function App() {
           <Route path="check-in" element={<CheckIn />} />
           <Route path="reports" element={<Reports />} />
           <Route path="transactions" element={<Transactions />} />
+
+          <Route path="my-account">
+            <Route path="touch" element={<Touch />} />
+            <Route path="ticket-default" element={<TicketDefault />} />
+            <Route path="change-password" element={<ChangePassword />} />
+          </Route>
 
           <Route path="administrator">
             <Route path="customers" element={<SearchCustomer />} />

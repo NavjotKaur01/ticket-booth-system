@@ -60,7 +60,14 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
     label: "Search",
     href: "#",
     icon: Search,
-    items: [{ id: "search-payments", label: "Search Payments" }],
+    items: [
+      { id: "search-reservations", label: "Search", action: "search-reservations" },
+      {
+        id: "search-payments",
+        label: "Search Payments",
+        action: "search-payments",
+      },
+    ],
   },
   {
     id: "my-account",
@@ -70,10 +77,10 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
     items: [
       { id: "my-account", label: "My Account" },
       { id: "app-updates", label: "App Updates" },
-      { id: "touch", label: "Touch" },
-      { id: "ticket-default", label: "Ticket Default" },
-      { id: "change-password", label: "Change Password" },
-      { id: "open-log-folder", label: "Open Log Folder" },
+      { id: "touch", label: "Touch", href: ROUTES.touch },
+      { id: "ticket-default", label: "Ticket Default", href: ROUTES.ticketDefault },
+      { id: "change-password", label: "Change Password", href: ROUTES.changePassword },
+      { id: "open-log-folder", label: "Open Log Folder", action: "open-log-folder" },
       { id: "logout", label: "Logout" },
       { id: "exit", label: "Exit" },
     ],

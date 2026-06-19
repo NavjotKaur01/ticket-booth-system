@@ -6,6 +6,7 @@ import type {
   UserSession,
 } from "@/types/dashboard"
 import { dashboardNewsImage } from "@/constants/assets"
+import { ROUTES } from "@/constants/routes"
 
 export const userSession: UserSession = {
   username: "admin",
@@ -48,7 +49,7 @@ export const quickLinks: QuickLink[] = [
   { label: "Manager Checkout", href: "#" },
   { label: "Quick View Sales", href: "#" },
   { label: "Door Checkout", href: "#" },
-  { label: "System Defaults", href: "#" },
+  { label: "System Defaults", href: ROUTES.systemDefaults },
   { label: "Online Dashboard", href: "#" },
   { label: "Add a Comic", href: "#" },
 ]
