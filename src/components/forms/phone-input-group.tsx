@@ -52,7 +52,7 @@ export function PhoneInputGroup({
         maxLength={4}
         value={value.line}
         onChange={(event) => updateField("line", event.target.value)}
-        className="h-9 min-w-0 flex-1 px-2 tabular-nums"
+        className="h-9 w-[4.5rem] shrink-0 px-2 tabular-nums"
       />
     </div>
   )

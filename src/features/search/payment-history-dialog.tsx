@@ -3,7 +3,12 @@ import { useEffect, useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { DataTable } from "@/components/data-table/data-table"
-import { FormField, FormSection, IconActionButton } from "@/components/forms/form-fields"
+import {
+  FILTER_SELECT_CLASS,
+  FormField,
+  FormSection,
+  IconActionButton,
+} from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -51,7 +56,12 @@ export function PaymentHistoryDialog({
       setDraftFilters(DEFAULT_PAYMENT_HISTORY_FILTERS)
       setAppliedFilters(DEFAULT_PAYMENT_HISTORY_FILTERS)
       setSearched(false)
+      return
     }
+
+    setDraftFilters(DEFAULT_PAYMENT_HISTORY_FILTERS)
+    setAppliedFilters(DEFAULT_PAYMENT_HISTORY_FILTERS)
+    setSearched(true)
   }, [open])
 
   const results = useMemo(
@@ -79,14 +89,14 @@ export function PaymentHistoryDialog({
   function handleClear() {
     setDraftFilters(DEFAULT_PAYMENT_HISTORY_FILTERS)
     setAppliedFilters(DEFAULT_PAYMENT_HISTORY_FILTERS)
-    setSearched(false)
+    setSearched(true)
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton
-        className="flex max-h-[92vh] max-w-6xl flex-col overflow-hidden p-0 sm:max-w-6xl"
+        className="flex max-h-[92vh] max-w-4xl flex-col overflow-hidden p-0 sm:max-w-4xl"
       >
         <DialogHeader className="shrink-0 gap-0 border-b px-4 py-3 pr-12">
           <div className="flex items-center justify-between gap-3 pr-2">
@@ -104,9 +114,13 @@ export function PaymentHistoryDialog({
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           <PanelCard>
-            <FormSection title="Search Criteria" className="border-b p-3">
-              <div className="grid gap-3 lg:grid-cols-[12rem_minmax(0,1fr)_auto] lg:items-end">
-                <FormField label="Search By" htmlFor="payment-search-by">
+            <FormSection title="Search Criteria" className="space-y-1.5 border-b p-3">
+              <div className="flex flex-wrap items-end gap-2">
+                <FormField
+                  label="Search By"
+                  htmlFor="payment-search-by"
+                  className="w-full sm:w-44"
+                >
                   <Select
                     value={draftFilters.searchBy}
                     onValueChange={(value) =>
@@ -116,7 +130,10 @@ export function PaymentHistoryDialog({
                       )
                     }
                   >
-                    <SelectTrigger id="payment-search-by" className="w-full">
+                    <SelectTrigger
+                      id="payment-search-by"
+                      className={FILTER_SELECT_CLASS}
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -136,6 +153,7 @@ export function PaymentHistoryDialog({
                     )?.label ?? "Search Value"
                   }
                   htmlFor="payment-search-value"
+                  className="w-full sm:w-48"
                 >
                   <Input
                     id="payment-search-value"
@@ -143,10 +161,11 @@ export function PaymentHistoryDialog({
                     onChange={(event) =>
                       updateDraftField("searchValue", event.target.value)
                     }
+                    className="h-9"
                   />
                 </FormField>
 
-                <div className="flex items-center gap-1.5 lg:pb-0.5">
+                <div className="flex shrink-0 items-center gap-1.5">
                   <IconActionButton
                     label="Search"
                     icon={Search}

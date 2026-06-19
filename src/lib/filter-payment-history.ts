@@ -12,7 +12,8 @@ export function filterPaymentHistoryRecords(
   filters: PaymentHistoryFilters,
   searched: boolean
 ): PaymentHistoryRecord[] {
-  if (!searched || !filters.searchValue.trim()) return []
+  if (!searched) return []
+  if (!filters.searchValue.trim()) return rows
 
   switch (filters.searchBy) {
     case "transaction-id":

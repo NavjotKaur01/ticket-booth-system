@@ -74,9 +74,8 @@ export const paymentHistoryColumns: ColumnDef<PaymentHistoryRecord>[] = [
   },
   {
     id: "actions",
-    header: () => null,
-    cell: () => <RowActionsMenu />,
-    meta: { sticky: "right" },
+    header: "Action",
     enableSorting: false,
+    cell: () => <RowActionsMenu />,
   },
 ]

@@ -27,13 +27,13 @@ export function filterReservationSearchResults(
 
   switch (filters.option) {
     case "confirmation-number":
-      if (!filters.confirmationNumber.trim()) return []
+      if (!filters.confirmationNumber.trim()) return rows
       return rows.filter((row) =>
         matches(row.id, filters.confirmationNumber)
       )
 
     case "customer":
-      if (!hasCustomerFilters(filters)) return []
+      if (!hasCustomerFilters(filters)) return rows
       return rows.filter((row) => {
         if (filters.lastName && !matches(row.lastName, filters.lastName)) {
           return false
@@ -54,15 +54,15 @@ export function filterReservationSearchResults(
       })
 
     case "comedian":
-      if (!filters.comedian.trim()) return []
+      if (!filters.comedian.trim()) return rows
       return rows.filter((row) => matches(row.comedian, filters.comedian))
 
     case "date":
-      if (!filters.showDate.trim()) return []
+      if (!filters.showDate.trim()) return rows
       return rows.filter((row) => matches(row.showDate, filters.showDate))
 
     case "payment":
-      if (!filters.paymentReference.trim()) return []
+      if (!filters.paymentReference.trim()) return rows
       return rows.filter((row) =>
         matches(row.total, filters.paymentReference)
       )
