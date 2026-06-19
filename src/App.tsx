@@ -4,6 +4,7 @@ import { Dashboard } from "@/components/dashboard/dashboard"
 import { AppLayout } from "@/components/layout/app-layout"
 import { CheckIn } from "@/pages/check-in"
 import { Reservations } from "@/pages/reservations"
+import { SearchCustomer } from "@/pages/search-customer"
 import { userSession } from "@/data/dashboard"
 
 /** Root router — all pages share AppLayout (sidebar + header). */
@@ -15,6 +16,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="reservations" element={<Reservations />} />
           <Route path="check-in" element={<CheckIn />} />
+          <Route path="customers" element={<SearchCustomer />} />
         </Route>
       </Routes>
     </BrowserRouter>
