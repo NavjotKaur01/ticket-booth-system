@@ -3,17 +3,20 @@ export const ROUTES = {
   dashboard: "/",
   reservations: "/reservations",
   checkIn: "/check-in",
-  searchCustomer: "/customers",
-  performers: "/performers",
-  marketingFilter: "/marketing-filter",
-  promotions: "/promotions",
-  showTimes: "/show-times",
-  preSalePrivateShow: "/pre-sale-private-show",
-  systemDefaults: "/system-defaults",
-  userAccess: "/user-access",
-  users: "/users",
-  businessContacts: "/business-contacts",
-  commentCards: "/comment-cards",
+  administrator: "/administrator",
+  ticketbooth: "/ticketbooth",
+  searchCustomer: "/administrator/customers",
+  performers: "/administrator/performers",
+  marketingFilter: "/administrator/marketing-filter",
+  promotions: "/administrator/promotions",
+  showTimes: "/administrator/show-times",
+  preSalePrivateShow: "/administrator/pre-sale-private-show",
+  systemDefaults: "/administrator/system-defaults",
+  userAccess: "/administrator/user-access",
+  users: "/administrator/users",
+  businessContacts: "/ticketbooth/business-contacts",
+  commentCards: "/ticketbooth/comment-cards",
+  giftCards: "/ticketbooth/gift-cards",
 } as const
 
 /** Human-readable labels used in breadcrumbs and page titles. */
@@ -32,6 +35,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.users]: "User",
   [ROUTES.businessContacts]: "Business Contacts",
   [ROUTES.commentCards]: "Comment Cards",
+  [ROUTES.giftCards]: "Gift Cards",
 }
 
 export function getRouteLabel(pathname: string) {

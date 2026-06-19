@@ -46,7 +46,7 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
     items: [
       { id: "business-contacts", label: "Business Contacts", href: ROUTES.businessContacts },
       { id: "comment-cards", label: "Comment Cards", href: ROUTES.commentCards },
-      { id: "gift-cards", label: "Gift Cards" },
+      { id: "gift-cards", label: "Gift Cards", href: ROUTES.giftCards },
       { id: "gift-certificate", label: "Gift Certificate" },
     ],
   },

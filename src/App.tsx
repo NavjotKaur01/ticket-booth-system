@@ -15,6 +15,7 @@ import { UserAccess } from "@/pages/user-access"
 import { Users } from "@/pages/users"
 import { BusinessContacts } from "@/pages/business-contacts"
 import { CommentCards } from "@/pages/comment-cards"
+import { GiftCards } from "@/pages/gift-cards"
 import { userSession } from "@/data/dashboard"
 
 /** Root router — all pages share AppLayout (sidebar + header). */
@@ -26,20 +27,27 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="reservations" element={<Reservations />} />
           <Route path="check-in" element={<CheckIn />} />
-          <Route path="customers" element={<SearchCustomer />} />
-          <Route path="performers" element={<Performers />} />
-          <Route path="marketing-filter" element={<MarketingFilter />} />
-          <Route path="promotions" element={<Promotions />} />
-          <Route path="show-times" element={<ShowTimes />} />
-          <Route
-            path="pre-sale-private-show"
-            element={<PreSalePrivateShow />}
-          />
-          <Route path="system-defaults" element={<SystemDefaults />} />
-          <Route path="user-access" element={<UserAccess />} />
-          <Route path="users" element={<Users />} />
-          <Route path="business-contacts" element={<BusinessContacts />} />
-          <Route path="comment-cards" element={<CommentCards />} />
+
+          <Route path="administrator">
+            <Route path="customers" element={<SearchCustomer />} />
+            <Route path="performers" element={<Performers />} />
+            <Route path="marketing-filter" element={<MarketingFilter />} />
+            <Route path="promotions" element={<Promotions />} />
+            <Route path="show-times" element={<ShowTimes />} />
+            <Route
+              path="pre-sale-private-show"
+              element={<PreSalePrivateShow />}
+            />
+            <Route path="system-defaults" element={<SystemDefaults />} />
+            <Route path="user-access" element={<UserAccess />} />
+            <Route path="users" element={<Users />} />
+          </Route>
+
+          <Route path="ticketbooth">
+            <Route path="business-contacts" element={<BusinessContacts />} />
+            <Route path="comment-cards" element={<CommentCards />} />
+            <Route path="gift-cards" element={<GiftCards />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>
