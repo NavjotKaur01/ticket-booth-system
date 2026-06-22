@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react"
+import { useMemo } from "react"
 
-import { fetchShowDetailsByDate } from "@/lib/api/reservations"
 import { mapShowDetailsToOptions } from "@/lib/map-show-details"
-import type { ShowOption } from "@/types/reservation"
+import { getClubmanErrorMessage } from "@/store/api/baseQuery"
+import { useGetShowDetailsByDateQuery } from "@/store/api/clubmanApi"
 
 type UseShowDetailsByDateResult = {
-  shows: ShowOption[]
+  shows: ReturnType<typeof mapShowDetailsToOptions>
   loading: boolean
   error: string | null
 }
@@ -17,57 +17,22 @@ export function useShowDetailsByDate(
   isCancelledShow: boolean,
   enabled = true
 ): UseShowDetailsByDateResult {
-  const [shows, setShows] = useState<ShowOption[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const shouldSkip =
+    !enabled || !connectionString || !locationId || !showDate
 
-  useEffect(() => {
-    if (!enabled || !connectionString || !locationId || !showDate) {
-      setShows([])
-      setError(null)
-      setLoading(false)
-      return
-    }
+  const { data, isLoading, isFetching, error } = useGetShowDetailsByDateQuery(
+    { connectionString, locationId, showDate, isCancelledShow },
+    { skip: shouldSkip }
+  )
 
-    let cancelled = false
+  const shows = useMemo(
+    () => (shouldSkip ? [] : mapShowDetailsToOptions(data ?? [])),
+    [data, shouldSkip]
+  )
 
-    async function loadShows() {
-      setLoading(true)
-      setError(null)
-
-      try {
-        const data = await fetchShowDetailsByDate({
-          connectionString,
-          locationId,
-          showDate,
-          isCancelledShow,
-        })
-
-        if (!cancelled) {
-          setShows(mapShowDetailsToOptions(data))
-        }
-      } catch (requestError) {
-        if (!cancelled) {
-          setShows([])
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Failed to load shows"
-          )
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
-      }
-    }
-
-    void loadShows()
-
-    return () => {
-      cancelled = true
-    }
-  }, [connectionString, locationId, showDate, isCancelledShow, enabled])
-
-  return { shows, loading, error }
+  return {
+    shows,
+    loading: shouldSkip ? false : isLoading || isFetching,
+    error: error ? getClubmanErrorMessage(error) : null,
+  }
 }

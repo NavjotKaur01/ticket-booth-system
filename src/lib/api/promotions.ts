@@ -1,5 +1,5 @@
-import { administratorApiPath, apiRequest } from "@/lib/api/client"
-import { buildSearchPromotionRequest } from "@/lib/build-search-promotion-request"
+import { dispatchEndpoint } from "@/lib/api/dispatch-endpoint"
+import { clubmanApi } from "@/store/api/clubmanApi"
 import type { ApiPromotionSearchItem } from "@/types/api/promotion-search"
 import type { PromotionFilters } from "@/types/promotion"
 
@@ -14,17 +14,8 @@ export function searchPromotions({
   locationId,
   filters,
 }: SearchPromotionsParams) {
-  return apiRequest<ApiPromotionSearchItem[]>(
-    administratorApiPath("SearchPromotion"),
-    {
-      method: "PUT",
-      body: JSON.stringify(
-        buildSearchPromotionRequest({
-          connectionName,
-          locationId,
-          filters,
-        })
-      ),
-    }
+  return dispatchEndpoint<ApiPromotionSearchItem[], SearchPromotionsParams>(
+    clubmanApi.endpoints.searchPromotions,
+    { connectionName, locationId, filters }
   )
 }

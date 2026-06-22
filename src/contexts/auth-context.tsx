@@ -3,27 +3,19 @@ import {
   useCallback,
   useContext,
   useMemo,
-  useState,
   type ReactNode,
 } from "react"
 
-import { authConfig } from "@/config/auth-config"
-import { accountLogin } from "@/lib/api/auth"
-import { fetchLocations } from "@/lib/api/locations"
-import { buildCredentialsFromLogin } from "@/lib/auth/build-credentials"
-import { applyLocationToCredentials } from "@/lib/auth/apply-location"
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import {
-  getInvalidLoginMessage,
-  isValidLoginCredential,
-} from "@/lib/auth/validate-login"
-import {
-  clearStoredCredentials,
-  getStoredCredentials,
-  saveCredentials,
-} from "@/lib/auth/credentials-storage"
-import { mapCredentialsToUserSession } from "@/lib/auth/map-user-session"
-import type { UserCredentials } from "@/types/auth"
+  selectIsAuthLoading,
+  selectIsAuthenticated,
+  selectUserSession,
+  selectCredentials,
+} from "@/store/selectors/authSelectors"
+import { login, logout, switchLocation as switchLocationAction } from "@/store/slices/authSlice"
 import type { AppLocation } from "@/types/api/locations"
+import type { UserCredentials } from "@/types/auth"
 import type { UserSession } from "@/types/dashboard"
 
 type AuthContextValue = {
@@ -39,87 +31,49 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [credentials, setCredentials] = useState<UserCredentials | null>(() =>
-    getStoredCredentials()
+  const dispatch = useAppDispatch()
+  const credentials = useAppSelector(selectCredentials)
+  const session = useAppSelector(selectUserSession)
+  const isAuthenticated = useAppSelector(selectIsAuthenticated)
+  const isLoading = useAppSelector(selectIsAuthLoading)
+
+  const handleLogin = useCallback(
+    async (userName: string, userPwd: string) => {
+      await dispatch(login({ userName, userPwd })).unwrap()
+    },
+    [dispatch]
   )
-  const [isLoading, setIsLoading] = useState(false)
 
-  const session = useMemo(
-    () => (credentials ? mapCredentialsToUserSession(credentials) : null),
-    [credentials]
+  const handleSwitchLocation = useCallback(
+    (location: AppLocation) => {
+      dispatch(switchLocationAction(location))
+    },
+    [dispatch]
   )
 
-  const login = useCallback(async (userName: string, userPwd: string) => {
-    const trimmedUserName = userName.trim()
-    const connectionString = authConfig.defaultConnectionString
-    const clubSlug = connectionString.toLowerCase()
-
-    if (!trimmedUserName || !userPwd) {
-      throw new Error("Username and password are required.")
-    }
-
-    if (!isValidLoginCredential(trimmedUserName, userPwd)) {
-      throw new Error(getInvalidLoginMessage())
-    }
-
-    setIsLoading(true)
-
-    try {
-      const locations = await fetchLocations(clubSlug)
-      const location = locations[0]
-
-      if (!location) {
-        throw new Error("No location is available for this club.")
-      }
-
-      await accountLogin({
-        ConnectionString: connectionString,
-        UserName: trimmedUserName,
-        UserPwd: userPwd,
-        LocationId: location.id,
-      })
-
-      const nextCredentials = buildCredentialsFromLogin({
-        connectionString,
-        userName: trimmedUserName,
-        location,
-      })
-
-      saveCredentials(nextCredentials)
-      setCredentials(nextCredentials)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  const switchLocation = useCallback((location: AppLocation) => {
-    setCredentials((current) => {
-      if (!current) {
-        return current
-      }
-
-      const nextCredentials = applyLocationToCredentials(current, location)
-      saveCredentials(nextCredentials)
-      return nextCredentials
-    })
-  }, [])
-
-  const logout = useCallback(() => {
-    clearStoredCredentials()
-    setCredentials(null)
-  }, [])
+  const handleLogout = useCallback(() => {
+    dispatch(logout())
+  }, [dispatch])
 
   const value = useMemo(
     () => ({
       credentials,
       session,
-      isAuthenticated: Boolean(credentials),
+      isAuthenticated,
       isLoading,
-      login,
-      switchLocation,
-      logout,
+      login: handleLogin,
+      switchLocation: handleSwitchLocation,
+      logout: handleLogout,
     }),
-    [credentials, session, isLoading, login, switchLocation, logout]
+    [
+      credentials,
+      session,
+      isAuthenticated,
+      isLoading,
+      handleLogin,
+      handleSwitchLocation,
+      handleLogout,
+    ]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

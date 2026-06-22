@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react"
 
-import { searchCustomers } from "@/lib/api/customers"
+import { getClubmanErrorMessage } from "@/store/api/baseQuery"
+import { useSearchCustomersMutation } from "@/store/api/clubmanApi"
 import { mapCustomerSearchResults } from "@/lib/map-customer-search"
 import type { Customer, CustomerSearchFilters } from "@/types/customer"
 
@@ -25,21 +26,18 @@ export function useCustomerSearch({
   enabled = true,
 }: UseCustomerSearchParams): UseCustomerSearchResult {
   const [customers, setCustomers] = useState<Customer[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [hasSearched, setHasSearched] = useState(false)
+  const [searchCustomers, { isLoading, error, reset }] =
+    useSearchCustomersMutation()
 
   const search = useCallback(
     async (filters: CustomerSearchFilters) => {
       if (!enabled || !connectionName || !locationId) {
         setCustomers([])
-        setError("Location is required before searching customers.")
         setHasSearched(true)
         return
       }
 
-      setLoading(true)
-      setError(null)
       setHasSearched(true)
 
       try {
@@ -47,28 +45,36 @@ export function useCustomerSearch({
           connectionName,
           locationId,
           filters,
-        })
+        }).unwrap()
         setCustomers(mapCustomerSearchResults(data))
-      } catch (requestError) {
+      } catch {
         setCustomers([])
-        setError(
-          requestError instanceof Error
-            ? requestError.message
-            : "Failed to search customers"
-        )
-      } finally {
-        setLoading(false)
       }
     },
-    [connectionName, locationId, enabled]
+    [connectionName, locationId, enabled, searchCustomers]
   )
 
   const clear = useCallback(() => {
     setCustomers([])
-    setError(null)
     setHasSearched(false)
-    setLoading(false)
-  }, [])
+    reset()
+  }, [reset])
 
-  return { customers, loading, error, hasSearched, search, clear }
+  const errorMessage =
+    !enabled || !connectionName || !locationId
+      ? hasSearched
+        ? "Location is required before searching customers."
+        : null
+      : error
+        ? getClubmanErrorMessage(error)
+        : null
+
+  return {
+    customers,
+    loading: isLoading,
+    error: errorMessage,
+    hasSearched,
+    search,
+    clear,
+  }
 }

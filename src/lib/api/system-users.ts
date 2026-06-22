@@ -1,4 +1,5 @@
-import { administratorApiPath, apiRequest } from "@/lib/api/client"
+import { dispatchEndpoint } from "@/lib/api/dispatch-endpoint"
+import { clubmanApi } from "@/store/api/clubmanApi"
 import type {
   ApiSystemUser,
   SaveSystemUserRequest,
@@ -18,33 +19,22 @@ export function fetchSystemUsers({
   userId,
   userRight,
 }: FetchSystemUsersParams) {
-  return apiRequest<ApiSystemUser[]>(
-    administratorApiPath(
-      organization,
-      locationId,
-      userId,
-      userRight,
-      "GetAllSystemUsers"
-    ),
-    {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-    }
+  return dispatchEndpoint<ApiSystemUser[], FetchSystemUsersParams>(
+    clubmanApi.endpoints.getSystemUsers,
+    { organization, locationId, userId, userRight }
   )
 }
 
 export function saveSystemUser(request: SaveSystemUserRequest) {
-  return apiRequest<boolean>(administratorApiPath("SaveSystemUser"), {
-    method: "POST",
-    body: JSON.stringify(request),
-  })
+  return dispatchEndpoint<boolean, SaveSystemUserRequest>(
+    clubmanApi.endpoints.saveSystemUser,
+    request
+  )
 }
 
 export function updateSystemUser(request: UpdateSystemUserRequest) {
-  return apiRequest<boolean>(administratorApiPath("UpdateSystemUser"), {
-    method: "PUT",
-    body: JSON.stringify(request),
-  })
+  return dispatchEndpoint<boolean, UpdateSystemUserRequest>(
+    clubmanApi.endpoints.updateSystemUser,
+    request
+  )
 }
