@@ -3,22 +3,39 @@ import { useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
-import { adminUsers } from "@/data/users"
+import { userSession } from "@/data/dashboard"
 import { AddUserDialog } from "@/features/users/add-user-dialog"
 import { AdminUserDataTable } from "@/features/users/admin-user-data-table"
 import { AdminUserFiltersCard } from "@/features/users/admin-user-filters-card"
+import { useLocations } from "@/hooks/use-locations"
+import { useSystemUsers } from "@/hooks/use-system-users"
 import { filterAdminUsers } from "@/lib/filter-admin-users"
 import { EMPTY_ADMIN_USER_FILTERS } from "@/types/user-admin"
 
 export function Users() {
+  const { locations, loading: locationsLoading } = useLocations(
+    userSession.clubSlug
+  )
+  const locationId = locations[0]?.id ?? ""
+
+  const { users, loading: usersLoading, error: usersError } = useSystemUsers({
+    organization: userSession.organization,
+    locationId,
+    userId: userSession.userId,
+    userRight: userSession.userRight,
+    enabled: !locationsLoading && Boolean(locationId),
+  })
+
   const [draftFilters, setDraftFilters] = useState(EMPTY_ADMIN_USER_FILTERS)
   const [appliedFilters, setAppliedFilters] = useState(EMPTY_ADMIN_USER_FILTERS)
   const [addOpen, setAddOpen] = useState(false)
 
   const filteredUsers = useMemo(
-    () => filterAdminUsers(adminUsers, appliedFilters),
-    [appliedFilters]
+    () => filterAdminUsers(users, appliedFilters),
+    [users, appliedFilters]
   )
+
+  const loading = locationsLoading || usersLoading
 
   function updateDraftField(
     field: keyof typeof EMPTY_ADMIN_USER_FILTERS,
@@ -71,7 +88,11 @@ export function Users() {
           </p>
         </div>
 
-        <AdminUserDataTable data={filteredUsers} />
+        {usersError ? (
+          <p className="px-3 py-2 text-sm text-destructive">{usersError}</p>
+        ) : null}
+
+        <AdminUserDataTable data={filteredUsers} loading={loading} />
       </PanelCard>
 
       <AddUserDialog open={addOpen} onOpenChange={setAddOpen} />

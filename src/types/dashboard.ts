@@ -24,6 +24,8 @@ export type UserSession = {
   username: string
   organization: string
   clubSlug: string
+  userId: string
+  userRight: string
   lastLogin: string
 }
 

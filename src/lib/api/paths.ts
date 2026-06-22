@@ -9,3 +9,7 @@ export function reportApiPath(clubSlug: string, ...segments: string[]) {
 export function reservationApiPath(...segments: string[]) {
   return `/clubman/api/Reservation/${segments.join("/")}`
 }
+
+export function administratorApiPath(...segments: string[]) {
+  return `/clubman/api/Adminstrator/${segments.join("/")}`
+}

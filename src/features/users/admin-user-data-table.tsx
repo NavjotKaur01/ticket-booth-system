@@ -4,14 +4,18 @@ import type { AdminUser } from "@/types/user-admin"
 
 type AdminUserDataTableProps = {
   data: AdminUser[]
+  loading?: boolean
 }
 
-export function AdminUserDataTable({ data }: AdminUserDataTableProps) {
+export function AdminUserDataTable({
+  data,
+  loading = false,
+}: AdminUserDataTableProps) {
   return (
     <DataTable
       columns={adminUserColumns}
       data={data}
-      emptyMessage="No record found"
+      emptyMessage={loading ? "Loading users..." : "No record found"}
       entityLabel="records"
       pageSize={10}
     />

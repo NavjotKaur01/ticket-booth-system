@@ -12,6 +12,8 @@ export const userSession: UserSession = {
   username: "admin",
   organization: "Standupmedia",
   clubSlug: "standupmedia",
+  userId: "420f45c0-24e9-4ad1-8679-e19a84c4ea89",
+  userRight: "SEC01",
   lastLogin: "9/21/2016",
 }
 
