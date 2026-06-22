@@ -1,4 +1,4 @@
-import { FileDown, Search } from "lucide-react"
+import { FileDown, Plus, Search } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
@@ -171,6 +171,14 @@ export function Reservations() {
             <Button variant="outline" size="sm" className="gap-1.5">
               <FileDown className="size-3.5" />
               Export
+            </Button>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setAddOpen(true)}
+            >
+              <Plus className="size-3.5" />
+              Add
             </Button>
           </div>
         </div>
