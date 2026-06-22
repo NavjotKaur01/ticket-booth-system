@@ -1,6 +1,5 @@
 import type { ManagerCheckoutShow } from "@/types/manager-checkout-report"
 import { ZERO_PAYMENTS } from "@/types/manager-checkout-report"
-import { userSession } from "@/data/dashboard"
 
 export const reportTypeOptions = [
   { id: "past-customers", label: "Past Customers" },
@@ -12,8 +11,6 @@ export const reportTypeOptions = [
   { id: "sales-by-show", label: "Sales By Show" },
   { id: "sales-by-day", label: "Sales By Day" },
 ]
-
-export const CLUB_NAME = userSession.organization
 
 const eveningShowPayments = {
   ...ZERO_PAYMENTS,

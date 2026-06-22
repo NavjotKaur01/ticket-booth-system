@@ -71,14 +71,12 @@ export type ManagerCheckoutShow = {
 
 export type ReportFilters = {
   reportType: string
-  location: string
   dateFrom: string
   dateTo: string
 }
 
 export const EMPTY_REPORT_FILTERS: ReportFilters = {
   reportType: "manager-checkout",
-  location: "",
   dateFrom: "2026-06-18",
   dateTo: "2026-06-18",
 }

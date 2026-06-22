@@ -2,9 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 
 import { PanelCard } from "@/components/common/panel-card"
-import { userSession } from "@/data/dashboard"
 import {
-  CLUB_NAME,
   managerCheckoutShows,
   reportTypeOptions,
 } from "@/data/manager-checkout-reports"
@@ -12,7 +10,7 @@ import { ManagerCheckoutShowReport } from "@/features/reports/manager-checkout-s
 import { PastCustomerReport } from "@/features/reports/past-customer-report"
 import { ReportFiltersToolbar } from "@/features/reports/report-filters-toolbar"
 import { TodaySalesReport } from "@/features/reports/today-sales-report"
-import { useLocations } from "@/hooks/use-locations"
+import { useAppSession } from "@/hooks/use-app-session"
 import {
   EMPTY_REPORT_FILTERS,
   type ReportFilters,
@@ -42,27 +40,14 @@ function shiftDate(days: number) {
   return isoDateValue(date)
 }
 
-function withDefaultLocation(
-  filters: ReportFilters,
-  locationId: string
-): ReportFilters {
-  if (filters.location || !locationId) {
-    return filters
-  }
-
-  return { ...filters, location: locationId }
-}
-
 function isTodaySalesReport(reportType: string) {
   return reportType === "today-sales"
 }
 
 export function Reports() {
+  const { clubSlug, locationId, locationName } = useAppSession()
   const [searchParams] = useSearchParams()
   const initialReportType = getReportTypeFromParams(searchParams)
-  const { locations, loading: locationsLoading, error: locationsError } =
-    useLocations(userSession.clubSlug)
-  const defaultLocationId = locations[0]?.id ?? ""
 
   const [draftFilters, setDraftFilters] = useState<ReportFilters>({
     ...EMPTY_REPORT_FILTERS,
@@ -78,53 +63,28 @@ export function Reports() {
     const reportType = getReportTypeFromParams(searchParams)
     const paramReport = searchParams.get("report")
 
-    setDraftFilters((current) =>
-      withDefaultLocation({ ...current, reportType }, defaultLocationId)
-    )
+    setDraftFilters((current) => ({ ...current, reportType }))
 
-    if (!paramReport || locationsLoading) {
+    if (!paramReport) {
       return
     }
 
     const today = isoDateValue(new Date())
-    const filters = withDefaultLocation(
-      {
-        ...EMPTY_REPORT_FILTERS,
-        reportType,
-        dateFrom: today,
-        dateTo: today,
-      },
-      defaultLocationId
-    )
+    const filters: ReportFilters = {
+      ...EMPTY_REPORT_FILTERS,
+      reportType,
+      dateFrom: today,
+      dateTo: today,
+    }
 
     setDraftFilters(filters)
 
-    if (isTodaySalesReport(reportType) && !filters.location) {
+    if (isTodaySalesReport(reportType) && !locationId) {
       return
     }
 
     setAppliedFilters(filters)
-  }, [searchParams, defaultLocationId, locationsLoading])
-
-  useEffect(() => {
-    if (locationsLoading || !defaultLocationId) {
-      return
-    }
-
-    setDraftFilters((current) => withDefaultLocation(current, defaultLocationId))
-    setAppliedFilters((current) => {
-      if (!current) {
-        return current
-      }
-
-      const next = withDefaultLocation(current, defaultLocationId)
-      if (isTodaySalesReport(current.reportType) && !next.location) {
-        return null
-      }
-
-      return next
-    })
-  }, [defaultLocationId, locationsLoading])
+  }, [searchParams, locationId])
 
   const selectedReportLabel = useMemo(
     () =>
@@ -138,9 +98,8 @@ export function Reports() {
       return
     }
 
-    const filters = withDefaultLocation(nextFilters, defaultLocationId)
-    if (filters.location) {
-      setAppliedFilters(filters)
+    if (locationId) {
+      setAppliedFilters(nextFilters)
     }
   }
 
@@ -162,14 +121,13 @@ export function Reports() {
   }
 
   function applyFilters(nextFilters: ReportFilters) {
-    const filters = withDefaultLocation(nextFilters, defaultLocationId)
-    setDraftFilters(filters)
+    setDraftFilters(nextFilters)
 
-    if (isTodaySalesReport(filters.reportType) && !filters.location) {
+    if (isTodaySalesReport(nextFilters.reportType) && !locationId) {
       return
     }
 
-    setAppliedFilters(filters)
+    setAppliedFilters(nextFilters)
   }
 
   function handleGenerate() {
@@ -195,9 +153,6 @@ export function Reports() {
 
   const toolbarProps = {
     filters: draftFilters,
-    locationOptions: locations,
-    locationsLoading,
-    locationsError,
     hideDateFilters: isTodaySalesView,
     onFilterChange: updateDraftField,
     onGenerate: handleGenerate,
@@ -217,11 +172,12 @@ export function Reports() {
   const showTodaySales =
     appliedFilters?.reportType === "today-sales" &&
     appliedFilters != null &&
-    Boolean(appliedFilters.location)
+    Boolean(locationId)
 
   const pendingTodaySales =
     getReportTypeFromParams(searchParams) === "today-sales" &&
-    (locationsLoading || (!appliedFilters && !locationsError))
+    !appliedFilters &&
+    !locationId
 
   return (
     <div className="space-y-3">
@@ -235,18 +191,15 @@ export function Reports() {
             <ReportFiltersToolbar {...toolbarProps} />
             <div className="px-4 py-10 text-center">
               <p className="text-sm font-medium text-foreground">
-                Loading locations...
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Report data will load after locations are ready.
+                Select a location from the header to view today&apos;s sales.
               </p>
             </div>
           </PanelCard>
         ) : showTodaySales ? (
           <TodaySalesReport
-            clubSlug={userSession.clubSlug}
-            location={appliedFilters.location}
-            locationsReady={!locationsLoading}
+            clubSlug={clubSlug}
+            location={locationId}
+            locationsReady={Boolean(locationId)}
             toolbar={<ReportFiltersToolbar {...toolbarProps} embedded />}
           />
         ) : (
@@ -254,7 +207,7 @@ export function Reports() {
             <ReportFiltersToolbar {...toolbarProps} />
             <div className="px-4 py-10 text-center">
               <p className="text-sm font-medium text-foreground">
-                Select a location to view today&apos;s sales.
+                Select a location from the header to view today&apos;s sales.
               </p>
             </div>
           </PanelCard>
@@ -311,7 +264,10 @@ export function Reports() {
 
               {managerCheckoutShows.map((show) => (
                 <PanelCard key={show.id} className="p-3 sm:p-4">
-                  <ManagerCheckoutShowReport clubName={CLUB_NAME} show={show} />
+                  <ManagerCheckoutShowReport
+                    clubName={locationName}
+                    show={show}
+                  />
                 </PanelCard>
               ))}
             </div>

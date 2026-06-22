@@ -22,6 +22,7 @@ export const ROUTES = {
   myAccount: "/my-account",
   ticketDefault: "/my-account/ticket-default",
   changePassword: "/my-account/change-password",
+  login: "/login",
 } as const
 
 export function reportViewerUrl(reportType?: string) {
@@ -53,6 +54,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.transactions]: "Transactions",
   [ROUTES.ticketDefault]: "Ticket Default",
   [ROUTES.changePassword]: "Change Password",
+  [ROUTES.login]: "Login",
 }
 
 export function getRouteLabel(pathname: string) {

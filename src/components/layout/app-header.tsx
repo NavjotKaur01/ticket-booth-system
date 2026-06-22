@@ -1,6 +1,7 @@
 import { Menu } from "lucide-react"
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 
+import { LocationSelect } from "@/components/layout/location-select"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
@@ -21,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ROUTES, getRouteLabel } from "@/constants/routes"
+import { useAuth } from "@/contexts/auth-context"
 import type { UserSession } from "@/types/dashboard"
 
 type AppHeaderProps = {
@@ -34,7 +36,14 @@ function getInitials(username: string) {
 
 export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const { logout } = useAuth()
   const pageLabel = getRouteLabel(pathname)
+
+  function handleSignOut() {
+    logout()
+    navigate(ROUTES.login, { replace: true })
+  }
 
   return (
     <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-3 border-b border-border/60 bg-background px-3 lg:px-4">
@@ -66,15 +75,9 @@ export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <p className="hidden flex-1 text-center text-sm font-semibold text-foreground md:block">
-        {session.organization}
-      </p>
-
-      <div className="ml-auto flex items-center gap-1 sm:gap-2">
+      <div className="ml-auto flex items-center gap-2">
+        <LocationSelect />
         <ThemeToggle />
-        <p className="hidden text-sm text-muted-foreground sm:block">
-          Welcome ({session.username})
-        </p>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -90,14 +93,14 @@ export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
             <DropdownMenuLabel>
               <p>{session.username}</p>
               <p className="text-xs font-normal text-muted-foreground">
-                {session.organization}
+                {session.locationName || session.organization}
               </p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>My Account</DropdownMenuItem>
             <DropdownMenuItem>System Defaults</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Sign out</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

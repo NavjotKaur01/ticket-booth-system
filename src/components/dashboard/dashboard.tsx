@@ -1,8 +1,11 @@
 import { StatsSummary } from "@/components/dashboard/stats-summary"
 import { NewsGrid } from "@/components/dashboard/news-grid"
-import { newsItems, statSummaries, userSession } from "@/data/dashboard"
+import { useAuth } from "@/contexts/auth-context"
+import { newsItems, statSummaries } from "@/data/dashboard"
 
 export function Dashboard() {
+  const { session } = useAuth()
+
   return (
     <div className="space-y-4">
       <div>
@@ -10,7 +13,7 @@ export function Dashboard() {
           Dashboard
         </h1>
         <p className="text-xs text-muted-foreground">
-          Ticket sales overview for {userSession.organization}
+          Ticket sales overview for {session?.locationName || session?.organization}
         </p>
       </div>
 

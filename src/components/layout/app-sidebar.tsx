@@ -248,7 +248,7 @@ export function AppSidebar({
           <div className="ml-3 min-w-0">
             <p className="truncate text-sm font-bold text-foreground">ClubMan</p>
             <p className="truncate text-xs text-muted-foreground">
-              {session.organization}
+              {session.locationName || session.organization}
             </p>
           </div>
         )}

@@ -3,12 +3,11 @@ import { useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
-import { userSession } from "@/data/dashboard"
 import { customers } from "@/data/customers"
 import { AddCustomerDialog } from "@/features/customers/add-customer-dialog"
 import { CustomerDataTable } from "@/features/customers/customer-data-table"
 import { CustomerSearchToolbar } from "@/features/customers/customer-search-toolbar"
-import { useLocations } from "@/hooks/use-locations"
+import { useAppSession } from "@/hooks/use-app-session"
 import { customerFormToSearchFilters } from "@/lib/build-save-customer-request"
 import { filterCustomers } from "@/lib/filter-customers"
 import type { CustomerSearchFilters } from "@/types/customer"
@@ -24,8 +23,7 @@ const EMPTY_FILTERS: CustomerSearchFilters = {
 }
 
 export function CommentCards() {
-  const { locations } = useLocations(userSession.clubSlug)
-  const locationId = locations[0]?.id ?? ""
+  const { connectionName, locationId, username } = useAppSession()
 
   const [draftFilters, setDraftFilters] =
     useState<CustomerSearchFilters>(EMPTY_FILTERS)
@@ -110,9 +108,9 @@ export function CommentCards() {
       <AddCustomerDialog
         open={addOpen}
         onOpenChange={setAddOpen}
-        connectionName={userSession.organization}
+        connectionName={connectionName}
         locationId={locationId}
-        lastUpdateId={userSession.username}
+        lastUpdateId={username}
         onSaved={handleCustomerCreated}
       />
     </div>

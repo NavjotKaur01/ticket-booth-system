@@ -103,7 +103,7 @@ export function AppLayout({ session }: AppLayoutProps) {
           </div>
         </main>
 
-        <AppFooter organization={session.organization} />
+        <AppFooter locationName={session.locationName || session.organization} />
       </div>
     </div>
   )
