@@ -9,7 +9,9 @@ import { CustomerDataTable } from "@/features/customers/customer-data-table"
 import { CustomerFiltersCard } from "@/features/customers/customer-filters-card"
 import { useCustomerSearch } from "@/hooks/use-customer-search"
 import { useLocations } from "@/hooks/use-locations"
+import { customerFormToSearchFilters } from "@/lib/build-save-customer-request"
 import type { CustomerSearchFilters } from "@/types/customer"
+import type { CustomerFormValues } from "@/types/customer-form"
 
 const EMPTY_FILTERS: CustomerSearchFilters = {
   lastName: "",
@@ -50,6 +52,12 @@ export function SearchCustomer() {
   function handleClear() {
     setDraftFilters(EMPTY_FILTERS)
     clear()
+  }
+
+  async function handleCustomerCreated(form: CustomerFormValues) {
+    const filters = customerFormToSearchFilters(form)
+    setDraftFilters(filters)
+    await search(filters)
   }
 
   const tableLoading = locationsLoading || loading
@@ -113,7 +121,14 @@ export function SearchCustomer() {
         />
       </PanelCard>
 
-      <AddCustomerDialog open={addOpen} onOpenChange={setAddOpen} />
+      <AddCustomerDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        connectionName={userSession.organization}
+        locationId={locationId}
+        lastUpdateId={userSession.username}
+        onSaved={handleCustomerCreated}
+      />
     </div>
   )
 }

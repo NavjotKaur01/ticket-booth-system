@@ -3,12 +3,16 @@ import { useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
+import { userSession } from "@/data/dashboard"
 import { customers } from "@/data/customers"
 import { AddCustomerDialog } from "@/features/customers/add-customer-dialog"
 import { CustomerDataTable } from "@/features/customers/customer-data-table"
 import { CustomerSearchToolbar } from "@/features/customers/customer-search-toolbar"
+import { useLocations } from "@/hooks/use-locations"
+import { customerFormToSearchFilters } from "@/lib/build-save-customer-request"
 import { filterCustomers } from "@/lib/filter-customers"
 import type { CustomerSearchFilters } from "@/types/customer"
+import type { CustomerFormValues } from "@/types/customer-form"
 
 const EMPTY_FILTERS: CustomerSearchFilters = {
   lastName: "",
@@ -20,6 +24,9 @@ const EMPTY_FILTERS: CustomerSearchFilters = {
 }
 
 export function CommentCards() {
+  const { locations } = useLocations(userSession.clubSlug)
+  const locationId = locations[0]?.id ?? ""
+
   const [draftFilters, setDraftFilters] =
     useState<CustomerSearchFilters>(EMPTY_FILTERS)
   const [appliedFilters, setAppliedFilters] =
@@ -45,6 +52,12 @@ export function CommentCards() {
   function handleClear() {
     setDraftFilters(EMPTY_FILTERS)
     setAppliedFilters(EMPTY_FILTERS)
+  }
+
+  function handleCustomerCreated(form: CustomerFormValues) {
+    const filters = customerFormToSearchFilters(form)
+    setDraftFilters(filters)
+    setAppliedFilters(filters)
   }
 
   return (
@@ -94,7 +107,14 @@ export function CommentCards() {
         <CustomerDataTable data={filteredCustomers} />
       </PanelCard>
 
-      <AddCustomerDialog open={addOpen} onOpenChange={setAddOpen} />
+      <AddCustomerDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        connectionName={userSession.organization}
+        locationId={locationId}
+        lastUpdateId={userSession.username}
+        onSaved={handleCustomerCreated}
+      />
     </div>
   )
 }

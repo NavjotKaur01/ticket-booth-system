@@ -29,6 +29,7 @@ import {
   dobMonthOptions,
   usStateOptions,
 } from "@/data/customer-form-options"
+import { saveCustomer } from "@/lib/api/customers"
 import {
   EMPTY_CUSTOMER_FORM,
   type CustomerFormValues,
@@ -37,17 +38,29 @@ import {
 type AddCustomerDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  connectionName: string
+  locationId: string
+  lastUpdateId: string
+  onSaved?: (form: CustomerFormValues) => Promise<void> | void
 }
 
 export function AddCustomerDialog({
   open,
   onOpenChange,
+  connectionName,
+  locationId,
+  lastUpdateId,
+  onSaved,
 }: AddCustomerDialogProps) {
   const [form, setForm] = useState<CustomerFormValues>(EMPTY_CUSTOMER_FORM)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) {
       setForm(EMPTY_CUSTOMER_FORM)
+      setSaving(false)
+      setError(null)
     }
   }, [open])
 
@@ -67,10 +80,52 @@ export function AddCustomerDialog({
 
   function handleClear() {
     setForm(EMPTY_CUSTOMER_FORM)
+    setError(null)
   }
 
-  function handleSave() {
-    onOpenChange(false)
+  function validateForm() {
+    if (!form.lastName.trim()) {
+      return "Last name is required."
+    }
+    if (!form.firstName.trim()) {
+      return "First name is required."
+    }
+    if (!locationId) {
+      return "Location is required before creating a customer."
+    }
+
+    return null
+  }
+
+  async function handleSave() {
+    const validationError = validateForm()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+
+    try {
+      await saveCustomer({
+        connectionName,
+        locationId,
+        lastUpdateId,
+        form,
+      })
+
+      await onSaved?.(form)
+      onOpenChange(false)
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Failed to save customer"
+      )
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -86,6 +141,10 @@ export function AddCustomerDialog({
         </DialogHeader>
 
         <div className="overflow-y-auto px-4 py-3">
+          {error ? (
+            <p className="mb-3 text-sm text-destructive">{error}</p>
+          ) : null}
+
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField label="Last Name" htmlFor="add-customer-last-name">
               <Input
@@ -309,19 +368,29 @@ export function AddCustomerDialog({
         </div>
 
         <DialogFooter className="shrink-0 border-t px-4 py-2 sm:justify-between">
-          <Button type="button" variant="outline" onClick={handleClear}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={saving}
+            onClick={handleClear}
+          >
             Clear
           </Button>
           <div className="flex flex-col-reverse gap-2 sm:flex-row">
             <Button
               type="button"
               variant="outline"
+              disabled={saving}
               onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
-            <Button type="button" onClick={handleSave}>
-              Save
+            <Button
+              type="button"
+              disabled={saving}
+              onClick={() => void handleSave()}
+            >
+              {saving ? "Saving..." : "Save"}
             </Button>
           </div>
         </DialogFooter>
