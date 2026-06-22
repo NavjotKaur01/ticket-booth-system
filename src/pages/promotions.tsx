@@ -3,11 +3,10 @@ import { useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
-import { userSession } from "@/data/dashboard"
 import { AddPromotionDialog } from "@/features/promotions/add-promotion-dialog"
 import { PromotionDataTable } from "@/features/promotions/promotion-data-table"
 import { PromotionFiltersCard } from "@/features/promotions/promotion-filters-card"
-import { useLocations } from "@/hooks/use-locations"
+import { useAppSession } from "@/hooks/use-app-session"
 import { usePromotionSearch } from "@/hooks/use-promotion-search"
 import {
   DEFAULT_PROMOTION_FILTERS,
@@ -15,16 +14,13 @@ import {
 } from "@/types/promotion"
 
 export function Promotions() {
-  const { locations, loading: locationsLoading } = useLocations(
-    userSession.clubSlug
-  )
-  const locationId = locations[0]?.id ?? ""
+  const { connectionName, locationId, isReady } = useAppSession()
 
   const { promotions, loading, error, hasSearched, search, clear } =
     usePromotionSearch({
-      connectionName: userSession.organization,
+      connectionName,
       locationId,
-      enabled: !locationsLoading && Boolean(locationId),
+      enabled: isReady,
     })
 
   const [draftFilters, setDraftFilters] = useState<PromotionFilters>(
@@ -48,7 +44,7 @@ export function Promotions() {
     clear()
   }
 
-  const tableLoading = locationsLoading || loading
+  const tableLoading = loading
   const emptyMessage = tableLoading
     ? "Searching promotions..."
     : hasSearched

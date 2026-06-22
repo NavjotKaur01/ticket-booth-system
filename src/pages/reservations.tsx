@@ -5,12 +5,11 @@ import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { userSession } from "@/data/dashboard"
 import { reservationCounts } from "@/data/reservation"
 import { AddReservationDialog } from "@/features/reservations/add-reservation-dialog"
 import { ReservationDataTable } from "@/features/reservations/reservation-data-table"
 import { ReservationFiltersCard } from "@/features/reservations/reservation-filters-card"
-import { useLocations } from "@/hooks/use-locations"
+import { useAppSession } from "@/hooks/use-app-session"
 import { useReservationData } from "@/hooks/use-reservation-data"
 import { useShowDetailsByDate } from "@/hooks/use-show-details-by-date"
 import { filterReservations } from "@/lib/filter-reservations"
@@ -25,10 +24,7 @@ function todayDateValue() {
 
 /** Reservations list with show filters and add-reservation workflow. */
 export function Reservations() {
-  const { locations, loading: locationsLoading } = useLocations(
-    userSession.clubSlug
-  )
-  const locationId = locations[0]?.id ?? ""
+  const { connectionName, locationId, isReady } = useAppSession()
 
   const [showDate, setShowDate] = useState(todayDateValue)
   const [showTime, setShowTime] = useState("")
@@ -41,11 +37,11 @@ export function Reservations() {
 
   const { shows, loading: showsLoading, error: showsError } =
     useShowDetailsByDate(
-      userSession.organization,
+      connectionName,
       locationId,
       showDate,
       cancelledShow,
-      !locationsLoading && Boolean(locationId)
+      isReady
     )
 
   const {
@@ -53,7 +49,7 @@ export function Reservations() {
     loading: reservationsLoading,
     error: reservationsError,
   } = useReservationData(
-    userSession.organization,
+    connectionName,
     showTime,
     showCancelled,
     Boolean(showTime)
@@ -126,7 +122,7 @@ export function Reservations() {
         refreshValue={refreshValue}
         onRefreshValueChange={setRefreshValue}
         shows={shows}
-        showsLoading={showsLoading || locationsLoading}
+        showsLoading={showsLoading}
         showsError={showsError}
         statItems={statItems}
       />

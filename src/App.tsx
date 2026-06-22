@@ -1,7 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom"
 
+import { ProtectedLayout } from "@/components/auth/protected-layout"
 import { Dashboard } from "@/components/dashboard/dashboard"
-import { AppLayout } from "@/components/layout/app-layout"
 import { MarketingFilter } from "@/pages/marketing-filter"
 import { Performers } from "@/pages/performers"
 import { PreSalePrivateShow } from "@/pages/pre-sale-private-show"
@@ -22,13 +22,16 @@ import { TicketDefault } from "@/pages/ticket-default"
 import { ChangePassword } from "@/pages/change-password"
 import { userSession } from "@/data/dashboard"
 import EventCalendar from "./components/calendar/EventCalendar"
+import { Login } from "@/pages/login"
 
-/** Root router — all pages share AppLayout (sidebar + header). */
+/** Root router — login is public; app routes require auth. */
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<AppLayout session={userSession} />}>
+        <Route path="login" element={<Login />} />
+
+        <Route element={<ProtectedLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="reservations" element={<Reservations />} />
           <Route path="check-in" element={<CheckIn />} />

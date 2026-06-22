@@ -3,30 +3,33 @@ import { useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
-import { userSession } from "@/data/dashboard"
 import { AddUserDialog } from "@/features/users/add-user-dialog"
 import { AdminUserDataTable } from "@/features/users/admin-user-data-table"
 import { AdminUserFiltersCard } from "@/features/users/admin-user-filters-card"
 import { EditUserDialog } from "@/features/users/edit-user-dialog"
-import { useLocations } from "@/hooks/use-locations"
+import { useAppSession } from "@/hooks/use-app-session"
 import { useSystemUsers } from "@/hooks/use-system-users"
 import { syncFiltersAfterUserEdit } from "@/lib/admin-user-form"
 import { filterAdminUsers } from "@/lib/filter-admin-users"
 import { EMPTY_ADMIN_USER_FILTERS, type AdminUser } from "@/types/user-admin"
 
 export function Users() {
-  const { locations, loading: locationsLoading } = useLocations(
-    userSession.clubSlug
-  )
-  const locationId = locations[0]?.id ?? ""
+  const {
+    connectionName,
+    locationId,
+    userId,
+    userRight,
+    username,
+    isReady,
+  } = useAppSession()
 
   const { users, loading: usersLoading, error: usersError, refresh, upsertUser } =
     useSystemUsers({
-      organization: userSession.organization,
+      organization: connectionName,
       locationId,
-      userId: userSession.userId,
-      userRight: userSession.userRight,
-      enabled: !locationsLoading && Boolean(locationId),
+      userId,
+      userRight,
+      enabled: isReady,
     })
 
   const [draftFilters, setDraftFilters] = useState(EMPTY_ADMIN_USER_FILTERS)
@@ -39,7 +42,7 @@ export function Users() {
     [users, appliedFilters]
   )
 
-  const loading = locationsLoading || usersLoading
+  const loading = usersLoading
 
   function updateDraftField(
     field: keyof typeof EMPTY_ADMIN_USER_FILTERS,
@@ -125,9 +128,9 @@ export function Users() {
       <AddUserDialog
         open={addOpen}
         onOpenChange={setAddOpen}
-        connectionName={userSession.organization}
+        connectionName={connectionName}
         locationId={locationId}
-        lastUpdateId={userSession.username}
+        lastUpdateId={username}
         onSaved={handleUserCreated}
       />
 
@@ -139,9 +142,9 @@ export function Users() {
           }
         }}
         user={editingUser}
-        connectionName={userSession.organization}
+        connectionName={connectionName}
         locationId={locationId}
-        lastUpdateId={userSession.username}
+        lastUpdateId={username}
         onSaved={handleUserUpdated}
       />
     </div>

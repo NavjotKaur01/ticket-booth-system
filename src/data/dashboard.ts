@@ -3,19 +3,9 @@ import type {
   QuickLink,
   ServiceFees,
   StatSummary,
-  UserSession,
 } from "@/types/dashboard"
 import { dashboardNewsImage } from "@/constants/assets"
 import { ROUTES, reportViewerUrl } from "@/constants/routes"
-
-export const userSession: UserSession = {
-  username: "admin",
-  organization: "Standupmedia",
-  clubSlug: "standupmedia",
-  userId: "420f45c0-24e9-4ad1-8679-e19a84c4ea89",
-  userRight: "SEC01",
-  lastLogin: "9/21/2016",
-}
 
 export const statSummaries: StatSummary[] = [
   {

@@ -10,4 +10,13 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      "/clubman": {
+        target: "https://testapi.standupmedia.mobi",
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
 });

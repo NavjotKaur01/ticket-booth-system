@@ -1,10 +1,10 @@
 import { Ticket } from "lucide-react"
 
 type AppFooterProps = {
-  organization: string
+  locationName: string
 }
 
-export function AppFooter({ organization }: AppFooterProps) {
+export function AppFooter({ locationName }: AppFooterProps) {
   const today = new Date().toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
@@ -23,7 +23,7 @@ export function AppFooter({ organization }: AppFooterProps) {
       </span>
       <div className="flex w-full items-center justify-end gap-3 sm:w-auto">
         <span>{today}</span>
-        <span className="font-semibold text-foreground">{organization}</span>
+        <span className="font-semibold text-foreground">{locationName}</span>
       </div>
     </footer>
   )

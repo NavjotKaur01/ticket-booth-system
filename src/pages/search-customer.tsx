@@ -3,12 +3,11 @@ import { useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
-import { userSession } from "@/data/dashboard"
 import { AddCustomerDialog } from "@/features/customers/add-customer-dialog"
 import { CustomerDataTable } from "@/features/customers/customer-data-table"
 import { CustomerFiltersCard } from "@/features/customers/customer-filters-card"
+import { useAppSession } from "@/hooks/use-app-session"
 import { useCustomerSearch } from "@/hooks/use-customer-search"
-import { useLocations } from "@/hooks/use-locations"
 import { customerFormToSearchFilters } from "@/lib/build-save-customer-request"
 import type { CustomerSearchFilters } from "@/types/customer"
 import type { CustomerFormValues } from "@/types/customer-form"
@@ -23,15 +22,12 @@ const EMPTY_FILTERS: CustomerSearchFilters = {
 }
 
 export function SearchCustomer() {
-  const { locations, loading: locationsLoading } = useLocations(
-    userSession.clubSlug
-  )
-  const locationId = locations[0]?.id ?? ""
+  const { connectionName, locationId, username, isReady } = useAppSession()
 
   const { customers, loading, error, hasSearched, search, clear } = useCustomerSearch({
-    connectionName: userSession.organization,
+    connectionName,
     locationId,
-    enabled: !locationsLoading && Boolean(locationId),
+    enabled: isReady,
   })
 
   const [draftFilters, setDraftFilters] =
@@ -60,7 +56,7 @@ export function SearchCustomer() {
     await search(filters)
   }
 
-  const tableLoading = locationsLoading || loading
+  const tableLoading = loading
   const emptyMessage = tableLoading
     ? "Searching customers..."
     : hasSearched
@@ -124,9 +120,9 @@ export function SearchCustomer() {
       <AddCustomerDialog
         open={addOpen}
         onOpenChange={setAddOpen}
-        connectionName={userSession.organization}
+        connectionName={connectionName}
         locationId={locationId}
-        lastUpdateId={userSession.username}
+        lastUpdateId={username}
         onSaved={handleCustomerCreated}
       />
     </div>
