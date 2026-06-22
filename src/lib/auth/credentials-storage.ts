@@ -1,13 +1,18 @@
 import { authConfig } from "@/config/auth-config"
+import {
+  clearLegacyAuthCookies,
+  deleteCookie,
+  getCookie,
+  setCookie,
+} from "@/lib/auth/cookie-utils"
 import { mapLoginResponseToCredentials } from "@/lib/auth/map-login-credentials"
+import { enrichCredentialsWithLocationCookie } from "@/lib/auth/resolve-session-location"
 import type {
   ApiUserCredentials,
   StoredLoginCookie,
 } from "@/types/api/account-login"
 import type { AppLocation } from "@/types/api/locations"
 import type { UserCredentials } from "@/types/auth"
-
-const EMPTY_GUID = "00000000-0000-0000-0000-000000000000"
 
 function isStoredLoginCookie(value: unknown): value is StoredLoginCookie {
   if (!value || typeof value !== "object") {
@@ -34,41 +39,23 @@ function isLegacyUserCredentials(value: unknown): value is UserCredentials {
   )
 }
 
-function setCookie(name: string, value: string) {
-  const maxAgeSeconds = authConfig.credentialsCookieMaxAgeDays * 24 * 60 * 60
-  const encoded = encodeURIComponent(value)
-
-  document.cookie = `${name}=${encoded}; path=/; max-age=${maxAgeSeconds}; SameSite=Lax`
-}
-
-function getCookie(name: string): string | null {
-  const prefix = `${name}=`
-  const cookies = document.cookie.split(";")
-
-  for (const cookie of cookies) {
-    const trimmed = cookie.trim()
-    if (trimmed.startsWith(prefix)) {
-      return decodeURIComponent(trimmed.slice(prefix.length))
+function readCookieByNames(names: string[]): string | null {
+  for (const name of names) {
+    const value = getCookie(name)
+    if (value) {
+      return value
     }
   }
 
   return null
 }
 
-function deleteCookie(name: string) {
-  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`
-}
-
-function clearLegacyLocalStorage() {
-  localStorage.removeItem(authConfig.legacyCredentialsStorageKey)
-}
-
 function cookiePayloadToCredentials(payload: StoredLoginCookie): UserCredentials {
   const location: AppLocation = {
     id: payload.login.LocationID ?? "",
-    label: payload.locationName,
+    label: payload.locationShortName || payload.locationName,
     name: payload.locationName,
-    shortName: payload.locationName,
+    shortName: payload.locationShortName || payload.locationName,
     dbName: payload.locationDbName,
     city: payload.locationCity,
   }
@@ -94,24 +81,66 @@ function readLegacyLocalStorage(): UserCredentials | null {
   }
 }
 
+function migrateLegacyUserCookie(raw: string): StoredLoginCookie | null {
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (isStoredLoginCookie(parsed)) {
+      return parsed
+    }
+
+    if (isLegacyUserCredentials(parsed)) {
+      return {
+        login: {
+          UserID: parsed.UserID,
+          LocationID: parsed.LocationID ?? undefined,
+          UserName: parsed.UserName,
+          FirstName: parsed.FirstName,
+          LastName: parsed.LastName,
+          UserRights: parsed.UserRights,
+          Email: parsed.Email,
+        },
+        connectionName: parsed.ConnectionName,
+        locationName: parsed.LocationName,
+        locationShortName: parsed.LocationName,
+        locationDbName: parsed.DBName,
+        locationCity: parsed.ClubCityName,
+      }
+    }
+  } catch {
+    return null
+  }
+
+  return null
+}
+
 export function getStoredLoginCookie(): StoredLoginCookie | null {
-  const raw = getCookie(authConfig.credentialsCookieName)
+  const raw = readCookieByNames([
+    authConfig.userDataCookieName,
+    authConfig.legacyUserDataCookieName,
+  ])
+
   if (!raw) {
     return null
   }
 
   try {
     const parsed: unknown = JSON.parse(raw)
-    return isStoredLoginCookie(parsed) ? parsed : null
+    if (isStoredLoginCookie(parsed)) {
+      return parsed
+    }
   } catch {
-    return null
+    return migrateLegacyUserCookie(raw)
   }
+
+  return migrateLegacyUserCookie(raw)
 }
 
 export function getStoredCredentials(): UserCredentials | null {
   const stored = getStoredLoginCookie()
   if (stored) {
-    return cookiePayloadToCredentials(stored)
+    return enrichCredentialsWithLocationCookie(
+      cookiePayloadToCredentials(stored)
+    )
   }
 
   const fromLegacy = readLegacyLocalStorage()
@@ -161,15 +190,17 @@ export function saveLoginSession(
   const payload: StoredLoginCookie = {
     login,
     connectionName: context.connectionString,
-    locationName: context.location.label,
+    locationName: context.location.name || context.location.label,
+    locationShortName: context.location.shortName || context.location.label,
     locationDbName: context.location.dbName,
     locationCity: context.location.city,
   }
 
-  setCookie(authConfig.credentialsCookieName, JSON.stringify(payload))
-  clearLegacyLocalStorage()
+  setCookie(authConfig.userDataCookieName, JSON.stringify(payload))
+  deleteCookie(authConfig.legacyUserDataCookieName)
+  clearLegacyAuthCookies()
 
-  if (!getCookie(authConfig.credentialsCookieName)) {
+  if (!getCookie(authConfig.userDataCookieName)) {
     throw new Error("Failed to save login session to cookies.")
   }
 
@@ -177,10 +208,11 @@ export function saveLoginSession(
 }
 
 export function clearStoredCredentials() {
-  deleteCookie(authConfig.credentialsCookieName)
-  clearLegacyLocalStorage()
+  deleteCookie(authConfig.userDataCookieName)
+  deleteCookie(authConfig.legacyUserDataCookieName)
+  clearLegacyAuthCookies()
 }
 
 export function createEmptyGuid() {
-  return EMPTY_GUID
+  return "00000000-0000-0000-0000-000000000000"
 }

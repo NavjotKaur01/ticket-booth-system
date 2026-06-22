@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import type { RowSelectionState } from "@tanstack/react-table"
 
 import { PanelCard } from "@/components/common/panel-card"
@@ -11,29 +11,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  performerLocations,
-  performers as initialPerformers,
-} from "@/data/performers"
+import { performers as initialPerformers } from "@/data/performers"
 import { AddPerformerDialog } from "@/features/performers/add-performer-dialog"
 import { PerformerDataTable } from "@/features/performers/performer-data-table"
 import { PerformerFiltersCard } from "@/features/performers/performer-filters-card"
+import { useAppSession } from "@/hooks/use-app-session"
+import { useLocations } from "@/hooks/use-locations"
 import { filterPerformers } from "@/lib/filter-performers"
 import type { Performer, PerformerFilters } from "@/types/performer"
 
-const DEFAULT_FILTERS: PerformerFilters = {
-  firstName: "",
-  lastName: "",
-  stageName: "",
-  locationId: "standupmedia",
-  showInactive: false,
-}
-
 export function Performers() {
+  const { clubSlug, locationId } = useAppSession()
+  const { locations } = useLocations(clubSlug)
   const [rows, setRows] = useState<Performer[]>(initialPerformers)
-  const [filters, setFilters] = useState<PerformerFilters>(DEFAULT_FILTERS)
+  const [filters, setFilters] = useState<PerformerFilters>({
+    firstName: "",
+    lastName: "",
+    stageName: "",
+    locationId: "",
+    showInactive: false,
+  })
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [addOpen, setAddOpen] = useState(false)
+
+  useEffect(() => {
+    if (locationId) {
+      setFilters((current) =>
+        current.locationId === locationId
+          ? current
+          : { ...current, locationId }
+      )
+    }
+  }, [locationId])
 
   const filteredPerformers = useMemo(
     () => filterPerformers(rows, filters),
@@ -81,9 +90,9 @@ export function Performers() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {performerLocations.map((location) => (
+              {locations.map((location) => (
                 <SelectItem key={location.id} value={location.id}>
-                  {location.label}
+                  {location.shortName || location.label}
                 </SelectItem>
               ))}
             </SelectContent>

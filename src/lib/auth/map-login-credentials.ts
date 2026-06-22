@@ -53,7 +53,7 @@ export function mapLoginResponseToCredentials(
     LastName: normalizeText(data.LastName),
     UserRights: normalizeText(data.UserRights),
     Email: normalizeText(data.Email),
-    LocationName: location.label,
+    LocationName: location.shortName || location.label,
     DBName: location.dbName || connectionString,
     TempID: crypto.randomUUID(),
     ConnectionType: 0,

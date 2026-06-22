@@ -1,7 +1,9 @@
 export const authConfig = {
   defaultConnectionString: "Standupmedia",
-  credentialsCookieName: "clubman_user_credentials",
-  /** Legacy key — cleared on logout so old sessions do not linger. */
+  userDataCookieName: "user_data",
+  locationsCookieName: "locations",
+  /** Cleared on logout / migration. */
+  legacyUserDataCookieName: "clubman_user_credentials",
   legacyCredentialsStorageKey: "clubman_user_credentials",
   credentialsCookieMaxAgeDays: 7,
 } as const

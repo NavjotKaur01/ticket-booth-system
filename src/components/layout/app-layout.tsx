@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/layout/app-sidebar"
 import { AdjustFeesDialog } from "@/features/administrator/adjust-fees-dialog"
 import { PaymentHistoryDialog } from "@/features/search/payment-history-dialog"
 import { SearchReservationDialog } from "@/features/search/search-reservation-dialog"
+import { useAppSession } from "@/hooks/use-app-session"
 import { cn } from "@/lib/utils"
 import type { NavSubItemAction } from "@/types/navigation"
 import type { UserSession } from "@/types/dashboard"
@@ -39,6 +40,7 @@ function handleSubMenuAction(
 }
 
 export function AppLayout({ session }: AppLayoutProps) {
+  const { locSName } = useAppSession()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [adjustFeesOpen, setAdjustFeesOpen] = useState(false)
@@ -103,7 +105,7 @@ export function AppLayout({ session }: AppLayoutProps) {
           </div>
         </main>
 
-        <AppFooter locationName={session.locationName || session.organization} />
+        <AppFooter locationName={locSName || session.locationName} />
       </div>
     </div>
   )

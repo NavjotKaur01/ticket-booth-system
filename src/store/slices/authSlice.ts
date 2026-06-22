@@ -12,7 +12,10 @@ import {
   getStoredLoginCookie,
   saveLoginSession,
 } from "@/lib/auth/credentials-storage"
+import { clearStoredLocations } from "@/lib/auth/locations-storage"
 import { assertLoginResponseData } from "@/lib/auth/map-login-credentials"
+import { enrichCredentialsWithLocationCookie } from "@/lib/auth/resolve-session-location"
+import { findLocationById } from "@/lib/map-location"
 import { clubmanApi } from "@/store/api/clubmanApi"
 import type { AppLocation } from "@/types/api/locations"
 import type { UserCredentials } from "@/types/auth"
@@ -34,7 +37,9 @@ export const login = createAsyncThunk(
     { dispatch }
   ) => {
     const trimmedUserName = userName.trim()
-    const connectionString = authConfig.defaultConnectionString
+    const storedLogin = getStoredLoginCookie()
+    const connectionString =
+      storedLogin?.connectionName ?? authConfig.defaultConnectionString
     const clubSlug = connectionString.toLowerCase()
 
     if (!trimmedUserName || !userPwd) {
@@ -45,7 +50,11 @@ export const login = createAsyncThunk(
       clubmanApi.endpoints.getLocations.initiate(clubSlug)
     ).unwrap()
 
-    const location = locations[0]
+    const preferredLocationId =
+      storedLogin?.login.LocationID ?? getStoredCredentials()?.LocationID ?? ""
+
+    const location =
+      findLocationById(preferredLocationId, locations) ?? locations[0]
 
     if (!location) {
       throw new Error("No location is available for this club.")
@@ -62,10 +71,15 @@ export const login = createAsyncThunk(
 
     const apiCredentials = assertLoginResponseData(loginData)
 
-    return saveLoginSession(apiCredentials, {
-      connectionString,
-      location,
-    })
+    const resolvedLocation =
+      findLocationById(apiCredentials.LocationID ?? "", locations) ?? location
+
+    return enrichCredentialsWithLocationCookie(
+      saveLoginSession(apiCredentials, {
+        connectionString,
+        location: resolvedLocation,
+      })
+    )
   }
 )
 
@@ -78,9 +92,8 @@ const authSlice = createSlice({
         return
       }
 
-      state.credentials = applyLocationToCredentials(
-        state.credentials,
-        action.payload
+      state.credentials = enrichCredentialsWithLocationCookie(
+        applyLocationToCredentials(state.credentials, action.payload)
       )
 
       const stored = getStoredLoginCookie()
@@ -95,11 +108,15 @@ const authSlice = createSlice({
             location: action.payload,
           }
         )
+        state.credentials = enrichCredentialsWithLocationCookie(
+          state.credentials
+        )
       }
     },
     logout: (state) => {
       state.credentials = null
       clearStoredCredentials()
+      clearStoredLocations()
     },
   },
   extraReducers: (builder) => {
@@ -108,7 +125,7 @@ const authSlice = createSlice({
         state.isLoading = true
       })
       .addCase(login.fulfilled, (state, action) => {
-        state.credentials = action.payload
+        state.credentials = enrichCredentialsWithLocationCookie(action.payload)
         state.isLoading = false
       })
       .addCase(login.rejected, (state) => {

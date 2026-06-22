@@ -3,13 +3,17 @@ export type ApiLocation = {
   LocName: string | null
   LocSName: string | null
   DBName: string | null
+  LocContact: string | null
   LocAddr1: string | null
   LocAddr2: string | null
   LocCity: string | null
   LocState: string | null
   LocZip: string | null
+  LocZipExt: string | null
   LocCountry: string | null
   LocPhone: string | null
+  LocPhoneExt: string | null
+  LocPhoneText: string | null
   LocEmail: string | null
   Gateway: string | null
   LicenseID: string | null
