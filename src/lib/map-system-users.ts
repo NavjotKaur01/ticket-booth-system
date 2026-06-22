@@ -7,7 +7,12 @@ function normalizeText(value: string) {
 }
 
 function mapActiveStatus(active: string) {
-  return active.trim().toUpperCase() === "Y" ? "Active" : "Inactive"
+  const normalized = active.trim().toLowerCase()
+  if (normalized === "y" || normalized === "active") {
+    return "Active"
+  }
+
+  return "Inactive"
 }
 
 function mapPasswordDisplay(user: ApiSystemUser) {
@@ -19,11 +24,12 @@ function mapPasswordDisplay(user: ApiSystemUser) {
 }
 
 export function mapSystemUsers(users: ApiSystemUser[]): AdminUser[] {
-  return users.map((user) => ({
+  return (users ?? []).map((user) => ({
     id: user.UserID,
     lastName: normalizeText(user.LastName),
     firstName: normalizeText(user.FirstName),
     userName: normalizeText(user.UserName),
+    email: user.Email?.trim() ?? "",
     password: mapPasswordDisplay(user),
     security: normalizeText(user.Security),
     lastUpdateId: normalizeText(user.LastUpdateID),

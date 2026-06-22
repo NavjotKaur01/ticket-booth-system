@@ -12,11 +12,16 @@ type UseSystemUsersParams = {
   enabled?: boolean
 }
 
+type RefreshOptions = {
+  silent?: boolean
+}
+
 type UseSystemUsersResult = {
   users: AdminUser[]
   loading: boolean
   error: string | null
-  refresh: () => Promise<void>
+  refresh: (options?: RefreshOptions) => Promise<void>
+  upsertUser: (user: AdminUser) => void
 }
 
 export function useSystemUsers({
@@ -30,40 +35,59 @@ export function useSystemUsers({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const refresh = useCallback(async () => {
-    if (!enabled || !organization || !locationId || !userId || !userRight) {
-      setUsers([])
+  const upsertUser = useCallback((user: AdminUser) => {
+    setUsers((current) => {
+      const index = current.findIndex((item) => item.id === user.id)
+      if (index === -1) {
+        return [...current, user]
+      }
+
+      const next = [...current]
+      next[index] = user
+      return next
+    })
+  }, [])
+
+  const refresh = useCallback(
+    async ({ silent = false }: RefreshOptions = {}) => {
+      if (!enabled || !organization || !locationId || !userId || !userRight) {
+        setUsers([])
+        setError(null)
+        setLoading(false)
+        return
+      }
+
+      if (!silent) {
+        setLoading(true)
+      }
       setError(null)
-      setLoading(false)
-      return
-    }
 
-    setLoading(true)
-    setError(null)
-
-    try {
-      const data = await fetchSystemUsers({
-        organization,
-        locationId,
-        userId,
-        userRight,
-      })
-      setUsers(mapSystemUsers(data))
-    } catch (requestError) {
-      setUsers([])
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to load users"
-      )
-    } finally {
-      setLoading(false)
-    }
-  }, [organization, locationId, userId, userRight, enabled])
+      try {
+        const data = await fetchSystemUsers({
+          organization,
+          locationId,
+          userId,
+          userRight,
+        })
+        setUsers(mapSystemUsers(data))
+      } catch (requestError) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Failed to load users"
+        )
+      } finally {
+        if (!silent) {
+          setLoading(false)
+        }
+      }
+    },
+    [organization, locationId, userId, userRight, enabled]
+  )
 
   useEffect(() => {
     void refresh()
   }, [refresh])
 
-  return { users, loading, error, refresh }
+  return { users, loading, error, refresh, upsertUser }
 }

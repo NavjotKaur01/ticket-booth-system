@@ -3,6 +3,7 @@ export type AdminUser = {
   lastName: string
   firstName: string
   userName: string
+  email: string
   password: string
   security: string
   lastUpdateId: string

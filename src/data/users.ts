@@ -10,6 +10,12 @@ export const userRightBySecurityLevel: Record<string, string> = {
   manager: "SEC05",
 }
 
+export const securityLevelByLabel: Record<string, string> = {
+  Administrator: "administrator",
+  User: "user",
+  Manager: "manager",
+}
+
 export const userStatusOptions = [
   { id: "active", label: "Active" },
   { id: "inactive", label: "Inactive" },

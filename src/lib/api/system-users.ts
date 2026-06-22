@@ -2,6 +2,7 @@ import { administratorApiPath, apiRequest } from "@/lib/api/client"
 import type {
   ApiSystemUser,
   SaveSystemUserRequest,
+  UpdateSystemUserRequest,
 } from "@/types/api/system-users"
 
 type FetchSystemUsersParams = {
@@ -37,6 +38,13 @@ export function fetchSystemUsers({
 export function saveSystemUser(request: SaveSystemUserRequest) {
   return apiRequest<boolean>(administratorApiPath("SaveSystemUser"), {
     method: "POST",
+    body: JSON.stringify(request),
+  })
+}
+
+export function updateSystemUser(request: UpdateSystemUserRequest) {
+  return apiRequest<boolean>(administratorApiPath("UpdateSystemUser"), {
+    method: "PUT",
     body: JSON.stringify(request),
   })
 }

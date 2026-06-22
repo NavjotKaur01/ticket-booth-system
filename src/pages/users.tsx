@@ -7,10 +7,12 @@ import { userSession } from "@/data/dashboard"
 import { AddUserDialog } from "@/features/users/add-user-dialog"
 import { AdminUserDataTable } from "@/features/users/admin-user-data-table"
 import { AdminUserFiltersCard } from "@/features/users/admin-user-filters-card"
+import { EditUserDialog } from "@/features/users/edit-user-dialog"
 import { useLocations } from "@/hooks/use-locations"
 import { useSystemUsers } from "@/hooks/use-system-users"
+import { syncFiltersAfterUserEdit } from "@/lib/admin-user-form"
 import { filterAdminUsers } from "@/lib/filter-admin-users"
-import { EMPTY_ADMIN_USER_FILTERS } from "@/types/user-admin"
+import { EMPTY_ADMIN_USER_FILTERS, type AdminUser } from "@/types/user-admin"
 
 export function Users() {
   const { locations, loading: locationsLoading } = useLocations(
@@ -18,17 +20,19 @@ export function Users() {
   )
   const locationId = locations[0]?.id ?? ""
 
-  const { users, loading: usersLoading, error: usersError, refresh } = useSystemUsers({
-    organization: userSession.organization,
-    locationId,
-    userId: userSession.userId,
-    userRight: userSession.userRight,
-    enabled: !locationsLoading && Boolean(locationId),
-  })
+  const { users, loading: usersLoading, error: usersError, refresh, upsertUser } =
+    useSystemUsers({
+      organization: userSession.organization,
+      locationId,
+      userId: userSession.userId,
+      userRight: userSession.userRight,
+      enabled: !locationsLoading && Boolean(locationId),
+    })
 
   const [draftFilters, setDraftFilters] = useState(EMPTY_ADMIN_USER_FILTERS)
   const [appliedFilters, setAppliedFilters] = useState(EMPTY_ADMIN_USER_FILTERS)
   const [addOpen, setAddOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null)
 
   const filteredUsers = useMemo(
     () => filterAdminUsers(users, appliedFilters),
@@ -51,6 +55,25 @@ export function Users() {
   function handleClear() {
     setDraftFilters(EMPTY_ADMIN_USER_FILTERS)
     setAppliedFilters(EMPTY_ADMIN_USER_FILTERS)
+  }
+
+  async function handleUserUpdated(updatedUser: AdminUser) {
+    if (!editingUser) {
+      return
+    }
+
+    upsertUser(updatedUser)
+    setDraftFilters((current) =>
+      syncFiltersAfterUserEdit(editingUser, updatedUser, current)
+    )
+    setAppliedFilters((current) =>
+      syncFiltersAfterUserEdit(editingUser, updatedUser, current)
+    )
+    await refresh({ silent: true })
+  }
+
+  async function handleUserCreated() {
+    await refresh({ silent: true })
   }
 
   return (
@@ -92,7 +115,11 @@ export function Users() {
           <p className="px-3 py-2 text-sm text-destructive">{usersError}</p>
         ) : null}
 
-        <AdminUserDataTable data={filteredUsers} loading={loading} />
+        <AdminUserDataTable
+          data={filteredUsers}
+          loading={loading}
+          onEdit={setEditingUser}
+        />
       </PanelCard>
 
       <AddUserDialog
@@ -101,7 +128,21 @@ export function Users() {
         connectionName={userSession.organization}
         locationId={locationId}
         lastUpdateId={userSession.username}
-        onSaved={refresh}
+        onSaved={handleUserCreated}
+      />
+
+      <EditUserDialog
+        open={editingUser !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingUser(null)
+          }
+        }}
+        user={editingUser}
+        connectionName={userSession.organization}
+        locationId={locationId}
+        lastUpdateId={userSession.username}
+        onSaved={handleUserUpdated}
       />
     </div>
   )

@@ -37,3 +37,18 @@ export type SaveSystemUserRequest = {
   UserRight: string
   Active: string
 }
+
+export type UpdateSystemUserRequest = {
+  ConnectionName: string
+  LocationID: string
+  LastUpdateID: string
+  LastUpdateDt: string
+  UserId: string
+  UserName: string
+  LastName: string
+  FirstName: string
+  Email: string
+  Password: string
+  UserRight: string
+  Active: string
+}

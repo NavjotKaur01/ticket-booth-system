@@ -7,10 +7,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import type { AdminUser } from "@/types/user-admin"
 
-const USER_ACTIONS = ["Edit", "Delete"] as const
+type AdminUserRowActionsMenuProps = {
+  user: AdminUser
+  onEdit: (user: AdminUser) => void
+}
 
-export function AdminUserRowActionsMenu() {
+export function AdminUserRowActionsMenu({
+  user,
+  onEdit,
+}: AdminUserRowActionsMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -25,9 +32,8 @@ export function AdminUserRowActionsMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[8rem]">
-        {USER_ACTIONS.map((action) => (
-          <DropdownMenuItem key={action}>{action}</DropdownMenuItem>
-        ))}
+        <DropdownMenuItem onClick={() => onEdit(user)}>Edit</DropdownMenuItem>
+        <DropdownMenuItem>Delete</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
