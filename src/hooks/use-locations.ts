@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react"
+import { useMemo } from "react"
 
-import { fetchLocations } from "@/lib/api/locations"
+import { getClubmanErrorMessage } from "@/store/api/baseQuery"
+import { useGetLocationsQuery } from "@/store/api/clubmanApi"
 import type { AppLocation } from "@/types/api/locations"
 
 type UseLocationsResult = {
@@ -10,51 +11,25 @@ type UseLocationsResult = {
 }
 
 export function useLocations(clubSlug: string): UseLocationsResult {
-  const [locations, setLocations] = useState<AppLocation[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data, isLoading, isFetching, error } = useGetLocationsQuery(clubSlug, {
+    skip: !clubSlug,
+  })
 
-  useEffect(() => {
+  const errorMessage = useMemo(() => {
     if (!clubSlug) {
-      setLocations([])
-      setError("Club slug is required")
-      setLoading(false)
-      return
+      return "Club slug is required"
     }
 
-    let cancelled = false
-
-    async function loadLocations() {
-      setLoading(true)
-      setError(null)
-
-      try {
-        const nextLocations = await fetchLocations(clubSlug)
-        if (!cancelled) {
-          setLocations(nextLocations)
-        }
-      } catch (requestError) {
-        if (!cancelled) {
-          setLocations([])
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Failed to load locations"
-          )
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
-      }
+    if (!error) {
+      return null
     }
 
-    void loadLocations()
+    return getClubmanErrorMessage(error)
+  }, [clubSlug, error])
 
-    return () => {
-      cancelled = true
-    }
-  }, [clubSlug])
-
-  return { locations, loading, error }
+  return {
+    locations: data ?? [],
+    loading: clubSlug ? isLoading || isFetching : false,
+    error: errorMessage,
+  }
 }

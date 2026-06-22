@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useMemo } from "react"
 
-import { fetchRecentSalesReport } from "@/lib/api/recent-sales"
 import { mapRecentSalesReport } from "@/lib/map-recent-sales-report"
+import { getClubmanErrorMessage } from "@/store/api/baseQuery"
+import { useGetRecentSalesReportQuery } from "@/store/api/clubmanApi"
 import type { TodaySalesSummary } from "@/types/today-sales-report"
 
 const EMPTY_SUMMARY: TodaySalesSummary = {
@@ -23,51 +24,36 @@ export function useRecentSalesReport(
   refreshIntervalMs: number | null,
   enabled = true
 ): UseRecentSalesReportResult {
-  const [data, setData] = useState<TodaySalesSummary>(EMPTY_SUMMARY)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const shouldSkip = !enabled || !clubSlug || !locationId
+
+  const pollingInterval =
+    enabled && refreshIntervalMs && refreshIntervalMs > 0
+      ? refreshIntervalMs
+      : 0
+
+  const { data, isLoading, isFetching, error, refetch } =
+    useGetRecentSalesReportQuery(
+      { clubSlug, locationId },
+      { skip: shouldSkip, pollingInterval }
+    )
+
+  const summary = useMemo(
+    () => (shouldSkip || !data ? EMPTY_SUMMARY : mapRecentSalesReport(data)),
+    [data, shouldSkip]
+  )
 
   const refresh = useCallback(async () => {
-    if (!enabled || !clubSlug || !locationId) {
-      setData(EMPTY_SUMMARY)
-      setError(null)
-      setLoading(!enabled ? false : !locationId)
+    if (shouldSkip) {
       return
     }
 
-    setLoading(true)
-    setError(null)
+    await refetch().unwrap()
+  }, [refetch, shouldSkip])
 
-    try {
-      const response = await fetchRecentSalesReport(clubSlug, locationId)
-      setData(mapRecentSalesReport(response))
-    } catch (requestError) {
-      setData(EMPTY_SUMMARY)
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to load recent sales"
-      )
-    } finally {
-      setLoading(false)
-    }
-  }, [clubSlug, locationId, enabled])
-
-  useEffect(() => {
-    void refresh()
-  }, [refresh])
-
-  useEffect(() => {
-    if (!enabled || !refreshIntervalMs || refreshIntervalMs <= 0) {
-      return
-    }
-
-    const timer = window.setInterval(() => {
-      void refresh()
-    }, refreshIntervalMs)
-
-    return () => window.clearInterval(timer)
-  }, [refresh, refreshIntervalMs, enabled])
-
-  return { data, loading, error, refresh }
+  return {
+    data: summary,
+    loading: shouldSkip ? !enabled : isLoading || isFetching,
+    error: error ? getClubmanErrorMessage(error) : null,
+    refresh,
+  }
 }

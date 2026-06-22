@@ -1,6 +1,5 @@
-import { administratorApiPath, apiRequest } from "@/lib/api/client"
-import { buildCustomerSearchRequest } from "@/lib/build-customer-search-request"
-import { buildSaveCustomerRequest } from "@/lib/build-save-customer-request"
+import { dispatchEndpoint } from "@/lib/api/dispatch-endpoint"
+import { clubmanApi } from "@/store/api/clubmanApi"
 import type { ApiCustomerSearchItem } from "@/types/api/customer-search"
 import type { CustomerSearchFilters } from "@/types/customer"
 import type { CustomerFormValues } from "@/types/customer-form"
@@ -18,19 +17,9 @@ export function searchCustomers({
   filters,
   pageNumber,
 }: SearchCustomersParams) {
-  return apiRequest<ApiCustomerSearchItem[]>(
-    administratorApiPath("CustomerSearch"),
-    {
-      method: "PUT",
-      body: JSON.stringify(
-        buildCustomerSearchRequest({
-          connectionName,
-          locationId,
-          filters,
-          pageNumber,
-        })
-      ),
-    }
+  return dispatchEndpoint<ApiCustomerSearchItem[], SearchCustomersParams>(
+    clubmanApi.endpoints.searchCustomers,
+    { connectionName, locationId, filters, pageNumber }
   )
 }
 
@@ -47,18 +36,8 @@ export function saveCustomer({
   lastUpdateId,
   form,
 }: SaveCustomerParams) {
-  return apiRequest<string[]>(
-    administratorApiPath("SaveCustomer"),
-    {
-      method: "POST",
-      body: JSON.stringify(
-        buildSaveCustomerRequest({
-          connectionName,
-          locationId,
-          lastUpdateId,
-          form,
-        })
-      ),
-    }
+  return dispatchEndpoint<string[], SaveCustomerParams>(
+    clubmanApi.endpoints.saveCustomer,
+    { connectionName, locationId, lastUpdateId, form }
   )
 }

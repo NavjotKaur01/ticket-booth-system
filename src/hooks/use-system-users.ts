@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { fetchSystemUsers } from "@/lib/api/system-users"
 import { mapSystemUsers } from "@/lib/map-system-users"
+import { getClubmanErrorMessage } from "@/store/api/baseQuery"
+import { useGetSystemUsersQuery } from "@/store/api/clubmanApi"
 import type { AdminUser } from "@/types/user-admin"
 
 type UseSystemUsersParams = {
@@ -32,8 +33,28 @@ export function useSystemUsers({
   enabled = true,
 }: UseSystemUsersParams): UseSystemUsersResult {
   const [users, setUsers] = useState<AdminUser[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const queryArgs = useMemo(
+    () => ({ organization, locationId, userId, userRight }),
+    [organization, locationId, userId, userRight]
+  )
+
+  const shouldSkip =
+    !enabled || !organization || !locationId || !userId || !userRight
+
+  const { data, isLoading, error, refetch } = useGetSystemUsersQuery(queryArgs, {
+    skip: shouldSkip,
+  })
+
+  useEffect(() => {
+    if (shouldSkip) {
+      setUsers([])
+      return
+    }
+
+    setUsers(mapSystemUsers(data ?? []))
+  }, [data, shouldSkip])
 
   const upsertUser = useCallback((user: AdminUser) => {
     setUsers((current) => {
@@ -50,44 +71,31 @@ export function useSystemUsers({
 
   const refresh = useCallback(
     async ({ silent = false }: RefreshOptions = {}) => {
-      if (!enabled || !organization || !locationId || !userId || !userRight) {
+      if (shouldSkip) {
         setUsers([])
-        setError(null)
-        setLoading(false)
         return
       }
 
       if (!silent) {
-        setLoading(true)
+        setIsRefreshing(true)
       }
-      setError(null)
 
       try {
-        const data = await fetchSystemUsers({
-          organization,
-          locationId,
-          userId,
-          userRight,
-        })
-        setUsers(mapSystemUsers(data))
-      } catch (requestError) {
-        setError(
-          requestError instanceof Error
-            ? requestError.message
-            : "Failed to load users"
-        )
+        await refetch().unwrap()
       } finally {
         if (!silent) {
-          setLoading(false)
+          setIsRefreshing(false)
         }
       }
     },
-    [organization, locationId, userId, userRight, enabled]
+    [refetch, shouldSkip]
   )
 
-  useEffect(() => {
-    void refresh()
-  }, [refresh])
-
-  return { users, loading, error, refresh, upsertUser }
+  return {
+    users,
+    loading: isLoading || isRefreshing,
+    error: error ? getClubmanErrorMessage(error) : null,
+    refresh,
+    upsertUser,
+  }
 }

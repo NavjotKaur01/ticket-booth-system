@@ -1,10 +1,7 @@
-import { apiRequest, reservationApiPath } from "@/lib/api/client"
-import { buildReservationDayRange } from "@/lib/reservation-date-range"
+import { dispatchEndpoint } from "@/lib/api/dispatch-endpoint"
+import { clubmanApi } from "@/store/api/clubmanApi"
 import type { ReservationDataItem } from "@/types/api/reservation-data"
-import type {
-  GetShowDetailsByDateRequest,
-  ShowDetailsByDateItem,
-} from "@/types/api/show-details"
+import type { ShowDetailsByDateItem } from "@/types/api/show-details"
 
 type FetchReservationDataParams = {
   connectionString: string
@@ -17,21 +14,9 @@ export function fetchReservationData({
   showId,
   includeCancelledReservations,
 }: FetchReservationDataParams) {
-  return apiRequest<ReservationDataItem[]>(
-    reservationApiPath(
-      connectionString,
-      showId,
-      String(includeCancelledReservations),
-      "false",
-      "false",
-      "GetReservationData"
-    ),
-    {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-    }
+  return dispatchEndpoint<ReservationDataItem[], FetchReservationDataParams>(
+    clubmanApi.endpoints.getReservationData,
+    { connectionString, showId, includeCancelledReservations }
   )
 }
 
@@ -48,21 +33,8 @@ export function fetchShowDetailsByDate({
   showDate,
   isCancelledShow,
 }: FetchShowDetailsByDateParams) {
-  const { startDate, endDate } = buildReservationDayRange(showDate)
-
-  const body: GetShowDetailsByDateRequest = {
-    ConnectionString: connectionString,
-    LocationId: locationId,
-    StartDate: startDate,
-    EndDate: endDate,
-    IsCancelledShow: isCancelledShow,
-  }
-
-  return apiRequest<ShowDetailsByDateItem[]>(
-    reservationApiPath("GetShowDetailsByDate"),
-    {
-      method: "PUT",
-      body: JSON.stringify(body),
-    }
+  return dispatchEndpoint<ShowDetailsByDateItem[], FetchShowDetailsByDateParams>(
+    clubmanApi.endpoints.getShowDetailsByDate,
+    { connectionString, locationId, showDate, isCancelledShow }
   )
 }
