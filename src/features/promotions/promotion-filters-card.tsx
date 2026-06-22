@@ -2,6 +2,7 @@ import { Search, X } from "lucide-react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import {
+  createFilterSearchHandlers,
   FILTER_EMAIL_CLASS,
   FILTER_INPUT_CLASS,
   FILTER_ROW_INNER_CLASS,
@@ -36,9 +37,12 @@ export function PromotionFiltersCard({
   onSearch,
   onClear,
 }: PromotionFiltersCardProps) {
+  const { handleSubmit, handleInputKeyDown } =
+    createFilterSearchHandlers(onSearch)
+
   return (
     <PanelCard>
-      <div className="space-y-3 p-3">
+      <form className="space-y-3 p-3" onSubmit={handleSubmit}>
         <div className={FILTER_ROW_INNER_CLASS}>
           <Input
             placeholder="Promotion Name"
@@ -46,6 +50,7 @@ export function PromotionFiltersCard({
             onChange={(event) =>
               onFilterChange("promotionName", event.target.value)
             }
+            onKeyDown={handleInputKeyDown}
             className={FILTER_EMAIL_CLASS}
           />
           <Input
@@ -54,6 +59,7 @@ export function PromotionFiltersCard({
             onChange={(event) =>
               onFilterChange("promotionCode", event.target.value)
             }
+            onKeyDown={handleInputKeyDown}
             className={FILTER_INPUT_CLASS}
           />
           <Select
@@ -76,7 +82,7 @@ export function PromotionFiltersCard({
               label="Search"
               icon={Search}
               variant="default"
-              onClick={onSearch}
+              type="submit"
             />
             <IconActionButton
               label="Clear"
@@ -96,7 +102,7 @@ export function PromotionFiltersCard({
           />
           Display Expired Promotions
         </label>
-      </div>
+      </form>
     </PanelCard>
   )
 }

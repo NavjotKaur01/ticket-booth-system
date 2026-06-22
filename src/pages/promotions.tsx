@@ -1,31 +1,36 @@
 import { Plus } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
-import { promotions } from "@/data/promotions"
+import { userSession } from "@/data/dashboard"
 import { AddPromotionDialog } from "@/features/promotions/add-promotion-dialog"
 import { PromotionDataTable } from "@/features/promotions/promotion-data-table"
 import { PromotionFiltersCard } from "@/features/promotions/promotion-filters-card"
-import { filterPromotions } from "@/lib/filter-promotions"
+import { useLocations } from "@/hooks/use-locations"
+import { usePromotionSearch } from "@/hooks/use-promotion-search"
 import {
   DEFAULT_PROMOTION_FILTERS,
   type PromotionFilters,
 } from "@/types/promotion"
 
 export function Promotions() {
+  const { locations, loading: locationsLoading } = useLocations(
+    userSession.clubSlug
+  )
+  const locationId = locations[0]?.id ?? ""
+
+  const { promotions, loading, error, hasSearched, search, clear } =
+    usePromotionSearch({
+      connectionName: userSession.organization,
+      locationId,
+      enabled: !locationsLoading && Boolean(locationId),
+    })
+
   const [draftFilters, setDraftFilters] = useState<PromotionFilters>(
     DEFAULT_PROMOTION_FILTERS
   )
-  const [appliedFilters, setAppliedFilters] = useState<PromotionFilters>(
-    DEFAULT_PROMOTION_FILTERS
-  )
   const [addOpen, setAddOpen] = useState(false)
-
-  const filteredPromotions = useMemo(
-    () => filterPromotions(promotions, appliedFilters),
-    [appliedFilters]
-  )
 
   function updateDraftField<K extends keyof PromotionFilters>(
     key: K,
@@ -35,13 +40,20 @@ export function Promotions() {
   }
 
   function handleSearch() {
-    setAppliedFilters(draftFilters)
+    void search(draftFilters)
   }
 
   function handleClear() {
     setDraftFilters(DEFAULT_PROMOTION_FILTERS)
-    setAppliedFilters(DEFAULT_PROMOTION_FILTERS)
+    clear()
   }
+
+  const tableLoading = locationsLoading || loading
+  const emptyMessage = tableLoading
+    ? "Searching promotions..."
+    : hasSearched
+      ? "No promotion found"
+      : "Enter search criteria and click Search"
 
   return (
     <div className="space-y-3">
@@ -61,7 +73,7 @@ export function Promotions() {
           <p className="text-xs text-muted-foreground">
             Records:{" "}
             <span className="font-semibold tabular-nums text-foreground">
-              {filteredPromotions.length}
+              {promotions.length}
             </span>
           </p>
           <Button
@@ -75,7 +87,15 @@ export function Promotions() {
           </Button>
         </div>
 
-        <PromotionDataTable data={filteredPromotions} />
+        {error ? (
+          <p className="px-3 py-2 text-sm text-destructive">{error}</p>
+        ) : null}
+
+        <PromotionDataTable
+          data={promotions}
+          loading={tableLoading}
+          emptyMessage={emptyMessage}
+        />
       </PanelCard>
 
       <AddPromotionDialog open={addOpen} onOpenChange={setAddOpen} />
