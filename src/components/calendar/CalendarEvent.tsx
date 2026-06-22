@@ -11,9 +11,11 @@ export default function CalendarEventCard({event}: CalendarEventProps) {
             title={`${event.performer} - ${event.time} - ${event.seats.sold}/${event.seats.comp}/${event.seats.capacity}`}
         >
             <div className="min-w-0">
-                <span className="w-1 h-full rounded-lg bg-primary" />
+                <div className="flex gap-1 items-center">
+                    <span className="w-0.5 h-3 rounded-lg bg-primary block" />
                 <div className={`truncate font-semibold ${event.cancelled ? 'text-muted-foreground line-through' : 'text-primary'}`}>
                     {event.performer}
+                </div>
                 </div>
                 <div className="truncate text-muted-foreground">
                     <span className="hidden sm:inline">

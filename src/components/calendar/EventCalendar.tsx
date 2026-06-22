@@ -7,6 +7,7 @@ import './calendar-overrides.css'
 
 import CalendarToolbar from "./CalendarToolbar";
 import CalendarEventCard from "./CalendarEvent";
+import CalendarShowMore from "./CalendarShowMore";
 import {events as allEvents, locations, type CalendarEvent} from '@/data/calendarEvents';
 
 const localizer = dayjsLocalizer(dayjs)
@@ -43,6 +44,7 @@ export default function EventCalendar( ) {
         event: ({ event } : {event: CalendarEvent}) => (
             <CalendarEventCard event={event} />
         ),
+        showMore: CalendarShowMore,
     }), [location, showCancelled, refreshInterval])
 
     const eventPropGetter = useCallback(() => ({
@@ -62,6 +64,7 @@ export default function EventCalendar( ) {
                 onNavigate={setCalendarDate}
                 defaultView="month"
                 views={['month', 'week']}
+                showAllEvents={false}
                 className="min-h-0 flex-1"
                 components={components}
                 eventPropGetter={eventPropGetter}
