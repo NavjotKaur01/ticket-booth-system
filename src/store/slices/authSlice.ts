@@ -6,16 +6,13 @@ import {
 
 import { authConfig } from "@/config/auth-config"
 import { applyLocationToCredentials } from "@/lib/auth/apply-location"
-import { buildCredentialsFromLogin } from "@/lib/auth/build-credentials"
 import {
   clearStoredCredentials,
   getStoredCredentials,
-  saveCredentials,
+  getStoredLoginCookie,
+  saveLoginSession,
 } from "@/lib/auth/credentials-storage"
-import {
-  getInvalidLoginMessage,
-  isValidLoginCredential,
-} from "@/lib/auth/validate-login"
+import { assertLoginResponseData } from "@/lib/auth/map-login-credentials"
 import { clubmanApi } from "@/store/api/clubmanApi"
 import type { AppLocation } from "@/types/api/locations"
 import type { UserCredentials } from "@/types/auth"
@@ -44,10 +41,6 @@ export const login = createAsyncThunk(
       throw new Error("Username and password are required.")
     }
 
-    if (!isValidLoginCredential(trimmedUserName, userPwd)) {
-      throw new Error(getInvalidLoginMessage())
-    }
-
     const locations = await dispatch(
       clubmanApi.endpoints.getLocations.initiate(clubSlug)
     ).unwrap()
@@ -58,7 +51,7 @@ export const login = createAsyncThunk(
       throw new Error("No location is available for this club.")
     }
 
-    await dispatch(
+    const loginData = await dispatch(
       clubmanApi.endpoints.accountLogin.initiate({
         ConnectionString: connectionString,
         UserName: trimmedUserName,
@@ -67,14 +60,12 @@ export const login = createAsyncThunk(
       })
     ).unwrap()
 
-    const nextCredentials = buildCredentialsFromLogin({
+    const apiCredentials = assertLoginResponseData(loginData)
+
+    return saveLoginSession(apiCredentials, {
       connectionString,
-      userName: trimmedUserName,
       location,
     })
-
-    saveCredentials(nextCredentials)
-    return nextCredentials
   }
 )
 
@@ -91,7 +82,20 @@ const authSlice = createSlice({
         state.credentials,
         action.payload
       )
-      saveCredentials(state.credentials)
+
+      const stored = getStoredLoginCookie()
+      if (stored) {
+        saveLoginSession(
+          {
+            ...stored.login,
+            LocationID: action.payload.id,
+          },
+          {
+            connectionString: stored.connectionName,
+            location: action.payload,
+          }
+        )
+      }
     },
     logout: (state) => {
       state.credentials = null
