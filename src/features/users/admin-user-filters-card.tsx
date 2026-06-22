@@ -2,6 +2,7 @@ import { Search, X } from "lucide-react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import {
+  createFilterSearchHandlers,
   FILTER_INPUT_CLASS,
   FILTER_ROW_CLASS,
   FILTER_SELECT_CLASS,
@@ -31,25 +32,30 @@ export function AdminUserFiltersCard({
   onSearch,
   onClear,
 }: AdminUserFiltersCardProps) {
+  const { handleSubmit, handleInputKeyDown } = createFilterSearchHandlers(onSearch)
+
   return (
     <PanelCard>
-      <div className={FILTER_ROW_CLASS}>
+      <form className={FILTER_ROW_CLASS} onSubmit={handleSubmit}>
         <Input
           placeholder="Last Name"
           value={filters.lastName}
           onChange={(event) => onFilterChange("lastName", event.target.value)}
+          onKeyDown={handleInputKeyDown}
           className={FILTER_INPUT_CLASS}
         />
         <Input
           placeholder="First Name"
           value={filters.firstName}
           onChange={(event) => onFilterChange("firstName", event.target.value)}
+          onKeyDown={handleInputKeyDown}
           className={FILTER_INPUT_CLASS}
         />
         <Input
           placeholder="User Name"
           value={filters.userName}
           onChange={(event) => onFilterChange("userName", event.target.value)}
+          onKeyDown={handleInputKeyDown}
           className={FILTER_INPUT_CLASS}
         />
 
@@ -96,11 +102,11 @@ export function AdminUserFiltersCard({
             label="Search"
             icon={Search}
             variant="default"
-            onClick={onSearch}
+            type="submit"
           />
           <IconActionButton label="Clear" icon={X} onClick={onClear} />
         </div>
-      </div>
+      </form>
     </PanelCard>
   )
 }

@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import type { ReactNode } from "react"
+import type { FormEvent, KeyboardEvent, ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -24,6 +24,22 @@ export const FILTER_PHONE_CLASS = "h-9 w-full sm:w-32"
 export const FILTER_AREA_CLASS = "h-9 w-full sm:w-28"
 export const FILTER_SELECT_CLASS = "h-9 w-full sm:w-44"
 export const FILTER_SELECT_WIDE_CLASS = "h-9 w-full sm:w-48"
+
+export function createFilterSearchHandlers(onSearch: () => void) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    onSearch()
+  }
+
+  function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      event.preventDefault()
+      onSearch()
+    }
+  }
+
+  return { handleSubmit, handleInputKeyDown }
+}
 
 /** Groups related form controls under a section heading. */
 export function FormSection({
@@ -79,18 +95,20 @@ export function IconActionButton({
   label,
   icon: Icon,
   variant = "outline",
+  type = "button",
   onClick,
 }: {
   label: string
   icon: LucideIcon
   variant?: "outline" | "default" | "secondary" | "ghost"
+  type?: "button" | "submit"
   onClick?: () => void
 }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
-          type="button"
+          type={type}
           variant={variant}
           size="icon-sm"
           aria-label={label}

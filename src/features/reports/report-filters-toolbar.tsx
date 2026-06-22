@@ -1,6 +1,7 @@
 import { FileDown, FileText, Printer, Search } from "lucide-react"
 
 import {
+  createFilterSearchHandlers,
   FILTER_ROW_INNER_CLASS,
   FILTER_SELECT_CLASS,
   IconActionButton,
@@ -55,9 +56,13 @@ export function ReportFiltersToolbar({
   onExport,
   onPdf,
 }: ReportFiltersToolbarProps) {
+  const { handleSubmit, handleInputKeyDown } =
+    createFilterSearchHandlers(onGenerate)
+
   return (
-    <div
+    <form
       className={`${FILTER_ROW_INNER_CLASS} p-3 md:items-end ${embedded ? "" : "border-b"}`}
+      onSubmit={handleSubmit}
     >
       <div className="w-full space-y-1 sm:w-auto sm:min-w-48">
         <Label htmlFor="report-type" className="text-xs font-medium">
@@ -124,6 +129,7 @@ export function ReportFiltersToolbar({
               type="date"
               value={filters.dateFrom}
               onChange={(event) => onFilterChange("dateFrom", event.target.value)}
+              onKeyDown={handleInputKeyDown}
               className={compactFieldClassName}
             />
           </div>
@@ -137,6 +143,7 @@ export function ReportFiltersToolbar({
               type="date"
               value={filters.dateTo}
               onChange={(event) => onFilterChange("dateTo", event.target.value)}
+              onKeyDown={handleInputKeyDown}
               className={compactFieldClassName}
             />
           </div>
@@ -146,7 +153,7 @@ export function ReportFiltersToolbar({
               label="Generate Report"
               icon={Search}
               variant="default"
-              onClick={onGenerate}
+              type="submit"
             />
             <Button type="button" size="sm" variant="outline" onClick={onToday}>
               Today
@@ -190,6 +197,6 @@ export function ReportFiltersToolbar({
           PDF
         </Button>
       </div>
-    </div>
+    </form>
   )
 }
