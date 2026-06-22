@@ -1,13 +1,14 @@
 import { FileDown, Plus } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
-import { customers } from "@/data/customers"
+import { userSession } from "@/data/dashboard"
 import { AddCustomerDialog } from "@/features/customers/add-customer-dialog"
 import { CustomerDataTable } from "@/features/customers/customer-data-table"
 import { CustomerFiltersCard } from "@/features/customers/customer-filters-card"
-import { filterCustomers } from "@/lib/filter-customers"
+import { useCustomerSearch } from "@/hooks/use-customer-search"
+import { useLocations } from "@/hooks/use-locations"
 import type { CustomerSearchFilters } from "@/types/customer"
 
 const EMPTY_FILTERS: CustomerSearchFilters = {
@@ -20,16 +21,20 @@ const EMPTY_FILTERS: CustomerSearchFilters = {
 }
 
 export function SearchCustomer() {
+  const { locations, loading: locationsLoading } = useLocations(
+    userSession.clubSlug
+  )
+  const locationId = locations[0]?.id ?? ""
+
+  const { customers, loading, error, hasSearched, search, clear } = useCustomerSearch({
+    connectionName: userSession.organization,
+    locationId,
+    enabled: !locationsLoading && Boolean(locationId),
+  })
+
   const [draftFilters, setDraftFilters] =
     useState<CustomerSearchFilters>(EMPTY_FILTERS)
-  const [appliedFilters, setAppliedFilters] =
-    useState<CustomerSearchFilters>(EMPTY_FILTERS)
   const [addOpen, setAddOpen] = useState(false)
-
-  const filteredCustomers = useMemo(
-    () => filterCustomers(customers, appliedFilters),
-    [appliedFilters]
-  )
 
   function updateDraftField(
     field: keyof CustomerSearchFilters,
@@ -39,8 +44,20 @@ export function SearchCustomer() {
   }
 
   function handleSearch() {
-    setAppliedFilters(draftFilters)
+    void search(draftFilters)
   }
+
+  function handleClear() {
+    setDraftFilters(EMPTY_FILTERS)
+    clear()
+  }
+
+  const tableLoading = locationsLoading || loading
+  const emptyMessage = tableLoading
+    ? "Searching customers..."
+    : hasSearched
+      ? "No record found"
+      : "Enter search criteria and click Search"
 
   return (
     <div className="space-y-3">
@@ -52,6 +69,7 @@ export function SearchCustomer() {
         filters={draftFilters}
         onFilterChange={updateDraftField}
         onSearch={handleSearch}
+        onClear={handleClear}
       />
 
       <PanelCard>
@@ -79,12 +97,20 @@ export function SearchCustomer() {
           <p className="shrink-0 text-xs text-muted-foreground">
             Records:{" "}
             <span className="font-semibold tabular-nums text-foreground">
-              {filteredCustomers.length}
+              {customers.length}
             </span>
           </p>
         </div>
 
-        <CustomerDataTable data={filteredCustomers} />
+        {error ? (
+          <p className="px-3 py-2 text-sm text-destructive">{error}</p>
+        ) : null}
+
+        <CustomerDataTable
+          data={customers}
+          loading={tableLoading}
+          emptyMessage={emptyMessage}
+        />
       </PanelCard>
 
       <AddCustomerDialog open={addOpen} onOpenChange={setAddOpen} />

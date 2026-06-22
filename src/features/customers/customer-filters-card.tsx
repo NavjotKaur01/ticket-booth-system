@@ -1,4 +1,4 @@
-import { Search } from "lucide-react"
+import { Search, X } from "lucide-react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import {
@@ -16,12 +16,14 @@ type CustomerFiltersCardProps = {
   filters: CustomerSearchFilters
   onFilterChange: (field: keyof CustomerSearchFilters, value: string) => void
   onSearch: () => void
+  onClear: () => void
 }
 
 export function CustomerFiltersCard({
   filters,
   onFilterChange,
   onSearch,
+  onClear,
 }: CustomerFiltersCardProps) {
   return (
     <PanelCard>
@@ -63,12 +65,15 @@ export function CustomerFiltersCard({
           className={FILTER_PHONE_CLASS}
         />
 
-        <IconActionButton
-          label="Search"
-          icon={Search}
-          variant="default"
-          onClick={onSearch}
-        />
+        <div className="flex items-center gap-1.5">
+          <IconActionButton
+            label="Search"
+            icon={Search}
+            variant="default"
+            onClick={onSearch}
+          />
+          <IconActionButton label="Clear" icon={X} onClick={onClear} />
+        </div>
       </div>
     </PanelCard>
   )
