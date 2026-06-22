@@ -1,0 +1,86 @@
+/* Remove default rbc event blue pills */
+.rbc-event {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.rbc-event:focus {
+  outline: none !important;
+}
+
+.rbc-event-label {
+  display: none !important;
+}
+
+/* Selected event */
+.rbc-selected {
+  background-color: transparent !important;
+}
+
+/* Day number */
+.rbc-date-cell {
+  text-align: right;
+  padding-right: 6px;
+  padding-top: 4px;
+  font-size: 13px;
+  color: #374151;
+}
+
+/* Day header row (Sun, Mon...) */
+.rbc-header {
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  padding: 6px 0;
+  text-align: center;
+}
+
+/* Remove rounded corners rbc adds to month view */
+.rbc-month-view {
+  border: 1px solid #e5e7eb;
+  border-radius: 0 0 8px 8px;
+}
+
+/* Cell borders */
+.rbc-day-bg + .rbc-day-bg {
+  border-left: 1px solid #e5e7eb;
+}
+
+.rbc-month-row + .rbc-month-row {
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Today highlight */
+.rbc-today {
+  background-color: #eff6ff;
+}
+
+/* Off-range days (prev/next month dates) */
+.rbc-off-range-bg {
+  background-color: #f9fafb;
+}
+
+.rbc-off-range .rbc-date-cell {
+  color: #9ca3af;
+}
+
+/* Show more link */
+.rbc-show-more {
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 500;
+  padding-left: 4px;
+}
+
+.rbc-show-more:hover {
+  text-decoration: underline;
+}
+
+/* Row content spacing */
+.rbc-row-content {
+  padding-bottom: 4px;
+}

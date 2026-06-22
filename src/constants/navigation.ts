@@ -51,7 +51,7 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
     ],
   },
   { id: "reports", label: "Reports", href: ROUTES.reports, icon: BarChart3 },
-  { id: "calendar", label: "Calendar", href: "#", icon: Calendar },
+  { id: "calendar", label: "Calendar", href: ROUTES.calendar, icon: Calendar },
   { id: "reservations", label: "Reservations", href: ROUTES.reservations, icon: Bookmark },
   { id: "check-in", label: "Check-In", href: ROUTES.checkIn, icon: UserCheck },
   { id: "transactions", label: "Transactions", href: ROUTES.transactions, icon: Receipt },

@@ -21,6 +21,7 @@ import { Transactions } from "@/pages/transactions"
 import { TicketDefault } from "@/pages/ticket-default"
 import { ChangePassword } from "@/pages/change-password"
 import { userSession } from "@/data/dashboard"
+import EventCalendar from "./components/calendar/EventCalendar"
 
 /** Root router — all pages share AppLayout (sidebar + header). */
 function App() {
@@ -33,6 +34,7 @@ function App() {
           <Route path="check-in" element={<CheckIn />} />
           <Route path="reports" element={<Reports />} />
           <Route path="transactions" element={<Transactions />} />
+          <Route path="calendar" element={<EventCalendar />} />
 
           <Route path="my-account">
             <Route path="ticket-default" element={<TicketDefault />} />

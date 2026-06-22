@@ -5,6 +5,7 @@ export const ROUTES = {
   checkIn: "/check-in",
   administrator: "/administrator",
   ticketbooth: "/ticketbooth",
+  calendar: "/calendar",  // temporary adding calendar route
   searchCustomer: "/administrator/customers",
   performers: "/administrator/performers",
   marketingFilter: "/administrator/marketing-filter",
@@ -35,6 +36,7 @@ export function reportViewerUrl(reportType?: string) {
 /** Human-readable labels used in breadcrumbs and page titles. */
 export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.dashboard]: "Dashboard",
+  [ROUTES.calendar]: "Calendar",
   [ROUTES.reservations]: "Reservations",
   [ROUTES.checkIn]: "Check In",
   [ROUTES.searchCustomer]: "Search Customer",
