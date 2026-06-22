@@ -1,9 +1,7 @@
 export const authConfig = {
   defaultConnectionString: "Standupmedia",
-  credentialsStorageKey: "clubman_user_credentials",
-  /** Known valid login until AccountLogin API returns Status:false for bad credentials. */
-  validLogin: {
-    userName: "admin",
-    userPwd: "123456",
-  },
+  credentialsCookieName: "clubman_user_credentials",
+  /** Legacy key — cleared on logout so old sessions do not linger. */
+  legacyCredentialsStorageKey: "clubman_user_credentials",
+  credentialsCookieMaxAgeDays: 7,
 } as const

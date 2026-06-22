@@ -11,8 +11,9 @@ import {
   reservationApiPath,
 } from "@/lib/api/paths"
 import { mapLocation } from "@/lib/map-location"
-import { clubmanBaseQuery } from "@/store/api/baseQuery"
-import type { AccountLoginRequest } from "@/types/api/account-login"
+import { executeAccountLogin } from "@/lib/api/account-login"
+import { clubmanBaseQuery, type ClubmanQueryError } from "@/store/api/baseQuery"
+import type { AccountLoginRequest, ApiUserCredentials } from "@/types/api/account-login"
 import type { ApiCustomerSearchItem } from "@/types/api/customer-search"
 import type { ApiLocation } from "@/types/api/locations"
 import type { ApiPromotionSearchItem } from "@/types/api/promotion-search"
@@ -53,12 +54,23 @@ export const clubmanApi = createApi({
       ],
     }),
 
-    accountLogin: builder.mutation({
-      query: (request: AccountLoginRequest) => ({
-        url: "/clubman/api/AccountLogin",
-        method: "POST",
-        body: request,
-      }),
+    accountLogin: builder.mutation<ApiUserCredentials, AccountLoginRequest>({
+      async queryFn(request) {
+        try {
+          const data = await executeAccountLogin(request)
+          return { data }
+        } catch (error) {
+          return {
+            error: {
+              status: "CUSTOM_ERROR",
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Login failed",
+            } satisfies ClubmanQueryError,
+          }
+        }
+      },
     }),
 
     searchCustomers: builder.mutation({
