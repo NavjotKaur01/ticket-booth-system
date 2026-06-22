@@ -1,5 +1,8 @@
 import { administratorApiPath, apiRequest } from "@/lib/api/client"
-import type { ApiSystemUser } from "@/types/api/system-users"
+import type {
+  ApiSystemUser,
+  SaveSystemUserRequest,
+} from "@/types/api/system-users"
 
 type FetchSystemUsersParams = {
   organization: string
@@ -29,4 +32,11 @@ export function fetchSystemUsers({
       },
     }
   )
+}
+
+export function saveSystemUser(request: SaveSystemUserRequest) {
+  return apiRequest<boolean>(administratorApiPath("SaveSystemUser"), {
+    method: "POST",
+    body: JSON.stringify(request),
+  })
 }

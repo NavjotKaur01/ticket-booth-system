@@ -21,3 +21,19 @@ export type ApiSystemUser = {
   PasswordForSystem: string
   PasswordForUser: string
 }
+
+export type SaveSystemUserRequest = {
+  ConnectionName: string
+  Email: string
+  FirstName: string
+  LastName: string
+  LastUpdateDt: string
+  LastUpdateId: string
+  LocationID: string
+  Password: string
+  Security: string | null
+  UserId: string
+  UserName: string
+  UserRight: string
+  Active: string
+}

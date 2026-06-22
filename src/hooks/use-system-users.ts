@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 import { fetchSystemUsers } from "@/lib/api/system-users"
 import { mapSystemUsers } from "@/lib/map-system-users"
@@ -16,6 +16,7 @@ type UseSystemUsersResult = {
   users: AdminUser[]
   loading: boolean
   error: string | null
+  refresh: () => Promise<void>
 }
 
 export function useSystemUsers({
@@ -29,7 +30,7 @@ export function useSystemUsers({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const refresh = useCallback(async () => {
     if (!enabled || !organization || !locationId || !userId || !userRight) {
       setUsers([])
       setError(null)
@@ -37,45 +38,32 @@ export function useSystemUsers({
       return
     }
 
-    let cancelled = false
+    setLoading(true)
+    setError(null)
 
-    async function loadUsers() {
-      setLoading(true)
-      setError(null)
-
-      try {
-        const data = await fetchSystemUsers({
-          organization,
-          locationId,
-          userId,
-          userRight,
-        })
-
-        if (!cancelled) {
-          setUsers(mapSystemUsers(data))
-        }
-      } catch (requestError) {
-        if (!cancelled) {
-          setUsers([])
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Failed to load users"
-          )
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
-      }
-    }
-
-    void loadUsers()
-
-    return () => {
-      cancelled = true
+    try {
+      const data = await fetchSystemUsers({
+        organization,
+        locationId,
+        userId,
+        userRight,
+      })
+      setUsers(mapSystemUsers(data))
+    } catch (requestError) {
+      setUsers([])
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Failed to load users"
+      )
+    } finally {
+      setLoading(false)
     }
   }, [organization, locationId, userId, userRight, enabled])
 
-  return { users, loading, error }
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+
+  return { users, loading, error, refresh }
 }

@@ -18,7 +18,7 @@ export function Users() {
   )
   const locationId = locations[0]?.id ?? ""
 
-  const { users, loading: usersLoading, error: usersError } = useSystemUsers({
+  const { users, loading: usersLoading, error: usersError, refresh } = useSystemUsers({
     organization: userSession.organization,
     locationId,
     userId: userSession.userId,
@@ -95,7 +95,14 @@ export function Users() {
         <AdminUserDataTable data={filteredUsers} loading={loading} />
       </PanelCard>
 
-      <AddUserDialog open={addOpen} onOpenChange={setAddOpen} />
+      <AddUserDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        connectionName={userSession.organization}
+        locationId={locationId}
+        lastUpdateId={userSession.username}
+        onSaved={refresh}
+      />
     </div>
   )
 }

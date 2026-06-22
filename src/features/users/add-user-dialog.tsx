@@ -18,6 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { securityLevelOptions, userStatusOptions } from "@/data/users"
+import { saveSystemUser } from "@/lib/api/system-users"
+import { buildSaveSystemUserRequest } from "@/lib/build-save-system-user-request"
 import {
   EMPTY_ADMIN_USER_FORM,
   type AdminUserFormValues,
@@ -26,14 +28,29 @@ import {
 type AddUserDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  connectionName: string
+  locationId: string
+  lastUpdateId: string
+  onSaved?: () => Promise<void>
 }
 
-export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
+export function AddUserDialog({
+  open,
+  onOpenChange,
+  connectionName,
+  locationId,
+  lastUpdateId,
+  onSaved,
+}: AddUserDialogProps) {
   const [form, setForm] = useState<AdminUserFormValues>(EMPTY_ADMIN_USER_FORM)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) {
       setForm(EMPTY_ADMIN_USER_FORM)
+      setSaving(false)
+      setError(null)
     }
   }, [open])
 
@@ -44,8 +61,63 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  function handleSave() {
-    onOpenChange(false)
+  function validateForm() {
+    if (!form.lastName.trim()) {
+      return "Last name is required."
+    }
+    if (!form.firstName.trim()) {
+      return "First name is required."
+    }
+    if (!form.userName.trim()) {
+      return "Username is required."
+    }
+    if (!form.password) {
+      return "Password is required."
+    }
+    if (form.password !== form.confirmPassword) {
+      return "Passwords do not match."
+    }
+    if (!form.security) {
+      return "Security level is required."
+    }
+    if (!locationId) {
+      return "Location is required before creating a user."
+    }
+
+    return null
+  }
+
+  async function handleSave() {
+    const validationError = validateForm()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+
+    try {
+      await saveSystemUser(
+        buildSaveSystemUserRequest({
+          connectionName,
+          locationId,
+          lastUpdateId,
+          form,
+        })
+      )
+
+      await onSaved?.()
+      onOpenChange(false)
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Failed to save user"
+      )
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -61,6 +133,10 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
         </DialogHeader>
 
         <div className="overflow-y-auto px-4 py-3">
+          {error ? (
+            <p className="mb-3 text-sm text-destructive">{error}</p>
+          ) : null}
+
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField label="Last Name" htmlFor="add-user-last-name">
               <Input
@@ -166,12 +242,13 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
             <Button
               type="button"
               variant="outline"
+              disabled={saving}
               onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
-            <Button type="button" onClick={handleSave}>
-              Save
+            <Button type="button" disabled={saving} onClick={() => void handleSave()}>
+              {saving ? "Saving..." : "Save"}
             </Button>
           </div>
         </DialogFooter>
