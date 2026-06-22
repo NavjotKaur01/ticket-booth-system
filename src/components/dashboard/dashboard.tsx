@@ -1,10 +1,10 @@
 import { StatsSummary } from "@/components/dashboard/stats-summary"
 import { NewsGrid } from "@/components/dashboard/news-grid"
-import { useAuth } from "@/contexts/auth-context"
+import { useAppSession } from "@/hooks/use-app-session"
 import { newsItems, statSummaries } from "@/data/dashboard"
 
 export function Dashboard() {
-  const { session } = useAuth()
+  const { locSName } = useAppSession()
 
   return (
     <div className="space-y-4">
@@ -13,7 +13,7 @@ export function Dashboard() {
           Dashboard
         </h1>
         <p className="text-xs text-muted-foreground">
-          Ticket sales overview for {session?.locationName || session?.organization}
+          Ticket sales overview for {locSName || "your location"}
         </p>
       </div>
 

@@ -10,7 +10,7 @@ export function applyLocationToCredentials(
     UserLocationId: location.id,
     UserSavedLocationId: location.id,
     LocationID: location.id,
-    LocationName: location.label,
+    LocationName: location.shortName || location.label,
     DBName: location.dbName || credentials.DBName,
     ClubCityName: location.city,
   }

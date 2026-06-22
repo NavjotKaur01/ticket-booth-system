@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ROUTES, getRouteLabel } from "@/constants/routes"
 import { useAuth } from "@/contexts/auth-context"
+import { useAppSession } from "@/hooks/use-app-session"
 import type { UserSession } from "@/types/dashboard"
 
 type AppHeaderProps = {
@@ -38,6 +39,7 @@ export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { logout } = useAuth()
+  const { locSName } = useAppSession()
   const pageLabel = getRouteLabel(pathname)
 
   function handleSignOut() {
@@ -93,7 +95,7 @@ export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
             <DropdownMenuLabel>
               <p>{session.username}</p>
               <p className="text-xs font-normal text-muted-foreground">
-                {session.locationName || session.organization}
+                {locSName || session.locationName}
               </p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

@@ -34,6 +34,7 @@ export type StoredLoginCookie = {
   login: ApiUserCredentials
   connectionName: string
   locationName: string
+  locationShortName?: string
   locationDbName: string
   locationCity: string
 }

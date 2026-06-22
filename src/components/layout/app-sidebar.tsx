@@ -16,6 +16,7 @@ import {
 import { SIDEBAR_NAV_ITEMS } from "@/constants/navigation"
 import { ROUTES } from "@/constants/routes"
 import { quickLinks } from "@/data/dashboard"
+import { useAppSession } from "@/hooks/use-app-session"
 import { cn } from "@/lib/utils"
 import type { NavItem, NavSubItemAction } from "@/types/navigation"
 import type { UserSession } from "@/types/dashboard"
@@ -215,6 +216,7 @@ export function AppSidebar({
   onSubMenuAction,
 }: AppSidebarProps) {
   const { pathname } = useLocation()
+  const { locSName } = useAppSession()
   const [openMenuId, setOpenMenuId] = useState<string | null>(() =>
     getParentMenuIdForPath(pathname)
   )
@@ -248,7 +250,7 @@ export function AppSidebar({
           <div className="ml-3 min-w-0">
             <p className="truncate text-sm font-bold text-foreground">ClubMan</p>
             <p className="truncate text-xs text-muted-foreground">
-              {session.locationName || session.organization}
+              {locSName || session.locationName}
             </p>
           </div>
         )}

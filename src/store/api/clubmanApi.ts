@@ -11,6 +11,7 @@ import {
   reservationApiPath,
 } from "@/lib/api/paths"
 import { mapLocation } from "@/lib/map-location"
+import { saveLocations } from "@/lib/auth/locations-storage"
 import { executeAccountLogin } from "@/lib/api/account-login"
 import { clubmanBaseQuery, type ClubmanQueryError } from "@/store/api/baseQuery"
 import type { AccountLoginRequest, ApiUserCredentials } from "@/types/api/account-login"
@@ -47,8 +48,10 @@ export const clubmanApi = createApi({
   endpoints: (builder) => ({
     getLocations: builder.query({
       query: (clubSlug: string) => clubApiPath(clubSlug, "locations"),
-      transformResponse: (response: ApiLocation[]) =>
-        response.map(mapLocation),
+      transformResponse: (response: ApiLocation[], _meta, clubSlug) => {
+        saveLocations(clubSlug, response)
+        return response.map(mapLocation)
+      },
       providesTags: (_result, _error, clubSlug) => [
         { type: "Location", id: clubSlug },
       ],
