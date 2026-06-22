@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { Calendar, dayjsLocalizer } from 'react-big-calendar';
+import { Calendar, dayjsLocalizer, type ToolbarProps } from 'react-big-calendar';
 import dayjs from 'dayjs'
 
 import 'react-big-calendar/lib/css/react-big-calendar.css'
@@ -15,6 +15,7 @@ export default function EventCalendar( ) {
     const [location, setLocation] = useState<string>(locations[0])
     const [showCancelled, setShowCancelled] = useState<boolean>(false)
     const [refreshInterval, setRefreshInterval] = useState<number>(30)
+    const [calendarDate, setCalendarDate] = useState(() => new Date())
 
 
     //filtered events
@@ -27,7 +28,7 @@ export default function EventCalendar( ) {
     }, [location, showCancelled])
 
     const components = useMemo(() => ({
-        toolbar: (props: any) => (
+        toolbar: (props: ToolbarProps<CalendarEvent>) => (
             <CalendarToolbar 
                 {...props}
                 location={location}
@@ -53,13 +54,15 @@ export default function EventCalendar( ) {
     }), [])
 
     return (
-        <div className="h-full w-full overflow-hidden bg-white">
+        <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg bg-background shadow-sm ring-1 ring-border">
             <Calendar 
                 localizer={localizer}
                 events={filteredEvents}
+                date={calendarDate}
+                onNavigate={setCalendarDate}
                 defaultView="month"
-                views={['month']}
-                style={{height: 700}}
+                views={['month', 'week']}
+                className="min-h-0 flex-1"
                 components={components}
                 eventPropGetter={eventPropGetter}
             />  

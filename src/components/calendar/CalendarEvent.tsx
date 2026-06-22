@@ -6,19 +6,25 @@ interface CalendarEventProps {
 
 export default function CalendarEventCard({event}: CalendarEventProps) {
     return (
-        <div className="flex items-start justify-between px-1 py-0.5 text-[11px] leading-tight">
+        <div
+            className="flex min-w-0 items-start justify-between px-0.5 py-0.5 text-[10px] leading-tight sm:px-1 sm:text-[11px]"
+            title={`${event.performer} - ${event.time} - ${event.seats.sold}/${event.seats.comp}/${event.seats.capacity}`}
+        >
             <div className="min-w-0">
-                <div className={`font-semibold truncate ${event.cancelled ? 'text-gray-400 line-through' : 'text-blue-700'}`}>
+                <span className="w-1 h-full rounded-lg bg-primary" />
+                <div className={`truncate font-semibold ${event.cancelled ? 'text-muted-foreground line-through' : 'text-primary'}`}>
                     {event.performer}
                 </div>
-                <div className="text-gray-500">
-                    {event.seats.sold}/{event.seats.comp}/{event.seats.capacity}
-                    &nbsp;&nbsp;
+                <div className="truncate text-muted-foreground">
+                    <span className="hidden sm:inline">
+                        {event.seats.sold}/{event.seats.comp}/{event.seats.capacity}{' '}
+                    </span>
                     {event.time}
-
                 </div>
             </div>
-            <span className="text-gray-400 ml-1 shrink-0 font-medium">{event.status}</span>
+            <span className="ml-1 hidden shrink-0 font-medium text-muted-foreground md:inline">
+                {event.status}
+            </span>
         </div>
     )
 }

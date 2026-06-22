@@ -35,18 +35,18 @@ export default function CalendarToolbar({
   setRefreshInterval,
 }: CalendarToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 bg-blue-700 text-white px-4 py-2">
+    <div className="grid shrink-0 grid-cols-2 items-center gap-2 bg-primary px-2 py-2 text-primary-foreground sm:px-3 lg:grid-cols-[auto_1fr_auto_auto] lg:gap-x-4">
 
       {/* Location */}
-      <div className="flex items-center gap-2">
-        <Label className="text-white text-sm font-medium">Location</Label>
+      <div className="order-2 col-span-2 flex min-w-0 items-center gap-2 sm:col-span-1 lg:order-1">
+        <Label className="shrink-0 text-sm font-medium text-primary-foreground">Location</Label>
         <Select value={location} onValueChange={setLocation}>
-          <SelectTrigger className="w-[160px] bg-white text-black text-sm h-8 focus:ring-0">
+          <SelectTrigger className="h-8 min-w-0 flex-1 bg-background text-sm text-foreground focus:ring-0 sm:w-[160px] sm:flex-none">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-popover text-popover-foreground">
             {locations.map(l => (
-              <SelectItem key={l} value={l}>
+              <SelectItem  className="focus:bg-accent focus:text-accent-foreground" key={l} value={l}>
                 {l}
               </SelectItem>
             ))}
@@ -55,17 +55,18 @@ export default function CalendarToolbar({
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center gap-2 flex-1 justify-center">
+      <div className="order-1 col-span-2 flex min-w-0 items-center justify-center gap-1 lg:order-2 lg:col-span-1 lg:gap-2">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => onNavigate('PREV')}
-          className="text-white hover:bg-blue-600 hover:text-white h-8 w-8"
+          className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground"
+          aria-label="Previous month"
         >
           <ChevronLeft size={18} />
         </Button>
 
-        <span className="font-semibold text-base min-w-[140px] text-center">
+        <span className="min-w-0 flex-1 truncate text-center text-sm font-semibold sm:min-w-[140px] sm:flex-none sm:text-base">
           {label}
         </span>
 
@@ -73,7 +74,8 @@ export default function CalendarToolbar({
           variant="ghost"
           size="icon"
           onClick={() => onNavigate('NEXT')}
-          className="text-white hover:bg-blue-600 hover:text-white h-8 w-8"
+          className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground"
+          aria-label="Next month"
         >
           <ChevronRight size={18} />
         </Button>
@@ -82,33 +84,35 @@ export default function CalendarToolbar({
           variant="outline"
           size="sm"
           onClick={() => onNavigate('TODAY')}
-          className="ml-2 h-8 text-black border-white hover:bg-blue-600 hover:text-white"
+          className="ml-1 h-8 border-primary-foreground/60 bg-background text-foreground hover:bg-primary-foreground/90 sm:ml-2"
         >
           Today
         </Button>
       </div>
 
       {/* Refresh */}
-      <div className="flex items-center gap-2">
-        <Label className="text-white text-sm">Refresh</Label>
+      <div className="order-3 flex items-center gap-2 lg:order-3">
+        <Label className="text-sm text-primary-foreground">Refresh</Label>
         <Input
           type="number"
           value={refreshInterval}
           onChange={e => setRefreshInterval(Number(e.target.value))}
-          className="w-14 h-8 text-black bg-white text-center text-sm focus-visible:ring-0"
+          min={1}
+          aria-label="Refresh interval in seconds"
+          className="h-8 w-14 bg-background text-center text-sm text-foreground focus-visible:ring-0"
         />
-        <RefreshCw size={16} className="cursor-pointer hover:opacity-70 text-white" />
+        <RefreshCw size={16} aria-hidden="true" className="hidden text-primary-foreground sm:block" />
       </div>
 
       {/* Cancelled */}
-      <div className="flex items-center gap-2">
+      <div className="order-4 flex items-center justify-end gap-2 lg:order-4">
         <Checkbox
           id="cancelled"
           checked={showCancelled}
           onCheckedChange={val => setShowCancelled(val as boolean)}
-          className="border-white data-[state=checked]:bg-white data-[state=checked]:text-blue-700"
+          className="border-primary-foreground data-checked:border-primary-foreground data-checked:bg-primary-foreground dark:data-checked:bg-primary-foreground data-checked:[&_[data-slot=checkbox-indicator]]:text-primary dark:data-checked:[&_[data-slot=checkbox-indicator]]:text-primary"
         />
-        <Label htmlFor="cancelled" className="text-white text-sm cursor-pointer">
+        <Label htmlFor="cancelled" className="cursor-pointer text-sm text-primary-foreground">
           Cancelled
         </Label>
       </div>
