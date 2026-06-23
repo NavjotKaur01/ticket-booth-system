@@ -384,8 +384,7 @@ export function ReservationPaymentActions ({
       <Button
         type='button'
         size='sm'
-        variant='link'
-        className='px-2'
+        variant='outline'
         onClick={onCancel}
       >
         Cancel
