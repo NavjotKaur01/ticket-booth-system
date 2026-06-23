@@ -1,17 +1,25 @@
-import type { ToolbarProps } from 'react-big-calendar'
-import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
-import type { CalendarEvent } from '@/data/calendarEvents'
-import { Button } from '@/components/ui/button'
+import type { ToolbarProps, View } from "react-big-calendar"
+import {
+  CalendarDays,
+  CalendarRange,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+} from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+} from "@/components/ui/select"
+import type { CalendarEvent } from "@/data/calendarEvents"
+import { cn } from "@/lib/utils"
 
 interface CalendarToolbarProps extends ToolbarProps<CalendarEvent> {
   location: string
@@ -23,8 +31,15 @@ interface CalendarToolbarProps extends ToolbarProps<CalendarEvent> {
   setRefreshInterval: (val: number) => void
 }
 
+const viewOptions: { value: View; label: string; icon: typeof CalendarDays }[] = [
+  { value: "month", label: "Month", icon: CalendarDays },
+  { value: "week", label: "Week", icon: CalendarRange },
+]
+
 export default function CalendarToolbar({
   label,
+  view,
+  onView,
   onNavigate,
   location,
   setLocation,
@@ -35,47 +50,50 @@ export default function CalendarToolbar({
   setRefreshInterval,
 }: CalendarToolbarProps) {
   return (
-    <div className="grid shrink-0 grid-cols-2 items-center gap-2 bg-primary px-2 py-2 text-primary-foreground sm:px-3 lg:grid-cols-[auto_1fr_auto_auto] lg:gap-x-4">
-
-      {/* Location */}
-      <div className="order-2 col-span-2 flex min-w-0 items-center gap-2 sm:col-span-1 lg:order-1">
-        <Label className="shrink-0 text-sm font-medium text-primary-foreground">Location</Label>
+    <div className="grid shrink-0 gap-2 bg-primary px-2 py-2 text-primary-foreground sm:px-3 xl:grid-cols-[minmax(13rem,17rem)_minmax(18rem,1fr)_auto] xl:items-center xl:gap-3">
+      <div className="flex min-w-0 items-center gap-2">
+        <Label className="shrink-0 text-sm font-medium text-primary-foreground">
+          Location
+        </Label>
         <Select value={location} onValueChange={setLocation}>
-          <SelectTrigger className="h-8 min-w-0 flex-1 bg-background text-sm text-foreground focus:ring-0 sm:w-[160px] sm:flex-none">
+          <SelectTrigger className="h-8 min-w-0 flex-1 bg-background text-sm text-foreground focus:ring-0 xl:w-full">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="bg-popover text-popover-foreground">
-            {locations.map(l => (
-              <SelectItem  className="focus:bg-accent focus:text-accent-foreground" key={l} value={l}>
-                {l}
+          <SelectContent className="max-h-56 overflow-y-auto bg-popover text-popover-foreground">
+            {locations.map((item) => (
+              <SelectItem
+                className="focus:bg-accent focus:text-accent-foreground"
+                key={item}
+                value={item}
+              >
+                {item}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Navigation */}
-      <div className="order-1 col-span-2 flex min-w-0 items-center justify-center gap-1 lg:order-2 lg:col-span-1 lg:gap-2">
+      <div className="grid min-w-0 grid-cols-[2rem_minmax(0,1fr)_2rem_auto] items-center gap-1 sm:gap-2">
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => onNavigate('PREV')}
+          onClick={() => onNavigate("PREV")}
           className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground"
-          aria-label="Previous month"
+          aria-label="Previous period"
         >
           <ChevronLeft size={18} />
         </Button>
 
-        <span className="min-w-0 flex-1 truncate text-center text-sm font-semibold sm:min-w-[140px] sm:flex-none sm:text-base">
+        <span className="min-w-0 truncate text-center text-sm font-semibold sm:text-base">
           {label}
         </span>
 
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => onNavigate('NEXT')}
+          onClick={() => onNavigate("NEXT")}
           className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground"
-          aria-label="Next month"
+          aria-label="Next period"
         >
           <ChevronRight size={18} />
         </Button>
@@ -83,40 +101,69 @@ export default function CalendarToolbar({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => onNavigate('TODAY')}
-          className="ml-1 h-8 border-primary-foreground/60 bg-background text-foreground hover:bg-primary-foreground/90 sm:ml-2"
+          onClick={() => onNavigate("TODAY")}
+          className="h-8 border-primary-foreground/60 bg-background px-2 text-xs text-foreground hover:bg-primary-foreground/90 sm:px-3 sm:text-sm"
         >
           Today
         </Button>
       </div>
 
-      {/* Refresh */}
-      <div className="order-3 flex items-center gap-2 lg:order-3">
-        <Label className="text-sm text-primary-foreground">Refresh</Label>
-        <Input
-          type="number"
-          value={refreshInterval}
-          onChange={e => setRefreshInterval(Number(e.target.value))}
-          min={1}
-          aria-label="Refresh interval in seconds"
-          className="h-8 w-14 bg-background text-center text-sm text-foreground focus-visible:ring-0"
-        />
-        <RefreshCw size={16} aria-hidden="true" className="hidden text-primary-foreground sm:block" />
-      </div>
+      <div className="grid grid-cols-2 items-center gap-2 sm:grid-cols-[auto_auto_auto] sm:justify-between md:justify-start xl:justify-end">
+        <div className="col-span-2 flex w-full rounded-md border border-primary-foreground/40 bg-primary-foreground/10 p-0.5 sm:col-span-1 sm:w-auto">
+          {viewOptions.map(({ value, label: optionLabel, icon: Icon }) => (
+            <Button
+              key={value}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onView(value)}
+              className={cn(
+                "h-7 flex-1 gap-1 rounded-sm px-2 text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground sm:flex-none",
+                view === value &&
+                  "bg-background text-foreground hover:bg-background hover:text-foreground"
+              )}
+              aria-pressed={view === value}
+            >
+              <Icon className="size-3.5" />
+              <span>{optionLabel}</span>
+            </Button>
+          ))}
+        </div>
 
-      {/* Cancelled */}
-      <div className="order-4 flex items-center justify-end gap-2 lg:order-4">
-        <Checkbox
-          id="cancelled"
-          checked={showCancelled}
-          onCheckedChange={val => setShowCancelled(val as boolean)}
-          className="border-primary-foreground data-checked:border-primary-foreground data-checked:bg-primary-foreground dark:data-checked:bg-primary-foreground data-checked:[&_[data-slot=checkbox-indicator]]:text-primary dark:data-checked:[&_[data-slot=checkbox-indicator]]:text-primary"
-        />
-        <Label htmlFor="cancelled" className="cursor-pointer text-sm text-primary-foreground">
-          Cancelled
-        </Label>
-      </div>
+        <div className="flex min-w-0 items-center gap-2">
+          <Label className="shrink-0 text-sm text-primary-foreground">
+            Refresh
+          </Label>
+          <Input
+            type="number"
+            value={refreshInterval}
+            onChange={(event) => setRefreshInterval(Number(event.target.value))}
+            min={1}
+            aria-label="Refresh interval in seconds"
+            className="h-8 w-14 bg-background text-center text-sm text-foreground focus-visible:ring-0"
+          />
+          <RefreshCw
+            size={16}
+            aria-hidden="true"
+            className="hidden shrink-0 text-primary-foreground md:block"
+          />
+        </div>
 
+        <div className="flex items-center justify-end gap-2 sm:justify-start">
+          <Checkbox
+            id="cancelled"
+            checked={showCancelled}
+            onCheckedChange={(val) => setShowCancelled(val as boolean)}
+            className="border-primary-foreground data-checked:border-primary-foreground data-checked:bg-primary-foreground dark:data-checked:bg-primary-foreground data-checked:[&_[data-slot=checkbox-indicator]]:text-primary dark:data-checked:[&_[data-slot=checkbox-indicator]]:text-primary"
+          />
+          <Label
+            htmlFor="cancelled"
+            className="cursor-pointer text-sm text-primary-foreground"
+          >
+            Cancelled
+          </Label>
+        </div>
+      </div>
     </div>
   )
 }
