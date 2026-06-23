@@ -20,10 +20,8 @@ import { Reports } from "@/pages/reports"
 import { Transactions } from "@/pages/transactions"
 import { TicketDefault } from "@/pages/ticket-default"
 import { ChangePassword } from "@/pages/change-password"
-import { userSession } from "@/data/dashboard"
-import EventCalendar from "./components/calendar/EventCalendar"
 import { Login } from "@/pages/login"
-import { userSession } from "@/data/dashboard"
+// import { userSession } from "@/data/dashboard"
 import EventCalendar from "./components/calendar/EventCalendar"
 
 /** Root router — login is public; app routes require auth. */
