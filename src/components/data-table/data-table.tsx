@@ -6,6 +6,7 @@ import {
   useReactTable,
   type ColumnDef,
   type OnChangeFn,
+  type Row,
   type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table"
@@ -60,6 +61,7 @@ type DataTableProps<TData> = {
   rowSelection?: RowSelectionState
   onRowSelectionChange?: OnChangeFn<RowSelectionState>
   getRowId?: (originalRow: TData, index: number) => string
+  onRowClick?: (row: Row<TData>) => void
   /** Noun shown in pagination, e.g. "records" or "reservations". */
   entityLabel?: string
 }
@@ -76,6 +78,7 @@ export function DataTable<TData>({
   rowSelection: rowSelectionProp,
   onRowSelectionChange,
   getRowId,
+  onRowClick,
   entityLabel = "records",
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([])
@@ -135,7 +138,11 @@ export function DataTable<TData>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="group border-b last:border-0 hover:bg-muted/40"
+                  className={cn(
+                    "group border-b last:border-0 hover:bg-muted/40",
+                    onRowClick && "cursor-pointer"
+                  )}
+                  onClick={() => onRowClick?.(row)}
                 >
                   {row.getVisibleCells().map((cell) => {
                     const rowSpan = cell.column.columnDef.meta?.getRowSpan?.(row)

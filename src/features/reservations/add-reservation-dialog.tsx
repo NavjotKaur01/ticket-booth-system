@@ -6,8 +6,9 @@ import {
   UserPlus,
   X
 } from 'lucide-react'
-import type { KeyboardEvent, ReactNode, RefObject } from 'react'
-import { useRef, useState } from 'react'
+import type { ReactNode, RefObject } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { RowSelectionState } from '@tanstack/react-table'
 
 import {
   FormSection,
@@ -37,9 +38,18 @@ import {
   reservationShowMeta,
   promoOptions,
   sectionOptions,
-  showOptions
+  showOptions,
+  formatSectionDesktopPrice,
 } from '@/data/reservation'
+import {
+  reservationBusinessSearchResults,
+  reservationCustomerSearchResults,
+  type ReservationBusinessSearchResult,
+  type ReservationCustomerSearchResult
+} from '@/data/reservation-search-results'
 import { ComicInfoDialog } from '@/features/reservations/comic-info-dialog'
+import { ReservationPaymentPanel } from '@/features/reservations/reservation-payment-panel'
+import { ReservationSearchResultsTable } from '@/features/reservations/reservation-search-results-table'
 import { cn } from '@/lib/utils'
 import type { SectionOption } from '@/types/reservation'
 
@@ -48,11 +58,11 @@ type AddReservationDialogProps = {
   onOpenChange: (open: boolean) => void
 }
 
-const PANEL_CLASS = 'space-y-3'
-const COMPACT_INPUT = 'h-9 text-sm'
-const COMPACT_NUMBER = 'h-9 w-14 px-1 text-center text-sm tabular-nums'
-const COMPACT_SELECT = 'h-9 w-44 min-w-0 text-sm'
-const INLINE_LABEL = 'mb-1.5 block text-xs font-medium text-muted-foreground'
+const PANEL_CLASS = 'space-y-2'
+const COMPACT_INPUT = 'h-8 text-xs'
+const COMPACT_NUMBER = 'h-8 w-12 px-1 text-center text-xs tabular-nums'
+const COMPACT_SELECT = 'h-8 w-40 min-w-0 text-xs'
+const INLINE_LABEL = 'mb-1 block text-[11px] font-medium text-muted-foreground'
 
 const RESERVATION_LINES = [
   { key: 'sub', label: 'Subtotal', value: '$0.00', info: null },
@@ -66,32 +76,176 @@ const ORIGIN_OPTIONS = [
   { id: 'walkup', label: 'Walk-up' }
 ] as const
 
-const SECTION_CARD_TONES = {
-  regular: {
-    selected: {
-      card: 'border-emerald-500 bg-emerald-50/70',
-      title: 'text-emerald-800',
-      meta: 'text-emerald-700/90'
-    },
-    unselected: {
-      card: 'border-emerald-200 bg-background hover:border-emerald-300',
-      title: 'text-emerald-800',
-      meta: 'text-muted-foreground'
-    }
-  },
-  vip: {
-    selected: {
-      card: 'border-amber-500 bg-amber-50/70',
-      title: 'text-amber-900',
-      meta: 'text-amber-800/90'
-    },
-    unselected: {
-      card: 'border-amber-200 bg-background hover:border-amber-300',
-      title: 'text-amber-900',
-      meta: 'text-muted-foreground'
-    }
+type CustomerSearchCriteria = {
+  lastName: string
+  firstName: string
+  phoneNo: string
+  email: string
+  businessName: string
+}
+
+const EMPTY_CUSTOMER_SEARCH_CRITERIA: CustomerSearchCriteria = {
+  lastName: '',
+  firstName: '',
+  phoneNo: '',
+  email: '',
+  businessName: ''
+}
+
+function hasCustomerSearchCriteria (
+  searchType: 'customer' | 'business',
+  criteria: CustomerSearchCriteria
+) {
+  if (searchType === 'business') {
+    return [
+      criteria.businessName,
+      criteria.lastName,
+      criteria.firstName,
+      criteria.phoneNo
+    ].some(value => value.trim().length > 0)
   }
+
+  return [
+    criteria.lastName,
+    criteria.firstName,
+    criteria.phoneNo,
+    criteria.email
+  ].some(value => value.trim().length > 0)
+}
+
+const SECTION_SEAT_STYLES = {
+  seatsLabel: 'text-slate-600',
+  seatsValue: 'font-semibold text-slate-800',
+  availableLabel: 'text-emerald-800/80',
+  availableValue: 'font-semibold text-emerald-600'
 } as const
+
+function SectionSeatDisplay ({ option }: { option: SectionOption }) {
+  return (
+    <div className='flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs tabular-nums max-sm:col-start-2 max-sm:row-start-2 sm:ml-auto sm:shrink-0'>
+      <span className='shrink-0 tabular-nums text-foreground'>
+        {formatSectionDesktopPrice(option.price)}
+      </span>
+
+      <span className='inline-flex items-center gap-x-0.5 whitespace-nowrap sm:min-w-[4.25rem]'>
+        <span className={SECTION_SEAT_STYLES.seatsLabel}>Seats:</span>
+        <span className={SECTION_SEAT_STYLES.seatsValue}>{option.seats}</span>
+      </span>
+
+      <span className='text-border'>|</span>
+
+      <span className='inline-flex items-center gap-x-0.5 whitespace-nowrap sm:min-w-[5.5rem]'>
+        <span className={SECTION_SEAT_STYLES.availableLabel}>Available:</span>
+        <span className={SECTION_SEAT_STYLES.availableValue}>
+          {option.available}
+        </span>
+      </span>
+    </div>
+  )
+}
+
+function SectionPicker ({
+  section,
+  onSectionChange,
+  partyBySection,
+  onPartyChange,
+  promo,
+  onPromoChange,
+  passes,
+  onPassesChange
+}: {
+  section: string
+  onSectionChange: (value: string) => void
+  partyBySection: Record<string, number>
+  onPartyChange: (sectionId: string, value: number) => void
+  promo: string
+  onPromoChange: (value: string) => void
+  passes: number
+  onPassesChange: (value: number) => void
+}) {
+  return (
+    <div>
+      <span className={INLINE_LABEL}>Section</span>
+      <RadioGroup
+        value={section}
+        onValueChange={onSectionChange}
+        className='gap-0'
+      >
+        <div className='overflow-hidden rounded-lg border border-border/60 divide-y divide-border/50'>
+          {sectionOptions.map(option => (
+            <div
+              key={option.id}
+              className='flex items-center gap-2 px-2.5 py-1.5'
+            >
+              <label
+                htmlFor={`section-${option.id}`}
+                className='flex min-w-0 flex-1 cursor-pointer items-center gap-2 max-sm:grid max-sm:grid-cols-[auto_minmax(0,1fr)] max-sm:items-center max-sm:gap-x-2 max-sm:gap-y-1'
+              >
+                <RadioGroupItem
+                  value={option.id}
+                  id={`section-${option.id}`}
+                  className='shrink-0 max-sm:row-span-2 max-sm:self-center'
+                />
+                <span className='shrink-0 text-xs font-semibold text-foreground max-sm:col-start-2 max-sm:row-start-1 sm:w-14'>
+                  {option.name}
+                </span>
+                <SectionSeatDisplay option={option} />
+              </label>
+              <Input
+                type='number'
+                min={1}
+                value={partyBySection[option.id] ?? 2}
+                onChange={event =>
+                  onPartyChange(option.id, Number(event.target.value) || 1)
+                }
+                onClick={event => event.stopPropagation()}
+                onPointerDown={event => event.stopPropagation()}
+                className={cn(COMPACT_NUMBER, 'shrink-0 self-center')}
+                aria-label={`${option.name} party size`}
+              />
+            </div>
+          ))}
+        </div>
+      </RadioGroup>
+
+      <div className='mt-2 flex flex-wrap items-center gap-2'>
+        <div className='min-w-0 flex-1 sm:flex-initial sm:shrink-0'>
+          <span className='sr-only'>Promo Code (Optional)</span>
+          <Select value={promo} onValueChange={onPromoChange}>
+            <SelectTrigger className={cn(COMPACT_SELECT, 'w-full min-w-0 sm:w-44')}>
+              <SelectValue placeholder='Select promo code' />
+            </SelectTrigger>
+            <SelectContent>
+              {promoOptions.map(option => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Input
+              type='number'
+              min={0}
+              value={passes}
+              onChange={event =>
+                onPassesChange(Math.max(0, Number(event.target.value) || 0))
+              }
+              className={COMPACT_NUMBER}
+              aria-label='Passes'
+            />
+          </TooltipTrigger>
+          <TooltipContent side='top'>
+            Number of promo passes to apply with the selected code
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </div>
+  )
+}
 
 function formatShowDate (dateValue: string) {
   const parsed = new Date(`${dateValue}T00:00:00`)
@@ -139,7 +293,7 @@ function TotalsBreakdown ({
   )
 
   return (
-    <div className='space-y-2.5 text-sm'>
+    <div className='space-y-2 text-xs'>
       {selectedSections.length > 0 ? (
         selectedSections.map(option => (
           <div
@@ -185,10 +339,10 @@ function TotalsBreakdown ({
         </div>
       ))}
 
-      <div className='border-t border-border/50 pt-2.5'>
-        <div className='flex items-center justify-between gap-6'>
-          <span className='font-semibold'>Total</span>
-          <span className='shrink-0 text-base font-bold tabular-nums'>
+      <div className='border-t border-border/50 pt-2'>
+        <div className='flex items-center justify-between gap-4'>
+          <span className='text-xs font-semibold'>Total</span>
+          <span className='shrink-0 text-sm font-bold tabular-nums'>
             {total}
           </span>
         </div>
@@ -230,8 +384,23 @@ function InlineRadioGroup ({
 
 function RadioOptionBox ({ children }: { children: ReactNode }) {
   return (
-    <div className='rounded-lg border border-border/60 bg-background px-3 py-2'>
+    <div className='rounded-lg border border-border/60 bg-background px-2.5 py-1.5'>
       {children}
+    </div>
+  )
+}
+
+function LabeledRadioOptionBox ({
+  label,
+  children
+}: {
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <div className='min-w-0'>
+      <span className={INLINE_LABEL}>{label}</span>
+      <RadioOptionBox>{children}</RadioOptionBox>
     </div>
   )
 }
@@ -248,8 +417,8 @@ function BookingOptionsBar ({
   onOriginChange: (value: string) => void
 }) {
   return (
-    <div className='inline-flex flex-wrap items-center gap-3'>
-      <RadioOptionBox>
+    <div className='flex flex-wrap items-end gap-2'>
+      <LabeledRadioOptionBox label='Time'>
         <InlineRadioGroup
           name='show-time'
           value={showTime}
@@ -260,9 +429,9 @@ function BookingOptionsBar ({
             title: show.label
           }))}
         />
-      </RadioOptionBox>
+      </LabeledRadioOptionBox>
 
-      <RadioOptionBox>
+      <LabeledRadioOptionBox label='Origin'>
         <InlineRadioGroup
           name='origin'
           value={origin}
@@ -272,7 +441,139 @@ function BookingOptionsBar ({
             label: option.label
           }))}
         />
-      </RadioOptionBox>
+      </LabeledRadioOptionBox>
+
+      <label className='flex cursor-pointer items-center gap-1.5 pb-1.5 text-xs whitespace-nowrap'>
+        <Checkbox id='dinner' />
+        Dinner
+      </label>
+    </div>
+  )
+}
+
+function CustomerSearchHeader ({
+  searchType,
+  onSearchTypeChange,
+  onSearch,
+  onClear
+}: {
+  searchType: 'customer' | 'business'
+  onSearchTypeChange: (value: string) => void
+  onSearch: () => void
+  onClear: () => void
+}) {
+  const isBusiness = searchType === 'business'
+
+  return (
+    <div className='flex flex-wrap items-center gap-x-3 gap-y-2'>
+       <div className='flex min-w-0 items-center gap-2'>
+        <h3 className='text-xs font-semibold text-foreground'>
+          Customer & Search
+        </h3>
+      </div>
+      <InlineRadioGroup
+        name='search-type'
+        value={searchType}
+        onChange={onSearchTypeChange}
+        options={[
+          { id: 'customer', label: 'Customer' },
+          { id: 'business', label: 'Business' }
+        ]}
+      />
+
+      <div className='ml-auto flex shrink-0 items-center gap-1.5'>
+        <IconActionButton
+          label='Search'
+          icon={Search}
+          variant='default'
+          onClick={onSearch}
+        />
+        <IconActionButton
+          label={isBusiness ? 'Add Business' : 'Add Customer'}
+          icon={UserPlus}
+        />
+        <IconActionButton label='Swipe Card' icon={CreditCard} />
+        <IconActionButton label='Clear' icon={X} variant='outline' onClick={onClear} />
+      </div>
+    </div>
+  )
+}
+
+function CustomerSearchFields ({
+  searchType,
+  criteria,
+  onCriteriaChange
+}: {
+  searchType: 'customer' | 'business'
+  criteria: CustomerSearchCriteria
+  onCriteriaChange: (criteria: CustomerSearchCriteria) => void
+}) {
+  const inputClass = cn('w-full', COMPACT_INPUT)
+
+  function updateField (field: keyof CustomerSearchCriteria, value: string) {
+    onCriteriaChange({ ...criteria, [field]: value })
+  }
+
+  if (searchType === 'business') {
+    return (
+      <div className='grid grid-cols-2 gap-x-2 gap-y-2'>
+        <Input
+          placeholder='Business Name'
+          value={criteria.businessName}
+          onChange={event => updateField('businessName', event.target.value)}
+          className={inputClass}
+        />
+        <Input
+          placeholder='Last Name'
+          value={criteria.lastName}
+          onChange={event => updateField('lastName', event.target.value)}
+          className={inputClass}
+        />
+        <Input
+          placeholder='First Name'
+          value={criteria.firstName}
+          onChange={event => updateField('firstName', event.target.value)}
+          className={inputClass}
+        />
+        <Input
+          type='tel'
+          placeholder='Phone No.'
+          value={criteria.phoneNo}
+          onChange={event => updateField('phoneNo', event.target.value)}
+          className={inputClass}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className='grid grid-cols-2 gap-x-2 gap-y-2'>
+      <Input
+        placeholder='Last Name'
+        value={criteria.lastName}
+        onChange={event => updateField('lastName', event.target.value)}
+        className={inputClass}
+      />
+      <Input
+        placeholder='First Name'
+        value={criteria.firstName}
+        onChange={event => updateField('firstName', event.target.value)}
+        className={inputClass}
+      />
+      <Input
+        type='tel'
+        placeholder='Phone No.'
+        value={criteria.phoneNo}
+        onChange={event => updateField('phoneNo', event.target.value)}
+        className={inputClass}
+      />
+      <Input
+        type='email'
+        placeholder='Email'
+        value={criteria.email}
+        onChange={event => updateField('email', event.target.value)}
+        className={inputClass}
+      />
     </div>
   )
 }
@@ -299,10 +600,10 @@ function ShowMetaRow ({
   onOpenDatePicker: () => void
 }) {
   return (
-    <div className='border-b border-border/50 pb-4'>
-      <div className='flex flex-wrap items-center gap-x-4 gap-y-3'>
+    <div className='space-y-2'>
+      <div className='flex flex-wrap items-center gap-x-3 gap-y-2'>
       <div className='inline-flex items-center'>
-        <span className='text-sm font-medium text-foreground'>
+        <span className='text-xs font-medium text-foreground'>
           {reservationShowMeta.comicName}
         </span>
 
@@ -324,7 +625,7 @@ function ShowMetaRow ({
       </div>
 
       <div className='inline-flex items-center gap-1'>
-        <span className='text-sm text-muted-foreground'>
+        <span className='text-xs text-muted-foreground'>
           {formatShowDate(showDate)}
         </span>
         <Tooltip>
@@ -352,6 +653,7 @@ function ShowMetaRow ({
           aria-hidden
         />
       </div>
+      </div>
 
       <BookingOptionsBar
         showTime={showTime}
@@ -359,86 +661,6 @@ function ShowMetaRow ({
         origin={origin}
         onOriginChange={onOriginChange}
       />
-
-      <label className='flex cursor-pointer items-center gap-2 text-sm whitespace-nowrap'>
-        <Checkbox id='dinner' />
-        Dinner
-      </label>
-      </div>
-    </div>
-  )
-}
-
-function SectionCard ({
-  option,
-  selected,
-  onToggle
-}: {
-  option: SectionOption
-  selected: boolean
-  onToggle: () => void
-}) {
-  function handleKeyDown (event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault()
-      onToggle()
-    }
-  }
-
-  const tone = SECTION_CARD_TONES[option.tone]
-  const styles = selected ? tone.selected : tone.unselected
-
-  return (
-    <div
-      role='checkbox'
-      tabIndex={0}
-      aria-checked={selected}
-      onClick={onToggle}
-      onKeyDown={handleKeyDown}
-      className={cn(
-        'flex min-w-[6.5rem] cursor-pointer flex-col items-start rounded-md border px-2.5 py-1.5 text-left transition-colors',
-        styles.card
-      )}
-    >
-      <span className={cn('text-xs font-semibold', styles.title)}>
-        {option.name}
-      </span>
-      <span className='mt-0.5 flex items-center gap-1 text-[11px]'>
-        <span className={styles.meta}>{option.price}</span>
-        <span className='text-muted-foreground'>·</span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span
-              className={cn(
-                'tabular-nums',
-                selected ? tone.selected.meta : tone.unselected.meta
-              )}
-              onClick={event => event.stopPropagation()}
-              onPointerDown={event => event.stopPropagation()}
-            >
-              {option.available}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side='top'>Available</TooltipContent>
-        </Tooltip>
-      </span>
-    </div>
-  )
-}
-
-function InlineField ({
-  label,
-  children,
-  className
-}: {
-  label: ReactNode
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <div className={cn('min-w-0', className)}>
-      <span className={INLINE_LABEL}>{label}</span>
-      {children}
     </div>
   )
 }
@@ -448,12 +670,16 @@ export function AddReservationDialog ({
   onOpenChange
 }: AddReservationDialogProps) {
   const dateInputRef = useRef<HTMLInputElement>(null)
-  const [searchType, setSearchType] = useState('customer')
+  const notesInputRef = useRef<HTMLTextAreaElement>(null)
+  const [searchType, setSearchType] = useState<'customer' | 'business'>(
+    'customer'
+  )
+  const [specialNotesOpen, setSpecialNotesOpen] = useState(false)
   const [showDate, setShowDate] = useState(reservationShowMeta.showDateInput)
   const [showTime, setShowTime] = useState(showOptions[0]?.id ?? '')
-  const [sections, setSections] = useState<string[]>([
+  const [section, setSection] = useState(
     sectionOptions[0]?.id ?? 'regular'
-  ])
+  )
   const [partyBySection, setPartyBySection] = useState<Record<string, number>>(
     () =>
       Object.fromEntries(
@@ -465,6 +691,55 @@ export function AddReservationDialog ({
   const [origin, setOrigin] =
     useState<typeof ORIGIN_OPTIONS[number]['id']>('phone')
   const [comicInfoOpen, setComicInfoOpen] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
+  const [customerSearchResults, setCustomerSearchResults] = useState<
+    ReservationCustomerSearchResult[]
+  >([])
+  const [businessSearchResults, setBusinessSearchResults] = useState<
+    ReservationBusinessSearchResult[]
+  >([])
+  const [searchRowSelection, setSearchRowSelection] = useState<RowSelectionState>(
+    {}
+  )
+  const [searchCriteria, setSearchCriteria] = useState<CustomerSearchCriteria>(
+    EMPTY_CUSTOMER_SEARCH_CRITERIA
+  )
+
+  function clearCustomerSearch () {
+    setHasSearched(false)
+    setCustomerSearchResults([])
+    setBusinessSearchResults([])
+    setSearchRowSelection({})
+    setSearchCriteria(EMPTY_CUSTOMER_SEARCH_CRITERIA)
+  }
+
+  function handleCustomerSearch () {
+    if (!hasCustomerSearchCriteria(searchType, searchCriteria)) {
+      return
+    }
+
+    setHasSearched(true)
+    setSearchRowSelection({})
+    setCustomerSearchResults(reservationCustomerSearchResults)
+    setBusinessSearchResults(reservationBusinessSearchResults)
+  }
+
+  useEffect(() => {
+    if (!open) {
+      setSpecialNotesOpen(false)
+      clearCustomerSearch()
+    }
+  }, [open])
+
+  useEffect(() => {
+    clearCustomerSearch()
+  }, [searchType])
+
+  useEffect(() => {
+    if (specialNotesOpen) {
+      notesInputRef.current?.focus()
+    }
+  }, [specialNotesOpen])
 
   function openDatePicker () {
     const input = dateInputRef.current
@@ -482,14 +757,6 @@ export function AddReservationDialog ({
     input.click()
   }
 
-  function toggleSection (sectionId: string) {
-    setSections(current =>
-      current.includes(sectionId)
-        ? current.filter(id => id !== sectionId)
-        : [...current, sectionId]
-    )
-  }
-
   function setSectionParty (sectionId: string, value: number) {
     setPartyBySection(current => ({
       ...current,
@@ -503,168 +770,109 @@ export function AddReservationDialog ({
         <TooltipProvider delayDuration={200}>
           <DialogContent
             showCloseButton
-            className='flex max-h-[92vh] w-[min(96vw,72rem)] max-w-none flex-col overflow-hidden sm:max-w-none'
+            className='flex max-h-[88vh] w-[min(94vw,58rem)] max-w-none flex-col overflow-hidden sm:max-w-none'
           >
-            <DialogHeader className='shrink-0 border-b px-5 py-4'>
-              <DialogTitle className='text-base font-semibold text-foreground'>
+            <DialogHeader className='shrink-0 border-b px-4 py-2.5'>
+              <DialogTitle className='text-sm font-semibold text-foreground'>
                 Add Reservation
               </DialogTitle>
             </DialogHeader>
 
-            <div className='space-y-5 overflow-y-auto px-5 py-3'>
+            <div className='overflow-y-auto px-4 py-2'>
               <FormPanel>
-                <ShowMetaRow
-                  showDate={showDate}
-                  onShowDateChange={setShowDate}
-                  showTime={showTime}
-                  onShowTimeChange={setShowTime}
-                  origin={origin}
-                  onOriginChange={id =>
-                    setOrigin(id as (typeof ORIGIN_OPTIONS)[number]['id'])
-                  }
-                  onOpenComicInfo={() => setComicInfoOpen(true)}
-                  dateInputRef={dateInputRef}
-                  onOpenDatePicker={openDatePicker}
-                />
-
-                <InlineField label='Section'>
-                  <div className='flex flex-wrap items-center gap-3 rounded-lg border border-border/60 bg-background px-3 py-2'>
-                    {sectionOptions.map(option => (
-                      <div
-                        key={option.id}
-                        className='flex items-center gap-2'
-                      >
-                        <SectionCard
-                          option={option}
-                          selected={sections.includes(option.id)}
-                          onToggle={() => toggleSection(option.id)}
-                        />
-
-                        <Input
-                          type='number'
-                          min={1}
-                          value={partyBySection[option.id] ?? 2}
-                          onChange={event =>
-                            setSectionParty(
-                              option.id,
-                              Number(event.target.value) || 1
-                            )
-                          }
-                          className={COMPACT_NUMBER}
-                          aria-label={`${option.name} party size`}
-                        />
-                      </div>
-                    ))}
-
-                    <div className='shrink-0'>
-                      <span className='sr-only'>Promo Code (Optional)</span>
-                      <Select value={promo} onValueChange={setPromo}>
-                        <SelectTrigger className={COMPACT_SELECT}>
-                          <SelectValue placeholder='Select promo code' />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {promoOptions.map(option => (
-                            <SelectItem key={option.id} value={option.id}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <Input
-                      type='number'
-                      min={0}
-                      value={passes}
-                      onChange={event =>
-                        setPasses(Math.max(0, Number(event.target.value) || 0))
+                <div className='grid gap-3 lg:grid-cols-2 lg:gap-4'>
+                  <div className='min-w-0 space-y-2.5 lg:pr-1'>
+                    <ShowMetaRow
+                      showDate={showDate}
+                      onShowDateChange={setShowDate}
+                      showTime={showTime}
+                      onShowTimeChange={setShowTime}
+                      origin={origin}
+                      onOriginChange={id =>
+                        setOrigin(id as (typeof ORIGIN_OPTIONS)[number]['id'])
                       }
-                      className={COMPACT_NUMBER}
-                      aria-label='Passes'
+                      onOpenComicInfo={() => setComicInfoOpen(true)}
+                      dateInputRef={dateInputRef}
+                      onOpenDatePicker={openDatePicker}
                     />
-                  </div>
-                </InlineField>
 
-                <div className='border-t border-border/50 pt-4'>
-                  <div className='grid gap-4 md:grid-cols-[2fr_3fr]'>
-                  <div className='rounded-lg border border-border/60 p-3'>
-                    <TotalsBreakdown
-                      sections={sections}
+                    <SectionPicker
+                      section={section}
+                      onSectionChange={setSection}
                       partyBySection={partyBySection}
-                      total='$0.00'
+                      onPartyChange={setSectionParty}
+                      promo={promo}
+                      onPromoChange={setPromo}
+                      passes={passes}
+                      onPassesChange={setPasses}
                     />
-                  </div>
 
-                  <div className='min-w-0 space-y-3'>
-                    <h3 className='text-sm font-semibold text-foreground'>
-                      Customer & Search
-                    </h3>
-
-                    <div className='grid grid-cols-2 gap-x-4 gap-y-3 lg:grid-cols-4'>
-                      <Input
-                        placeholder='Last Name'
-                        className={cn('w-full', COMPACT_INPUT)}
-                      />
-                      <Input
-                        placeholder='First Name'
-                        className={cn('w-full', COMPACT_INPUT)}
-                      />
-                      <Input
-                        type='tel'
-                        placeholder='Phone No.'
-                        className={cn('w-full', COMPACT_INPUT)}
-                      />
-                      <Input
-                        type='email'
-                        placeholder='Email'
-                        className={cn('w-full', COMPACT_INPUT)}
+                    <div className='rounded-lg border border-border/60 p-2.5'>
+                      <TotalsBreakdown
+                        sections={[section]}
+                        partyBySection={partyBySection}
+                        total='$0.00'
                       />
                     </div>
+                  </div>
 
-                    <div className='flex items-center gap-4 overflow-x-auto rounded-lg border border-border/60 bg-muted/15 px-3 py-2'>
-                      <InlineRadioGroup
-                        name='search-type'
-                        value={searchType}
-                        onChange={setSearchType}
-                        options={[
-                          { id: 'customer', label: 'Customer' },
-                          { id: 'business', label: 'Business' }
-                        ]}
+                  <div className='min-w-0 space-y-2.5 border-t border-border/50 pt-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4'>
+                    <CustomerSearchHeader
+                      searchType={searchType}
+                      onSearchTypeChange={value =>
+                        setSearchType(value as 'customer' | 'business')
+                      }
+                      onSearch={handleCustomerSearch}
+                      onClear={clearCustomerSearch}
+                    />
+
+                    <CustomerSearchFields
+                      searchType={searchType}
+                      criteria={searchCriteria}
+                      onCriteriaChange={setSearchCriteria}
+                    />
+
+                    {hasSearched ? (
+                      <ReservationSearchResultsTable
+                        searchType={searchType}
+                        customerResults={customerSearchResults}
+                        businessResults={businessSearchResults}
+                        hasSearched={hasSearched}
+                        rowSelection={searchRowSelection}
+                        onRowSelectionChange={setSearchRowSelection}
                       />
+                    ) : null}
 
-                      <div className='ml-auto flex shrink-0 items-center gap-1.5'>
-                        <IconActionButton
-                          label='Search'
-                          icon={Search}
-                          variant='default'
-                        />
-                        <IconActionButton
-                          label='Add Customer'
-                          icon={UserPlus}
-                        />
-                        <IconActionButton
-                          label='Swipe Card'
-                          icon={CreditCard}
-                        />
-                        <IconActionButton
-                          label='Clear'
-                          icon={X}
-                          variant='outline'
-                        />
+                    <div className='w-full space-y-2'>
+                      <div className='flex justify-end'>
+                        <Button
+                          type='button'
+                          variant='link'
+                          size='sm'
+                          className='h-auto px-0 pt-0 text-sm font-normal underline'
+                          onClick={() => setSpecialNotesOpen(current => !current)}
+                          aria-expanded={specialNotesOpen}
+                        >
+                          Special Notes
+                        </Button>
                       </div>
+
+                      {specialNotesOpen ? (
+                        <Textarea
+                          ref={notesInputRef}
+                          placeholder='Enter notes or special requests...'
+                          className='min-h-16 w-full resize-y text-xs shadow-xs'
+                        />
+                      ) : null}
                     </div>
 
-                    <Textarea
-                      placeholder='Enter notes or special requests...'
-                      className='min-h-20 w-full resize-y text-sm'
-                    />
-                  </div>
+                    <ReservationPaymentPanel amountDue='$0.00' />
                   </div>
                 </div>
               </FormPanel>
             </div>
 
-            <DialogFooter className='shrink-0 gap-2 border-t px-5 py-4 sm:justify-end'>
+            <DialogFooter className='shrink-0 gap-2 border-t px-4 py-2.5 sm:justify-end'>
               <Button
                 type='button'
                 variant='outline'
