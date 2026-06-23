@@ -30,6 +30,9 @@ export type ShowOption = {
 export type SectionOption = {
   id: string
   label: string
+  price: string
+  name: string
+  available: number
 }
 
 export type ReservationCounts = {

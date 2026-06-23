@@ -90,6 +90,38 @@ export function ReadOnlyValue({ value }: { value: string }) {
   )
 }
 
+/** Compact pill for price summaries (subtotal, tax, total, etc.). */
+export function AmountPill({
+  label,
+  value,
+  emphasized = false,
+}: {
+  label: string
+  value: string
+  emphasized?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] tabular-nums",
+        emphasized
+          ? "border-primary/30 bg-primary/5"
+          : "border-border/60 bg-muted/30"
+      )}
+    >
+      <span className="text-muted-foreground">{label}</span>
+      <span
+        className={cn(
+          "font-semibold text-foreground",
+          emphasized && "text-primary"
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  )
+}
+
 /** Icon-only action with tooltip for compact toolbars. */
 export function IconActionButton({
   label,

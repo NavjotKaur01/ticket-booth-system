@@ -12,8 +12,20 @@ export const showOptions: ShowOption[] = [
 ]
 
 export const sectionOptions: SectionOption[] = [
-  { id: "regular", label: "$ 10.00 Regular Seats: 300 Available:" },
-  { id: "vip", label: "$ 25.00 VIP Seats: 50 Available:" },
+  {
+    id: "regular",
+    label: "$ 10.00 Regular Seats: 300 Available:",
+    price: "$10.00",
+    name: "Regular",
+    available: 300,
+  },
+  {
+    id: "vip",
+    label: "$ 25.00 VIP Seats: 50 Available:",
+    price: "$25.00",
+    name: "VIP",
+    available: 50,
+  },
 ]
 
 export const reservationCounts: ReservationCounts = {
