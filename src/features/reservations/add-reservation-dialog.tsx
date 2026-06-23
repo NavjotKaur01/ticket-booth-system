@@ -11,10 +11,10 @@ import type { ReactNode } from "react"
 import { useState } from "react"
 
 import {
+  AmountPill,
   FormField,
   FormSection,
   IconActionButton,
-  ReadOnlyValue,
 } from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -41,16 +41,24 @@ import {
   sectionOptions,
   showOptions,
 } from "@/data/reservation"
+import { cn } from "@/lib/utils"
+import type { SectionOption } from "@/types/reservation"
 
 type AddReservationDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-const FORM_GRID_CLASS =
-  "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 xl:items-end"
+const COMPACT_INPUT = "h-8 text-xs"
+const COMPACT_SELECT = "h-8 w-full min-w-0 text-xs"
 
-const COMPACT_FIELD_CLASS = "min-w-0 sm:max-w-[8rem] xl:max-w-none"
+const RESERVATION_TOTALS = [
+  { label: "Sub", value: "$0.00" },
+  { label: "Svc", value: "$0.00" },
+  { label: "Disc", value: "$0.00" },
+  { label: "Tax", value: "$0.00" },
+  { label: "Total", value: "$0.00", emphasized: true },
+] as const
 
 function FormPanel({
   title,
@@ -60,15 +68,42 @@ function FormPanel({
   children: ReactNode
 }) {
   return (
-    <FormSection title={title} className="space-y-3">
-      <div className="rounded-md border border-border/60 bg-muted/10 p-3">
+    <FormSection title={title} className="space-y-1.5">
+      <div className="rounded-md border border-border/60 bg-muted/10 p-2.5">
         {children}
       </div>
     </FormSection>
   )
 }
 
-// Multi-step reservation form: show → booking → customer → notes.
+function SectionChip({
+  option,
+  selected,
+  onSelect,
+}: {
+  option: SectionOption
+  selected: boolean
+  onSelect: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onSelect}
+      className={cn(
+        "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-xs transition-colors",
+        selected
+          ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/20"
+          : "border-border/60 bg-background text-foreground hover:bg-muted/40"
+      )}
+    >
+      <span className="font-semibold">{option.name}</span>
+      <span className="tabular-nums text-muted-foreground">{option.price}</span>
+      <span className="text-muted-foreground">· {option.available}</span>
+    </button>
+  )
+}
+
 export function AddReservationDialog({
   open,
   onOpenChange,
@@ -83,33 +118,37 @@ export function AddReservationDialog({
       <TooltipProvider delayDuration={200}>
         <DialogContent
           showCloseButton
-          className="flex max-h-[92vh] w-[min(96vw,72rem)] max-w-none flex-col overflow-hidden sm:max-w-none"
+          className="flex max-h-[92vh] w-[min(96vw,56rem)] max-w-none flex-col overflow-hidden sm:max-w-none"
         >
-          <DialogHeader className="shrink-0 gap-1 border-b px-4 py-3 pr-12">
-            <DialogTitle className="text-lg font-semibold text-foreground">
+          <DialogHeader className="shrink-0 gap-0.5 border-b px-4 py-2.5 pr-12">
+            <DialogTitle className="text-base font-semibold text-foreground">
               Add Reservation
             </DialogTitle>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {reservationShowMeta.comicName} · {reservationShowMeta.showDate}
             </p>
           </DialogHeader>
 
-          <div className="space-y-4 overflow-y-auto px-4 py-4">
+          <div className="space-y-2.5 overflow-y-auto px-4 py-3">
             <FormPanel title="Show Details">
-              <div className={FORM_GRID_CLASS}>
-                <FormField label="Show Date" htmlFor="add-show-date" className="min-w-0">
+              <div className="flex flex-wrap items-end gap-2">
+                <FormField
+                  label="Show Date"
+                  htmlFor="add-show-date"
+                  className="w-full min-w-0 sm:w-36"
+                >
                   <Input
                     id="add-show-date"
                     type="date"
                     value={showDate}
                     onChange={(e) => setShowDate(e.target.value)}
-                    className="w-full"
+                    className={cn("w-full", COMPACT_INPUT)}
                   />
                 </FormField>
 
-                <FormField label="Show Time" className="min-w-0">
+                <FormField label="Show Time" className="min-w-0 flex-1 sm:max-w-52">
                   <Select value={showTime} onValueChange={setShowTime}>
-                    <SelectTrigger className="w-full min-w-0">
+                    <SelectTrigger className={COMPACT_SELECT}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -122,41 +161,33 @@ export function AddReservationDialog({
                   </Select>
                 </FormField>
 
-                <FormField label="Section" className="min-w-0 lg:col-span-1">
-                  <Select value={section} onValueChange={setSection}>
-                    <SelectTrigger className="w-full min-w-0">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sectionOptions.map((opt) => (
-                        <SelectItem key={opt.id} value={opt.id}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <FormField label="Section" className="min-w-0 flex-1">
+                  <div className="flex flex-wrap gap-1.5">
+                    {sectionOptions.map((opt) => (
+                      <SectionChip
+                        key={opt.id}
+                        option={opt}
+                        selected={section === opt.id}
+                        onSelect={() => setSection(opt.id)}
+                      />
+                    ))}
+                  </div>
                 </FormField>
 
-                <div className="flex min-w-0 items-end sm:col-span-2 xl:col-span-1 xl:justify-start">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="h-9 w-full gap-1.5 sm:w-auto"
-                  >
-                    <Info className="size-4" />
-                    Comic Info
-                  </Button>
-                </div>
+                <IconActionButton
+                  label="Comic Info"
+                  icon={Info}
+                  variant="secondary"
+                />
               </div>
             </FormPanel>
 
             <FormPanel title="Reservation Details">
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 xl:items-end">
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_4.5rem_1fr_4.5rem]">
                   <FormField label="Origin" className="min-w-0">
                     <Select defaultValue="phone">
-                      <SelectTrigger className="w-full min-w-0">
+                      <SelectTrigger className={COMPACT_SELECT}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -167,13 +198,18 @@ export function AddReservationDialog({
                     </Select>
                   </FormField>
 
-                  <FormField label="Party" className={COMPACT_FIELD_CLASS}>
-                    <Input type="number" defaultValue={0} min={0} className="w-full" />
+                  <FormField label="Party">
+                    <Input
+                      type="number"
+                      defaultValue={0}
+                      min={0}
+                      className={cn("px-1.5 text-center tabular-nums", COMPACT_INPUT)}
+                    />
                   </FormField>
 
                   <FormField label="Promo" className="min-w-0">
                     <Select defaultValue="select">
-                      <SelectTrigger className="w-full min-w-0">
+                      <SelectTrigger className={COMPACT_SELECT}>
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent>
@@ -182,124 +218,129 @@ export function AddReservationDialog({
                     </Select>
                   </FormField>
 
-                  <FormField label="Passes" className={COMPACT_FIELD_CLASS}>
-                    <Input type="number" defaultValue={1} min={0} className="w-full" />
+                  <FormField label="Passes">
+                    <Input
+                      type="number"
+                      defaultValue={1}
+                      min={0}
+                      className={cn("px-1.5 text-center tabular-nums", COMPACT_INPUT)}
+                    />
                   </FormField>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-                  <FormField label="Subtotal">
-                    <ReadOnlyValue value="$0.00" />
-                  </FormField>
-                  <FormField label="Service Charge">
-                    <ReadOnlyValue value="$0.00" />
-                  </FormField>
-                  <FormField label="Discount">
-                    <ReadOnlyValue value="$0.00" />
-                  </FormField>
-                  <FormField label="Taxes">
-                    <ReadOnlyValue value="$0.00" />
-                  </FormField>
-                  <FormField label="Total" className="col-span-2 md:col-span-1">
-                    <ReadOnlyValue value="$0.00" />
-                  </FormField>
-                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {RESERVATION_TOTALS.map((item) => (
+                      <AmountPill
+                        key={item.label}
+                        label={item.label}
+                        value={item.value}
+                        emphasized={"emphasized" in item && item.emphasized}
+                      />
+                    ))}
+                  </div>
 
-                <div className="flex flex-col gap-3 border-t border-border/60 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                  <label className="flex cursor-pointer items-center gap-2 text-xs">
-                    <Checkbox id="dinner" />
-                    Dinner
-                  </label>
-                  <Button type="button" className="h-9 w-full gap-2 sm:w-auto">
-                    <Calculator className="size-4" />
-                    Calculate Total
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <label className="flex cursor-pointer items-center gap-1.5 text-xs whitespace-nowrap">
+                      <Checkbox id="dinner" />
+                      Dinner
+                    </label>
+
+                    <IconActionButton
+                      label="Calculate Total"
+                      icon={Calculator}
+                      variant="default"
+                    />
+                  </div>
                 </div>
               </div>
             </FormPanel>
 
-            <FormPanel title="Customer Details">
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <FormField label="Last Name" className="min-w-0">
-                    <Input className="w-full" />
-                  </FormField>
-                  <FormField label="First Name" className="min-w-0">
-                    <Input className="w-full" />
-                  </FormField>
+            <FormPanel title="Customer & Search">
+              <div className="flex flex-wrap items-start gap-2">
+                <div className="min-w-0 flex-1 space-y-2 sm:max-w-[calc(50%-0.25rem)]">
+                  <div className="grid grid-cols-2 gap-2">
+                    <FormField label="Last Name" className="min-w-0">
+                      <Input className={cn("w-full", COMPACT_INPUT)} />
+                    </FormField>
+                    <FormField label="First Name" className="min-w-0">
+                      <Input className={cn("w-full", COMPACT_INPUT)} />
+                    </FormField>
+                  </div>
+
+                  <div className="flex items-center gap-2 overflow-x-auto">
+                    <RadioGroup
+                      value={searchType}
+                      onValueChange={setSearchType}
+                      className="flex w-auto shrink-0 flex-row items-center gap-x-4"
+                    >
+                      <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs whitespace-nowrap">
+                        <RadioGroupItem value="customer" id="search-customer" />
+                        Customer
+                      </label>
+                      <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs whitespace-nowrap">
+                        <RadioGroupItem value="business" id="search-business" />
+                        Business
+                      </label>
+                    </RadioGroup>
+
+                    <div className="h-4 w-px shrink-0 bg-border/60" />
+
+                    <IconActionButton
+                      label="Search"
+                      icon={Search}
+                      variant="default"
+                    />
+                    <IconActionButton label="Add Customer" icon={UserPlus} />
+                    <IconActionButton label="Swipe Card" icon={CreditCard} />
+                    <IconActionButton label="Clear" icon={X} variant="outline" />
+                    <IconActionButton
+                      label="Contact Lookup"
+                      icon={Contact}
+                      variant="secondary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:max-w-[calc(50%-0.25rem)]">
                   <FormField label="Phone No." className="min-w-0">
                     <Input
                       type="tel"
                       placeholder="(555) 000-0000"
-                      className="w-full"
+                      className={cn("w-full", COMPACT_INPUT)}
                     />
                   </FormField>
                   <FormField label="Email" className="min-w-0">
                     <Input
                       type="email"
                       placeholder="name@example.com"
-                      className="w-full"
+                      className={cn("w-full", COMPACT_INPUT)}
                     />
                   </FormField>
                 </div>
-
-                <div className="flex justify-start sm:justify-end">
-                  <IconActionButton
-                    label="Contact Lookup"
-                    icon={Contact}
-                    variant="secondary"
-                  />
-                </div>
               </div>
             </FormPanel>
 
-            <FormPanel title="Search Criteria">
-              <div className="space-y-3">
-                <RadioGroup
-                  value={searchType}
-                  onValueChange={setSearchType}
-                  className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5"
-                >
-                  <label className="flex cursor-pointer items-center gap-2 text-xs">
-                    <RadioGroupItem value="customer" id="search-customer" />
-                    Customer
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-2 text-xs">
-                    <RadioGroupItem value="business" id="search-business" />
-                    Business
-                  </label>
-                </RadioGroup>
-
-                <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
-                  <IconActionButton
-                    label="Search"
-                    icon={Search}
-                    variant="default"
-                  />
-                  <IconActionButton label="Add Customer" icon={UserPlus} />
-                  <IconActionButton label="Swipe Card" icon={CreditCard} />
-                  <IconActionButton label="Clear" icon={X} variant="outline" />
-                </div>
-              </div>
-            </FormPanel>
-
-            <FormSection title="Notes / Request" className="space-y-3">
+            <FormSection title="Notes / Request" className="space-y-1.5">
               <Textarea
                 placeholder="Enter notes or special requests..."
-                className="min-h-20 w-full resize-y"
+                className="min-h-14 w-full resize-y text-xs"
               />
             </FormSection>
           </div>
 
-          <DialogFooter className="shrink-0 gap-2 border-t px-4 py-3 sm:justify-end">
+          <DialogFooter className="shrink-0 gap-2 border-t px-4 py-2.5 sm:justify-end">
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={() => onOpenChange(false)}
             >
               Close
             </Button>
-            <Button type="button">Continue</Button>
+            <Button type="button" size="sm">
+              Continue
+            </Button>
           </DialogFooter>
         </DialogContent>
       </TooltipProvider>
