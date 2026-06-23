@@ -103,9 +103,20 @@ export function FormField({
 }
 
 /** Displays calculated amounts — visually distinct from editable inputs. */
-export function ReadOnlyValue({ value }: { value: string }) {
+export function ReadOnlyValue({
+  value,
+  className,
+}: {
+  value: string
+  className?: string
+}) {
   return (
-    <div className="flex h-9 items-center rounded-md bg-muted/50 px-2.5 text-sm font-medium tabular-nums text-foreground">
+    <div
+      className={cn(
+        "flex h-9 items-center rounded-md bg-muted/50 px-2.5 text-sm font-medium tabular-nums text-foreground",
+        className
+      )}
+    >
       {value}
     </div>
   )
