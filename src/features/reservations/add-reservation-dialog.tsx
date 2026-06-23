@@ -18,8 +18,8 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
@@ -48,7 +48,10 @@ import {
   type ReservationCustomerSearchResult
 } from '@/data/reservation-search-results'
 import { ComicInfoDialog } from '@/features/reservations/comic-info-dialog'
-import { ReservationPaymentPanel } from '@/features/reservations/reservation-payment-panel'
+import {
+  ReservationPaymentActions,
+  ReservationPaymentPanel,
+} from '@/features/reservations/reservation-payment-panel'
 import { ReservationSearchResultsTable } from '@/features/reservations/reservation-search-results-table'
 import { cn } from '@/lib/utils'
 import type { SectionOption } from '@/types/reservation'
@@ -59,10 +62,10 @@ type AddReservationDialogProps = {
 }
 
 const PANEL_CLASS = 'space-y-2'
-const COMPACT_INPUT = 'h-8 text-xs'
-const COMPACT_NUMBER = 'h-8 w-12 px-1 text-center text-xs tabular-nums'
-const COMPACT_SELECT = 'h-8 w-40 min-w-0 text-xs'
-const INLINE_LABEL = 'mb-1 block text-[11px] font-medium text-muted-foreground'
+const COMPACT_INPUT = 'h-9 text-sm'
+const COMPACT_NUMBER = 'h-9 w-14 px-1 text-center text-sm tabular-nums'
+const COMPACT_SELECT = 'h-9 w-44 min-w-0 text-sm'
+const INLINE_LABEL = 'mb-1.5 block text-xs font-medium text-muted-foreground'
 
 const RESERVATION_LINES = [
   { key: 'sub', label: 'Subtotal', value: '$0.00', info: null },
@@ -122,7 +125,7 @@ const SECTION_SEAT_STYLES = {
 
 function SectionSeatDisplay ({ option }: { option: SectionOption }) {
   return (
-    <div className='flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs tabular-nums max-sm:col-start-2 max-sm:row-start-2 sm:ml-auto sm:shrink-0'>
+    <div className='flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm tabular-nums max-sm:col-start-2 max-sm:row-start-2 sm:ml-auto sm:shrink-0'>
       <span className='shrink-0 tabular-nums text-foreground'>
         {formatSectionDesktopPrice(option.price)}
       </span>
@@ -186,7 +189,7 @@ function SectionPicker ({
                   id={`section-${option.id}`}
                   className='shrink-0 max-sm:row-span-2 max-sm:self-center'
                 />
-                <span className='shrink-0 text-xs font-semibold text-foreground max-sm:col-start-2 max-sm:row-start-1 sm:w-14'>
+                <span className='shrink-0 text-sm font-semibold text-foreground max-sm:col-start-2 max-sm:row-start-1 sm:w-14'>
                   {option.name}
                 </span>
                 <SectionSeatDisplay option={option} />
@@ -282,18 +285,20 @@ function FormPanel ({
 function TotalsBreakdown ({
   sections,
   partyBySection,
-  total
+  total,
+  amountDue
 }: {
   sections: string[]
   partyBySection: Record<string, number>
   total: string
+  amountDue: string
 }) {
   const selectedSections = sectionOptions.filter(option =>
     sections.includes(option.id)
   )
 
   return (
-    <div className='space-y-2 text-xs'>
+    <div className='space-y-2.5 text-sm'>
       {selectedSections.length > 0 ? (
         selectedSections.map(option => (
           <div
@@ -339,10 +344,16 @@ function TotalsBreakdown ({
         </div>
       ))}
 
-      <div className='border-t border-border/50 pt-2'>
+      <div className='space-y-2 border-t border-border/50 pt-2'>
         <div className='flex items-center justify-between gap-4'>
-          <span className='text-xs font-semibold'>Total</span>
-          <span className='shrink-0 text-sm font-bold tabular-nums'>
+          <span className='text-sm font-medium text-red-600'>Amount Due</span>
+          <span className='shrink-0 text-sm font-bold tabular-nums text-red-600'>
+            {amountDue}
+          </span>
+        </div>
+        <div className='flex items-center justify-between gap-4'>
+          <span className='font-semibold'>Total</span>
+          <span className='shrink-0 text-base font-bold tabular-nums'>
             {total}
           </span>
         </div>
@@ -443,7 +454,7 @@ function BookingOptionsBar ({
         />
       </LabeledRadioOptionBox>
 
-      <label className='flex cursor-pointer items-center gap-1.5 pb-1.5 text-xs whitespace-nowrap'>
+      <label className='flex cursor-pointer items-center gap-2 pb-2 text-sm whitespace-nowrap'>
         <Checkbox id='dinner' />
         Dinner
       </label>
@@ -467,7 +478,7 @@ function CustomerSearchHeader ({
   return (
     <div className='flex flex-wrap items-center gap-x-3 gap-y-2'>
        <div className='flex min-w-0 items-center gap-2'>
-        <h3 className='text-xs font-semibold text-foreground'>
+        <h3 className='text-sm font-semibold text-foreground'>
           Customer & Search
         </h3>
       </div>
@@ -603,7 +614,7 @@ function ShowMetaRow ({
     <div className='space-y-2'>
       <div className='flex flex-wrap items-center gap-x-3 gap-y-2'>
       <div className='inline-flex items-center'>
-        <span className='text-xs font-medium text-foreground'>
+        <span className='text-sm font-medium text-foreground'>
           {reservationShowMeta.comicName}
         </span>
 
@@ -625,7 +636,7 @@ function ShowMetaRow ({
       </div>
 
       <div className='inline-flex items-center gap-1'>
-        <span className='text-xs text-muted-foreground'>
+        <span className='text-sm text-muted-foreground'>
           {formatShowDate(showDate)}
         </span>
         <Tooltip>
@@ -769,18 +780,22 @@ export function AddReservationDialog ({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <TooltipProvider delayDuration={200}>
           <DialogContent
-            showCloseButton
-            className='flex max-h-[88vh] w-[min(94vw,58rem)] max-w-none flex-col overflow-hidden sm:max-w-none'
+            showCloseButton={false}
+            className='flex max-h-[88vh] w-[min(96vw,72rem)] max-w-none flex-col overflow-hidden sm:max-w-none'
           >
-            <DialogHeader className='shrink-0 border-b px-4 py-2.5'>
-              <DialogTitle className='text-sm font-semibold text-foreground'>
+            <DialogHeader className='shrink-0 flex-row items-center justify-between gap-4 border-b px-4 py-3'>
+              <DialogTitle className='text-base font-semibold text-foreground'>
                 Add Reservation
               </DialogTitle>
+              <DialogClose className='flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none'>
+                <X className='size-4' />
+                <span className='sr-only'>Close</span>
+              </DialogClose>
             </DialogHeader>
 
             <div className='overflow-y-auto px-4 py-2'>
               <FormPanel>
-                <div className='grid gap-3 lg:grid-cols-2 lg:gap-4'>
+                <div className='grid gap-3 lg:grid-cols-2 lg:items-stretch lg:gap-4'>
                   <div className='min-w-0 space-y-2.5 lg:pr-1'>
                     <ShowMetaRow
                       showDate={showDate}
@@ -812,11 +827,12 @@ export function AddReservationDialog ({
                         sections={[section]}
                         partyBySection={partyBySection}
                         total='$0.00'
+                        amountDue='$0.00'
                       />
                     </div>
                   </div>
 
-                  <div className='min-w-0 space-y-2.5 border-t border-border/50 pt-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4'>
+                  <div className='flex min-w-0 flex-col gap-2.5 border-t border-border/50 pt-3 lg:min-h-full lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4'>
                     <CustomerSearchHeader
                       searchType={searchType}
                       onSearchTypeChange={value =>
@@ -861,30 +877,20 @@ export function AddReservationDialog ({
                         <Textarea
                           ref={notesInputRef}
                           placeholder='Enter notes or special requests...'
-                          className='min-h-16 w-full resize-y text-xs shadow-xs'
+                          className='min-h-20 w-full resize-y text-sm shadow-xs'
                         />
                       ) : null}
                     </div>
 
                     <ReservationPaymentPanel amountDue='$0.00' />
+
+                    <ReservationPaymentActions
+                      onCancel={() => onOpenChange(false)}
+                    />
                   </div>
                 </div>
               </FormPanel>
             </div>
-
-            <DialogFooter className='shrink-0 gap-2 border-t px-4 py-2.5 sm:justify-end'>
-              <Button
-                type='button'
-                variant='outline'
-                size='sm'
-                onClick={() => onOpenChange(false)}
-              >
-                Close
-              </Button>
-              <Button type='button' size='sm'>
-                Continue
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </TooltipProvider>
       </Dialog>
