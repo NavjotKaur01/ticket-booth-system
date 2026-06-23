@@ -7,8 +7,8 @@ import type {
 
 /** Static reservation data for the booth UI — replace with API calls when wired up. */
 export const showOptions: ShowOption[] = [
-  { id: "1", label: "7:30 PM Benson, Doug" },
-  { id: "2", label: "9:30 PM Benson, Doug" },
+  { id: "1", label: "7:30 PM Benson, Doug", time: "7:30 PM" },
+  { id: "2", label: "9:30 PM Benson, Doug", time: "9:30 PM" },
 ]
 
 export const sectionOptions: SectionOption[] = [
@@ -18,6 +18,7 @@ export const sectionOptions: SectionOption[] = [
     price: "$10.00",
     name: "Regular",
     available: 300,
+    tone: "regular",
   },
   {
     id: "vip",
@@ -25,8 +26,17 @@ export const sectionOptions: SectionOption[] = [
     price: "$25.00",
     name: "VIP",
     available: 50,
+    tone: "vip",
   },
 ]
+
+export const promoOptions = [
+  { id: "none", label: "Select promo code" },
+  { id: "admit2", label: "Admit 2" },
+  { id: "admit4", label: "Admit 4" },
+  { id: "buy1get1", label: "Buy 1 Get 1" },
+  { id: "comedy10", label: "COMEDY10" },
+] as const
 
 export const reservationCounts: ReservationCounts = {
   seats: 200,

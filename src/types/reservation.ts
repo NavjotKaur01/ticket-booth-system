@@ -25,7 +25,11 @@ export type Reservation = {
 export type ShowOption = {
   id: string
   label: string
+  /** Short time label for chip buttons (e.g. "7:30 PM"). */
+  time?: string
 }
+
+export type SectionTone = 'regular' | 'vip'
 
 export type SectionOption = {
   id: string
@@ -33,6 +37,7 @@ export type SectionOption = {
   price: string
   name: string
   available: number
+  tone: SectionTone
 }
 
 export type ReservationCounts = {

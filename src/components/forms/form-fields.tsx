@@ -65,18 +65,39 @@ export function FormField({
   children,
   className,
   htmlFor,
+  labelPlacement = "above",
 }: {
   label: string
   children: ReactNode
   className?: string
   htmlFor?: string
+  labelPlacement?: "above" | "below"
 }) {
+  const labelEl = (
+    <Label
+      htmlFor={htmlFor}
+      className={cn(
+        "block text-xs font-medium",
+        labelPlacement === "above" ? "mb-1" : "mt-1"
+      )}
+    >
+      {label}
+    </Label>
+  )
+
   return (
     <div className={className}>
-      <Label htmlFor={htmlFor} className="mb-1 block text-xs font-medium">
-        {label}
-      </Label>
-      {children}
+      {labelPlacement === "above" ? (
+        <>
+          {labelEl}
+          {children}
+        </>
+      ) : (
+        <>
+          {children}
+          {labelEl}
+        </>
+      )}
     </div>
   )
 }
@@ -95,13 +116,16 @@ export function AmountPill({
   label,
   value,
   emphasized = false,
+  title,
 }: {
   label: string
   value: string
   emphasized?: boolean
+  title?: string
 }) {
   return (
     <div
+      title={title}
       className={cn(
         "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] tabular-nums",
         emphasized
