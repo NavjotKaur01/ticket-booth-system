@@ -1,6 +1,5 @@
 import {
   Calculator,
-  Contact,
   CreditCard,
   Info,
   Search,
@@ -294,11 +293,6 @@ export function AddReservationDialog({
                     <IconActionButton label="Add Customer" icon={UserPlus} />
                     <IconActionButton label="Swipe Card" icon={CreditCard} />
                     <IconActionButton label="Clear" icon={X} variant="outline" />
-                    <IconActionButton
-                      label="Contact Lookup"
-                      icon={Contact}
-                      variant="secondary"
-                    />
                   </div>
                 </div>
 
