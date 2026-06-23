@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from "react"
+import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import {
     Calendar,
     dayjsLocalizer,
@@ -15,7 +15,7 @@ import "./calendar-overrides.css"
 
 import AddShowDialog from "./AddShowDialog"
 import CalendarToolbar from "./CalendarToolbar"
-import CalendarEventCard from "./CalendarEvent"
+import CalendarEventCard, { CALENDAR_ACTION_MENU_OUTSIDE_INTERACTION } from "./CalendarEvent"
 import CalendarShowMore from "./CalendarShowMore"
 import PastDateAlertDialog from "./PastDateAlertDialog"
 import RecurrenceDialog from "./RecurrenceDialog"
@@ -68,6 +68,21 @@ export default function EventCalendar() {
         })
     }, [location, showCancelled])
 
+    const suppressNextSlotSelection = useCallback(() => {
+        suppressNextSlotSelectionRef.current = true
+        window.setTimeout(() => {
+            suppressNextSlotSelectionRef.current = false
+        }, 100)
+    }, [])
+
+    useEffect(() => {
+        window.addEventListener(CALENDAR_ACTION_MENU_OUTSIDE_INTERACTION, suppressNextSlotSelection)
+
+        return () => {
+            window.removeEventListener(CALENDAR_ACTION_MENU_OUTSIDE_INTERACTION, suppressNextSlotSelection)
+        }
+    }, [suppressNextSlotSelection])
+
     const components = useMemo(() => ({
         toolbar: (props: ToolbarProps<CalendarEvent>) => (
             <CalendarToolbar
@@ -90,15 +105,10 @@ export default function EventCalendar() {
         showMore: (props: ShowMoreProps<CalendarEvent>) => (
             <CalendarShowMore
                 {...props}
-                onCalendarOutsideInteraction={() => {
-                    suppressNextSlotSelectionRef.current = true
-                    window.setTimeout(() => {
-                        suppressNextSlotSelectionRef.current = false
-                    }, 100)
-                }}
+                onCalendarOutsideInteraction={suppressNextSlotSelection}
             />
         ),
-    }), [location, showCancelled, refreshInterval])
+    }), [location, showCancelled, refreshInterval, suppressNextSlotSelection])
 
     const eventPropGetter = useCallback(() => ({
         style: {
@@ -163,3 +173,4 @@ export default function EventCalendar() {
         </div>
     )
 }
+

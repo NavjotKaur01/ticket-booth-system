@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import type { CalendarEvent } from "@/data/calendarEvents"
 
+export const CALENDAR_ACTION_MENU_OUTSIDE_INTERACTION = "calendar-action-menu-outside-interaction"
+
 interface CalendarEventAction {
     id: string
     label: string
@@ -84,6 +86,9 @@ export default function CalendarEventCard({ event }: CalendarEventProps) {
                         className="calendar-event-actions-menu max-h-[min(20rem,calc(var(--radix-dropdown-menu-content-available-height)-1rem))] w-64 rounded-md border border-primary/20 bg-popover p-1.5 text-popover-foreground shadow-lg ring-1 ring-primary/10"
                         data-calendar-event-actions="true"
                         onClick={(menuEvent) => menuEvent.stopPropagation()}
+                        onInteractOutside={() => {
+                            window.dispatchEvent(new CustomEvent(CALENDAR_ACTION_MENU_OUTSIDE_INTERACTION))
+                        }}
                     >
                         {calendarEventActions.map((action) => (
                             <DropdownMenuItem
@@ -103,6 +108,8 @@ export default function CalendarEventCard({ event }: CalendarEventProps) {
         </div>
     )
 }
+
+
 
 
 

@@ -224,7 +224,7 @@ export default function RecurrenceDialog({
         </DialogHeader>
 
         <div className="space-y-5 px-6 py-5">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <Label htmlFor="recurrence-start-date" className="min-w-20">
               Start Date
             </Label>
@@ -237,11 +237,11 @@ export default function RecurrenceDialog({
 
           <fieldset className="rounded-md border p-4">
             <legend className="px-2 text-sm font-medium">Recurrence Pattern</legend>
-            <div className="grid gap-5 md:grid-cols-[14rem_1fr]">
+            <div className="grid gap-5 md:grid-cols-[12.5rem_minmax(0,1fr)]">
               <RadioGroup
                 value={pattern}
                 onValueChange={(value) => setPattern(value as RecurrencePattern)}
-                className="gap-3 border-border md:border-r md:pr-5"
+                className="grid gap-2 border-border md:border-r md:pr-5"
               >
                 <div className="flex items-center gap-2">
                   <RadioGroupItem id="pattern-daily" value="daily" />
@@ -285,9 +285,9 @@ export default function RecurrenceDialog({
                   <RadioGroup
                     value={monthlyMode}
                     onValueChange={(value) => setMonthlyMode(value as MonthlyMode)}
-                    className="gap-4"
+                    className="grid gap-3"
                   >
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                       <RadioGroupItem id="monthly-day" value="day" />
                       <Label htmlFor="monthly-day">Day</Label>
                       <NumberInput value={startDay} onChange={() => undefined} />
@@ -295,7 +295,7 @@ export default function RecurrenceDialog({
                       <NumberInput value={interval} onChange={setInterval} />
                       <span className="text-sm">month(s)</span>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                       <RadioGroupItem id="monthly-weekday" value="weekday" />
                       <Label htmlFor="monthly-weekday">The</Label>
                       <Select defaultValue="Fourth">
@@ -311,7 +311,7 @@ export default function RecurrenceDialog({
                         </SelectContent>
                       </Select>
                       <Select defaultValue={weekdays[startWeekday]}>
-                        <SelectTrigger className="w-40">
+                        <SelectTrigger className="w-36">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -333,9 +333,9 @@ export default function RecurrenceDialog({
                   <RadioGroup
                     value={yearlyMode}
                     onValueChange={(value) => setYearlyMode(value as YearlyMode)}
-                    className="gap-4"
+                    className="grid gap-3"
                   >
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                       <RadioGroupItem id="yearly-date" value="date" />
                       <Label htmlFor="yearly-date">Every</Label>
                       <Select defaultValue={months[startMonth]}>
@@ -352,7 +352,7 @@ export default function RecurrenceDialog({
                       </Select>
                       <NumberInput value={startDay} onChange={() => undefined} />
                     </div>
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                       <RadioGroupItem id="yearly-weekday" value="weekday" />
                       <Label htmlFor="yearly-weekday">The</Label>
                       <Select defaultValue="Fourth">
@@ -368,7 +368,7 @@ export default function RecurrenceDialog({
                         </SelectContent>
                       </Select>
                       <Select defaultValue={weekdays[startWeekday]}>
-                        <SelectTrigger className="w-40">
+                        <SelectTrigger className="w-36">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -437,3 +437,5 @@ export default function RecurrenceDialog({
     </Dialog>
   )
 }
+
+
