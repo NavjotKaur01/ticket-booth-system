@@ -36,6 +36,7 @@ export type SectionOption = {
   label: string
   price: string
   name: string
+  seats: number
   available: number
   tone: SectionTone
 }

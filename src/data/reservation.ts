@@ -11,21 +11,48 @@ export const showOptions: ShowOption[] = [
   { id: "2", label: "9:30 PM Benson, Doug", time: "9:30 PM" },
 ]
 
+export function formatSectionDesktopPrice (price: string) {
+  return price.startsWith('$ ') ? price : `$ ${price.slice(1)}`
+}
+
+export function formatSectionSeatAvailability (seats: number, available: number) {
+  return `Seats: ${seats} Available: ${available}`
+}
+
+export function formatSectionOptionLabel (option: Pick<
+  SectionOption,
+  'price' | 'name' | 'seats' | 'available'
+>) {
+  return `${formatSectionDesktopPrice(option.price)} ${option.name} ${formatSectionSeatAvailability(option.seats, option.available)}`
+}
+
 export const sectionOptions: SectionOption[] = [
   {
     id: "regular",
-    label: "$ 10.00 Regular Seats: 300 Available:",
+    label: formatSectionOptionLabel({
+      price: "$10.00",
+      name: "Regular",
+      seats: 300,
+      available: 121,
+    }),
     price: "$10.00",
     name: "Regular",
-    available: 300,
+    seats: 300,
+    available: 121,
     tone: "regular",
   },
   {
     id: "vip",
-    label: "$ 25.00 VIP Seats: 50 Available:",
+    label: formatSectionOptionLabel({
+      price: "$25.00",
+      name: "VIP",
+      seats: 50,
+      available: 33,
+    }),
     price: "$25.00",
     name: "VIP",
-    available: 50,
+    seats: 50,
+    available: 33,
     tone: "vip",
   },
 ]
