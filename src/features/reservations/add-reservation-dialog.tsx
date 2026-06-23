@@ -1,6 +1,5 @@
 import {
   Calendar,
-  CreditCard,
   Info,
   Search,
   UserPlus,
@@ -503,7 +502,6 @@ function CustomerSearchHeader ({
           label={isBusiness ? 'Add Business' : 'Add Customer'}
           icon={UserPlus}
         />
-        <IconActionButton label='Swipe Card' icon={CreditCard} />
         <IconActionButton label='Clear' icon={X} variant='outline' onClick={onClear} />
       </div>
     </div>
