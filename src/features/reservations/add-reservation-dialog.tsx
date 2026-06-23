@@ -3,7 +3,8 @@ import {
   Info,
   Search,
   UserPlus,
-  X
+  X,
+  type LucideIcon
 } from 'lucide-react'
 import type { ReactNode, RefObject } from 'react'
 import { useEffect, useRef, useState } from 'react'
@@ -587,6 +588,34 @@ function CustomerSearchFields ({
   )
 }
 
+function MetaIconButton ({
+  label,
+  icon: Icon,
+  onClick
+}: {
+  label: string
+  icon: LucideIcon
+  onClick: () => void
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type='button'
+          size='icon-sm'
+          variant='ghost'
+          className='size-8 shrink-0 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary'
+          aria-label={label}
+          onClick={onClick}
+        >
+          <Icon className='size-4' />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side='top'>{label}</TooltipContent>
+    </Tooltip>
+  )
+}
+
 function ShowMetaRow ({
   showDate,
   onShowDateChange,
@@ -611,47 +640,27 @@ function ShowMetaRow ({
   return (
     <div className='space-y-2'>
       <div className='flex flex-wrap items-center gap-x-3 gap-y-2'>
-      <div className='inline-flex items-center'>
+      <div className='inline-flex items-center gap-1'>
         <span className='text-sm font-medium text-foreground'>
           {reservationShowMeta.comicName}
         </span>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type='button'
-              variant='ghost'
-              size='icon-sm'
-              className='size-7 shrink-0 text-muted-foreground hover:text-foreground'
-              aria-label='Comic Info'
-              onClick={onOpenComicInfo}
-            >
-              <Info className='size-4' />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side='top'>Comic Info</TooltipContent>
-        </Tooltip>
+        <MetaIconButton
+          label='Comic Info'
+          icon={Info}
+          onClick={onOpenComicInfo}
+        />
       </div>
 
       <div className='inline-flex items-center gap-1'>
         <span className='text-sm text-muted-foreground'>
           {formatShowDate(showDate)}
         </span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type='button'
-              variant='ghost'
-              size='icon-sm'
-              className='size-7 shrink-0 text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-              aria-label='Change show date'
-              onClick={onOpenDatePicker}
-            >
-              <Calendar className='size-3.5' />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side='top'>Change show date</TooltipContent>
-        </Tooltip>
+        <MetaIconButton
+          label='Change show date'
+          icon={Calendar}
+          onClick={onOpenDatePicker}
+        />
         <input
           ref={dateInputRef}
           type='date'
