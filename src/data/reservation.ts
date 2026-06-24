@@ -7,8 +7,9 @@ import type {
 
 /** Static reservation data for the booth UI — replace with API calls when wired up. */
 export const showOptions: ShowOption[] = [
-  { id: "1", label: "7:30 PM Benson, Doug", time: "7:30 PM" },
-  { id: "2", label: "9:30 PM Benson, Doug", time: "9:30 PM" },
+  { id: "1", label: "7:30 PM Benson, Doug", time: "7:30 PM", subtitle: "Main Theater" },
+  { id: "2", label: "9:30 PM Benson, Doug", time: "9:30 PM", subtitle: "Main Theater" },
+  { id: "3", label: "11:00 PM Benson, Doug", time: "11:00 PM", subtitle: "Main Theater" },
 ]
 
 export function formatSectionDesktopPrice (price: string) {

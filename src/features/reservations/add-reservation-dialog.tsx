@@ -75,8 +75,8 @@ const RESERVATION_LINES = [
 ] as const
 
 const ORIGIN_OPTIONS = [
-  { id: 'phone', label: 'Phone-In' },
-  { id: 'walkup', label: 'Walk-up' }
+  { id: 'walkup', label: 'Walk-in' },
+  { id: 'phone', label: 'Phone-in' }
 ] as const
 
 type CustomerSearchCriteria = {
@@ -416,48 +416,101 @@ function LabeledRadioOptionBox ({
   )
 }
 
-function BookingOptionsBar ({
+function OriginSegmentedControl ({
+  value,
+  onChange
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className='inline-flex overflow-hidden rounded-full border border-border/60 text-sm'>
+      {ORIGIN_OPTIONS.map((option, index) => (
+        <button
+          key={option.id}
+          type='button'
+          onClick={() => onChange(option.id)}
+          className={cn(
+            'px-3 py-1 transition-colors',
+            value === option.id
+              ? 'bg-primary/10 text-primary'
+              : 'bg-background text-foreground hover:text-foreground',
+            index > 0 && 'border-l border-border/60'
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function ShowTimePicker ({
   showTime,
-  onShowTimeChange,
-  origin,
-  onOriginChange
+  onShowTimeChange
 }: {
   showTime: string
   onShowTimeChange: (value: string) => void
-  origin: string
-  onOriginChange: (value: string) => void
 }) {
   return (
-    <div className='flex flex-wrap items-end gap-2'>
-      <LabeledRadioOptionBox label='Time'>
-        <InlineRadioGroup
-          name='show-time'
-          value={showTime}
-          onChange={onShowTimeChange}
-          options={showOptions.map(show => ({
-            id: show.id,
-            label: show.time ?? show.label,
-            title: show.label
-          }))}
-        />
-      </LabeledRadioOptionBox>
+    <div className='flex w-auto shrink-0 items-stretch gap-1.5'>
+      {showOptions.map(show => {
+        const isSelected = showTime === show.id
 
-      <LabeledRadioOptionBox label='Origin'>
-        <InlineRadioGroup
-          name='origin'
-          value={origin}
-          onChange={onOriginChange}
-          options={ORIGIN_OPTIONS.map(option => ({
-            id: option.id,
-            label: option.label
-          }))}
-        />
-      </LabeledRadioOptionBox>
+        return (
+          <button
+            key={show.id}
+            type='button'
+            title={show.label}
+            onClick={() => onShowTimeChange(show.id)}
+            className={cn(
+              'flex w-[6.75rem] shrink-0 flex-col rounded-lg px-2.5 py-2 text-left transition-colors',
+              isSelected
+                ? 'bg-primary text-primary-foreground'
+                : 'border border-border/60 bg-background text-foreground hover:bg-muted/30'
+            )}
+          >
+            <span className='truncate text-sm font-semibold'>
+              {show.time ?? show.label}
+            </span>
+            <span
+              className={cn(
+                'truncate text-xs',
+                isSelected
+                  ? 'text-primary-foreground/85'
+                  : 'text-muted-foreground'
+              )}
+            >
+              {show.subtitle ?? 'Main Theater'}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
-      <label className='flex cursor-pointer items-center gap-2 pb-2 text-sm whitespace-nowrap'>
-        <Checkbox id='dinner' />
-        Dinner
-      </label>
+function BookingOptionsBar ({
+  showTime,
+  onShowTimeChange
+}: {
+  showTime: string
+  onShowTimeChange: (value: string) => void
+}) {
+  return (
+    <div className='min-w-0'>
+      <span className={INLINE_LABEL}>Show / Time</span>
+      <div className='flex min-w-0 items-center gap-2 overflow-hidden'>
+        <ShowTimePicker
+          showTime={showTime}
+          onShowTimeChange={onShowTimeChange}
+        />
+
+        <label className='flex shrink-0 cursor-pointer items-center gap-2 text-sm whitespace-nowrap'>
+          <Checkbox id='dinner' />
+          Dinner
+        </label>
+      </div>
     </div>
   )
 }
@@ -638,46 +691,49 @@ function ShowMetaRow ({
   onOpenDatePicker: () => void
 }) {
   return (
-    <div className='space-y-2'>
+    <div className='min-w-0 space-y-2'>
       <div className='flex flex-wrap items-center gap-x-3 gap-y-2'>
-      <div className='inline-flex items-center gap-1'>
-        <span className='text-sm font-medium text-foreground'>
-          {reservationShowMeta.comicName}
-        </span>
+        <div className='inline-flex items-center gap-1'>
+          <span className='text-sm font-medium text-foreground'>
+            {reservationShowMeta.comicName}
+          </span>
 
-        <MetaIconButton
-          label='Comic Info'
-          icon={Info}
-          onClick={onOpenComicInfo}
-        />
-      </div>
+          <MetaIconButton
+            label='Comic Info'
+            icon={Info}
+            onClick={onOpenComicInfo}
+          />
+        </div>
 
-      <div className='inline-flex items-center gap-1'>
-        <span className='text-sm text-muted-foreground'>
-          {formatShowDate(showDate)}
-        </span>
-        <MetaIconButton
-          label='Change show date'
-          icon={Calendar}
-          onClick={onOpenDatePicker}
+        <div className='inline-flex items-center gap-1'>
+          <span className='text-sm text-muted-foreground'>
+            {formatShowDate(showDate)}
+          </span>
+          <MetaIconButton
+            label='Change show date'
+            icon={Calendar}
+            onClick={onOpenDatePicker}
+          />
+          <input
+            ref={dateInputRef}
+            type='date'
+            value={showDate}
+            onChange={event => onShowDateChange(event.target.value)}
+            className='sr-only'
+            tabIndex={-1}
+            aria-hidden
+          />
+        </div>
+
+        <OriginSegmentedControl
+          value={origin}
+          onChange={onOriginChange}
         />
-        <input
-          ref={dateInputRef}
-          type='date'
-          value={showDate}
-          onChange={event => onShowDateChange(event.target.value)}
-          className='sr-only'
-          tabIndex={-1}
-          aria-hidden
-        />
-      </div>
       </div>
 
       <BookingOptionsBar
         showTime={showTime}
         onShowTimeChange={onShowTimeChange}
-        origin={origin}
-        onOriginChange={onOriginChange}
       />
     </div>
   )
@@ -692,7 +748,7 @@ export function AddReservationDialog ({
   const [searchType, setSearchType] = useState<'customer' | 'business'>(
     'customer'
   )
-  const [specialNotesOpen, setSpecialNotesOpen] = useState(false)
+  const [specialNotesOpen, setSpecialNotesOpen] = useState(true)
   const [showDate, setShowDate] = useState(reservationShowMeta.showDateInput)
   const [showTime, setShowTime] = useState(showOptions[0]?.id ?? '')
   const [section, setSection] = useState(
@@ -744,7 +800,7 @@ export function AddReservationDialog ({
 
   useEffect(() => {
     if (!open) {
-      setSpecialNotesOpen(false)
+      setSpecialNotesOpen(true)
       clearCustomerSearch()
     }
   }, [open])
@@ -788,7 +844,7 @@ export function AddReservationDialog ({
         <TooltipProvider delayDuration={200}>
           <DialogContent
             showCloseButton={false}
-            className='flex max-h-[88vh] w-[min(96vw,72rem)] max-w-none flex-col overflow-hidden sm:max-w-none'
+            className='flex max-h-[82vh] w-[min(96vw,72rem)] max-w-none flex-col overflow-hidden sm:max-w-none'
           >
             <DialogHeader className='shrink-0 flex-row items-center justify-between gap-4 border-b px-4 py-3'>
               <DialogTitle className='text-base font-semibold text-foreground'>
@@ -800,9 +856,8 @@ export function AddReservationDialog ({
               </DialogClose>
             </DialogHeader>
 
-            <div className='overflow-y-auto px-4 py-2'>
-              <FormPanel>
-                <div className='grid gap-3 lg:grid-cols-2 lg:items-stretch lg:gap-4'>
+            <div className='min-h-0 flex-1 overflow-y-auto px-4 py-2 pb-3'>
+              <div className='grid gap-3 lg:grid-cols-2 lg:gap-4'>
                   <div className='min-w-0 space-y-2.5 lg:pr-1'>
                     <ShowMetaRow
                       showDate={showDate}
@@ -839,64 +894,75 @@ export function AddReservationDialog ({
                     </div>
                   </div>
 
-                  <div className='flex min-w-0 flex-col gap-2.5 border-t border-border/50 pt-3 lg:min-h-full lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4'>
-                    <CustomerSearchHeader
-                      searchType={searchType}
-                      onSearchTypeChange={value =>
-                        setSearchType(value as 'customer' | 'business')
-                      }
-                      onSearch={handleCustomerSearch}
-                      onClear={clearCustomerSearch}
-                    />
-
-                    <CustomerSearchFields
-                      searchType={searchType}
-                      criteria={searchCriteria}
-                      onCriteriaChange={setSearchCriteria}
-                    />
-
-                    {hasSearched ? (
-                      <ReservationSearchResultsTable
-                        searchType={searchType}
-                        customerResults={customerSearchResults}
-                        businessResults={businessSearchResults}
-                        hasSearched={hasSearched}
-                        rowSelection={searchRowSelection}
-                        onRowSelectionChange={setSearchRowSelection}
-                      />
-                    ) : null}
-
-                    <div className='w-full space-y-2'>
-                      <div className='flex justify-end'>
-                        <Button
-                          type='button'
-                          variant='link'
-                          size='sm'
-                          className='h-auto px-0 pt-0 text-sm font-normal underline'
-                          onClick={() => setSpecialNotesOpen(current => !current)}
-                          aria-expanded={specialNotesOpen}
-                        >
-                          Special Notes
-                        </Button>
+                  <div className='flex min-w-0 flex-col gap-3 border-t border-border/50 pt-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4'>
+                    <div className='flex flex-col gap-2.5'>
+                      <div className='shrink-0'>
+                        <CustomerSearchHeader
+                          searchType={searchType}
+                          onSearchTypeChange={value =>
+                            setSearchType(value as 'customer' | 'business')
+                          }
+                          onSearch={handleCustomerSearch}
+                          onClear={clearCustomerSearch}
+                        />
                       </div>
 
-                      {specialNotesOpen ? (
-                        <Textarea
-                          ref={notesInputRef}
-                          placeholder='Enter notes or special requests...'
-                          className='min-h-20 w-full resize-y text-sm shadow-xs'
+                      <div className='shrink-0'>
+                        <CustomerSearchFields
+                          searchType={searchType}
+                          criteria={searchCriteria}
+                          onCriteriaChange={setSearchCriteria}
                         />
+                      </div>
+
+                      {hasSearched ? (
+                        <div className='shrink-0'>
+                          <ReservationSearchResultsTable
+                            searchType={searchType}
+                            customerResults={customerSearchResults}
+                            businessResults={businessSearchResults}
+                            hasSearched={hasSearched}
+                            rowSelection={searchRowSelection}
+                            onRowSelectionChange={setSearchRowSelection}
+                          />
+                        </div>
                       ) : null}
+
+                      <div className='w-full shrink-0 space-y-2'>
+                        <div className='flex justify-end'>
+                          <Button
+                            type='button'
+                            variant='link'
+                            size='sm'
+                            className='h-auto px-0 pt-0 text-sm font-normal underline'
+                            onClick={() => setSpecialNotesOpen(current => !current)}
+                            aria-expanded={specialNotesOpen}
+                          >
+                            Special Notes
+                          </Button>
+                        </div>
+
+                        {specialNotesOpen ? (
+                          <Textarea
+                            ref={notesInputRef}
+                            placeholder='Enter notes or special requests...'
+                            className='min-h-20 w-full resize-y text-sm shadow-xs'
+                          />
+                        ) : null}
+                      </div>
+
+                      <div className='shrink-0'>
+                        <ReservationPaymentPanel amountDue='$0.00' />
+                      </div>
                     </div>
 
-                    <ReservationPaymentPanel amountDue='$0.00' />
-
-                    <ReservationPaymentActions
-                      onCancel={() => onOpenChange(false)}
-                    />
+                    <div className='shrink-0 border-t border-border/50 pt-3 pb-1'>
+                      <ReservationPaymentActions
+                        onCancel={() => onOpenChange(false)}
+                      />
+                    </div>
                   </div>
                 </div>
-              </FormPanel>
             </div>
           </DialogContent>
         </TooltipProvider>
