@@ -89,6 +89,7 @@ type AddShowDialogProps = {
   locationId: string
   username: string
   onSaved?: () => void
+  title?: string
 }
 
 function formatCurrencyValue(value: number | null) {
@@ -294,6 +295,7 @@ export default function AddShowDialog({
   locationId,
   username,
   onSaved,
+  title = "Add Show",
 }: AddShowDialogProps) {
   const [dialogData, setDialogData] = useState<AddShowDialogData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -485,7 +487,7 @@ export default function AddShowDialog({
                 <ArrowLeft className="size-4" />
               </Button>
             ) : null}
-            <DialogTitle className="text-lg">Add Show</DialogTitle>
+            <DialogTitle className="text-lg">{title}</DialogTitle>
           </div>
         </DialogHeader>
 
