@@ -28,13 +28,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { getAddShowDialogData } from "@/lib/api/mock-add-show"
+import { fetchAddShowDialogData, saveShowRequest } from "@/lib/api/add-show"
+import SaveVerifyDialog from "./SaveVerifyDialog"
+import {
+  buildSaveShowFilterList,
+} from "@/lib/map-default-show-sections"
+import {
+  validateAddShowForm,
+} from "@/lib/build-save-show-request"
+import { saveShowsWithRecurrence } from "@/lib/save-shows-with-recurrence"
 import type {
   AddShowDialogData,
   AddShowFormValues,
   PerformerOption,
   ShowTimeOption,
 } from "@/types/calendar-show"
+import type { RecurrenceState } from "@/types/recurrence"
+import type { ApiDefaultShowSection } from "@/types/api/save-show"
 
 const emptyFormValues: AddShowFormValues = {
   headlinerId: "",
@@ -80,6 +90,11 @@ type AddShowDialogProps = {
   onOpenChange: (open: boolean) => void
   onBack?: () => void
   onSave?: (values: AddShowFormValues) => void
+  recurrence: RecurrenceState | null
+  connectionString: string
+  locationId: string
+  username: string
+  onSaved?: () => void
 }
 
 function formatCurrencyValue(value: number | null) {
@@ -277,22 +292,43 @@ function ShowTimesTable({
   )
 }
 
-export default function AddShowDialog({ open, onOpenChange, onBack, onSave }: AddShowDialogProps) {
+export default function AddShowDialog({
+  open,
+  onOpenChange,
+  onBack,
+  onSave,
+  recurrence,
+  connectionString,
+  locationId,
+  username,
+  onSaved,
+}: AddShowDialogProps) {
   const [dialogData, setDialogData] = useState<AddShowDialogData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [formValues, setFormValues] = useState<AddShowFormValues>(emptyFormValues)
   const [isShowDetailsVisible, setIsShowDetailsVisible] = useState(false)
+  const [isVerifyOpen, setIsVerifyOpen] = useState(false)
+  const [verifyRows, setVerifyRows] = useState<ApiDefaultShowSection[]>([])
 
   useEffect(() => {
-    if (!open) {
+    if (!open || !recurrence || !connectionString || !locationId) {
       return
     }
 
     let isActive = true
     setIsLoading(true)
     setIsShowDetailsVisible(false)
+    setErrorMessage(null)
+    setIsVerifyOpen(false)
+    setVerifyRows([])
 
-    getAddShowDialogData()
+    fetchAddShowDialogData({
+      connectionString,
+      locationId,
+      recurrence,
+    })
       .then((data) => {
         if (!isActive) {
           return
@@ -306,6 +342,12 @@ export default function AddShowDialog({ open, onOpenChange, onBack, onSave }: Ad
             .map((showTime) => showTime.id),
         })
       })
+      .catch((error: Error) => {
+        if (isActive) {
+          setErrorMessage(error.message || "Unable to load add show data.")
+          setDialogData(null)
+        }
+      })
       .finally(() => {
         if (isActive) {
           setIsLoading(false)
@@ -315,7 +357,7 @@ export default function AddShowDialog({ open, onOpenChange, onBack, onSave }: Ad
     return () => {
       isActive = false
     }
-  }, [open])
+  }, [open, recurrence, connectionString, locationId])
 
   const performers = dialogData?.performers ?? []
   const showTimes = dialogData?.showTimes ?? []
@@ -344,11 +386,97 @@ export default function AddShowDialog({ open, onOpenChange, onBack, onSave }: Ad
 
 
   function handleSave() {
-    onSave?.(formValues)
-    onOpenChange(false)
+    if (!dialogData || !recurrence) {
+      return
+    }
+
+    const filteredRows = buildSaveShowFilterList(
+      dialogData.sectionRows,
+      formValues.selectedShowTimeIds
+    )
+    const validationError = validateAddShowForm(formValues, filteredRows)
+
+    if (validationError) {
+      setErrorMessage(validationError)
+      return
+    }
+
+    setErrorMessage(null)
+    setVerifyRows(filteredRows.map((row) => ({ ...row })))
+    setIsVerifyOpen(true)
+  }
+
+  async function handleConfirmSave() {
+    if (!dialogData || !recurrence) {
+      return
+    }
+
+    setIsSaving(true)
+    setErrorMessage(null)
+
+    try {
+      const saved = await saveShowsWithRecurrence({
+        connectionString,
+        locationId,
+        username,
+        recurrence,
+        form: formValues,
+        sectionRows: verifyRows,
+        sectionLookups: dialogData.sectionLookups,
+        saveShow: saveShowRequest,
+      })
+
+      if (!saved) {
+        throw new Error("Unable to save show.")
+      }
+
+      onSave?.(formValues)
+      onSaved?.()
+      setIsVerifyOpen(false)
+      onOpenChange(false)
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unable to save show."
+      )
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  function handleVerifyRowsChange(rows: ApiDefaultShowSection[]) {
+    setVerifyRows(rows)
+
+    if (!dialogData) {
+      return
+    }
+
+    const priceByDetId = new Map(
+      rows.map((row) => [row.ShowDetID, row.ShowPrice])
+    )
+
+    setDialogData({
+      ...dialogData,
+      sectionRows: dialogData.sectionRows.map((row) =>
+        priceByDetId.has(row.ShowDetID)
+          ? { ...row, ShowPrice: priceByDetId.get(row.ShowDetID) ?? row.ShowPrice }
+          : row
+      ),
+      showTimes: dialogData.showTimes.map((showTime) => ({
+        ...showTime,
+        sections: showTime.sections.map((section) =>
+          priceByDetId.has(section.id)
+            ? {
+                ...section,
+                price: priceByDetId.get(section.id) ?? section.price,
+              }
+            : section
+        ),
+      })),
+    })
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent disableOutsideDismiss className="max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-6xl">
         <DialogHeader className="border-b px-5 py-4">
@@ -370,6 +498,11 @@ export default function AddShowDialog({ open, onOpenChange, onBack, onSave }: Ad
         </DialogHeader>
 
         <div className="max-h-[calc(100vh-10rem)] space-y-6 overflow-y-auto px-5 py-4">
+          {errorMessage ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {errorMessage}
+            </div>
+          ) : null}
           {isLoading ? (
             <AddShowDialogSkeleton />
           ) : (
@@ -539,7 +672,7 @@ export default function AddShowDialog({ open, onOpenChange, onBack, onSave }: Ad
         </div>
 
         <DialogFooter className="border-t px-5 py-4 sm:justify-start">
-          <Button type="button" onClick={handleSave} disabled={isLoading || !dialogData}>
+          <Button type="button" onClick={handleSave} disabled={isLoading || isSaving || !dialogData}>
             Save
           </Button>
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
@@ -548,6 +681,16 @@ export default function AddShowDialog({ open, onOpenChange, onBack, onSave }: Ad
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+      <SaveVerifyDialog
+        open={isVerifyOpen}
+        onOpenChange={setIsVerifyOpen}
+        rows={verifyRows}
+        onRowsChange={handleVerifyRowsChange}
+        onConfirm={handleConfirmSave}
+        isSaving={isSaving}
+      />
+    </>
   )
 }
 

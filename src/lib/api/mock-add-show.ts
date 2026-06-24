@@ -1,6 +1,8 @@
 import type { AddShowDialogData } from "@/types/calendar-show"
 
 const mockAddShowDialogData: AddShowDialogData = {
+  sectionRows: [],
+  sectionLookups: [],
   performers: [
     { id: "bandit", name: "The Bandit" },
     { id: "funnie-comic", name: "Funnieest Comic in Little Rock" },

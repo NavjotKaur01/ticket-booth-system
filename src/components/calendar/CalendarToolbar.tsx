@@ -18,17 +18,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { CalendarEvent } from "@/data/calendarEvents"
+import type { CalendarEvent } from "@/types/calendar-event"
+import type { AppLocation } from "@/types/api/locations"
 import { cn } from "@/lib/utils"
 
 interface CalendarToolbarProps extends ToolbarProps<CalendarEvent> {
-  location: string
-  setLocation: (val: string) => void
-  locations: string[]
+  locationId: string
+  onLocationChange: (locationId: string) => void
+  locations: AppLocation[]
+  locationsLoading?: boolean
   showCancelled: boolean
   setShowCancelled: (val: boolean) => void
   refreshInterval: number
   setRefreshInterval: (val: number) => void
+  onRefresh?: () => void
+  isRefreshing?: boolean
 }
 
 const viewOptions: { value: View; label: string; icon: typeof CalendarDays }[] = [
@@ -36,18 +40,25 @@ const viewOptions: { value: View; label: string; icon: typeof CalendarDays }[] =
   { value: "week", label: "Week", icon: CalendarRange },
 ]
 
+function getLocationLabel(location: AppLocation) {
+  return location.shortName || location.label || location.name || location.id
+}
+
 export default function CalendarToolbar({
   label,
   view,
   onView,
   onNavigate,
-  location,
-  setLocation,
+  locationId,
+  onLocationChange,
   locations,
+  locationsLoading = false,
   showCancelled,
   setShowCancelled,
   refreshInterval,
   setRefreshInterval,
+  onRefresh,
+  isRefreshing = false,
 }: CalendarToolbarProps) {
   return (
     <div className="grid shrink-0 gap-2 bg-primary px-2 py-2 text-primary-foreground sm:px-3 xl:grid-cols-[minmax(13rem,17rem)_minmax(18rem,1fr)_auto] xl:items-center xl:gap-3">
@@ -55,18 +66,26 @@ export default function CalendarToolbar({
         <Label className="shrink-0 text-sm font-medium text-primary-foreground">
           Location
         </Label>
-        <Select value={location} onValueChange={setLocation}>
+        <Select
+          value={locationId || undefined}
+          onValueChange={onLocationChange}
+          disabled={locationsLoading || locations.length === 0}
+        >
           <SelectTrigger className="h-8 min-w-0 flex-1 bg-background text-sm text-foreground focus:ring-0 xl:w-full">
-            <SelectValue />
+            <SelectValue
+              placeholder={
+                locationsLoading ? "Loading..." : "Select location"
+              }
+            />
           </SelectTrigger>
           <SelectContent className="max-h-56 overflow-y-auto bg-popover text-popover-foreground">
             {locations.map((item) => (
               <SelectItem
                 className="focus:bg-accent focus:text-accent-foreground"
-                key={item}
-                value={item}
+                key={item.id}
+                value={item.id}
               >
-                {item}
+                {getLocationLabel(item)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -138,15 +157,25 @@ export default function CalendarToolbar({
             type="number"
             value={refreshInterval}
             onChange={(event) => setRefreshInterval(Number(event.target.value))}
-            min={1}
+            min={10}
             aria-label="Refresh interval in seconds"
             className="h-8 w-14 bg-background text-center text-sm text-foreground focus-visible:ring-0"
           />
-          <RefreshCw
-            size={16}
-            aria-hidden="true"
-            className="hidden shrink-0 text-primary-foreground md:block"
-          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onRefresh}
+            disabled={!onRefresh || isRefreshing}
+            aria-label="Refresh calendar"
+            className="hidden h-8 w-8 text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground md:inline-flex"
+          >
+            <RefreshCw
+              size={16}
+              aria-hidden="true"
+              className={isRefreshing ? "animate-spin" : undefined}
+            />
+          </Button>
         </div>
 
         <div className="flex items-center justify-end gap-2 sm:justify-start">

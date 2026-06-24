@@ -4,20 +4,34 @@ import { buildCustomerSearchRequest } from "@/lib/build-customer-search-request"
 import { buildSaveCustomerRequest } from "@/lib/build-save-customer-request"
 import { buildReservationDayRange } from "@/lib/reservation-date-range"
 import { buildSearchPromotionRequest } from "@/lib/build-search-promotion-request"
+import { buildCalendarFetchRange } from "@/lib/build-calendar-fetch-range"
 import {
   administratorApiPath,
+  calendarApiPath,
   clubApiPath,
   reportApiPath,
   reservationApiPath,
+  systemApiPath,
 } from "@/lib/api/paths"
 import { mapLocation } from "@/lib/map-location"
 import { saveLocations } from "@/lib/auth/locations-storage"
 import { executeAccountLogin } from "@/lib/api/account-login"
 import { clubmanBaseQuery, type ClubmanQueryError } from "@/store/api/baseQuery"
 import type { AccountLoginRequest, ApiUserCredentials } from "@/types/api/account-login"
+import type {
+  ApiCalendarModel,
+  CalendarRequestModel,
+} from "@/types/api/calendar-data"
+import type {
+  ApiComedianSearchItem,
+  ApiDefaultShowSection,
+  ComedianSearchRequestModel,
+  SaveShowRequestModel,
+} from "@/types/api/save-show"
 import type { ApiCustomerSearchItem } from "@/types/api/customer-search"
 import type { ApiLocation } from "@/types/api/locations"
 import type { ApiPromotionSearchItem } from "@/types/api/promotion-search"
+import type { ApiSystemLookupItem } from "@/types/api/system-lookup"
 import type { RecentSalesReportData } from "@/types/api/recent-sales"
 import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type {
@@ -44,6 +58,7 @@ export const clubmanApi = createApi({
     "Reservation",
     "ShowDetails",
     "RecentSales",
+    "Calendar",
   ],
   endpoints: (builder) => ({
     getLocations: builder.query({
@@ -257,6 +272,79 @@ export const clubmanApi = createApi({
       ],
     }),
 
+    getCalendarData: builder.query({
+      query: ({
+        connectionString,
+        locationId,
+        calendarDate,
+        isCancelled,
+      }: {
+        connectionString: string
+        locationId: string
+        calendarDate: string
+        isCancelled: boolean
+      }) => {
+        const { startDate, endDate } = buildCalendarFetchRange(
+          new Date(calendarDate)
+        )
+        const body: CalendarRequestModel = {
+          ConnectionString: connectionString,
+          LocationID: locationId,
+          StartDate: startDate,
+          EndDate: endDate,
+          IsCancelled: isCancelled,
+        }
+
+        return {
+          url: calendarApiPath("LoadCalendarDataV2"),
+          method: "PUT",
+          body,
+        }
+      },
+      transformResponse: (response: ApiCalendarModel[]) => response,
+      providesTags: (_result, _error, arg) => [
+        {
+          type: "Calendar",
+          id: `${arg.locationId}:${arg.calendarDate}:${arg.isCancelled}`,
+        },
+      ],
+    }),
+
+    getSystemLookup: builder.query({
+      query: (connectionName: string) => ({
+        url: systemApiPath(connectionName, "LoadSystemLookUp"),
+        method: "GET",
+      }),
+      transformResponse: (response: ApiSystemLookupItem[]) => response,
+    }),
+
+    searchComedians: builder.mutation({
+      query: (body: ComedianSearchRequestModel) => ({
+        url: calendarApiPath("ComedianSearch"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: ApiComedianSearchItem[]) => response,
+    }),
+
+    getDefaultShowSections: builder.mutation({
+      query: (body: SaveShowRequestModel) => ({
+        url: calendarApiPath("GetDefaultShowSections"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: ApiDefaultShowSection[]) => response,
+    }),
+
+    saveShow: builder.mutation({
+      query: (body: SaveShowRequestModel) => ({
+        url: calendarApiPath("SaveShow"),
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Calendar"],
+    }),
+
     getRecentSalesReport: builder.query({
       query: ({
         clubSlug,
@@ -288,4 +376,8 @@ export const {
   useGetReservationDataQuery,
   useGetShowDetailsByDateQuery,
   useGetRecentSalesReportQuery,
+  useGetCalendarDataQuery,
+  useSearchComediansMutation,
+  useGetDefaultShowSectionsMutation,
+  useSaveShowMutation,
 } = clubmanApi

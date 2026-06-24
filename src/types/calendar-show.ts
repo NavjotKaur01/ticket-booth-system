@@ -1,3 +1,5 @@
+import type { ApiDefaultShowSection } from "@/types/api/save-show"
+
 export type PerformerOption = {
   id: string
   name: string
@@ -29,10 +31,14 @@ export type ShowTimeOption = {
   sections: ShowTimeSection[]
 }
 
+import type { SectionLookupItem } from "@/types/api/system-lookup"
+
 export type AddShowDialogData = {
   performers: PerformerOption[]
   ageRestrictions: AgeRestrictionOption[]
   showTimes: ShowTimeOption[]
+  sectionRows: ApiDefaultShowSection[]
+  sectionLookups: SectionLookupItem[]
 }
 
 export type AddShowFormValues = {

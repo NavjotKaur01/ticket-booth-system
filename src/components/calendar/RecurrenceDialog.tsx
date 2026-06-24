@@ -24,28 +24,21 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
-type RecurrencePattern = "daily" | "weekly" | "monthly" | "yearly"
-type EndMode = "after" | "date"
-type MonthlyMode = "day" | "weekday"
-type YearlyMode = "date" | "weekday"
+import type { RecurrenceFormValue } from "@/types/recurrence"
+
+export type { RecurrenceFormValue } from "@/types/recurrence"
+
+type RecurrencePattern = RecurrenceFormValue["pattern"]
+type EndMode = RecurrenceFormValue["endMode"]
+type MonthlyMode = RecurrenceFormValue["monthlyMode"]
+type YearlyMode = RecurrenceFormValue["yearlyMode"]
 
 type RecurrenceDialogProps = {
   open: boolean
   startDate: Date | null
   onOpenChange: (open: boolean) => void
   onSave?: (value: RecurrenceFormValue) => void
-}
-
-export type RecurrenceFormValue = {
-  startDate: Date
-  pattern: RecurrencePattern
-  selectedWeekdays: number[]
-  monthlyMode: MonthlyMode
-  yearlyMode: YearlyMode
-  interval: number
-  occurrences: number
-  endMode: EndMode
-  endDate: Date
+  errorMessage?: string | null
 }
 
 const weekdays = [
@@ -161,6 +154,7 @@ export default function RecurrenceDialog({
   startDate,
   onOpenChange,
   onSave,
+  errorMessage,
 }: RecurrenceDialogProps) {
   const normalizedStartDate = useMemo(
     () => (startDate ? getStartOfDay(startDate) : getStartOfDay(new Date())),
@@ -172,12 +166,20 @@ export default function RecurrenceDialog({
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([
     normalizedStartDate.getDay(),
   ])
+  const [dailyWeekdays, setDailyWeekdays] = useState<number[]>([
+    normalizedStartDate.getDay(),
+  ])
   const [monthlyMode, setMonthlyMode] = useState<MonthlyMode>("day")
   const [yearlyMode, setYearlyMode] = useState<YearlyMode>("date")
   const [interval, setInterval] = useState(1)
   const [occurrences, setOccurrences] = useState(1)
   const [endMode, setEndMode] = useState<EndMode>("after")
   const [endDate, setEndDate] = useState(normalizedStartDate)
+  const [monthlyOrdinal, setMonthlyOrdinal] = useState("Fourth")
+  const [monthlyWeekday, setMonthlyWeekday] = useState(weekdays[normalizedStartDate.getDay()])
+  const [yearlyMonth, setYearlyMonth] = useState(months[normalizedStartDate.getMonth()])
+  const [yearlyOrdinal, setYearlyOrdinal] = useState("Fourth")
+  const [yearlyWeekday, setYearlyWeekday] = useState(weekdays[normalizedStartDate.getDay()])
 
   useEffect(() => {
     if (!open) {
@@ -186,15 +188,25 @@ export default function RecurrenceDialog({
 
     setDialogStartDate(normalizedStartDate)
     setSelectedWeekdays([normalizedStartDate.getDay()])
+    setDailyWeekdays([normalizedStartDate.getDay()])
     setEndDate(normalizedStartDate)
+    setMonthlyWeekday(weekdays[normalizedStartDate.getDay()])
+    setYearlyMonth(months[normalizedStartDate.getMonth()])
+    setYearlyWeekday(weekdays[normalizedStartDate.getDay()])
   }, [normalizedStartDate, open])
 
   const startDay = dialogStartDate.getDate()
-  const startMonth = dialogStartDate.getMonth()
-  const startWeekday = dialogStartDate.getDay()
 
   function toggleWeekday(day: number) {
     setSelectedWeekdays((current) =>
+      current.includes(day)
+        ? current.filter((item) => item !== day)
+        : [...current, day].sort((a, b) => a - b)
+    )
+  }
+
+  function toggleDailyWeekday(day: number) {
+    setDailyWeekdays((current) =>
       current.includes(day)
         ? current.filter((item) => item !== day)
         : [...current, day].sort((a, b) => a - b)
@@ -206,14 +218,20 @@ export default function RecurrenceDialog({
       startDate: dialogStartDate,
       pattern,
       selectedWeekdays,
+      dailyWeekdays,
       monthlyMode,
       yearlyMode,
       interval,
       occurrences,
       endMode,
       endDate,
+      monthlyOrdinal,
+      monthlyWeekday,
+      yearlyMonth,
+      yearlyDay: startDay,
+      yearlyOrdinal,
+      yearlyWeekday,
     })
-    onOpenChange(false)
   }
 
   return (
@@ -224,6 +242,11 @@ export default function RecurrenceDialog({
         </DialogHeader>
 
         <div className="space-y-5 px-6 py-5">
+          {errorMessage ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {errorMessage}
+            </div>
+          ) : null}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <Label htmlFor="recurrence-start-date" className="min-w-20">
               Start Date
@@ -263,7 +286,18 @@ export default function RecurrenceDialog({
 
               <div className="min-h-32 pt-1">
                 {pattern === "daily" ? (
-                  <p className="text-sm text-muted-foreground">Repeats every day.</p>
+                  <div className="flex flex-wrap gap-x-5 gap-y-4">
+                    {weekdays.map((day, index) => (
+                      <div key={day} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`daily-weekday-${day}`}
+                          checked={dailyWeekdays.includes(index)}
+                          onCheckedChange={() => toggleDailyWeekday(index)}
+                        />
+                        <Label htmlFor={`daily-weekday-${day}`}>{day}</Label>
+                      </div>
+                    ))}
+                  </div>
                 ) : null}
 
                 {pattern === "weekly" ? (
@@ -298,7 +332,7 @@ export default function RecurrenceDialog({
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                       <RadioGroupItem id="monthly-weekday" value="weekday" />
                       <Label htmlFor="monthly-weekday">The</Label>
-                      <Select defaultValue="Fourth">
+                      <Select value={monthlyOrdinal} onValueChange={setMonthlyOrdinal}>
                         <SelectTrigger className="w-36">
                           <SelectValue />
                         </SelectTrigger>
@@ -310,7 +344,7 @@ export default function RecurrenceDialog({
                           ))}
                         </SelectContent>
                       </Select>
-                      <Select defaultValue={weekdays[startWeekday]}>
+                      <Select value={monthlyWeekday} onValueChange={setMonthlyWeekday}>
                         <SelectTrigger className="w-36">
                           <SelectValue />
                         </SelectTrigger>
@@ -338,7 +372,7 @@ export default function RecurrenceDialog({
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                       <RadioGroupItem id="yearly-date" value="date" />
                       <Label htmlFor="yearly-date">Every</Label>
-                      <Select defaultValue={months[startMonth]}>
+                      <Select value={yearlyMonth} onValueChange={setYearlyMonth}>
                         <SelectTrigger className="w-36">
                           <SelectValue />
                         </SelectTrigger>
@@ -355,7 +389,7 @@ export default function RecurrenceDialog({
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                       <RadioGroupItem id="yearly-weekday" value="weekday" />
                       <Label htmlFor="yearly-weekday">The</Label>
-                      <Select defaultValue="Fourth">
+                      <Select value={yearlyOrdinal} onValueChange={setYearlyOrdinal}>
                         <SelectTrigger className="w-36">
                           <SelectValue />
                         </SelectTrigger>
@@ -367,7 +401,7 @@ export default function RecurrenceDialog({
                           ))}
                         </SelectContent>
                       </Select>
-                      <Select defaultValue={weekdays[startWeekday]}>
+                      <Select value={yearlyWeekday} onValueChange={setYearlyWeekday}>
                         <SelectTrigger className="w-36">
                           <SelectValue />
                         </SelectTrigger>
@@ -380,7 +414,7 @@ export default function RecurrenceDialog({
                         </SelectContent>
                       </Select>
                       <span className="text-sm">of</span>
-                      <Select defaultValue={months[startMonth]}>
+                      <Select value={yearlyMonth} onValueChange={setYearlyMonth}>
                         <SelectTrigger className="w-36">
                           <SelectValue />
                         </SelectTrigger>
