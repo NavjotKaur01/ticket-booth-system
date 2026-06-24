@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { FormField } from "@/components/forms/form-fields"
@@ -5,6 +6,7 @@ import {
   PhoneInputGroup,
   type PhoneParts,
 } from "@/components/forms/phone-input-group"
+import CalendarSelectControl from "@/components/calendar/controls/CalendarSelectControl"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -16,13 +18,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import {
   countryOptions,
@@ -41,6 +36,8 @@ type AddCustomerDialogProps = {
   connectionName: string
   locationId: string
   lastUpdateId: string
+  nested?: boolean
+  onBack?: () => void
   onSaved?: (form: CustomerFormValues) => Promise<void> | void
 }
 
@@ -50,6 +47,8 @@ export function AddCustomerDialog({
   connectionName,
   locationId,
   lastUpdateId,
+  nested = false,
+  onBack,
   onSaved,
 }: AddCustomerDialogProps) {
   const [form, setForm] = useState<CustomerFormValues>(EMPTY_CUSTOMER_FORM)
@@ -128,16 +127,51 @@ export function AddCustomerDialog({
     }
   }
 
+  function handleClose() {
+    if (onBack) {
+      onBack()
+      return
+    }
+
+    onOpenChange(false)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && onBack) {
+          onBack()
+          return
+        }
+
+        onOpenChange(nextOpen)
+      }}
+    >
       <DialogContent
+        nested={nested}
+        disableOutsideDismiss={nested}
         showCloseButton
         className="flex max-h-[92vh] max-w-4xl flex-col overflow-hidden sm:max-w-4xl"
       >
         <DialogHeader className="shrink-0 gap-0 border-b px-4 py-3 pr-12">
-          <DialogTitle className="text-lg leading-snug font-normal">
-            <span className="font-semibold text-foreground">Add Customer</span>
-          </DialogTitle>
+          <div className="flex items-center gap-2">
+            {onBack ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onBack}
+                className="size-8"
+                aria-label="Back to add reservation"
+              >
+                <ArrowLeft className="size-4" />
+              </Button>
+            ) : null}
+            <DialogTitle className="text-lg leading-snug font-normal">
+              <span className="font-semibold text-foreground">Add Customer</span>
+            </DialogTitle>
+          </div>
         </DialogHeader>
 
         <div className="overflow-y-auto px-4 py-3">
@@ -220,21 +254,15 @@ export function AddCustomerDialog({
             </FormField>
 
             <FormField label="Country">
-              <Select
+              <CalendarSelectControl
+                id="add-customer-country"
                 value={form.country}
-                onValueChange={(value) => updateField("country", value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {countryOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(value) => updateField("country", value)}
+                options={countryOptions.map((option) => ({
+                  value: option.id,
+                  label: option.label,
+                }))}
+              />
             </FormField>
 
             <FormField label="City" htmlFor="add-customer-city">
@@ -246,21 +274,15 @@ export function AddCustomerDialog({
             </FormField>
 
             <FormField label="State">
-              <Select
+              <CalendarSelectControl
+                id="add-customer-state"
                 value={form.state}
-                onValueChange={(value) => updateField("state", value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {usStateOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(value) => updateField("state", value)}
+                options={usStateOptions.map((option) => ({
+                  value: option.id,
+                  label: option.label,
+                }))}
+              />
             </FormField>
 
             <FormField label="Zip Code" htmlFor="add-customer-zip">
@@ -275,21 +297,17 @@ export function AddCustomerDialog({
 
             <FormField label="DOB">
               <div className="flex min-w-0 items-center gap-2">
-                <Select
-                  value={form.dobMonth || undefined}
-                  onValueChange={(value) => updateField("dobMonth", value)}
-                >
-                  <SelectTrigger className="min-w-0 flex-1">
-                    <SelectValue placeholder="Month" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dobMonthOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CalendarSelectControl
+                  id="add-customer-dob-month"
+                  value={form.dobMonth}
+                  onChange={(value) => updateField("dobMonth", value)}
+                  placeholder="Month"
+                  className="min-w-0 flex-1"
+                  options={dobMonthOptions.map((option) => ({
+                    value: option.id,
+                    label: option.label,
+                  }))}
+                />
                 <Input
                   id="add-customer-dob-day-year"
                   value={form.dobDayYear}
@@ -381,7 +399,7 @@ export function AddCustomerDialog({
               type="button"
               variant="outline"
               disabled={saving}
-              onClick={() => onOpenChange(false)}
+              onClick={handleClose}
             >
               Cancel
             </Button>
