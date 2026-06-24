@@ -47,12 +47,15 @@ import {
   type ReservationCustomerSearchResult
 } from '@/data/reservation-search-results'
 import { ComicInfoDialog } from '@/features/reservations/comic-info-dialog'
+import { AddCustomerDialog } from '@/features/customers/add-customer-dialog'
 import {
   ReservationPaymentActions,
   ReservationPaymentPanel,
 } from '@/features/reservations/reservation-payment-panel'
 import { ReservationSearchResultsTable } from '@/features/reservations/reservation-search-results-table'
 import { cn } from '@/lib/utils'
+import { useAppSession } from '@/hooks/use-app-session'
+import type { CustomerFormValues } from '@/types/customer-form'
 import type { SectionOption } from '@/types/reservation'
 
 type AddReservationDialogProps = {
@@ -476,12 +479,14 @@ function CustomerSearchHeader ({
   searchType,
   onSearchTypeChange,
   onSearch,
-  onClear
+  onClear,
+  onAddCustomer
 }: {
   searchType: 'customer' | 'business'
   onSearchTypeChange: (value: string) => void
   onSearch: () => void
   onClear: () => void
+  onAddCustomer: () => void
 }) {
   const isBusiness = searchType === 'business'
 
@@ -512,6 +517,7 @@ function CustomerSearchHeader ({
         <IconActionButton
           label={isBusiness ? 'Add Business' : 'Add Customer'}
           icon={UserPlus}
+          onClick={isBusiness ? undefined : onAddCustomer}
         />
         <IconActionButton label='Clear' icon={X} variant='outline' onClick={onClear} />
       </div>
@@ -700,6 +706,7 @@ export function AddReservationDialog ({
   open,
   onOpenChange
 }: AddReservationDialogProps) {
+  const { connectionName, locationId, username } = useAppSession()
   const dateInputRef = useRef<HTMLInputElement>(null)
   const notesInputRef = useRef<HTMLTextAreaElement>(null)
   const [searchType, setSearchType] = useState<'customer' | 'business'>(
@@ -722,6 +729,7 @@ export function AddReservationDialog ({
   const [origin, setOrigin] =
     useState<typeof ORIGIN_OPTIONS[number]['id']>('phone')
   const [comicInfoOpen, setComicInfoOpen] = useState(false)
+  const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
   const [customerSearchResults, setCustomerSearchResults] = useState<
     ReservationCustomerSearchResult[]
@@ -758,6 +766,8 @@ export function AddReservationDialog ({
   useEffect(() => {
     if (!open) {
       setSpecialNotesOpen(true)
+      setComicInfoOpen(false)
+      setIsAddCustomerOpen(false)
       clearCustomerSearch()
     }
   }, [open])
@@ -795,11 +805,33 @@ export function AddReservationDialog ({
     }))
   }
 
+  function applySavedCustomer (customer: CustomerFormValues) {
+    const { area, prefix, line } = customer.phone
+    setSearchType('customer')
+    setSearchCriteria({
+      lastName: customer.lastName,
+      firstName: customer.firstName,
+      phoneNo: [area, prefix, line].filter(Boolean).join(''),
+      email: customer.email,
+      businessName: ''
+    })
+    setIsAddCustomerOpen(false)
+  }
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && (comicInfoOpen || isAddCustomerOpen)) {
+            return
+          }
+          onOpenChange(nextOpen)
+        }}
+      >
         <TooltipProvider delayDuration={200}>
           <DialogContent
+            disableOutsideDismiss
             showCloseButton={false}
             className='flex max-h-[82vh] w-[min(96vw,72rem)] max-w-none flex-col overflow-hidden sm:max-w-none'
           >
@@ -861,6 +893,7 @@ export function AddReservationDialog ({
                           }
                           onSearch={handleCustomerSearch}
                           onClear={clearCustomerSearch}
+                          onAddCustomer={() => setIsAddCustomerOpen(true)}
                         />
                       </div>
 
@@ -930,6 +963,17 @@ export function AddReservationDialog ({
         onOpenChange={setComicInfoOpen}
         stageName={reservationShowMeta.comicName}
         nested
+      />
+
+      <AddCustomerDialog
+        open={isAddCustomerOpen}
+        onOpenChange={setIsAddCustomerOpen}
+        nested
+        onBack={() => setIsAddCustomerOpen(false)}
+        connectionName={connectionName}
+        locationId={locationId}
+        lastUpdateId={username}
+        onSaved={applySavedCustomer}
       />
     </>
   )

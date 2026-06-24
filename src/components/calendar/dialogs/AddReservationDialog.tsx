@@ -230,7 +230,15 @@ export default function AddReservationDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && (isComicInfoOpen || isAddCustomerOpen)) {
+            return
+          }
+          onOpenChange(nextOpen)
+        }}
+      >
       <DialogContent disableOutsideDismiss className="max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-6xl">
         <DialogHeader className="border-b px-5 py-4">
           <DialogTitle className="text-lg">{headerTitle}</DialogTitle>

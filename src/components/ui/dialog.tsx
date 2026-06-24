@@ -44,13 +44,68 @@ function DialogOverlay({
   )
 }
 
+type OutsideDismissEvent = {
+  target: EventTarget | null
+  currentTarget: EventTarget | null
+  preventDefault: () => void
+}
+
+function isWithinAnotherDialogContent(
+  target: EventTarget | null,
+  currentContent: EventTarget | null
+) {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
+
+  const dialogContents = document.querySelectorAll('[data-slot="dialog-content"]')
+  for (const content of Array.from(dialogContents)) {
+    if (content !== currentContent && content.contains(target)) {
+      return true
+    }
+  }
+
+  return false
+}
+
+function hasOpenStackedDialog(currentContent: EventTarget | null) {
+  const contents = document.querySelectorAll('[data-slot="dialog-content"]')
+  if (contents.length <= 1) {
+    return false
+  }
+
+  const currentIndex = Array.from(contents).indexOf(currentContent as Element)
+  return currentIndex >= 0 && currentIndex < contents.length - 1
+}
+
+function shouldPreventOutsideDismiss(
+  event: OutsideDismissEvent,
+  disableOutsideDismiss: boolean
+) {
+  if (disableOutsideDismiss) {
+    event.preventDefault()
+    return
+  }
+
+  if (
+    isWithinAnotherDialogContent(event.target, event.currentTarget) ||
+    hasOpenStackedDialog(event.currentTarget)
+  ) {
+    event.preventDefault()
+  }
+}
+
 function DialogContent({
   className,
   children,
   showCloseButton = true,
   disableOutsideDismiss = false,
-  onInteractOutside,
   nested = false,
+  onInteractOutside,
+  onPointerDownOutside,
+  onFocusOutside,
+  onEscapeKeyDown,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
@@ -58,6 +113,14 @@ function DialogContent({
   nested?: boolean
 }) {
   const stackClass = nested ? "z-[60]" : "z-50"
+
+  const handleOutsideEvent = <T extends OutsideDismissEvent>(
+    event: T,
+    userHandler?: (event: T) => void
+  ) => {
+    userHandler?.(event)
+    shouldPreventOutsideDismiss(event, disableOutsideDismiss)
+  }
 
   return (
     <DialogPortal>
@@ -68,9 +131,20 @@ function DialogContent({
           "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-0 rounded-lg border border-border/80 bg-background p-0 shadow-xl ring-1 ring-background/40 duration-200 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 sm:max-w-lg", stackClass,
           className
         )}
-        onInteractOutside={(event) => {
-          onInteractOutside?.(event)
-          if (disableOutsideDismiss) {
+        onInteractOutside={(event) => handleOutsideEvent(event, onInteractOutside)}
+        onPointerDownOutside={(event) =>
+          handleOutsideEvent(event, onPointerDownOutside)
+        }
+        onFocusOutside={(event) => handleOutsideEvent(event, onFocusOutside)}
+        onEscapeKeyDown={(event) => {
+          onEscapeKeyDown?.(event)
+          if (hasOpenStackedDialog(event.currentTarget)) {
+            event.preventDefault()
+          }
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event)
+          if (nested) {
             event.preventDefault()
           }
         }}

@@ -1,5 +1,4 @@
 import { User } from "lucide-react"
-import type { ReactNode } from "react"
 import { useEffect, useState } from "react"
 
 import { FormField } from "@/components/forms/form-fields"
@@ -34,6 +33,7 @@ const PREFERRED_CONTACT_OPTIONS = [
 ] as const
 
 const FIELD_GRID = "grid gap-3 sm:grid-cols-2"
+const FIELD_GRID_3 = "grid gap-3 sm:grid-cols-3"
 const PANEL_CLASS = "rounded-lg border border-border/60 bg-background p-3"
 
 const COUNTRY_OPTIONS = [
@@ -52,6 +52,13 @@ const ARTIST_TYPE_OPTIONS = [
   { value: "Host", label: "Host" },
   { value: "Musician", label: "Musician" },
 ]
+
+const COMIC_INFO_TABS = [
+  { id: "info" as const, label: "Comedian Info" },
+  { id: "contact" as const, label: "Contact & Address" },
+]
+
+type ComicInfoTab = (typeof COMIC_INFO_TABS)[number]["id"]
 
 type ComicInfoDialogProps = {
   open: boolean
@@ -77,18 +84,6 @@ function SkeletonField({
   )
 }
 
-function SkeletonPhoneField({ labelWidth = "w-24" }: { labelWidth?: string }) {
-  return (
-    <div>
-      <Skeleton className={`mb-1 h-3.5 ${labelWidth}`} />
-      <div className="flex gap-2">
-        <Skeleton className="h-8 w-14 rounded-md" />
-        <Skeleton className="h-8 w-14 rounded-md" />
-        <Skeleton className="h-8 min-w-0 flex-1 rounded-md" />
-      </div>
-    </div>
-  )
-}
 
 function ComicInfoDialogBodySkeleton() {
   return (
@@ -100,8 +95,11 @@ function ComicInfoDialogBodySkeleton() {
         </div>
 
         <div className="min-w-0 flex-1 space-y-3">
-          <section className="space-y-2">
-            <Skeleton className="h-3.5 w-24" />
+          <div className="inline-flex rounded-sm border border-border bg-muted/30 p-0.5">
+            <Skeleton className="h-8 w-28 rounded-sm" />
+            <Skeleton className="ml-0.5 h-8 w-32 rounded-sm" />
+          </div>
+          <div className="rounded-lg border border-border/60 bg-background p-3">
             <div className="grid gap-2 sm:grid-cols-2">
               <SkeletonField labelWidth="w-16" />
               <SkeletonField labelWidth="w-16" />
@@ -111,68 +109,49 @@ function ComicInfoDialogBodySkeleton() {
                 <Skeleton className="min-h-20 w-full rounded-md" />
               </div>
             </div>
-          </section>
+          </div>
         </div>
       </div>
 
-      <section className="space-y-2">
+      <section className="space-y-2 lg:col-span-2">
         <Skeleton className="h-3.5 w-12" />
         <Skeleton className="min-h-16 w-full rounded-md" />
       </section>
-
-      <div className="grid gap-3 lg:grid-cols-3">
-        <div className="space-y-2">
-          <SkeletonField labelWidth="w-10" />
-          <SkeletonField labelWidth="w-14" />
-          <SkeletonPhoneField labelWidth="w-20" />
-          <SkeletonField labelWidth="w-16" />
-          <SkeletonField labelWidth="w-14" />
-        </div>
-
-        <div className="space-y-2">
-          <SkeletonField labelWidth="w-8" />
-          <SkeletonField labelWidth="w-16" />
-          <SkeletonPhoneField labelWidth="w-24" />
-          <SkeletonField labelWidth="w-10" />
-        </div>
-
-        <div className="space-y-2">
-          <SkeletonField labelWidth="w-12" />
-          <SkeletonField labelWidth="w-8" />
-          <SkeletonPhoneField labelWidth="w-8" />
-          <SkeletonField labelWidth="w-16" />
-        </div>
-      </div>
-
-      <div>
-        <Skeleton className="mb-1 h-3.5 w-28" />
-        <div className="flex flex-row flex-wrap items-center gap-x-4 gap-y-2">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div key={index} className="flex items-center gap-1.5">
-              <Skeleton className="size-4 rounded-full" />
-              <Skeleton className="h-3.5 w-16" />
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   )
 }
 
-function FormPanel ({
-  title,
-  children,
-  className
+function ComicInfoTabs({
+  activeTab,
+  onTabChange,
 }: {
-  title: string
-  children: ReactNode
-  className?: string
+  activeTab: ComicInfoTab
+  onTabChange: (tab: ComicInfoTab) => void
 }) {
   return (
-    <section className={cn(PANEL_CLASS, className)}>
-      <h3 className="mb-3 text-sm font-semibold text-foreground">{title}</h3>
-      {children}
-    </section>
+    <div
+      role="tablist"
+      aria-label="Comedian form sections"
+      className="inline-flex rounded-sm border border-border bg-muted/30 p-0.5"
+    >
+      {COMIC_INFO_TABS.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === tab.id}
+          onClick={() => onTabChange(tab.id)}
+          className={cn(
+            "rounded-sm px-3 py-1.5 text-sm font-medium transition-colors",
+            activeTab === tab.id
+              ? "bg-background text-primary shadow-xs"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -185,10 +164,12 @@ export function ComicInfoDialog({
   onSave,
 }: ComicInfoDialogProps) {
   const [form, setForm] = useState<ComicInfo>(() => getComicInfo(stageName))
+  const [activeTab, setActiveTab] = useState<ComicInfoTab>("info")
 
   useEffect(() => {
     if (open && !isLoading) {
       setForm(getComicInfo(stageName))
+      setActiveTab("info")
     }
   }, [isLoading, open, stageName])
 
@@ -238,233 +219,235 @@ export function ComicInfoDialog({
             </aside>
 
             <div className="min-w-0 space-y-3">
-              <FormPanel title="Comedian Info">
-                <div className={FIELD_GRID}>
-                  <FormField label="Last Name" htmlFor="comic-last-name">
-                    <Input
-                      id="comic-last-name"
-                      value={form.lastName}
-                      onChange={(e) => updateField("lastName", e.target.value)}
-                    />
-                  </FormField>
-                  <FormField label="First Name" htmlFor="comic-first-name">
-                    <Input
-                      id="comic-first-name"
-                      value={form.firstName}
-                      onChange={(e) => updateField("firstName", e.target.value)}
-                    />
-                  </FormField>
-                  <FormField
-                    label="Stage Name"
-                    htmlFor="comic-stage-name"
-                    className="sm:col-span-2"
-                  >
-                    <Input
-                      id="comic-stage-name"
-                      value={form.stageName}
-                      onChange={(e) => updateField("stageName", e.target.value)}
-                    />
-                  </FormField>
-                  <FormField
-                    label="About comedian"
-                    htmlFor="comic-about"
-                    className="sm:col-span-2"
-                  >
-                    <Textarea
-                      id="comic-about"
-                      value={form.about}
-                      onChange={(e) => updateField("about", e.target.value)}
-                      className="min-h-20 resize-y"
-                    />
-                  </FormField>
-                  <FormField label="Notes" className="sm:col-span-2">
-                    <Textarea
-                      value={form.notes}
-                      onChange={(e) => updateField("notes", e.target.value)}
-                      className="min-h-16 resize-y"
-                    />
-                  </FormField>
-                </div>
-              </FormPanel>
+              <ComicInfoTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-              <FormPanel title="Contact & Address">
-                <div className="space-y-4">
-                  <div className={FIELD_GRID}>
-                    <FormField label="Email" htmlFor="comic-email">
-                      <Input
-                        id="comic-email"
-                        type="email"
-                        value={form.email}
-                        onChange={(e) => updateField("email", e.target.value)}
+              <div
+                role="tabpanel"
+                className={cn(PANEL_CLASS, "min-h-72")}
+              >
+                {activeTab === "info" ? (
+                  <div className="space-y-3">
+                    <div className={FIELD_GRID_3}>
+                      <FormField label="Last Name" htmlFor="comic-last-name">
+                        <Input
+                          id="comic-last-name"
+                          value={form.lastName}
+                          onChange={(e) => updateField("lastName", e.target.value)}
+                        />
+                      </FormField>
+                      <FormField label="First Name" htmlFor="comic-first-name">
+                        <Input
+                          id="comic-first-name"
+                          value={form.firstName}
+                          onChange={(e) => updateField("firstName", e.target.value)}
+                        />
+                      </FormField>
+                      <FormField label="Stage Name" htmlFor="comic-stage-name">
+                        <Input
+                          id="comic-stage-name"
+                          value={form.stageName}
+                          onChange={(e) => updateField("stageName", e.target.value)}
+                        />
+                      </FormField>
+                    </div>
+                    <FormField
+                      label="About comedian"
+                      htmlFor="comic-about"
+                    >
+                      <Textarea
+                        id="comic-about"
+                        value={form.about}
+                        onChange={(e) => updateField("about", e.target.value)}
+                        className="min-h-20 resize-y"
                       />
                     </FormField>
-                    <FormField label="URL" htmlFor="comic-url">
-                      <Input
-                        id="comic-url"
-                        type="url"
-                        value={form.url}
-                        onChange={(e) => updateField("url", e.target.value)}
-                      />
-                    </FormField>
-                    <FormField label="Alt URL" htmlFor="comic-alt-url">
-                      <Input
-                        id="comic-alt-url"
-                        type="url"
-                        value={form.altUrl}
-                        onChange={(e) => updateField("altUrl", e.target.value)}
-                      />
-                    </FormField>
-                    <FormField label="Artist Type">
-                      <Select
-                        value={form.artistType || "select"}
-                        onValueChange={(value) =>
-                          updateField("artistType", value === "select" ? "" : value)
-                        }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="select">Select type</SelectItem>
-                          {ARTIST_TYPE_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormField>
-                  </div>
-
-                  <div className={cn(FIELD_GRID, "border-t border-border/50 pt-4")}>
-                    <FormField label="Address" htmlFor="comic-address">
-                      <Input
-                        id="comic-address"
-                        value={form.address}
-                        onChange={(e) => updateField("address", e.target.value)}
-                      />
-                    </FormField>
-                    <FormField label="Address2" htmlFor="comic-address2">
-                      <Input
-                        id="comic-address2"
-                        value={form.address2}
-                        onChange={(e) => updateField("address2", e.target.value)}
-                      />
-                    </FormField>
-                    <FormField label="City" htmlFor="comic-city">
-                      <Input
-                        id="comic-city"
-                        value={form.city}
-                        onChange={(e) => updateField("city", e.target.value)}
-                      />
-                    </FormField>
-                    <FormField label="State">
-                      <Select
-                        value={form.state || "select"}
-                        onValueChange={(value) =>
-                          updateField("state", value === "select" ? "" : value)
-                        }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select State" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="select">Select State</SelectItem>
-                          {STATE_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormField>
-                    <FormField label="Zip Code" htmlFor="comic-zip">
-                      <Input
-                        id="comic-zip"
-                        value={form.zipCode}
-                        onChange={(e) => updateField("zipCode", e.target.value)}
-                      />
-                    </FormField>
-                    <FormField label="Country">
-                      <Select
-                        value={form.country || "select"}
-                        onValueChange={(value) =>
-                          updateField("country", value === "select" ? "" : value)
-                        }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select country" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="select">Select country</SelectItem>
-                          {COUNTRY_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormField>
-                  </div>
-
-                  <div className={cn(FIELD_GRID, "border-t border-border/50 pt-4")}>
-                    <FormField label="Home Phone" htmlFor="comic-home-phone">
-                      <Input
-                        id="comic-home-phone"
-                        type="tel"
-                        value={form.homePhone}
-                        onChange={(e) => updateField("homePhone", e.target.value)}
-                      />
-                    </FormField>
-                    <FormField label="Mobile Phone" htmlFor="comic-mobile-phone">
-                      <Input
-                        id="comic-mobile-phone"
-                        type="tel"
-                        value={form.mobilePhone}
-                        onChange={(e) =>
-                          updateField("mobilePhone", e.target.value)
-                        }
-                      />
-                    </FormField>
-                    <FormField label="Fax" htmlFor="comic-fax">
-                      <Input
-                        id="comic-fax"
-                        type="tel"
-                        value={form.fax}
-                        onChange={(e) => updateField("fax", e.target.value)}
+                    <FormField label="Notes">
+                      <Textarea
+                        value={form.notes}
+                        onChange={(e) => updateField("notes", e.target.value)}
+                        className="min-h-16 resize-y"
                       />
                     </FormField>
                   </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className={FIELD_GRID}>
+                      <FormField label="Email" htmlFor="comic-email">
+                        <Input
+                          id="comic-email"
+                          type="email"
+                          value={form.email}
+                          onChange={(e) => updateField("email", e.target.value)}
+                        />
+                      </FormField>
+                      <FormField label="URL" htmlFor="comic-url">
+                        <Input
+                          id="comic-url"
+                          type="url"
+                          value={form.url}
+                          onChange={(e) => updateField("url", e.target.value)}
+                        />
+                      </FormField>
+                      <FormField label="Alt URL" htmlFor="comic-alt-url">
+                        <Input
+                          id="comic-alt-url"
+                          type="url"
+                          value={form.altUrl}
+                          onChange={(e) => updateField("altUrl", e.target.value)}
+                        />
+                      </FormField>
+                      <FormField label="Artist Type">
+                        <Select
+                          value={form.artistType || "select"}
+                          onValueChange={(value) =>
+                            updateField("artistType", value === "select" ? "" : value)
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="select">Select type</SelectItem>
+                            {ARTIST_TYPE_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                    </div>
 
-                  <div className="space-y-2 border-t border-border/50 pt-4">
-                    <span className="block text-xs font-medium text-muted-foreground">
-                      Preferred Contact
-                    </span>
-                    <div className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2.5">
-                      <RadioGroup
-                        value={form.preferredContact}
-                        onValueChange={(value) =>
-                          updateField("preferredContact", value)
-                        }
-                        className="flex flex-row flex-wrap items-center gap-x-4 gap-y-2"
-                      >
-                        {PREFERRED_CONTACT_OPTIONS.map((option) => (
-                          <label
-                            key={option.value}
-                            className="flex cursor-pointer items-center gap-2 text-sm"
-                          >
-                            <RadioGroupItem
-                              value={option.value}
-                              id={`comic-contact-${option.value}`}
-                            />
-                            {option.label}
-                          </label>
-                        ))}
-                      </RadioGroup>
+                    <div className={FIELD_GRID}>
+                      <FormField label="Address" htmlFor="comic-address">
+                        <Input
+                          id="comic-address"
+                          value={form.address}
+                          onChange={(e) => updateField("address", e.target.value)}
+                        />
+                      </FormField>
+                      <FormField label="Address2" htmlFor="comic-address2">
+                        <Input
+                          id="comic-address2"
+                          value={form.address2}
+                          onChange={(e) => updateField("address2", e.target.value)}
+                        />
+                      </FormField>
+                      <FormField label="City" htmlFor="comic-city">
+                        <Input
+                          id="comic-city"
+                          value={form.city}
+                          onChange={(e) => updateField("city", e.target.value)}
+                        />
+                      </FormField>
+                      <FormField label="State">
+                        <Select
+                          value={form.state || "select"}
+                          onValueChange={(value) =>
+                            updateField("state", value === "select" ? "" : value)
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select State" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="select">Select State</SelectItem>
+                            {STATE_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                      <FormField label="Zip Code" htmlFor="comic-zip">
+                        <Input
+                          id="comic-zip"
+                          value={form.zipCode}
+                          onChange={(e) => updateField("zipCode", e.target.value)}
+                        />
+                      </FormField>
+                      <FormField label="Country">
+                        <Select
+                          value={form.country || "select"}
+                          onValueChange={(value) =>
+                            updateField("country", value === "select" ? "" : value)
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select country" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="select">Select country</SelectItem>
+                            {COUNTRY_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                    </div>
+
+                    <div className={FIELD_GRID_3}>
+                      <FormField label="Home Phone" htmlFor="comic-home-phone">
+                        <Input
+                          id="comic-home-phone"
+                          type="tel"
+                          value={form.homePhone}
+                          onChange={(e) => updateField("homePhone", e.target.value)}
+                        />
+                      </FormField>
+                      <FormField label="Mobile Phone" htmlFor="comic-mobile-phone">
+                        <Input
+                          id="comic-mobile-phone"
+                          type="tel"
+                          value={form.mobilePhone}
+                          onChange={(e) =>
+                            updateField("mobilePhone", e.target.value)
+                          }
+                        />
+                      </FormField>
+                      <FormField label="Fax" htmlFor="comic-fax">
+                        <Input
+                          id="comic-fax"
+                          type="tel"
+                          value={form.fax}
+                          onChange={(e) => updateField("fax", e.target.value)}
+                        />
+                      </FormField>
+                    </div>
+
+                    <div className="space-y-2">
+                      <span className="block text-xs font-medium text-muted-foreground">
+                        Preferred Contact
+                      </span>
+                      <div className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2.5">
+                        <RadioGroup
+                          value={form.preferredContact}
+                          onValueChange={(value) =>
+                            updateField("preferredContact", value)
+                          }
+                          className="flex flex-row flex-wrap items-center gap-x-4 gap-y-2"
+                        >
+                          {PREFERRED_CONTACT_OPTIONS.map((option) => (
+                            <label
+                              key={option.value}
+                              className="flex cursor-pointer items-center gap-2 text-sm"
+                            >
+                              <RadioGroupItem
+                                value={option.value}
+                                id={`comic-contact-${option.value}`}
+                              />
+                              {option.label}
+                            </label>
+                          ))}
+                        </RadioGroup>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </FormPanel>
+                )}
+              </div>
             </div>
           </div>
         </div>
