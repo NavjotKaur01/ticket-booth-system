@@ -80,20 +80,31 @@ function AdjustHubTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {shows.map((show) => (
-            <TableRow key={show.id} className="odd:bg-background even:bg-muted/20">
-              <TableCell className="border px-3 py-2">
-                <Checkbox
-                  checked={hubByShowId[show.id] ?? false}
-                  onCheckedChange={(checked) => onToggleHub(show.id, checked === true)}
-                  aria-label={`Toggle hub for ${show.comic} at ${show.showTime}`}
-                />
+          {shows.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={4}
+                className="h-32 border px-3 py-10 text-center text-sm text-muted-foreground"
+              >
+                No record
               </TableCell>
-              <TableCell className="border px-3 py-2">{show.showDate}</TableCell>
-              <TableCell className="border px-3 py-2">{show.showTime}</TableCell>
-              <TableCell className="border px-3 py-2">{show.comic}</TableCell>
             </TableRow>
-          ))}
+          ) : (
+            shows.map((show) => (
+              <TableRow key={show.id} className="odd:bg-background even:bg-muted/20">
+                <TableCell className="border px-3 py-2">
+                  <Checkbox
+                    checked={hubByShowId[show.id] ?? false}
+                    onCheckedChange={(checked) => onToggleHub(show.id, checked === true)}
+                    aria-label={`Toggle hub for ${show.comic} at ${show.showTime}`}
+                  />
+                </TableCell>
+                <TableCell className="border px-3 py-2">{show.showDate}</TableCell>
+                <TableCell className="border px-3 py-2">{show.showTime}</TableCell>
+                <TableCell className="border px-3 py-2">{show.comic}</TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </div>

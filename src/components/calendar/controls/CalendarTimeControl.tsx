@@ -11,8 +11,18 @@ import { cn } from "@/lib/utils"
 
 import { CalendarScrollSelectList } from "./CalendarScrollSelectList"
 
-const hourlyTimeOptions = Array.from({ length: 24 }, (_, hour) =>
-  formatTimeValue(hour, 0)
+const TIME_INTERVAL_MINUTES = 15
+const MINUTES_PER_DAY = 24 * 60
+
+const quarterHourTimeOptions = Array.from(
+  { length: MINUTES_PER_DAY / TIME_INTERVAL_MINUTES },
+  (_, index) => {
+    const totalMinutes = index * TIME_INTERVAL_MINUTES
+    const hour = Math.floor(totalMinutes / 60)
+    const minute = totalMinutes % 60
+
+    return formatTimeValue(hour, minute)
+  }
 )
 
 function parseTimeValue(value: string) {
@@ -42,15 +52,45 @@ function formatTimeValue(hour: number, minute: number) {
   return `${displayHour}:${minute.toString().padStart(2, "0")} ${period}`
 }
 
-function stepTimeValue(value: string, direction: 1 | -1) {
+function timeToMinutes(value: string) {
   const { hour, minute } = parseTimeValue(value)
-  return formatTimeValue(hour + direction, minute)
+  return hour * 60 + minute
+}
+
+function normalizeTimeValue(value: string) {
+  const { hour, minute } = parseTimeValue(value)
+  return formatTimeValue(hour, minute)
 }
 
 function getTimeOptions(value: string) {
-  return hourlyTimeOptions.includes(value)
-    ? hourlyTimeOptions
-    : [value, ...hourlyTimeOptions]
+  const normalized = normalizeTimeValue(value)
+
+  if (quarterHourTimeOptions.includes(normalized)) {
+    return quarterHourTimeOptions
+  }
+
+  const targetMinutes = timeToMinutes(normalized)
+  const insertIndex = quarterHourTimeOptions.findIndex(
+    (option) => timeToMinutes(option) > targetMinutes
+  )
+
+  if (insertIndex === -1) {
+    return [...quarterHourTimeOptions, normalized]
+  }
+
+  return [
+    ...quarterHourTimeOptions.slice(0, insertIndex),
+    normalized,
+    ...quarterHourTimeOptions.slice(insertIndex),
+  ]
+}
+
+function stepTimeValue(value: string, direction: 1 | -1) {
+  const totalMinutes = timeToMinutes(value) + direction * TIME_INTERVAL_MINUTES
+  const wrapped =
+    ((totalMinutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY
+
+  return formatTimeValue(Math.floor(wrapped / 60), wrapped % 60)
 }
 
 type CalendarTimeControlProps = {
@@ -110,7 +150,7 @@ export default function CalendarTimeControl({
           type="button"
           variant="ghost"
           className="h-1/2 rounded-none p-0 hover:bg-primary/10"
-          aria-label="Move time one hour up"
+          aria-label="Move time fifteen minutes forward"
           onClick={() => onChange(stepTimeValue(value, 1))}
         >
           <ChevronUp className="size-3" />
@@ -119,7 +159,7 @@ export default function CalendarTimeControl({
           type="button"
           variant="ghost"
           className="h-1/2 rounded-none border-t p-0 hover:bg-primary/10"
-          aria-label="Move time one hour down"
+          aria-label="Move time fifteen minutes backward"
           onClick={() => onChange(stepTimeValue(value, -1))}
         >
           <ChevronDown className="size-3" />

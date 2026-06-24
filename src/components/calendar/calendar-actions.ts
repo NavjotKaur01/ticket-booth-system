@@ -23,8 +23,15 @@ export type CalendarActionDialog =
   | "addReservation"
   | "adjustAge"
   | "adjustHub"
+  | "adjustPromo"
+  | "adjustSeats"
   | "cancelShow"
   | "editComic"
+  | "editShow"
+  | "moveShow"
+  | "preSalePrivateShow"
+  | "showHistory"
+  | "showDetailHistory"
   | "recurrence"
 export type PastDateBehavior = "block" | "allow"
 
@@ -46,17 +53,17 @@ export const calendarEventActions: CalendarActionDefinition[] = [
   { id: "add-reservation", label: "Add Reservation", dialog: "addReservation", pastDateBehavior: "block" },
   { id: "adjust-age", label: "Adjust Age", dialog: "adjustAge", pastDateBehavior: "block" },
   { id: "adjust-hub", label: "Adjust Hub", dialog: "adjustHub", pastDateBehavior: "block" },
-  { id: "adjust-promo", label: "Adjust Promo for show", pastDateBehavior: "block" },
-  { id: "adjust-seats-section-price", label: "Adjust Seats/Section/Price", pastDateBehavior: "block" },
+  { id: "adjust-promo", label: "Adjust Promo for show", dialog: "adjustPromo", pastDateBehavior: "block" },
+  { id: "adjust-seats-section-price", label: "Adjust Seats/Section/Price", dialog: "adjustSeats", pastDateBehavior: "block" },
   { id: "cancel-show", label: "Cancel Show", dialog: "cancelShow", pastDateBehavior: "block" },
   { id: "edit-comic", label: "Edit Comic", dialog: "editComic", pastDateBehavior: "block" },
-  { id: "edit-show", label: "Edit Show", pastDateBehavior: "block" },
+  { id: "edit-show", label: "Edit Show", dialog: "editShow", pastDateBehavior: "block" },
   { id: "mark-sold-out", label: "Mark Show as Sold Out", pastDateBehavior: "block" },
   { id: "mark-unavailable-web", label: "Mark Show Unavailable on Web", pastDateBehavior: "block" },
-  { id: "show-history", label: "Show History", pastDateBehavior: "block" },
-  { id: "show-detail-history", label: "Show Detail History", pastDateBehavior: "block" },
-  { id: "move-show", label: "Move Show", pastDateBehavior: "block" },
-  { id: "pre-sale-private-show", label: "Pre-sale Private Show", pastDateBehavior: "block" },
+  { id: "show-history", label: "Show History", dialog: "showHistory", pastDateBehavior: "block" },
+  { id: "show-detail-history", label: "Show Detail History", dialog: "showDetailHistory", pastDateBehavior: "block" },
+  { id: "move-show", label: "Move Show", dialog: "moveShow", pastDateBehavior: "block" },
+  { id: "pre-sale-private-show", label: "Pre-sale Private Show", dialog: "preSalePrivateShow", pastDateBehavior: "block" },
 ]
 
 export function getCalendarAction(actionId: CalendarActionId) {

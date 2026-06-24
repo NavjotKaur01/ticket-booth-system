@@ -6,8 +6,14 @@ import AddReservationDialog from "./AddReservationDialog"
 import AddShowDialog from "./AddShowDialog"
 import AdjustAgeDialog from "./AdjustAgeDialog"
 import AdjustHubDialog from "./AdjustHubDialog"
+import AdjustPromoDialog from "./AdjustPromoDialog"
+import AdjustSeatsDialog from "./AdjustSeatsDialog"
 import CancelShowDialog from "./CancelShowDialog"
 import EditComicDialog from "./EditComicDialog"
+import MoveShowDialog from "./MoveShowDialog"
+import PrivatePreSaleDialog from "./PrivatePreSaleDialog"
+import ShowDetailHistoryDialog from "./ShowDetailHistoryDialog"
+import ShowHistoryDialog from "./ShowHistoryDialog"
 import PastDateAlertDialog from "./PastDateAlertDialog"
 import RecurrenceDialog, { type RecurrenceFormValue } from "./RecurrenceDialog"
 
@@ -24,12 +30,35 @@ type CalendarDialogsProps = {
   isAdjustHubOpen: boolean
   setIsAdjustHubOpen: (open: boolean) => void
   adjustHubEvent: CalendarEvent | null
+  isAdjustPromoOpen: boolean
+  setIsAdjustPromoOpen: (open: boolean) => void
+  adjustPromoEvent: CalendarEvent | null
+  isAdjustSeatsOpen: boolean
+  setIsAdjustSeatsOpen: (open: boolean) => void
+  adjustSeatsEvent: CalendarEvent | null
   isCancelShowOpen: boolean
   setIsCancelShowOpen: (open: boolean) => void
   cancelShowEvent: CalendarEvent | null
   isEditComicOpen: boolean
   setIsEditComicOpen: (open: boolean) => void
   editComicEvent: CalendarEvent | null
+  isEditShowOpen: boolean
+  onEditShowOpenChange: (open: boolean) => void
+  editShowRecurrence: RecurrenceState | null
+  onEditShowSaved?: () => void
+  isMoveShowOpen: boolean
+  setIsMoveShowOpen: (open: boolean) => void
+  moveShowEvent: CalendarEvent | null
+  onMoveShowSaved?: () => void
+  isPrivatePreSaleOpen: boolean
+  setIsPrivatePreSaleOpen: (open: boolean) => void
+  privatePreSaleEvent: CalendarEvent | null
+  isShowHistoryOpen: boolean
+  setIsShowHistoryOpen: (open: boolean) => void
+  showHistoryEvent: CalendarEvent | null
+  isShowDetailHistoryOpen: boolean
+  setIsShowDetailHistoryOpen: (open: boolean) => void
+  showDetailHistoryEvent: CalendarEvent | null
   isPastDateAlertOpen: boolean
   setIsPastDateAlertOpen: (open: boolean) => void
   isRecurrenceOpen: boolean
@@ -59,12 +88,35 @@ export default function CalendarDialogs({
   isAdjustHubOpen,
   setIsAdjustHubOpen,
   adjustHubEvent,
+  isAdjustPromoOpen,
+  setIsAdjustPromoOpen,
+  adjustPromoEvent,
+  isAdjustSeatsOpen,
+  setIsAdjustSeatsOpen,
+  adjustSeatsEvent,
   isCancelShowOpen,
   setIsCancelShowOpen,
   cancelShowEvent,
   isEditComicOpen,
   setIsEditComicOpen,
   editComicEvent,
+  isEditShowOpen,
+  onEditShowOpenChange,
+  editShowRecurrence,
+  onEditShowSaved,
+  isMoveShowOpen,
+  setIsMoveShowOpen,
+  moveShowEvent,
+  onMoveShowSaved,
+  isPrivatePreSaleOpen,
+  setIsPrivatePreSaleOpen,
+  privatePreSaleEvent,
+  isShowHistoryOpen,
+  setIsShowHistoryOpen,
+  showHistoryEvent,
+  isShowDetailHistoryOpen,
+  setIsShowDetailHistoryOpen,
+  showDetailHistoryEvent,
   isPastDateAlertOpen,
   setIsPastDateAlertOpen,
   isRecurrenceOpen,
@@ -102,6 +154,17 @@ export default function CalendarDialogs({
         event={adjustHubEvent}
         onOpenChange={setIsAdjustHubOpen}
       />
+      <AdjustPromoDialog
+        open={isAdjustPromoOpen}
+        event={adjustPromoEvent}
+        username={username}
+        onOpenChange={setIsAdjustPromoOpen}
+      />
+      <AdjustSeatsDialog
+        open={isAdjustSeatsOpen}
+        event={adjustSeatsEvent}
+        onOpenChange={setIsAdjustSeatsOpen}
+      />
       <CancelShowDialog
         open={isCancelShowOpen}
         event={cancelShowEvent}
@@ -111,6 +174,37 @@ export default function CalendarDialogs({
         open={isEditComicOpen}
         event={editComicEvent}
         onOpenChange={setIsEditComicOpen}
+      />
+      <AddShowDialog
+        open={isEditShowOpen}
+        onOpenChange={onEditShowOpenChange}
+        recurrence={editShowRecurrence}
+        connectionString={connectionString}
+        locationId={locationId}
+        username={username}
+        title="Edit Show"
+        onSaved={onEditShowSaved}
+      />
+      <MoveShowDialog
+        open={isMoveShowOpen}
+        event={moveShowEvent}
+        onOpenChange={setIsMoveShowOpen}
+        onMoved={onMoveShowSaved}
+      />
+      <PrivatePreSaleDialog
+        open={isPrivatePreSaleOpen}
+        event={privatePreSaleEvent}
+        onOpenChange={setIsPrivatePreSaleOpen}
+      />
+      <ShowHistoryDialog
+        open={isShowHistoryOpen}
+        event={showHistoryEvent}
+        onOpenChange={setIsShowHistoryOpen}
+      />
+      <ShowDetailHistoryDialog
+        open={isShowDetailHistoryOpen}
+        event={showDetailHistoryEvent}
+        onOpenChange={setIsShowDetailHistoryOpen}
       />
       <PastDateAlertDialog
         open={isPastDateAlertOpen}
