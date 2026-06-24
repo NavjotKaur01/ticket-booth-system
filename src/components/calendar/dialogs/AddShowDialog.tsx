@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { getAddShowDialogData } from "@/lib/api/mock-add-show"
+import { getAddShowDialogData } from "../service/mockAddShow.service"
 import type {
   AddShowDialogData,
   AddShowFormValues,
@@ -550,5 +550,6 @@ export default function AddShowDialog({ open, onOpenChange, onBack, onSave }: Ad
     </Dialog>
   )
 }
+
 
 

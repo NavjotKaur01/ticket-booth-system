@@ -10,14 +10,17 @@ import {
 import type { CalendarEvent } from "@/data/calendarEvents"
 
 import CalendarEventCard from "./CalendarEvent"
+import type { CalendarEventActionSelectHandler } from "./calendar-actions"
 
 export default function CalendarShowMore({
   count,
   events,
   slotDate,
   onCalendarOutsideInteraction,
+  onActionSelect,
 }: ShowMoreProps<CalendarEvent> & {
   onCalendarOutsideInteraction?: () => void
+  onActionSelect?: CalendarEventActionSelectHandler
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [anchorPosition, setAnchorPosition] = useState({ x: 0, y: 0 })
@@ -82,7 +85,7 @@ export default function CalendarShowMore({
               key={event.id}
               className="rounded-md border bg-background px-1 py-0.5 transition-colors hover:bg-muted/60"
             >
-              <CalendarEventCard event={event} />
+              <CalendarEventCard event={event} onActionSelect={onActionSelect} />
             </div>
           ))}
         </div>

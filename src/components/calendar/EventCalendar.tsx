@@ -13,12 +13,15 @@ import dayjs from "dayjs"
 import "react-big-calendar/lib/css/react-big-calendar.css"
 import "./calendar-overrides.css"
 
-import AddShowDialog from "./AddShowDialog"
+import CalendarDialogs from "./dialogs/CalendarDialogs"
 import CalendarToolbar from "./CalendarToolbar"
 import CalendarEventCard, { CALENDAR_ACTION_MENU_OUTSIDE_INTERACTION } from "./CalendarEvent"
 import CalendarShowMore from "./CalendarShowMore"
-import PastDateAlertDialog from "./PastDateAlertDialog"
-import RecurrenceDialog from "./RecurrenceDialog"
+import {
+    getCalendarAction,
+    shouldBlockPastDateAction,
+    type CalendarActionId,
+} from "./calendar-actions"
 import { events as allEvents, locations, type CalendarEvent } from "@/data/calendarEvents"
 
 const localizer = dayjsLocalizer(dayjs)
@@ -37,6 +40,7 @@ function WeekHeader({ date }: HeaderProps) {
         </div>
     )
 }
+
 function getStartOfDay(date: Date) {
     const value = new Date(date)
     value.setHours(0, 0, 0, 0)
@@ -54,12 +58,13 @@ export default function EventCalendar() {
     const [calendarDate, setCalendarDate] = useState(() => new Date())
     const [calendarView, setCalendarView] = useState<View>("month")
     const [recurrenceDate, setRecurrenceDate] = useState<Date | null>(null)
+    const [packageEvent, setPackageEvent] = useState<CalendarEvent | null>(null)
+    const [isAddEditPackageOpen, setIsAddEditPackageOpen] = useState(false)
     const [isRecurrenceOpen, setIsRecurrenceOpen] = useState(false)
     const [isAddShowOpen, setIsAddShowOpen] = useState(false)
     const [isPastDateAlertOpen, setIsPastDateAlertOpen] = useState(false)
     const suppressNextSlotSelectionRef = useRef(false)
 
-    //filtered events
     const filteredEvents = useMemo<CalendarEvent[]>(() => {
         return allEvents.filter(event => {
             if (event.location !== location) return false
@@ -83,6 +88,32 @@ export default function EventCalendar() {
         }
     }, [suppressNextSlotSelection])
 
+    const handleCalendarActionSelect = useCallback((actionId: CalendarActionId, event: CalendarEvent) => {
+        const action = getCalendarAction(actionId)
+
+        if (!action) {
+            return
+        }
+
+        const actionDate = getStartOfDay(event.start)
+
+        if (!isTodayOrFuture(actionDate) && shouldBlockPastDateAction(action)) {
+            setIsPastDateAlertOpen(true)
+            return
+        }
+
+        if (action.dialog === "addEditPackage") {
+            setPackageEvent(event)
+            setIsAddEditPackageOpen(true)
+            return
+        }
+
+        if (action.dialog === "recurrence") {
+            setRecurrenceDate(actionDate)
+            setIsRecurrenceOpen(true)
+        }
+    }, [])
+
     const components = useMemo(() => ({
         toolbar: (props: ToolbarProps<CalendarEvent>) => (
             <CalendarToolbar
@@ -97,7 +128,7 @@ export default function EventCalendar() {
             />
         ),
         event: ({ event }: { event: CalendarEvent }) => (
-            <CalendarEventCard event={event} />
+            <CalendarEventCard event={event} onActionSelect={handleCalendarActionSelect} />
         ),
         week: {
             header: WeekHeader,
@@ -106,9 +137,10 @@ export default function EventCalendar() {
             <CalendarShowMore
                 {...props}
                 onCalendarOutsideInteraction={suppressNextSlotSelection}
+                onActionSelect={handleCalendarActionSelect}
             />
         ),
-    }), [location, showCancelled, refreshInterval, suppressNextSlotSelection])
+    }), [location, showCancelled, refreshInterval, suppressNextSlotSelection, handleCalendarActionSelect])
 
     const eventPropGetter = useCallback(() => ({
         style: {
@@ -152,25 +184,20 @@ export default function EventCalendar() {
                 selectable
                 onSelectSlot={handleSelectSlot}
             />
-            <PastDateAlertDialog
-                open={isPastDateAlertOpen}
-                onOpenChange={setIsPastDateAlertOpen}
-            />
-            <RecurrenceDialog
-                open={isRecurrenceOpen}
-                startDate={recurrenceDate}
-                onOpenChange={setIsRecurrenceOpen}
-                onSave={() => setIsAddShowOpen(true)}
-            />
-            <AddShowDialog
-                open={isAddShowOpen}
-                onOpenChange={setIsAddShowOpen}
-                onBack={() => {
-                    setIsAddShowOpen(false)
-                    setIsRecurrenceOpen(true)
-                }}
+            <CalendarDialogs
+                isAddEditPackageOpen={isAddEditPackageOpen}
+                setIsAddEditPackageOpen={setIsAddEditPackageOpen}
+                packageEvent={packageEvent}
+                isPastDateAlertOpen={isPastDateAlertOpen}
+                setIsPastDateAlertOpen={setIsPastDateAlertOpen}
+                isRecurrenceOpen={isRecurrenceOpen}
+                setIsRecurrenceOpen={setIsRecurrenceOpen}
+                recurrenceDate={recurrenceDate}
+                isAddShowOpen={isAddShowOpen}
+                setIsAddShowOpen={setIsAddShowOpen}
             />
         </div>
     )
 }
+
 
