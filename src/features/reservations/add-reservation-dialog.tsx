@@ -6,12 +6,11 @@ import {
   X,
   type LucideIcon
 } from 'lucide-react'
-import type { ReactNode, RefObject } from 'react'
+import type { RefObject } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import type { RowSelectionState } from '@tanstack/react-table'
 
 import {
-  FormSection,
   IconActionButton
 } from '@/components/forms/form-fields'
 import { Button } from '@/components/ui/button'
@@ -61,7 +60,6 @@ type AddReservationDialogProps = {
   onOpenChange: (open: boolean) => void
 }
 
-const PANEL_CLASS = 'space-y-2'
 const COMPACT_INPUT = 'h-9 text-sm'
 const COMPACT_NUMBER = 'h-9 w-14 px-1 text-center text-sm tabular-nums'
 const COMPACT_SELECT = 'h-9 w-44 min-w-0 text-sm'
@@ -264,24 +262,6 @@ function formatShowDate (dateValue: string) {
   })
 }
 
-function FormPanel ({
-  title,
-  children
-}: {
-  title?: string
-  children: ReactNode
-}) {
-  if (!title) {
-    return <div className={PANEL_CLASS}>{children}</div>
-  }
-
-  return (
-    <FormSection title={title} className='space-y-2'>
-      <div className={PANEL_CLASS}>{children}</div>
-    </FormSection>
-  )
-}
-
 function TotalsBreakdown ({
   sections,
   partyBySection,
@@ -390,29 +370,6 @@ function InlineRadioGroup ({
         </label>
       ))}
     </RadioGroup>
-  )
-}
-
-function RadioOptionBox ({ children }: { children: ReactNode }) {
-  return (
-    <div className='rounded-lg border border-border/60 bg-background px-2.5 py-1.5'>
-      {children}
-    </div>
-  )
-}
-
-function LabeledRadioOptionBox ({
-  label,
-  children
-}: {
-  label: string
-  children: ReactNode
-}) {
-  return (
-    <div className='min-w-0'>
-      <span className={INLINE_LABEL}>{label}</span>
-      <RadioOptionBox>{children}</RadioOptionBox>
-    </div>
   )
 }
 
