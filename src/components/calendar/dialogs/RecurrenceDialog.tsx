@@ -18,28 +18,21 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { cn } from "@/lib/utils"
 
-type RecurrencePattern = "daily" | "weekly" | "monthly" | "yearly"
-type EndMode = "after" | "date"
-type MonthlyMode = "day" | "weekday"
-type YearlyMode = "date" | "weekday"
+import type { RecurrenceFormValue } from "@/types/recurrence"
+
+export type { RecurrenceFormValue } from "@/types/recurrence"
+
+type RecurrencePattern = RecurrenceFormValue["pattern"]
+type EndMode = RecurrenceFormValue["endMode"]
+type MonthlyMode = RecurrenceFormValue["monthlyMode"]
+type YearlyMode = RecurrenceFormValue["yearlyMode"]
 
 type RecurrenceDialogProps = {
   open: boolean
   startDate: Date | null
   onOpenChange: (open: boolean) => void
   onSave?: (value: RecurrenceFormValue) => void
-}
-
-export type RecurrenceFormValue = {
-  startDate: Date
-  pattern: RecurrencePattern
-  selectedWeekdays: number[]
-  monthlyMode: MonthlyMode
-  yearlyMode: YearlyMode
-  interval: number
-  occurrences: number
-  endMode: EndMode
-  endDate: Date
+  errorMessage?: string | null
 }
 
 const weekdays = [
@@ -159,6 +152,7 @@ export default function RecurrenceDialog({
   startDate,
   onOpenChange,
   onSave,
+  errorMessage,
 }: RecurrenceDialogProps) {
   const normalizedStartDate = useMemo(
     () => (startDate ? getStartOfDay(startDate) : getStartOfDay(new Date())),
@@ -168,6 +162,9 @@ export default function RecurrenceDialog({
   const [pattern, setPattern] = useState<RecurrencePattern>("daily")
   const [dialogStartDate, setDialogStartDate] = useState(normalizedStartDate)
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([
+    normalizedStartDate.getDay(),
+  ])
+  const [dailyWeekdays, setDailyWeekdays] = useState<number[]>([
     normalizedStartDate.getDay(),
   ])
   const [monthlyMode, setMonthlyMode] = useState<MonthlyMode>("day")
@@ -196,6 +193,7 @@ export default function RecurrenceDialog({
 
     setDialogStartDate(normalizedStartDate)
     setSelectedWeekdays([normalizedStartDate.getDay()])
+    setDailyWeekdays([normalizedStartDate.getDay()])
     setEndDate(normalizedStartDate)
     setMonthlyWeekday(weekdays[normalizedStartDate.getDay()])
     setYearlyMonth(months[normalizedStartDate.getMonth()])
@@ -216,19 +214,33 @@ export default function RecurrenceDialog({
     )
   }
 
+  function toggleDailyWeekday(day: number) {
+    setDailyWeekdays((current) =>
+      current.includes(day)
+        ? current.filter((item) => item !== day)
+        : [...current, day].sort((a, b) => a - b)
+    )
+  }
+
   function handleSave() {
     onSave?.({
       startDate: dialogStartDate,
       pattern,
       selectedWeekdays,
+      dailyWeekdays,
       monthlyMode,
       yearlyMode,
       interval,
       occurrences,
       endMode,
       endDate,
+      monthlyOrdinal,
+      monthlyWeekday,
+      yearlyMonth,
+      yearlyDay: startDay,
+      yearlyOrdinal,
+      yearlyWeekday,
     })
-    onOpenChange(false)
   }
 
   return (
@@ -239,6 +251,11 @@ export default function RecurrenceDialog({
         </DialogHeader>
 
         <div className="space-y-5 px-6 py-5">
+          {errorMessage ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {errorMessage}
+            </div>
+          ) : null}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <Label htmlFor="recurrence-start-date" className="min-w-20">
               Start Date
@@ -278,7 +295,18 @@ export default function RecurrenceDialog({
 
               <div className="min-h-32 pt-1">
                 {pattern === "daily" ? (
-                  <p className="text-sm text-muted-foreground">Repeats every day.</p>
+                  <div className="flex flex-wrap gap-x-5 gap-y-4">
+                    {weekdays.map((day, index) => (
+                      <div key={day} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`daily-weekday-${day}`}
+                          checked={dailyWeekdays.includes(index)}
+                          onCheckedChange={() => toggleDailyWeekday(index)}
+                        />
+                        <Label htmlFor={`daily-weekday-${day}`}>{day}</Label>
+                      </div>
+                    ))}
+                  </div>
                 ) : null}
 
                 {pattern === "weekly" ? (

@@ -65,8 +65,8 @@ function AdjustHubTable({
   onToggleHub,
 }: {
   shows: AdjustHubShowRow[]
-  hubByShowId: Record<number, boolean>
-  onToggleHub: (showId: number, isHub: boolean) => void
+  hubByShowId: Record<string, boolean>
+  onToggleHub: (showId: string, isHub: boolean) => void
 }) {
   return (
     <div className="overflow-auto border">
@@ -137,7 +137,7 @@ export default function AdjustHubDialog({
     }
   }, [event, open])
 
-  function handleToggleHub(showId: number, isHub: boolean) {
+  function handleToggleHub(showId: string, isHub: boolean) {
     setFormValues((current) => (current ? applyHubToggle(current, showId, isHub) : current))
   }
 
@@ -195,3 +195,5 @@ export default function AdjustHubDialog({
     </Dialog>
   )
 }
+
+

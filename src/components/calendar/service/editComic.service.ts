@@ -2,7 +2,7 @@ import type { ComicInfo } from "@/data/comedian-info"
 import type { CalendarEvent } from "@/data/calendarEvents"
 
 export type EditComicDialogData = {
-  eventId: number
+  eventId: string
   stageName: string
 }
 
@@ -18,7 +18,7 @@ export async function getEditComicDialogData(
 }
 
 export async function saveEditComicInfo(
-  eventId: number,
+  eventId: string,
   values: ComicInfo
 ): Promise<void> {
   await new Promise((resolve) => window.setTimeout(resolve, 200))
@@ -26,3 +26,4 @@ export async function saveEditComicInfo(
   void eventId
   void values
 }
+

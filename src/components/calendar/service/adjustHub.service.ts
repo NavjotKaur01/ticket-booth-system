@@ -1,7 +1,7 @@
 import { events, type CalendarEvent } from "@/data/calendarEvents"
 
 export type AdjustHubShowRow = {
-  id: number
+  id: string
   showDate: string
   showTime: string
   comic: string
@@ -9,13 +9,13 @@ export type AdjustHubShowRow = {
 }
 
 export type AdjustHubDialogData = {
-  eventId: number
+  eventId: string
   dateLabel: string
   shows: AdjustHubShowRow[]
 }
 
 export type AdjustHubFormValues = {
-  hubByShowId: Record<number, boolean>
+  hubByShowId: Record<string, boolean>
 }
 
 function formatDateLabel(date: Date) {
@@ -107,7 +107,7 @@ export function createAdjustHubFormValues(data: AdjustHubDialogData): AdjustHubF
 
 export function applyHubToggle(
   current: AdjustHubFormValues,
-  showId: number,
+  showId: string,
   isHub: boolean
 ): AdjustHubFormValues {
   return {
@@ -129,7 +129,7 @@ export async function getAdjustHubDialogData(event: CalendarEvent): Promise<Adju
 }
 
 export async function saveAdjustHubFormValues(
-  eventId: number,
+  eventId: string,
   values: AdjustHubFormValues
 ): Promise<void> {
   await new Promise((resolve) => window.setTimeout(resolve, 150))
@@ -137,3 +137,5 @@ export async function saveAdjustHubFormValues(
   void eventId
   void values
 }
+
+

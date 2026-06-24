@@ -5,7 +5,7 @@ import type { CalendarSelectOption } from "../controls/CalendarSelectControl"
 export type AdjustAgeMode = "flag" | "minAge"
 
 export type AdjustAgeDialogData = {
-  eventId: number
+  eventId: string
   performer: string
   showDateLabel: string
   mode: AdjustAgeMode
@@ -145,3 +145,4 @@ export async function getAdjustAgeDialogData(
     ageFlagOptions: AGE_FLAG_OPTIONS,
   }
 }
+

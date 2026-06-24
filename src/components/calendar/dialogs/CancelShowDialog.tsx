@@ -23,7 +23,7 @@ type CancelShowDialogProps = {
   open: boolean
   event: CalendarEvent | null
   onOpenChange: (open: boolean) => void
-  onCancelShow?: (eventId: number) => void
+  onCancelShow?: (eventId: string) => void
 }
 
 type CancelShowStep = "confirm" | "reservations"
@@ -192,3 +192,4 @@ export default function CancelShowDialog({
     </Dialog>
   )
 }
+

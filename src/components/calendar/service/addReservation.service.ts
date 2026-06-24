@@ -44,7 +44,7 @@ export type AddReservationCustomerDefaults = {
 }
 
 export type AddReservationDialogData = {
-  eventId: number
+  eventId: string
   performer: string
   headerDateLabel: string
   showDate: string
@@ -262,3 +262,4 @@ export async function getAddReservationDialogData(
     notes: "",
   }
 }
+

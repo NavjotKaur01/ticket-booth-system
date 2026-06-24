@@ -1,7 +1,7 @@
 import type { CalendarEvent } from "@/data/calendarEvents"
 
 export type CancelShowDialogData = {
-  eventId: number
+  eventId: string
   showDate: string
   showTime: string
   comic: string
@@ -49,8 +49,9 @@ export async function getCancelShowDialogData(
   }
 }
 
-export async function cancelShow(eventId: number): Promise<void> {
+export async function cancelShow(eventId: string): Promise<void> {
   await new Promise((resolve) => window.setTimeout(resolve, 200))
 
   void eventId
 }
+

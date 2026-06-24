@@ -1,12 +1,12 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
-    Calendar,
-    dayjsLocalizer,
-    type HeaderProps,
-    type ShowMoreProps,
-    type SlotInfo,
-    type ToolbarProps,
-    type View,
+  Calendar,
+  dayjsLocalizer,
+  type HeaderProps,
+  type ShowMoreProps,
+  type SlotInfo,
+  type ToolbarProps,
+  type View,
 } from "react-big-calendar"
 import dayjs from "dayjs"
 
@@ -14,245 +14,352 @@ import "react-big-calendar/lib/css/react-big-calendar.css"
 import "./calendar-overrides.css"
 
 import CalendarDialogs from "./dialogs/CalendarDialogs"
-import CalendarToolbar from "./CalendarToolbar"
-import CalendarEventCard, { CALENDAR_ACTION_MENU_OUTSIDE_INTERACTION } from "./CalendarEvent"
+import CalendarEventCard, {
+  CALENDAR_ACTION_MENU_OUTSIDE_INTERACTION,
+} from "./CalendarEvent"
 import CalendarShowMore from "./CalendarShowMore"
+import CalendarToolbar from "./CalendarToolbar"
 import {
-    getCalendarAction,
-    shouldBlockPastDateAction,
-    type CalendarActionId,
+  getCalendarAction,
+  shouldBlockPastDateAction,
+  type CalendarActionId,
 } from "./calendar-actions"
-import { events as allEvents, locations, type CalendarEvent } from "@/data/calendarEvents"
+import { useAuth } from "@/contexts/auth-context"
+import { useAppSession } from "@/hooks/use-app-session"
+import { useCalendarEvents } from "@/hooks/use-calendar-events"
+import { useLocations } from "@/hooks/use-locations"
+import { findLocationById } from "@/lib/api/locations"
+import {
+  mapRecurrenceFormToState,
+  validateRecurrenceForm,
+} from "@/lib/recurrence/map-recurrence-form"
+import type { CalendarEvent } from "@/types/calendar-event"
+import type { RecurrenceFormValue, RecurrenceState } from "@/types/recurrence"
 
 const localizer = dayjsLocalizer(dayjs)
+const DEFAULT_REFRESH_SECONDS = 30
 
 function WeekHeader({ date }: HeaderProps) {
-    const isToday = dayjs(date).isSame(dayjs(), "day")
+  const isToday = dayjs(date).isSame(dayjs(), "day")
 
-    return (
-        <div className="calendar-week-header">
-            <span className="calendar-week-header-day">
-                {dayjs(date).format("ddd")}
-            </span>
-            <span className={isToday ? "calendar-week-header-date is-today" : "calendar-week-header-date"}>
-                {dayjs(date).format("D")}
-            </span>
-        </div>
-    )
+  return (
+    <div className="calendar-week-header">
+      <span className="calendar-week-header-day">
+        {dayjs(date).format("ddd")}
+      </span>
+      <span
+        className={
+          isToday
+            ? "calendar-week-header-date is-today"
+            : "calendar-week-header-date"
+        }
+      >
+        {dayjs(date).format("D")}
+      </span>
+    </div>
+  )
 }
 
 function getStartOfDay(date: Date) {
-    const value = new Date(date)
-    value.setHours(0, 0, 0, 0)
-    return value
+  const value = new Date(date)
+  value.setHours(0, 0, 0, 0)
+  return value
 }
 
 function isTodayOrFuture(date: Date) {
-    return getStartOfDay(date) >= getStartOfDay(new Date())
+  return getStartOfDay(date) >= getStartOfDay(new Date())
 }
 
 export default function EventCalendar() {
-    const [location, setLocation] = useState<string>(locations[0])
-    const [showCancelled, setShowCancelled] = useState<boolean>(false)
-    const [refreshInterval, setRefreshInterval] = useState<number>(30)
-    const [calendarDate, setCalendarDate] = useState(() => new Date())
-    const [calendarView, setCalendarView] = useState<View>("month")
-    const [recurrenceDate, setRecurrenceDate] = useState<Date | null>(null)
-    const [packageEvent, setPackageEvent] = useState<CalendarEvent | null>(null)
-    const [reservationEvent, setReservationEvent] = useState<CalendarEvent | null>(null)
-    const [adjustAgeEvent, setAdjustAgeEvent] = useState<CalendarEvent | null>(null)
-    const [adjustHubEvent, setAdjustHubEvent] = useState<CalendarEvent | null>(null)
-    const [cancelShowEvent, setCancelShowEvent] = useState<CalendarEvent | null>(null)
-    const [editComicEvent, setEditComicEvent] = useState<CalendarEvent | null>(null)
-    const [isAddEditPackageOpen, setIsAddEditPackageOpen] = useState(false)
-    const [isAddReservationOpen, setIsAddReservationOpen] = useState(false)
-    const [isAdjustAgeOpen, setIsAdjustAgeOpen] = useState(false)
-    const [isAdjustHubOpen, setIsAdjustHubOpen] = useState(false)
-    const [isCancelShowOpen, setIsCancelShowOpen] = useState(false)
-    const [isEditComicOpen, setIsEditComicOpen] = useState(false)
-    const [isRecurrenceOpen, setIsRecurrenceOpen] = useState(false)
-    const [isAddShowOpen, setIsAddShowOpen] = useState(false)
-    const [isPastDateAlertOpen, setIsPastDateAlertOpen] = useState(false)
-    const suppressNextSlotSelectionRef = useRef(false)
+  const { switchLocation } = useAuth()
+  const {
+    connectionName,
+    locationId,
+    locationName,
+    clubSlug,
+    username,
+    isReady,
+  } = useAppSession()
+  const { locations, loading: locationsLoading } = useLocations(clubSlug)
 
-    const filteredEvents = useMemo<CalendarEvent[]>(() => {
-        return allEvents.filter(event => {
-            if (event.location !== location) return false
-            if (!showCancelled && event.cancelled) return false
-            return true
-        })
-    }, [location, showCancelled])
+  const [showCancelled, setShowCancelled] = useState(false)
+  const [refreshInterval, setRefreshInterval] = useState(DEFAULT_REFRESH_SECONDS)
+  const [calendarDate, setCalendarDate] = useState(() => new Date())
+  const [calendarView, setCalendarView] = useState<View>("month")
+  const [recurrenceDate, setRecurrenceDate] = useState<Date | null>(null)
+  const [recurrenceState, setRecurrenceState] = useState<RecurrenceState | null>(null)
+  const [recurrenceError, setRecurrenceError] = useState<string | null>(null)
+  const [packageEvent, setPackageEvent] = useState<CalendarEvent | null>(null)
+  const [reservationEvent, setReservationEvent] = useState<CalendarEvent | null>(null)
+  const [adjustAgeEvent, setAdjustAgeEvent] = useState<CalendarEvent | null>(null)
+  const [adjustHubEvent, setAdjustHubEvent] = useState<CalendarEvent | null>(null)
+  const [cancelShowEvent, setCancelShowEvent] = useState<CalendarEvent | null>(null)
+  const [editComicEvent, setEditComicEvent] = useState<CalendarEvent | null>(null)
+  const [isAddEditPackageOpen, setIsAddEditPackageOpen] = useState(false)
+  const [isAddReservationOpen, setIsAddReservationOpen] = useState(false)
+  const [isAdjustAgeOpen, setIsAdjustAgeOpen] = useState(false)
+  const [isAdjustHubOpen, setIsAdjustHubOpen] = useState(false)
+  const [isCancelShowOpen, setIsCancelShowOpen] = useState(false)
+  const [isEditComicOpen, setIsEditComicOpen] = useState(false)
+  const [isRecurrenceOpen, setIsRecurrenceOpen] = useState(false)
+  const [isAddShowOpen, setIsAddShowOpen] = useState(false)
+  const [isPastDateAlertOpen, setIsPastDateAlertOpen] = useState(false)
+  const suppressNextSlotSelectionRef = useRef(false)
 
-    const suppressNextSlotSelection = useCallback(() => {
-        suppressNextSlotSelectionRef.current = true
-        window.setTimeout(() => {
-            suppressNextSlotSelectionRef.current = false
-        }, 100)
-    }, [])
+  const { events, loading, error, refetch } = useCalendarEvents(
+    connectionName,
+    locationId,
+    locationName,
+    calendarDate,
+    showCancelled,
+    refreshInterval,
+    isReady
+  )
 
-    useEffect(() => {
-        window.addEventListener(CALENDAR_ACTION_MENU_OUTSIDE_INTERACTION, suppressNextSlotSelection)
+  const suppressNextSlotSelection = useCallback(() => {
+    suppressNextSlotSelectionRef.current = true
+    window.setTimeout(() => {
+      suppressNextSlotSelectionRef.current = false
+    }, 100)
+  }, [])
 
-        return () => {
-            window.removeEventListener(CALENDAR_ACTION_MENU_OUTSIDE_INTERACTION, suppressNextSlotSelection)
-        }
-    }, [suppressNextSlotSelection])
-
-    const handleCalendarActionSelect = useCallback((actionId: CalendarActionId, event: CalendarEvent) => {
-        const action = getCalendarAction(actionId)
-
-        if (!action) {
-            return
-        }
-
-        const actionDate = getStartOfDay(event.start)
-
-        if (!isTodayOrFuture(actionDate) && shouldBlockPastDateAction(action)) {
-            setIsPastDateAlertOpen(true)
-            return
-        }
-
-        if (action.dialog === "addEditPackage") {
-            setPackageEvent(event)
-            setIsAddEditPackageOpen(true)
-            return
-        }
-
-        if (action.dialog === "addReservation") {
-            setReservationEvent(event)
-            setIsAddReservationOpen(true)
-            return
-        }
-
-        if (action.dialog === "adjustAge") {
-            setAdjustAgeEvent(event)
-            setIsAdjustAgeOpen(true)
-            return
-        }
-
-        if (action.dialog === "adjustHub") {
-            setAdjustHubEvent(event)
-            setIsAdjustHubOpen(true)
-            return
-        }
-
-        if (action.dialog === "cancelShow") {
-            setCancelShowEvent(event)
-            setIsCancelShowOpen(true)
-            return
-        }
-
-        if (action.dialog === "editComic") {
-            setEditComicEvent(event)
-            setIsEditComicOpen(true)
-            return
-        }
-
-        if (action.dialog === "recurrence") {
-            setRecurrenceDate(actionDate)
-            setIsRecurrenceOpen(true)
-        }
-    }, [])
-
-    const components = useMemo(() => ({
-        toolbar: (props: ToolbarProps<CalendarEvent>) => (
-            <CalendarToolbar
-                {...props}
-                location={location}
-                setLocation={setLocation}
-                locations={locations}
-                showCancelled={showCancelled}
-                setShowCancelled={setShowCancelled}
-                refreshInterval={refreshInterval}
-                setRefreshInterval={setRefreshInterval}
-            />
-        ),
-        event: ({ event }: { event: CalendarEvent }) => (
-            <CalendarEventCard event={event} onActionSelect={handleCalendarActionSelect} />
-        ),
-        week: {
-            header: WeekHeader,
-        },
-        showMore: (props: ShowMoreProps<CalendarEvent>) => (
-            <CalendarShowMore
-                {...props}
-                onCalendarOutsideInteraction={suppressNextSlotSelection}
-                onActionSelect={handleCalendarActionSelect}
-            />
-        ),
-    }), [location, showCancelled, refreshInterval, suppressNextSlotSelection, handleCalendarActionSelect])
-
-    const eventPropGetter = useCallback(() => ({
-        style: {
-            backgroundColor: "transparent",
-            border: "none",
-            padding: 0,
-        },
-    }), [])
-
-    const handleSelectSlot = useCallback((slotInfo: SlotInfo) => {
-        const selectedDate = getStartOfDay(slotInfo.start)
-
-        if (suppressNextSlotSelectionRef.current) {
-            suppressNextSlotSelectionRef.current = false
-            return
-        }
-
-        if (!isTodayOrFuture(selectedDate)) {
-            setIsPastDateAlertOpen(true)
-            return
-        }
-
-        setRecurrenceDate(selectedDate)
-        setIsRecurrenceOpen(true)
-    }, [])
-
-    return (
-        <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg bg-background shadow-sm ring-1 ring-border">
-            <Calendar
-                localizer={localizer}
-                events={filteredEvents}
-                date={calendarDate}
-                onNavigate={setCalendarDate}
-                view={calendarView}
-                onView={setCalendarView}
-                views={["month", "week"]}
-                showAllEvents={false}
-                className="min-h-0 flex-1"
-                components={components}
-                eventPropGetter={eventPropGetter}
-                selectable
-                onSelectSlot={handleSelectSlot}
-            />
-            <CalendarDialogs
-                isAddEditPackageOpen={isAddEditPackageOpen}
-                setIsAddEditPackageOpen={setIsAddEditPackageOpen}
-                packageEvent={packageEvent}
-                isAddReservationOpen={isAddReservationOpen}
-                setIsAddReservationOpen={setIsAddReservationOpen}
-                reservationEvent={reservationEvent}
-                isAdjustAgeOpen={isAdjustAgeOpen}
-                setIsAdjustAgeOpen={setIsAdjustAgeOpen}
-                adjustAgeEvent={adjustAgeEvent}
-                isAdjustHubOpen={isAdjustHubOpen}
-                setIsAdjustHubOpen={setIsAdjustHubOpen}
-                adjustHubEvent={adjustHubEvent}
-                isCancelShowOpen={isCancelShowOpen}
-                setIsCancelShowOpen={setIsCancelShowOpen}
-                cancelShowEvent={cancelShowEvent}
-                isEditComicOpen={isEditComicOpen}
-                setIsEditComicOpen={setIsEditComicOpen}
-                editComicEvent={editComicEvent}
-                isPastDateAlertOpen={isPastDateAlertOpen}
-                setIsPastDateAlertOpen={setIsPastDateAlertOpen}
-                isRecurrenceOpen={isRecurrenceOpen}
-                setIsRecurrenceOpen={setIsRecurrenceOpen}
-                recurrenceDate={recurrenceDate}
-                isAddShowOpen={isAddShowOpen}
-                setIsAddShowOpen={setIsAddShowOpen}
-            />
-        </div>
+  useEffect(() => {
+    window.addEventListener(
+      CALENDAR_ACTION_MENU_OUTSIDE_INTERACTION,
+      suppressNextSlotSelection
     )
+
+    return () => {
+      window.removeEventListener(
+        CALENDAR_ACTION_MENU_OUTSIDE_INTERACTION,
+        suppressNextSlotSelection
+      )
+    }
+  }, [suppressNextSlotSelection])
+
+  const handleLocationChange = useCallback(
+    (nextLocationId: string) => {
+      const location = findLocationById(nextLocationId, locations)
+      if (location) {
+        switchLocation(location)
+      }
+    },
+    [locations, switchLocation]
+  )
+
+  const handleCalendarActionSelect = useCallback(
+    (actionId: CalendarActionId, event: CalendarEvent) => {
+      const action = getCalendarAction(actionId)
+
+      if (!action) {
+        return
+      }
+
+      const actionDate = getStartOfDay(event.start)
+
+      if (!isTodayOrFuture(actionDate) && shouldBlockPastDateAction(action)) {
+        setIsPastDateAlertOpen(true)
+        return
+      }
+
+      if (action.dialog === "addEditPackage") {
+        setPackageEvent(event)
+        setIsAddEditPackageOpen(true)
+        return
+      }
+
+      if (action.dialog === "addReservation") {
+        setReservationEvent(event)
+        setIsAddReservationOpen(true)
+        return
+      }
+
+      if (action.dialog === "adjustAge") {
+        setAdjustAgeEvent(event)
+        setIsAdjustAgeOpen(true)
+        return
+      }
+
+      if (action.dialog === "adjustHub") {
+        setAdjustHubEvent(event)
+        setIsAdjustHubOpen(true)
+        return
+      }
+
+      if (action.dialog === "cancelShow") {
+        setCancelShowEvent(event)
+        setIsCancelShowOpen(true)
+        return
+      }
+
+      if (action.dialog === "editComic") {
+        setEditComicEvent(event)
+        setIsEditComicOpen(true)
+        return
+      }
+
+      if (action.dialog === "recurrence") {
+        setRecurrenceDate(actionDate)
+        setRecurrenceError(null)
+        setRecurrenceState(null)
+        setIsRecurrenceOpen(true)
+      }
+    },
+    []
+  )
+
+  const handleRecurrenceSave = useCallback((form: RecurrenceFormValue) => {
+    const validationError = validateRecurrenceForm(form)
+    if (validationError) {
+      setRecurrenceError(validationError)
+      return
+    }
+
+    setRecurrenceError(null)
+    setRecurrenceState(mapRecurrenceFormToState(form))
+    setIsRecurrenceOpen(false)
+    setIsAddShowOpen(true)
+  }, [])
+
+  const handleAddShowSaved = useCallback(() => {
+    setRecurrenceState(null)
+    refetch()
+  }, [refetch])
+
+  const eventPropGetter = useCallback(
+    (event: CalendarEvent) => ({
+      style: {
+        backgroundColor: event.rowColor ?? "transparent",
+        border: "none",
+        padding: 0,
+      },
+    }),
+    []
+  )
+
+  const handleSelectSlot = useCallback((slotInfo: SlotInfo) => {
+    const selectedDate = getStartOfDay(slotInfo.start)
+
+    if (suppressNextSlotSelectionRef.current) {
+      suppressNextSlotSelectionRef.current = false
+      return
+    }
+
+    if (!isTodayOrFuture(selectedDate)) {
+      setIsPastDateAlertOpen(true)
+      return
+    }
+
+    setRecurrenceDate(selectedDate)
+    setRecurrenceError(null)
+    setRecurrenceState(null)
+    setIsRecurrenceOpen(true)
+  }, [])
+
+  const components = useMemo(
+    () => ({
+      toolbar: (props: ToolbarProps<CalendarEvent>) => (
+        <CalendarToolbar
+          {...props}
+          locationId={locationId}
+          onLocationChange={handleLocationChange}
+          locations={locations}
+          locationsLoading={locationsLoading}
+          showCancelled={showCancelled}
+          setShowCancelled={setShowCancelled}
+          refreshInterval={refreshInterval}
+          setRefreshInterval={setRefreshInterval}
+          onRefresh={refetch}
+          isRefreshing={loading}
+        />
+      ),
+      event: ({ event }: { event: CalendarEvent }) => (
+        <CalendarEventCard
+          event={event}
+          onActionSelect={handleCalendarActionSelect}
+        />
+      ),
+      week: {
+        header: WeekHeader,
+      },
+      showMore: (props: ShowMoreProps<CalendarEvent>) => (
+        <CalendarShowMore
+          {...props}
+          onCalendarOutsideInteraction={suppressNextSlotSelection}
+          onActionSelect={handleCalendarActionSelect}
+        />
+      ),
+    }),
+    [
+      locationId,
+      handleLocationChange,
+      locations,
+      locationsLoading,
+      showCancelled,
+      refreshInterval,
+      refetch,
+      loading,
+      handleCalendarActionSelect,
+      suppressNextSlotSelection,
+    ]
+  )
+
+  return (
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg bg-background shadow-sm ring-1 ring-border">
+      {error ? (
+        <div className="border-b border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {error}
+        </div>
+      ) : null}
+      <Calendar
+        localizer={localizer}
+        events={events}
+        date={calendarDate}
+        onNavigate={setCalendarDate}
+        view={calendarView}
+        onView={setCalendarView}
+        views={["month", "week"]}
+        showAllEvents={false}
+        className="min-h-0 flex-1"
+        components={components}
+        eventPropGetter={eventPropGetter}
+        selectable
+        onSelectSlot={handleSelectSlot}
+      />
+      <CalendarDialogs
+        isAddEditPackageOpen={isAddEditPackageOpen}
+        setIsAddEditPackageOpen={setIsAddEditPackageOpen}
+        packageEvent={packageEvent}
+        isAddReservationOpen={isAddReservationOpen}
+        setIsAddReservationOpen={setIsAddReservationOpen}
+        reservationEvent={reservationEvent}
+        isAdjustAgeOpen={isAdjustAgeOpen}
+        setIsAdjustAgeOpen={setIsAdjustAgeOpen}
+        adjustAgeEvent={adjustAgeEvent}
+        isAdjustHubOpen={isAdjustHubOpen}
+        setIsAdjustHubOpen={setIsAdjustHubOpen}
+        adjustHubEvent={adjustHubEvent}
+        isCancelShowOpen={isCancelShowOpen}
+        setIsCancelShowOpen={setIsCancelShowOpen}
+        cancelShowEvent={cancelShowEvent}
+        isEditComicOpen={isEditComicOpen}
+        setIsEditComicOpen={setIsEditComicOpen}
+        editComicEvent={editComicEvent}
+        isPastDateAlertOpen={isPastDateAlertOpen}
+        setIsPastDateAlertOpen={setIsPastDateAlertOpen}
+        isRecurrenceOpen={isRecurrenceOpen}
+        setIsRecurrenceOpen={setIsRecurrenceOpen}
+        recurrenceDate={recurrenceDate}
+        recurrenceError={recurrenceError}
+        recurrenceState={recurrenceState}
+        onRecurrenceSave={handleRecurrenceSave}
+        isAddShowOpen={isAddShowOpen}
+        setIsAddShowOpen={setIsAddShowOpen}
+        connectionString={connectionName}
+        locationId={locationId}
+        username={username}
+        onAddShowSaved={handleAddShowSaved}
+      />
+    </div>
+  )
 }
-
-

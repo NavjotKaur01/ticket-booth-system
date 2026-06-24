@@ -1,14 +1,15 @@
-import type { CalendarEvent } from "@/data/calendarEvents"
+import type { CalendarEvent } from "@/types/calendar-event"
+import type { RecurrenceState } from "@/types/recurrence"
 
 import AddEditPackageDialog from "./AddEditPackageDialog"
 import AddReservationDialog from "./AddReservationDialog"
+import AddShowDialog from "./AddShowDialog"
 import AdjustAgeDialog from "./AdjustAgeDialog"
 import AdjustHubDialog from "./AdjustHubDialog"
 import CancelShowDialog from "./CancelShowDialog"
 import EditComicDialog from "./EditComicDialog"
-import AddShowDialog from "./AddShowDialog"
 import PastDateAlertDialog from "./PastDateAlertDialog"
-import RecurrenceDialog from "./RecurrenceDialog"
+import RecurrenceDialog, { type RecurrenceFormValue } from "./RecurrenceDialog"
 
 type CalendarDialogsProps = {
   isAddEditPackageOpen: boolean
@@ -34,8 +35,15 @@ type CalendarDialogsProps = {
   isRecurrenceOpen: boolean
   setIsRecurrenceOpen: (open: boolean) => void
   recurrenceDate: Date | null
+  recurrenceError?: string | null
+  recurrenceState: RecurrenceState | null
+  onRecurrenceSave: (value: RecurrenceFormValue) => void
   isAddShowOpen: boolean
   setIsAddShowOpen: (open: boolean) => void
+  connectionString: string
+  locationId: string
+  username: string
+  onAddShowSaved?: () => void
 }
 
 export default function CalendarDialogs({
@@ -62,8 +70,15 @@ export default function CalendarDialogs({
   isRecurrenceOpen,
   setIsRecurrenceOpen,
   recurrenceDate,
+  recurrenceError = null,
+  recurrenceState,
+  onRecurrenceSave,
   isAddShowOpen,
   setIsAddShowOpen,
+  connectionString,
+  locationId,
+  username,
+  onAddShowSaved,
 }: CalendarDialogsProps) {
   return (
     <>
@@ -105,11 +120,17 @@ export default function CalendarDialogs({
         open={isRecurrenceOpen}
         startDate={recurrenceDate}
         onOpenChange={setIsRecurrenceOpen}
-        onSave={() => setIsAddShowOpen(true)}
+        onSave={onRecurrenceSave}
+        errorMessage={recurrenceError}
       />
       <AddShowDialog
         open={isAddShowOpen}
         onOpenChange={setIsAddShowOpen}
+        recurrence={recurrenceState}
+        connectionString={connectionString}
+        locationId={locationId}
+        username={username}
+        onSaved={onAddShowSaved}
         onBack={() => {
           setIsAddShowOpen(false)
           setIsRecurrenceOpen(true)

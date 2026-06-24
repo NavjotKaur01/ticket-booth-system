@@ -1,7 +1,7 @@
 import type { CalendarEvent } from "@/data/calendarEvents"
 
 export type AddEditPackageDialogData = {
-  eventId: number
+  eventId: string
   dateLabel: string
   timeLabel: string
   startTime: string
@@ -57,3 +57,4 @@ export async function getAddEditPackageDialogData(
     packageText: getPackageText(event),
   }
 }
+

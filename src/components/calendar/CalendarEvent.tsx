@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import type { CalendarEvent } from "@/data/calendarEvents"
+import type { CalendarEvent } from "@/types/calendar-event"
 
 import {
   calendarEventActions,

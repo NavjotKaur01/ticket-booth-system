@@ -12,17 +12,21 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { CalendarEvent } from "@/data/calendarEvents"
 import { cn } from "@/lib/utils"
+import type { AppLocation } from "@/types/api/locations"
+import type { CalendarEvent } from "@/types/calendar-event"
 
 interface CalendarToolbarProps extends ToolbarProps<CalendarEvent> {
-  location: string
-  setLocation: (val: string) => void
-  locations: string[]
+  locationId: string
+  onLocationChange: (locationId: string) => void
+  locations: AppLocation[]
+  locationsLoading?: boolean
   showCancelled: boolean
   setShowCancelled: (val: boolean) => void
   refreshInterval: number
   setRefreshInterval: (val: number) => void
+  onRefresh?: () => void
+  isRefreshing?: boolean
 }
 
 const viewOptions: { value: View; label: string; icon: typeof CalendarDays }[] = [
@@ -30,18 +34,25 @@ const viewOptions: { value: View; label: string; icon: typeof CalendarDays }[] =
   { value: "week", label: "Week", icon: CalendarRange },
 ]
 
+function getLocationLabel(location: AppLocation) {
+  return location.shortName || location.label || location.name || location.id
+}
+
 export default function CalendarToolbar({
   label,
   view,
   onView,
   onNavigate,
-  location,
-  setLocation,
+  locationId,
+  onLocationChange,
   locations,
+  locationsLoading = false,
   showCancelled,
   setShowCancelled,
   refreshInterval,
   setRefreshInterval,
+  onRefresh,
+  isRefreshing = false,
 }: CalendarToolbarProps) {
   return (
     <div className="grid shrink-0 gap-2 bg-primary px-2 py-2 text-primary-foreground sm:px-3 xl:grid-cols-[minmax(13rem,17rem)_minmax(18rem,1fr)_auto] xl:items-center xl:gap-3">
@@ -51,10 +62,15 @@ export default function CalendarToolbar({
         </Label>
         <CalendarSelectControl
           id="calendar-location"
-          value={location}
-          onChange={setLocation}
+          value={locationId}
+          onChange={onLocationChange}
+          disabled={locationsLoading || locations.length === 0}
+          placeholder={locationsLoading ? "Loading..." : "Select location"}
           className="h-8 min-w-0 flex-1 bg-background text-sm text-foreground xl:w-full"
-          options={locations.map((item) => ({ value: item, label: item }))}
+          options={locations.map((item) => ({
+            value: item.id,
+            label: getLocationLabel(item),
+          }))}
         />
       </div>
 
@@ -123,15 +139,25 @@ export default function CalendarToolbar({
             type="number"
             value={refreshInterval}
             onChange={(event) => setRefreshInterval(Number(event.target.value))}
-            min={1}
+            min={10}
             aria-label="Refresh interval in seconds"
             className="h-8 w-14 bg-background text-center text-sm text-foreground focus-visible:ring-0"
           />
-          <RefreshCw
-            size={16}
-            aria-hidden="true"
-            className="hidden shrink-0 text-primary-foreground md:block"
-          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onRefresh}
+            disabled={!onRefresh || isRefreshing}
+            aria-label="Refresh calendar"
+            className="hidden h-8 w-8 text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground md:inline-flex"
+          >
+            <RefreshCw
+              size={16}
+              aria-hidden="true"
+              className={isRefreshing ? "animate-spin" : undefined}
+            />
+          </Button>
         </div>
 
         <div className="flex items-center justify-end gap-2 sm:justify-start">
