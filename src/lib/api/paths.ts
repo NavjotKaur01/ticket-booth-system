@@ -13,3 +13,11 @@ export function reservationApiPath(...segments: string[]) {
 export function administratorApiPath(...segments: string[]) {
   return `/clubman/api/Adminstrator/${segments.join("/")}`
 }
+
+export function calendarApiPath(...segments: string[]) {
+  return `/clubman/api/Calendar/${segments.join("/")}`
+}
+
+export function systemApiPath(connectionName: string, ...segments: string[]) {
+  return `/clubman/api/${connectionName}/${segments.join("/")}`
+}
