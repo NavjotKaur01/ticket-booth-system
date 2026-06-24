@@ -7,17 +7,11 @@ import {
   RefreshCw,
 } from "lucide-react"
 
+import CalendarSelectControl from "./controls/CalendarSelectControl"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import type { CalendarEvent } from "@/data/calendarEvents"
 import { cn } from "@/lib/utils"
 
@@ -55,22 +49,13 @@ export default function CalendarToolbar({
         <Label className="shrink-0 text-sm font-medium text-primary-foreground">
           Location
         </Label>
-        <Select value={location} onValueChange={setLocation}>
-          <SelectTrigger className="h-8 min-w-0 flex-1 bg-background text-sm text-foreground focus:ring-0 xl:w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="max-h-56 overflow-y-auto bg-popover text-popover-foreground">
-            {locations.map((item) => (
-              <SelectItem
-                className="focus:bg-accent focus:text-accent-foreground"
-                key={item}
-                value={item}
-              >
-                {item}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <CalendarSelectControl
+          id="calendar-location"
+          value={location}
+          onChange={setLocation}
+          className="h-8 min-w-0 flex-1 bg-background text-sm text-foreground xl:w-full"
+          options={locations.map((item) => ({ value: item, label: item }))}
+        />
       </div>
 
       <div className="grid min-w-0 grid-cols-[2rem_minmax(0,1fr)_2rem_auto] items-center gap-1 sm:gap-2">

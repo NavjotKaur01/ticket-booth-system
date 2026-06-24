@@ -1,6 +1,7 @@
 import { CalendarIcon } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
+import CalendarSelectControl from "../controls/CalendarSelectControl"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -15,13 +16,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
 type RecurrencePattern = "daily" | "weekly" | "monthly" | "yearly"
@@ -74,6 +68,10 @@ const months = [
 ]
 
 const ordinalOptions = ["First", "Second", "Third", "Fourth", "Last"]
+
+function toSelectOptions(values: string[]) {
+  return values.map((value) => ({ value, label: value }))
+}
 
 function formatDate(date: Date | null) {
   if (!date) {
@@ -178,6 +176,18 @@ export default function RecurrenceDialog({
   const [occurrences, setOccurrences] = useState(1)
   const [endMode, setEndMode] = useState<EndMode>("after")
   const [endDate, setEndDate] = useState(normalizedStartDate)
+  const [monthlyOrdinal, setMonthlyOrdinal] = useState("Fourth")
+  const [monthlyWeekday, setMonthlyWeekday] = useState(
+    weekdays[normalizedStartDate.getDay()]
+  )
+  const [yearlyMonth, setYearlyMonth] = useState(months[normalizedStartDate.getMonth()])
+  const [yearlyOrdinal, setYearlyOrdinal] = useState("Fourth")
+  const [yearlyWeekday, setYearlyWeekday] = useState(
+    weekdays[normalizedStartDate.getDay()]
+  )
+  const [yearlyWeekdayMonth, setYearlyWeekdayMonth] = useState(
+    months[normalizedStartDate.getMonth()]
+  )
 
   useEffect(() => {
     if (!open) {
@@ -187,11 +197,16 @@ export default function RecurrenceDialog({
     setDialogStartDate(normalizedStartDate)
     setSelectedWeekdays([normalizedStartDate.getDay()])
     setEndDate(normalizedStartDate)
+    setMonthlyWeekday(weekdays[normalizedStartDate.getDay()])
+    setYearlyMonth(months[normalizedStartDate.getMonth()])
+    setYearlyWeekday(weekdays[normalizedStartDate.getDay()])
+    setYearlyWeekdayMonth(months[normalizedStartDate.getMonth()])
   }, [normalizedStartDate, open])
 
   const startDay = dialogStartDate.getDate()
-  const startMonth = dialogStartDate.getMonth()
-  const startWeekday = dialogStartDate.getDay()
+  const weekdayOptions = useMemo(() => toSelectOptions(weekdays), [])
+  const monthOptions = useMemo(() => toSelectOptions(months), [])
+  const ordinalSelectOptions = useMemo(() => toSelectOptions(ordinalOptions), [])
 
   function toggleWeekday(day: number) {
     setSelectedWeekdays((current) =>
@@ -298,30 +313,20 @@ export default function RecurrenceDialog({
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                       <RadioGroupItem id="monthly-weekday" value="weekday" />
                       <Label htmlFor="monthly-weekday">The</Label>
-                      <Select defaultValue="Fourth">
-                        <SelectTrigger className="w-36">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ordinalOptions.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select defaultValue={weekdays[startWeekday]}>
-                        <SelectTrigger className="w-36">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {weekdays.map((day) => (
-                            <SelectItem key={day} value={day}>
-                              {day}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <CalendarSelectControl
+                        id="recurrence-monthly-ordinal"
+                        value={monthlyOrdinal}
+                        onChange={setMonthlyOrdinal}
+                        className="w-36"
+                        options={ordinalSelectOptions}
+                      />
+                      <CalendarSelectControl
+                        id="recurrence-monthly-weekday"
+                        value={monthlyWeekday}
+                        onChange={setMonthlyWeekday}
+                        className="w-36"
+                        options={weekdayOptions}
+                      />
                       <span className="text-sm">after every</span>
                       <NumberInput value={interval} onChange={setInterval} />
                       <span className="text-sm">month(s)</span>
@@ -338,60 +343,40 @@ export default function RecurrenceDialog({
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                       <RadioGroupItem id="yearly-date" value="date" />
                       <Label htmlFor="yearly-date">Every</Label>
-                      <Select defaultValue={months[startMonth]}>
-                        <SelectTrigger className="w-36">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {months.map((month) => (
-                            <SelectItem key={month} value={month}>
-                              {month}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <CalendarSelectControl
+                        id="recurrence-yearly-month"
+                        value={yearlyMonth}
+                        onChange={setYearlyMonth}
+                        className="w-36"
+                        options={monthOptions}
+                      />
                       <NumberInput value={startDay} onChange={() => undefined} />
                     </div>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                       <RadioGroupItem id="yearly-weekday" value="weekday" />
                       <Label htmlFor="yearly-weekday">The</Label>
-                      <Select defaultValue="Fourth">
-                        <SelectTrigger className="w-36">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ordinalOptions.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select defaultValue={weekdays[startWeekday]}>
-                        <SelectTrigger className="w-36">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {weekdays.map((day) => (
-                            <SelectItem key={day} value={day}>
-                              {day}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <CalendarSelectControl
+                        id="recurrence-yearly-ordinal"
+                        value={yearlyOrdinal}
+                        onChange={setYearlyOrdinal}
+                        className="w-36"
+                        options={ordinalSelectOptions}
+                      />
+                      <CalendarSelectControl
+                        id="recurrence-yearly-weekday"
+                        value={yearlyWeekday}
+                        onChange={setYearlyWeekday}
+                        className="w-36"
+                        options={weekdayOptions}
+                      />
                       <span className="text-sm">of</span>
-                      <Select defaultValue={months[startMonth]}>
-                        <SelectTrigger className="w-36">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {months.map((month) => (
-                            <SelectItem key={month} value={month}>
-                              {month}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <CalendarSelectControl
+                        id="recurrence-yearly-weekday-month"
+                        value={yearlyWeekdayMonth}
+                        onChange={setYearlyWeekdayMonth}
+                        className="w-36"
+                        options={monthOptions}
+                      />
                     </div>
                   </RadioGroup>
                 ) : null}

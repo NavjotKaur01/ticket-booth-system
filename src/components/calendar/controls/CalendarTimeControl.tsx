@@ -1,5 +1,5 @@
-import { Check, ChevronDown, ChevronUp } from "lucide-react"
-import { useState } from "react"
+import { ChevronDown, ChevronUp } from "lucide-react"
+import { useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -8,6 +8,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+
+import { CalendarScrollSelectList } from "./CalendarScrollSelectList"
 
 const hourlyTimeOptions = Array.from({ length: 24 }, (_, hour) =>
   formatTimeValue(hour, 0)
@@ -66,10 +68,14 @@ export default function CalendarTimeControl({
 }: CalendarTimeControlProps) {
   const [isOpen, setIsOpen] = useState(false)
 
-  function handleWheel(event: React.WheelEvent<HTMLDivElement>) {
-    event.stopPropagation()
-    event.currentTarget.scrollTop += event.deltaY
-  }
+  const timeOptions = useMemo(
+    () =>
+      getTimeOptions(value).map((option) => ({
+        value: option,
+        label: option,
+      })),
+    [value]
+  )
 
   function handleSelect(option: string) {
     onChange(option)
@@ -91,25 +97,12 @@ export default function CalendarTimeControl({
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-40 p-1" sideOffset={4}>
-          <div
-            className="calendar-thin-scrollbar max-h-44 overscroll-contain overflow-y-auto pr-1"
-            onWheel={handleWheel}
-          >
-            {getTimeOptions(value).map((option) => (
-              <button
-                key={option}
-                type="button"
-                className={cn(
-                  "flex h-8 w-full items-center justify-between rounded-sm px-2 text-left text-sm hover:bg-primary/10 hover:text-primary",
-                  option === value && "bg-primary/10 text-primary"
-                )}
-                onClick={() => handleSelect(option)}
-              >
-                <span>{option}</span>
-                {option === value ? <Check className="size-3.5" /> : null}
-              </button>
-            ))}
-          </div>
+          <CalendarScrollSelectList
+            isOpen={isOpen}
+            value={value}
+            options={timeOptions}
+            onSelect={handleSelect}
+          />
         </PopoverContent>
       </Popover>
       <div className="flex h-9 w-7 flex-col overflow-hidden rounded-r-md border bg-background">
@@ -135,7 +128,3 @@ export default function CalendarTimeControl({
     </div>
   )
 }
-
-
-
-

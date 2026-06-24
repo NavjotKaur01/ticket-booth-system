@@ -906,6 +906,7 @@ export function AddReservationDialog ({
         open={comicInfoOpen}
         onOpenChange={setComicInfoOpen}
         stageName={reservationShowMeta.comicName}
+        nested
       />
     </>
   )

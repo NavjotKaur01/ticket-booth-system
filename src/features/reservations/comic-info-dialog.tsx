@@ -1,7 +1,9 @@
 import { User } from "lucide-react"
 import { useEffect, useState } from "react"
 
+import CalendarSelectControl from "@/components/calendar/controls/CalendarSelectControl"
 import { FormField, FormSection } from "@/components/forms/form-fields"
+import { PhoneStringInputGroup } from "@/components/forms/phone-input-group"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -12,14 +14,8 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Skeleton } from "@/components/ui/skeleton"
 import { getComicInfo, type ComicInfo } from "@/data/comedian-info"
 
 const PREFERRED_CONTACT_OPTIONS = [
@@ -33,24 +29,144 @@ const PREFERRED_CONTACT_OPTIONS = [
 const COMPACT_INPUT = "h-8 text-xs"
 const COMPACT_SELECT = "h-8 w-full text-xs"
 
+const COUNTRY_OPTIONS = [
+  { value: "US", label: "United States" },
+  { value: "CA", label: "Canada" },
+]
+
+const STATE_OPTIONS = [
+  { value: "CA", label: "California" },
+  { value: "NY", label: "New York" },
+  { value: "MA", label: "Massachusetts" },
+]
+
+const ARTIST_TYPE_OPTIONS = [
+  { value: "Comedian", label: "Comedian" },
+  { value: "Host", label: "Host" },
+  { value: "Musician", label: "Musician" },
+]
+
 type ComicInfoDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   stageName: string
+  nested?: boolean
+  isLoading?: boolean
+  onSave?: (values: ComicInfo) => void | Promise<void>
+}
+
+function SkeletonField({
+  labelWidth = "w-20",
+  className,
+}: {
+  labelWidth?: string
+  className?: string
+}) {
+  return (
+    <div className={className}>
+      <Skeleton className={`mb-1 h-3.5 ${labelWidth}`} />
+      <Skeleton className="h-8 w-full rounded-md" />
+    </div>
+  )
+}
+
+function SkeletonPhoneField({ labelWidth = "w-24" }: { labelWidth?: string }) {
+  return (
+    <div>
+      <Skeleton className={`mb-1 h-3.5 ${labelWidth}`} />
+      <div className="flex gap-2">
+        <Skeleton className="h-8 w-14 rounded-md" />
+        <Skeleton className="h-8 w-14 rounded-md" />
+        <Skeleton className="h-8 min-w-0 flex-1 rounded-md" />
+      </div>
+    </div>
+  )
+}
+
+function ComicInfoDialogBodySkeleton() {
+  return (
+    <div className="space-y-4 overflow-y-auto px-4 py-3" aria-label="Loading edit comic form">
+      <div className="flex flex-col gap-4 lg:flex-row">
+        <div className="flex shrink-0 flex-col items-center gap-2 lg:w-36">
+          <Skeleton className="size-28 rounded-md" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+
+        <div className="min-w-0 flex-1 space-y-3">
+          <section className="space-y-2">
+            <Skeleton className="h-3.5 w-24" />
+            <div className="grid gap-2 sm:grid-cols-2">
+              <SkeletonField labelWidth="w-16" />
+              <SkeletonField labelWidth="w-16" />
+              <SkeletonField labelWidth="w-20" className="sm:col-span-2" />
+              <div className="sm:col-span-2">
+                <Skeleton className="mb-1 h-3.5 w-28" />
+                <Skeleton className="min-h-20 w-full rounded-md" />
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <section className="space-y-2">
+        <Skeleton className="h-3.5 w-12" />
+        <Skeleton className="min-h-16 w-full rounded-md" />
+      </section>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="space-y-2">
+          <SkeletonField labelWidth="w-10" />
+          <SkeletonField labelWidth="w-14" />
+          <SkeletonPhoneField labelWidth="w-20" />
+          <SkeletonField labelWidth="w-16" />
+          <SkeletonField labelWidth="w-14" />
+        </div>
+
+        <div className="space-y-2">
+          <SkeletonField labelWidth="w-8" />
+          <SkeletonField labelWidth="w-16" />
+          <SkeletonPhoneField labelWidth="w-24" />
+          <SkeletonField labelWidth="w-10" />
+        </div>
+
+        <div className="space-y-2">
+          <SkeletonField labelWidth="w-12" />
+          <SkeletonField labelWidth="w-8" />
+          <SkeletonPhoneField labelWidth="w-8" />
+          <SkeletonField labelWidth="w-16" />
+        </div>
+      </div>
+
+      <div>
+        <Skeleton className="mb-1 h-3.5 w-28" />
+        <div className="flex flex-row flex-wrap items-center gap-x-4 gap-y-2">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="flex items-center gap-1.5">
+              <Skeleton className="size-4 rounded-full" />
+              <Skeleton className="h-3.5 w-16" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function ComicInfoDialog({
   open,
   onOpenChange,
   stageName,
+  nested = false,
+  isLoading = false,
+  onSave,
 }: ComicInfoDialogProps) {
   const [form, setForm] = useState<ComicInfo>(() => getComicInfo(stageName))
 
   useEffect(() => {
-    if (open) {
+    if (open && !isLoading) {
       setForm(getComicInfo(stageName))
     }
-  }, [open, stageName])
+  }, [isLoading, open, stageName])
 
   function updateField<K extends keyof ComicInfo>(
     field: K,
@@ -59,14 +175,16 @@ export function ComicInfoDialog({
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  function handleSave() {
+  async function handleSave() {
+    await onSave?.(form)
     onOpenChange(false)
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        nested
+        nested={nested}
+        disableOutsideDismiss
         showCloseButton
         className="flex max-h-[92vh] w-[min(96vw,56rem)] max-w-none flex-col overflow-hidden sm:max-w-none"
       >
@@ -76,7 +194,10 @@ export function ComicInfoDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 overflow-y-auto px-4 py-3">
+        {isLoading ? (
+          <ComicInfoDialogBodySkeleton />
+        ) : (
+          <div className="space-y-4 overflow-y-auto px-4 py-3">
           <div className="flex flex-col gap-4 lg:flex-row">
             <div className="flex shrink-0 flex-col items-center gap-2 lg:w-36">
               <div className="flex size-28 items-center justify-center rounded-md border border-border/60 bg-muted/30">
@@ -162,12 +283,11 @@ export function ComicInfoDialog({
                   className={COMPACT_INPUT}
                 />
               </FormField>
-              <FormField label="Home Phone" htmlFor="comic-home-phone">
-                <Input
-                  id="comic-home-phone"
+              <FormField label="Home Phone">
+                <PhoneStringInputGroup
+                  idPrefix="comic-home-phone"
                   value={form.homePhone}
-                  onChange={(e) => updateField("homePhone", e.target.value)}
-                  className={COMPACT_INPUT}
+                  onChange={(nextValue) => updateField("homePhone", nextValue)}
                 />
               </FormField>
               <FormField label="Zip Code" htmlFor="comic-zip">
@@ -179,21 +299,14 @@ export function ComicInfoDialog({
                 />
               </FormField>
               <FormField label="Country">
-                <Select
-                  value={form.country || "select"}
-                  onValueChange={(value) =>
-                    updateField("country", value === "select" ? "" : value)
-                  }
-                >
-                  <SelectTrigger className={COMPACT_SELECT}>
-                    <SelectValue placeholder="Select country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="select">Select country</SelectItem>
-                    <SelectItem value="US">United States</SelectItem>
-                    <SelectItem value="CA">Canada</SelectItem>
-                  </SelectContent>
-                </Select>
+                <CalendarSelectControl
+                  id="comic-country"
+                  value={form.country}
+                  onChange={(value) => updateField("country", value)}
+                  placeholder="Select country"
+                  className={COMPACT_SELECT}
+                  options={COUNTRY_OPTIONS}
+                />
               </FormField>
             </div>
 
@@ -214,62 +327,32 @@ export function ComicInfoDialog({
                   className={COMPACT_INPUT}
                 />
               </FormField>
-              <FormField label="Mobile Phone" htmlFor="comic-mobile-phone">
-                <Input
-                  id="comic-mobile-phone"
+              <FormField label="Mobile Phone">
+                <PhoneStringInputGroup
+                  idPrefix="comic-mobile-phone"
                   value={form.mobilePhone}
-                  onChange={(e) => updateField("mobilePhone", e.target.value)}
-                  className={COMPACT_INPUT}
+                  onChange={(nextValue) => updateField("mobilePhone", nextValue)}
                 />
               </FormField>
               <FormField label="State">
-                <Select
-                  value={form.state || "select"}
-                  onValueChange={(value) =>
-                    updateField("state", value === "select" ? "" : value)
-                  }
-                >
-                  <SelectTrigger className={COMPACT_SELECT}>
-                    <SelectValue placeholder="Select State" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="select">Select State</SelectItem>
-                    <SelectItem value="CA">California</SelectItem>
-                    <SelectItem value="NY">New York</SelectItem>
-                    <SelectItem value="MA">Massachusetts</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormField>
-
-              <FormField label="Preferred Contact">
-                <RadioGroup
-                  value={form.preferredContact}
-                  onValueChange={(value) => updateField("preferredContact", value)}
-                  className="flex w-auto flex-row flex-wrap items-center gap-x-3 gap-y-1"
-                >
-                  {PREFERRED_CONTACT_OPTIONS.map((option) => (
-                    <label
-                      key={option.value}
-                      className="flex cursor-pointer items-center gap-1.5 text-xs"
-                    >
-                      <RadioGroupItem
-                        value={option.value}
-                        id={`comic-contact-${option.value}`}
-                      />
-                      {option.label}
-                    </label>
-                  ))}
-                </RadioGroup>
+                <CalendarSelectControl
+                  id="comic-state"
+                  value={form.state}
+                  onChange={(value) => updateField("state", value)}
+                  placeholder="Select State"
+                  className={COMPACT_SELECT}
+                  options={STATE_OPTIONS}
+                />
               </FormField>
             </div>
 
             <div className="space-y-2">
               <FormField label="AltURL" htmlFor="comic-alt-url">
-                <Textarea
+                <Input
                   id="comic-alt-url"
                   value={form.altUrl}
                   onChange={(e) => updateField("altUrl", e.target.value)}
-                  className="min-h-16 resize-y font-mono text-xs"
+                  className={COMPACT_INPUT}
                 />
               </FormField>
               <FormField label="City" htmlFor="comic-city">
@@ -280,46 +363,57 @@ export function ComicInfoDialog({
                   className={COMPACT_INPUT}
                 />
               </FormField>
-              <FormField label="Fax" htmlFor="comic-fax">
-                <Input
-                  id="comic-fax"
+              <FormField label="Fax">
+                <PhoneStringInputGroup
+                  idPrefix="comic-fax"
                   value={form.fax}
-                  onChange={(e) => updateField("fax", e.target.value)}
-                  className={COMPACT_INPUT}
+                  onChange={(nextValue) => updateField("fax", nextValue)}
                 />
               </FormField>
               <FormField label="Artist Type">
-                <Select
-                  value={form.artistType || "select"}
-                  onValueChange={(value) =>
-                    updateField("artistType", value === "select" ? "" : value)
-                  }
-                >
-                  <SelectTrigger className={COMPACT_SELECT}>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="select">Select type</SelectItem>
-                    <SelectItem value="Comedian">Comedian</SelectItem>
-                    <SelectItem value="Host">Host</SelectItem>
-                    <SelectItem value="Musician">Musician</SelectItem>
-                  </SelectContent>
-                </Select>
+                <CalendarSelectControl
+                  id="comic-artist-type"
+                  value={form.artistType}
+                  onChange={(value) => updateField("artistType", value)}
+                  placeholder="Select type"
+                  className={COMPACT_SELECT}
+                  options={ARTIST_TYPE_OPTIONS}
+                />
               </FormField>
             </div>
           </div>
-        </div>
 
-        <DialogFooter className="shrink-0 gap-2 border-t px-4 py-2.5 sm:justify-start">
-          <Button type="button" size="sm" onClick={handleSave}>
+          <FormField label="Preferred Contact">
+            <RadioGroup
+              value={form.preferredContact}
+              onValueChange={(value) => updateField("preferredContact", value)}
+              className="flex w-full flex-row flex-wrap items-center gap-x-4 gap-y-2"
+            >
+              {PREFERRED_CONTACT_OPTIONS.map((option) => (
+                <label
+                  key={option.value}
+                  className="flex cursor-pointer items-center gap-1.5 text-xs"
+                >
+                  <RadioGroupItem
+                    value={option.value}
+                    id={`comic-contact-${option.value}`}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </RadioGroup>
+          </FormField>
+        </div>
+        )}
+
+        <DialogFooter className="shrink-0 border-t px-4 py-2.5 sm:justify-start">
+          <Button type="button" size="sm" onClick={handleSave} disabled={isLoading}>
             Save
           </Button>
-          <span className="hidden text-xs text-muted-foreground sm:inline">or</span>
           <Button
             type="button"
-            variant="link"
+            variant="ghost"
             size="sm"
-            className="text-muted-foreground"
             onClick={() => onOpenChange(false)}
           >
             Cancel

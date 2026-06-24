@@ -59,7 +59,17 @@ export default function EventCalendar() {
     const [calendarView, setCalendarView] = useState<View>("month")
     const [recurrenceDate, setRecurrenceDate] = useState<Date | null>(null)
     const [packageEvent, setPackageEvent] = useState<CalendarEvent | null>(null)
+    const [reservationEvent, setReservationEvent] = useState<CalendarEvent | null>(null)
+    const [adjustAgeEvent, setAdjustAgeEvent] = useState<CalendarEvent | null>(null)
+    const [adjustHubEvent, setAdjustHubEvent] = useState<CalendarEvent | null>(null)
+    const [cancelShowEvent, setCancelShowEvent] = useState<CalendarEvent | null>(null)
+    const [editComicEvent, setEditComicEvent] = useState<CalendarEvent | null>(null)
     const [isAddEditPackageOpen, setIsAddEditPackageOpen] = useState(false)
+    const [isAddReservationOpen, setIsAddReservationOpen] = useState(false)
+    const [isAdjustAgeOpen, setIsAdjustAgeOpen] = useState(false)
+    const [isAdjustHubOpen, setIsAdjustHubOpen] = useState(false)
+    const [isCancelShowOpen, setIsCancelShowOpen] = useState(false)
+    const [isEditComicOpen, setIsEditComicOpen] = useState(false)
     const [isRecurrenceOpen, setIsRecurrenceOpen] = useState(false)
     const [isAddShowOpen, setIsAddShowOpen] = useState(false)
     const [isPastDateAlertOpen, setIsPastDateAlertOpen] = useState(false)
@@ -105,6 +115,36 @@ export default function EventCalendar() {
         if (action.dialog === "addEditPackage") {
             setPackageEvent(event)
             setIsAddEditPackageOpen(true)
+            return
+        }
+
+        if (action.dialog === "addReservation") {
+            setReservationEvent(event)
+            setIsAddReservationOpen(true)
+            return
+        }
+
+        if (action.dialog === "adjustAge") {
+            setAdjustAgeEvent(event)
+            setIsAdjustAgeOpen(true)
+            return
+        }
+
+        if (action.dialog === "adjustHub") {
+            setAdjustHubEvent(event)
+            setIsAdjustHubOpen(true)
+            return
+        }
+
+        if (action.dialog === "cancelShow") {
+            setCancelShowEvent(event)
+            setIsCancelShowOpen(true)
+            return
+        }
+
+        if (action.dialog === "editComic") {
+            setEditComicEvent(event)
+            setIsEditComicOpen(true)
             return
         }
 
@@ -188,6 +228,21 @@ export default function EventCalendar() {
                 isAddEditPackageOpen={isAddEditPackageOpen}
                 setIsAddEditPackageOpen={setIsAddEditPackageOpen}
                 packageEvent={packageEvent}
+                isAddReservationOpen={isAddReservationOpen}
+                setIsAddReservationOpen={setIsAddReservationOpen}
+                reservationEvent={reservationEvent}
+                isAdjustAgeOpen={isAdjustAgeOpen}
+                setIsAdjustAgeOpen={setIsAdjustAgeOpen}
+                adjustAgeEvent={adjustAgeEvent}
+                isAdjustHubOpen={isAdjustHubOpen}
+                setIsAdjustHubOpen={setIsAdjustHubOpen}
+                adjustHubEvent={adjustHubEvent}
+                isCancelShowOpen={isCancelShowOpen}
+                setIsCancelShowOpen={setIsCancelShowOpen}
+                cancelShowEvent={cancelShowEvent}
+                isEditComicOpen={isEditComicOpen}
+                setIsEditComicOpen={setIsEditComicOpen}
+                editComicEvent={editComicEvent}
                 isPastDateAlertOpen={isPastDateAlertOpen}
                 setIsPastDateAlertOpen={setIsPastDateAlertOpen}
                 isRecurrenceOpen={isRecurrenceOpen}

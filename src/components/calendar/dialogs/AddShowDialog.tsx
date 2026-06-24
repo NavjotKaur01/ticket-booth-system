@@ -1,6 +1,7 @@
 import { ArrowLeft, PlusCircle, Search } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
+import CalendarSelectControl from "../controls/CalendarSelectControl"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -12,13 +13,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
@@ -102,18 +96,16 @@ function PerformerSelect({
   return (
     <div className="grid gap-2 sm:grid-cols-[7rem_minmax(0,1fr)_auto_auto] sm:items-center">
       <Label htmlFor={id}>{label}</Label>
-      <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger id={id} className="h-9 w-full bg-background">
-          <SelectValue placeholder="Select" />
-        </SelectTrigger>
-        <SelectContent className="max-h-56 overflow-y-auto">
-          {performers.map((performer) => (
-            <SelectItem key={performer.id} value={performer.id}>
-              {performer.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <CalendarSelectControl
+        id={id}
+        value={value}
+        onChange={onValueChange}
+        placeholder="Select"
+        options={performers.map((performer) => ({
+          value: performer.id,
+          label: performer.name,
+        }))}
+      />
       <Button type="button" size="icon" className="hidden sm:inline-flex" aria-label={`Add ${label}`}>
         <PlusCircle className="size-4" />
       </Button>
@@ -451,24 +443,17 @@ export default function AddShowDialog({ open, onOpenChange, onBack, onSave }: Ad
                     <Label htmlFor="show-age-restriction" className="shrink-0">
                       Age Restrictions
                     </Label>
-                    <Select
+                    <CalendarSelectControl
+                      id="show-age-restriction"
                       value={formValues.ageRestriction}
-                      onValueChange={(value) =>
-                        updateField("ageRestriction", value === "select" ? "" : value)
-                      }
-                    >
-                      <SelectTrigger id="show-age-restriction" className="h-9 flex-1 bg-background">
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-56 overflow-y-auto">
-                        <SelectItem value="select">Select</SelectItem>
-                        {ageRestrictions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(value) => updateField("ageRestriction", value)}
+                      placeholder="Select"
+                      className="flex-1"
+                      options={ageRestrictions.map((option) => ({
+                        value: option.value,
+                        label: option.label,
+                      }))}
+                    />
                   </div>
                 </div>
                 <p className="mt-4 text-center text-sm text-muted-foreground">
