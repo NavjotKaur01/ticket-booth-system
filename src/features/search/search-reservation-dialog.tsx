@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { PanelCard } from "@/components/common/panel-card"
 import { DataTable } from "@/components/data-table/data-table"
 import {
+  createFilterSearchHandlers,
   FormField,
   FormSection,
   IconActionButton,
@@ -28,12 +29,37 @@ import {
   type ReservationSearchOption,
 } from "@/types/search-reservation"
 
-const compactFieldClass = "w-full shrink-0 sm:w-36"
-const compactDateClass = "w-full shrink-0 sm:w-40"
+const INPUT_CLASS = "h-9 w-full min-w-0"
+const CUSTOMER_FIELD_CLASS = "min-w-0 flex-1 basis-[8.5rem]"
+const CUSTOMER_PHONE_FIELD_CLASS = "min-w-0 flex-[1.35] basis-[12rem]"
+const SINGLE_FIELD_CLASS = "min-w-0 w-full sm:max-w-xs sm:flex-1 sm:basis-[12rem]"
 
 type SearchReservationDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+}
+
+function SearchCriteriaActions({
+  onClear,
+}: {
+  onClear: () => void
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-1.5">
+      <IconActionButton
+        label="Search"
+        icon={Search}
+        variant="default"
+        type="submit"
+      />
+      <IconActionButton
+        label="Clear"
+        icon={X}
+        variant="outline"
+        onClick={onClear}
+      />
+    </div>
+  )
 }
 
 export function SearchReservationDialog({
@@ -47,6 +73,20 @@ export function SearchReservationDialog({
     DEFAULT_RESERVATION_SEARCH_FILTERS
   )
   const [searched, setSearched] = useState(false)
+
+  function handleSearch() {
+    setAppliedFilters(draftFilters)
+    setSearched(true)
+  }
+
+  function handleClear() {
+    setDraftFilters(DEFAULT_RESERVATION_SEARCH_FILTERS)
+    setAppliedFilters(DEFAULT_RESERVATION_SEARCH_FILTERS)
+    setSearched(true)
+  }
+
+  const { handleSubmit, handleInputKeyDown } =
+    createFilterSearchHandlers(handleSearch)
 
   useEffect(() => {
     if (!open) {
@@ -78,17 +118,6 @@ export function SearchReservationDialog({
     setDraftFilters((current) => ({ ...current, [field]: value }))
   }
 
-  function handleSearch() {
-    setAppliedFilters(draftFilters)
-    setSearched(true)
-  }
-
-  function handleClear() {
-    setDraftFilters(DEFAULT_RESERVATION_SEARCH_FILTERS)
-    setAppliedFilters(DEFAULT_RESERVATION_SEARCH_FILTERS)
-    setSearched(true)
-  }
-
   function renderCriteriaFields() {
     switch (draftFilters.option) {
       case "confirmation-number":
@@ -96,7 +125,7 @@ export function SearchReservationDialog({
           <FormField
             label="Confirmation Number"
             htmlFor="search-confirmation-number"
-            className="w-full shrink-0 sm:w-48"
+            className={SINGLE_FIELD_CLASS}
           >
             <Input
               id="search-confirmation-number"
@@ -104,7 +133,8 @@ export function SearchReservationDialog({
               onChange={(event) =>
                 updateDraftField("confirmationNumber", event.target.value)
               }
-              className="h-9"
+              onKeyDown={handleInputKeyDown}
+              className={INPUT_CLASS}
             />
           </FormField>
         )
@@ -115,7 +145,7 @@ export function SearchReservationDialog({
             <FormField
               label="Last Name"
               htmlFor="search-last-name"
-              className={compactFieldClass}
+              className={CUSTOMER_FIELD_CLASS}
             >
               <Input
                 id="search-last-name"
@@ -123,13 +153,14 @@ export function SearchReservationDialog({
                 onChange={(event) =>
                   updateDraftField("lastName", event.target.value)
                 }
-                className="h-9"
+                onKeyDown={handleInputKeyDown}
+                className={INPUT_CLASS}
               />
             </FormField>
             <FormField
               label="First Name"
               htmlFor="search-first-name"
-              className={compactFieldClass}
+              className={CUSTOMER_FIELD_CLASS}
             >
               <Input
                 id="search-first-name"
@@ -137,10 +168,11 @@ export function SearchReservationDialog({
                 onChange={(event) =>
                   updateDraftField("firstName", event.target.value)
                 }
-                className="h-9"
+                onKeyDown={handleInputKeyDown}
+                className={INPUT_CLASS}
               />
             </FormField>
-            <FormField label="Phone" className="shrink-0">
+            <FormField label="Phone" className={CUSTOMER_PHONE_FIELD_CLASS}>
               <PhoneInputGroup
                 idPrefix="search-phone"
                 value={{
@@ -158,7 +190,7 @@ export function SearchReservationDialog({
             <FormField
               label="Since"
               htmlFor="search-since"
-              className={compactDateClass}
+              className={CUSTOMER_FIELD_CLASS}
             >
               <Input
                 id="search-since"
@@ -167,7 +199,7 @@ export function SearchReservationDialog({
                 onChange={(event) =>
                   updateDraftField("since", event.target.value)
                 }
-                className="h-9"
+                className={INPUT_CLASS}
               />
             </FormField>
           </>
@@ -178,7 +210,7 @@ export function SearchReservationDialog({
           <FormField
             label="Comedian"
             htmlFor="search-comedian"
-            className="w-full shrink-0 sm:w-48"
+            className={SINGLE_FIELD_CLASS}
           >
             <Input
               id="search-comedian"
@@ -186,7 +218,8 @@ export function SearchReservationDialog({
               onChange={(event) =>
                 updateDraftField("comedian", event.target.value)
               }
-              className="h-9"
+              onKeyDown={handleInputKeyDown}
+              className={INPUT_CLASS}
             />
           </FormField>
         )
@@ -196,7 +229,7 @@ export function SearchReservationDialog({
           <FormField
             label="Show Date"
             htmlFor="search-show-date"
-            className={compactDateClass}
+            className={SINGLE_FIELD_CLASS}
           >
             <Input
               id="search-show-date"
@@ -205,7 +238,7 @@ export function SearchReservationDialog({
               onChange={(event) =>
                 updateDraftField("showDate", event.target.value)
               }
-              className="h-9"
+              className={INPUT_CLASS}
             />
           </FormField>
         )
@@ -215,7 +248,7 @@ export function SearchReservationDialog({
           <FormField
             label="Payment Reference"
             htmlFor="search-payment-reference"
-            className="w-full shrink-0 sm:w-48"
+            className={SINGLE_FIELD_CLASS}
           >
             <Input
               id="search-payment-reference"
@@ -223,7 +256,8 @@ export function SearchReservationDialog({
               onChange={(event) =>
                 updateDraftField("paymentReference", event.target.value)
               }
-              className="h-9"
+              onKeyDown={handleInputKeyDown}
+              className={INPUT_CLASS}
             />
           </FormField>
         )
@@ -232,6 +266,9 @@ export function SearchReservationDialog({
         return null
     }
   }
+
+  const criteriaTitle =
+    draftFilters.option === "customer" ? "Customer Search" : "Search Criteria"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -245,10 +282,10 @@ export function SearchReservationDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
           <PanelCard>
-            <div className="space-y-2 border-b p-3">
-              <FormSection title="Reservation Option" className="space-y-1.5">
+            <form className="space-y-4 p-3" onSubmit={handleSubmit}>
+              <FormSection title="Reservation Option" className="space-y-2">
                 <RadioGroup
                   value={draftFilters.option}
                   onValueChange={(value) =>
@@ -257,7 +294,7 @@ export function SearchReservationDialog({
                       value as ReservationSearchOption
                     )
                   }
-                  className="flex flex-wrap gap-x-4 gap-y-1"
+                  className="flex flex-wrap gap-x-5 gap-y-2"
                 >
                   {RESERVATION_SEARCH_OPTIONS.map((option) => (
                     <div key={option.value} className="flex items-center gap-2">
@@ -276,45 +313,18 @@ export function SearchReservationDialog({
                 </RadioGroup>
               </FormSection>
 
-              {draftFilters.option === "customer" ? (
-                <FormSection title="Customer Search" className="space-y-1.5">
+              <div className="border-t border-border/60 pt-4">
+                <FormSection title={criteriaTitle} className="space-y-3">
                   <div className="flex flex-wrap items-end gap-2">
                     {renderCriteriaFields()}
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <IconActionButton
-                        label="Search"
-                        icon={Search}
-                        variant="default"
-                        onClick={handleSearch}
-                      />
-                      <IconActionButton
-                        label="Clear"
-                        icon={X}
-                        onClick={handleClear}
-                      />
-                    </div>
+                    <SearchCriteriaActions onClear={handleClear} />
                   </div>
                 </FormSection>
-              ) : (
-                <div className="flex flex-wrap items-end gap-2">
-                  {renderCriteriaFields()}
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <IconActionButton
-                      label="Search"
-                      icon={Search}
-                      variant="default"
-                      onClick={handleSearch}
-                    />
-                    <IconActionButton
-                      label="Clear"
-                      icon={X}
-                      onClick={handleClear}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            </form>
+          </PanelCard>
 
+          <PanelCard>
             <DataTable
               columns={searchReservationColumns}
               data={results}

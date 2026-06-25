@@ -510,7 +510,7 @@ export function UpdatePerformerDialog({
         <DialogHeader className="shrink-0 gap-0 border-b px-4 py-3 pr-12">
           <DialogTitle className="text-lg leading-snug font-normal">
             <span className="font-semibold text-foreground">
-              Update Performer
+              Update Comedian
             </span>
             {performer ? (
               <span className="mt-0.5 block text-sm font-normal text-muted-foreground">

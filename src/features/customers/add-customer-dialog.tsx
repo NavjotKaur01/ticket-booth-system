@@ -24,6 +24,9 @@ import {
   usStateOptions,
 } from "@/data/customer-form-options"
 import { saveCustomer } from "@/lib/api/customers"
+import { mapCustomerToForm } from "@/lib/map-customer-form"
+import { cn } from "@/lib/utils"
+import type { Customer } from "@/types/customer"
 import {
   EMPTY_CUSTOMER_FORM,
   type CustomerFormValues,
@@ -38,6 +41,8 @@ type AddCustomerDialogProps = {
   connectionName: string
   locationId: string
   lastUpdateId: string
+  customer?: Customer | null
+  initialValues?: CustomerFormValues | null
   nested?: boolean
   onBack?: () => void
   onSaved?: (form: CustomerFormValues) => Promise<void> | void
@@ -49,10 +54,13 @@ export function AddCustomerDialog({
   connectionName,
   locationId,
   lastUpdateId,
+  customer = null,
+  initialValues = null,
   nested = false,
   onBack,
   onSaved,
 }: AddCustomerDialogProps) {
+  const isEditMode = customer != null
   const [form, setForm] = useState<CustomerFormValues>(EMPTY_CUSTOMER_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -62,8 +70,27 @@ export function AddCustomerDialog({
       setForm(EMPTY_CUSTOMER_FORM)
       setSaving(false)
       setError(null)
+      return
     }
-  }, [open])
+
+    if (customer) {
+      setForm(mapCustomerToForm(customer))
+      return
+    }
+
+    if (initialValues) {
+      setForm({
+        ...EMPTY_CUSTOMER_FORM,
+        ...initialValues,
+        phone: { ...EMPTY_CUSTOMER_FORM.phone, ...initialValues.phone },
+        altPhone1: { ...EMPTY_CUSTOMER_FORM.altPhone1, ...initialValues.altPhone1 },
+        altPhone2: { ...EMPTY_CUSTOMER_FORM.altPhone2, ...initialValues.altPhone2 },
+      })
+      return
+    }
+
+    setForm(EMPTY_CUSTOMER_FORM)
+  }, [open, customer, initialValues])
 
   function updateField<K extends keyof CustomerFormValues>(
     field: K,
@@ -169,7 +196,7 @@ export function AddCustomerDialog({
               </Button>
             ) : null}
             <DialogTitle className="text-base font-semibold text-foreground">
-              Add Customer
+              {isEditMode ? "Edit Customer" : "Add Customer"}
             </DialogTitle>
           </div>
         </DialogHeader>
@@ -380,15 +407,22 @@ export function AddCustomerDialog({
           </div>
         </div>
 
-        <DialogFooter className="shrink-0 border-t px-4 py-2 sm:justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={saving}
-            onClick={handleClear}
-          >
-            Clear
-          </Button>
+        <DialogFooter
+          className={cn(
+            "shrink-0 border-t px-4 py-2",
+            isEditMode ? "sm:justify-end" : "sm:justify-between"
+          )}
+        >
+          {!isEditMode ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saving}
+              onClick={handleClear}
+            >
+              Clear
+            </Button>
+          ) : null}
           <div className="flex flex-col-reverse gap-2 sm:flex-row">
             <Button
               type="button"

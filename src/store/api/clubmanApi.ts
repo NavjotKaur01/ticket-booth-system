@@ -3,6 +3,7 @@ import { createApi } from "@reduxjs/toolkit/query/react"
 import { buildCustomerSearchRequest } from "@/lib/build-customer-search-request"
 import { buildSaveCustomerRequest } from "@/lib/build-save-customer-request"
 import { buildReservationDayRange } from "@/lib/reservation-date-range"
+import { buildGetReservationPromotionsRequest } from "@/lib/build-get-reservation-promotions-request"
 import { buildSearchPromotionRequest } from "@/lib/build-search-promotion-request"
 import { buildCalendarFetchRange } from "@/lib/build-calendar-fetch-range"
 import {
@@ -34,10 +35,13 @@ import type { ApiPromotionSearchItem } from "@/types/api/promotion-search"
 import type { ApiSystemLookupItem } from "@/types/api/system-lookup"
 import type { RecentSalesReportData } from "@/types/api/recent-sales"
 import type { ReservationDataItem } from "@/types/api/reservation-data"
+import type { ReservationCustomerSearchItem } from "@/types/api/reservation-customer-search"
+import type { SaveReservationRequest } from "@/types/api/save-reservation"
 import type {
   GetShowDetailsByDateRequest,
   ShowDetailsByDateItem,
 } from "@/types/api/show-details"
+import type { ShowSectionItem } from "@/types/api/show-sections"
 import type {
   ApiSystemUser,
   SaveSystemUserRequest,
@@ -118,6 +122,24 @@ export const clubmanApi = createApi({
       ],
     }),
 
+    searchReservationCustomers: builder.mutation({
+      query: (body) => ({
+        url: reservationApiPath("ReservationSearchCustomer"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: ReservationCustomerSearchItem[]) => response,
+    }),
+
+    searchReservationBusinessCustomers: builder.mutation({
+      query: (body) => ({
+        url: reservationApiPath("ReservationSearchBusinessCustomer"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: ReservationCustomerSearchItem[]) => response,
+    }),
+
     saveCustomer: builder.mutation({
       query: ({
         connectionName,
@@ -187,6 +209,36 @@ export const clubmanApi = createApi({
         body: request,
       }),
       invalidatesTags: ["SystemUser"],
+    }),
+
+    getReservationPromotions: builder.mutation({
+      query: ({
+        connectionName,
+        locationId,
+        showId,
+        showDate,
+        isManager,
+      }: {
+        connectionName: string
+        locationId: string
+        showId: string
+        showDate: string
+        isManager?: boolean
+      }) => ({
+        url: reservationApiPath("GetPromotions"),
+        method: "PUT",
+        body: buildGetReservationPromotionsRequest({
+          connectionName,
+          locationId,
+          showId,
+          showDate,
+          isManager,
+        }),
+      }),
+      transformResponse: (response: ApiPromotionSearchItem[]) => response,
+      invalidatesTags: (_result, _error, arg) => [
+        { type: "Promotion", id: `${arg.showId}:${arg.showDate}` },
+      ],
     }),
 
     searchPromotions: builder.mutation({
@@ -270,6 +322,41 @@ export const clubmanApi = createApi({
       providesTags: (_result, _error, arg) => [
         { type: "ShowDetails", id: `${arg.locationId}:${arg.showDate}:${arg.isCancelledShow}` },
       ],
+    }),
+
+    getShowSections: builder.query({
+      query: ({
+        connectionString,
+        showId,
+      }: {
+        connectionString: string
+        showId: string
+      }) => ({
+        url: reservationApiPath(connectionString, showId, "GetShowSections"),
+        headers: { Accept: "application/json" },
+      }),
+      transformResponse: (response: ShowSectionItem[]) => response,
+      providesTags: (_result, _error, arg) => [
+        { type: "ShowDetails", id: `sections:${arg.showId}` },
+      ],
+    }),
+
+    saveReservation: builder.mutation({
+      query: (body: SaveReservationRequest) => ({
+        url: reservationApiPath("SaveReservation"),
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Reservation"],
+    }),
+
+    updateReservation: builder.mutation({
+      query: (body: SaveReservationRequest) => ({
+        url: reservationApiPath("UpdateReservation"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
     }),
 
     getCalendarData: builder.query({
@@ -368,13 +455,19 @@ export const {
   useGetLocationsQuery,
   useAccountLoginMutation,
   useSearchCustomersMutation,
+  useSearchReservationCustomersMutation,
+  useSearchReservationBusinessCustomersMutation,
   useSaveCustomerMutation,
   useGetSystemUsersQuery,
   useSaveSystemUserMutation,
   useUpdateSystemUserMutation,
   useSearchPromotionsMutation,
+  useGetReservationPromotionsMutation,
   useGetReservationDataQuery,
   useGetShowDetailsByDateQuery,
+  useGetShowSectionsQuery,
+  useSaveReservationMutation,
+  useUpdateReservationMutation,
   useGetRecentSalesReportQuery,
   useGetCalendarDataQuery,
   useSearchComediansMutation,

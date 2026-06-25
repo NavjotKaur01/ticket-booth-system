@@ -1,7 +1,11 @@
-import type { ReactNode } from "react"
+import { cloneElement, isValidElement, type ReactElement, type ReactNode } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { DataTable } from "@/components/data-table/data-table"
+import {
+  ReportCountBadge,
+  ReportHeroMetric,
+} from "@/features/reports/report-highlight"
 import { useRecentSalesReport } from "@/features/reports/use-recent-sales-report"
 import { recentSalesActivityColumns } from "@/features/reports/recent-sales-activity-columns"
 import { todayShowsColumns } from "@/features/reports/today-shows-columns"
@@ -28,45 +32,38 @@ export function TodaySalesReport({
 
   const ticketsSoldToday = loading ? "…" : data.ticketsSoldToday
 
-  const summaryStrip = (
-    <div className="w-fit rounded-sm bg-muted/30 px-2.5 py-1.5 shadow-xs">
-      <p className="text-[10px] font-medium tracking-wide whitespace-nowrap text-muted-foreground uppercase">
-        Tickets Sold Today
-      </p>
-      <p className="mt-0.5 text-base font-semibold tabular-nums text-foreground">
-        {ticketsSoldToday}
-      </p>
-    </div>
+  const heroMetric = (
+    <ReportHeroMetric label="Tickets Sold Today" value={ticketsSoldToday} />
   )
 
+  const toolbarWithMetric =
+    toolbar && isValidElement(toolbar)
+      ? cloneElement(toolbar as ReactElement<{ leading?: ReactNode }>, {
+          leading: heroMetric,
+        })
+      : null
+
   return (
-    <>
+    <div className="space-y-2">
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-      {toolbar ? (
-        <PanelCard>
-          <div className="border-b p-3">
-            {summaryStrip}
-          </div>
-          {toolbar}
-        </PanelCard>
+      {toolbarWithMetric ? (
+        <PanelCard>{toolbarWithMetric}</PanelCard>
       ) : (
         <PanelCard>
-          <div className="p-3">
-            {summaryStrip}
-          </div>
+          <div className="p-4">{heroMetric}</div>
         </PanelCard>
       )}
 
       <PanelCard>
-        <div className="flex flex-col gap-1 border-b px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-b px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-sm font-semibold text-foreground">
             Today&apos;s Shows
           </h3>
-          <span className="w-fit rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+          <ReportCountBadge>
             {data.todaysShows.length} Show
             {data.todaysShows.length === 1 ? "" : "s"}
-          </span>
+          </ReportCountBadge>
         </div>
         <DataTable
           columns={todayShowsColumns}
@@ -77,13 +74,13 @@ export function TodaySalesReport({
       </PanelCard>
 
       <PanelCard>
-        <div className="flex flex-col gap-1 border-b px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-b px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-sm font-semibold text-foreground">
             Recent Sales Activity
           </h3>
-          <span className="w-fit rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+          <ReportCountBadge>
             Today&apos;s Reservation Count: {data.recentSales.length}
-          </span>
+          </ReportCountBadge>
         </div>
         <DataTable
           columns={recentSalesActivityColumns}
@@ -92,6 +89,6 @@ export function TodaySalesReport({
           entityLabel="sales"
         />
       </PanelCard>
-    </>
+    </div>
   )
 }

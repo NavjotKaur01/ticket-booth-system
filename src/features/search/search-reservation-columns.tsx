@@ -87,6 +87,7 @@ export const searchReservationColumns: ColumnDef<ReservationSearchResult>[] = [
     id: "actions",
     header: "Action",
     enableSorting: false,
+    meta: { sticky: "right" },
     cell: () => <RowActionsMenu />,
   },
 ]

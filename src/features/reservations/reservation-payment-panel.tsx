@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react'
-
 import { FormField } from '@/components/forms/form-fields'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,37 +16,18 @@ import {
   RESERVATION_PAYMENT_TYPES,
   type ReservationPaymentType
 } from '@/data/reservation-payment-options'
+import {
+  formatReservationMoney,
+  parseReservationMoney
+} from '@/lib/calculate-reservation-totals'
 import { cn } from '@/lib/utils'
+import type { ReservationPaymentFields } from '@/types/reservation-payment'
 
 const COMPACT_INPUT = 'h-9 w-full text-sm'
 const FIELD_LABEL = '[&_label]:mb-1 [&_label]:text-xs'
 const FIELD_STACK = cn('w-full space-y-1.5', FIELD_LABEL)
 const TYPE_PAIR_ROW = cn('grid w-full grid-cols-2 items-end gap-2', FIELD_LABEL)
 const CARD_SECONDARY_ROW = cn('grid w-full items-end gap-2', FIELD_LABEL)
-
-type PaymentFieldState = {
-  paymentAmount: string
-  cardNumber: string
-  cvv: string
-  expMonth: string
-  expYear: string
-  billingAddress: string
-  zipCode: string
-  accountNumber: string
-}
-
-function createEmptyPaymentFields (amountDue: string): PaymentFieldState {
-  return {
-    paymentAmount: amountDue,
-    cardNumber: '',
-    cvv: '',
-    expMonth: EXPIRATION_MONTHS[0],
-    expYear: String(new Date().getFullYear()),
-    billingAddress: '',
-    zipCode: '',
-    accountNumber: ''
-  }
-}
 
 function ExpirationFields ({
   expMonth,
@@ -132,6 +111,37 @@ function PaymentTypeField ({
   )
 }
 
+function PaymentAmountField ({
+  value,
+  onChange,
+  disabled
+}: {
+  value: string
+  onChange: (value: string) => void
+  disabled?: boolean
+}) {
+  return (
+    <FormField
+      label='Payment Amount'
+      htmlFor='payment-amount'
+      className='min-w-0'
+    >
+      <Input
+        id='payment-amount'
+        value={value}
+        onChange={event => onChange(event.target.value)}
+        onBlur={event => {
+          const parsed = parseReservationMoney(event.target.value)
+          onChange(formatReservationMoney(parsed))
+        }}
+        className={cn(COMPACT_INPUT, 'tabular-nums')}
+        inputMode='decimal'
+        disabled={disabled}
+      />
+    </FormField>
+  )
+}
+
 function CreditCardNumberField ({
   value,
   onChange
@@ -210,10 +220,10 @@ function CreditCardSecondaryRow ({
   onFieldChange,
   showZip = false
 }: {
-  fields: PaymentFieldState
-  onFieldChange: <K extends keyof PaymentFieldState>(
+  fields: ReservationPaymentFields
+  onFieldChange: <K extends keyof ReservationPaymentFields>(
     key: K,
-    value: PaymentFieldState[K]
+    value: ReservationPaymentFields[K]
   ) => void
   showZip?: boolean
 }) {
@@ -267,16 +277,22 @@ function CreditCardSecondaryRow ({
 function PaymentFormFields ({
   paymentType,
   onPaymentTypeChange,
+  paymentAmount,
+  onPaymentAmountChange,
   fields,
-  onFieldChange
+  onFieldChange,
+  paymentDisabled
 }: {
   paymentType: ReservationPaymentType
   onPaymentTypeChange: (value: ReservationPaymentType) => void
-  fields: PaymentFieldState
-  onFieldChange: <K extends keyof PaymentFieldState>(
+  paymentAmount: string
+  onPaymentAmountChange: (value: string) => void
+  fields: ReservationPaymentFields
+  onFieldChange: <K extends keyof ReservationPaymentFields>(
     key: K,
-    value: PaymentFieldState[K]
+    value: ReservationPaymentFields[K]
   ) => void
+  paymentDisabled?: boolean
 }) {
   const layout = getPaymentDetailLayout(paymentType)
 
@@ -288,11 +304,17 @@ function PaymentFormFields ({
             paymentType={paymentType}
             onPaymentTypeChange={onPaymentTypeChange}
           />
-          <CreditCardNumberField
-            value={fields.cardNumber}
-            onChange={value => onFieldChange('cardNumber', value)}
+          <PaymentAmountField
+            value={paymentAmount}
+            onChange={onPaymentAmountChange}
+            disabled={paymentDisabled}
           />
         </div>
+
+        <CreditCardNumberField
+          value={fields.cardNumber}
+          onChange={value => onFieldChange('cardNumber', value)}
+        />
 
         <CreditCardSecondaryRow
           fields={fields}
@@ -316,11 +338,17 @@ function PaymentFormFields ({
             paymentType={paymentType}
             onPaymentTypeChange={onPaymentTypeChange}
           />
-          <CreditCardNumberField
-            value={fields.cardNumber}
-            onChange={value => onFieldChange('cardNumber', value)}
+          <PaymentAmountField
+            value={paymentAmount}
+            onChange={onPaymentAmountChange}
+            disabled={paymentDisabled}
           />
         </div>
+
+        <CreditCardNumberField
+          value={fields.cardNumber}
+          onChange={value => onFieldChange('cardNumber', value)}
+        />
 
         <CreditCardSecondaryRow fields={fields} onFieldChange={onFieldChange} />
 
@@ -340,12 +368,18 @@ function PaymentFormFields ({
             paymentType={paymentType}
             onPaymentTypeChange={onPaymentTypeChange}
           />
-          <GiftAccountField
-            paymentType={paymentType}
-            value={fields.accountNumber}
-            onChange={value => onFieldChange('accountNumber', value)}
+          <PaymentAmountField
+            value={paymentAmount}
+            onChange={onPaymentAmountChange}
+            disabled={paymentDisabled}
           />
         </div>
+
+        <GiftAccountField
+          paymentType={paymentType}
+          value={fields.accountNumber}
+          onChange={value => onFieldChange('accountNumber', value)}
+        />
 
         <BillingAddressField
           value={fields.billingAddress}
@@ -362,9 +396,10 @@ function PaymentFormFields ({
           paymentType={paymentType}
           onPaymentTypeChange={onPaymentTypeChange}
         />
-        <BillingAddressField
-          value={fields.billingAddress}
-          onChange={value => onFieldChange('billingAddress', value)}
+        <PaymentAmountField
+          value={paymentAmount}
+          onChange={onPaymentAmountChange}
+          disabled={paymentDisabled}
         />
       </div>
     </div>
@@ -372,14 +407,27 @@ function PaymentFormFields ({
 }
 
 export function ReservationPaymentActions ({
-  onCancel
+  onCancel,
+  onSave,
+  saveDisabled,
+  saving = false,
+  showReprint = false
 }: {
   onCancel?: () => void
+  onSave?: () => void
+  saveDisabled?: boolean
+  saving?: boolean
+  showReprint?: boolean
 }) {
   return (
     <div className='flex flex-wrap items-center gap-2'>
-      <Button type='button' size='sm'>
-        Save
+      <Button
+        type='button'
+        size='sm'
+        onClick={onSave}
+        disabled={saveDisabled || saving}
+      >
+        {saving ? 'Saving...' : 'Save'}
       </Button>
       <Button
         type='button'
@@ -389,30 +437,35 @@ export function ReservationPaymentActions ({
       >
         Cancel
       </Button>
-      <Button type='button' size='sm' variant='outline' className='ml-auto'>
-        Re Print Ticket
-      </Button>
+      {showReprint ? (
+        <Button type='button' size='sm' variant='outline' className='ml-auto'>
+          Re Print Ticket
+        </Button>
+      ) : null}
     </div>
   )
 }
 
-export function ReservationPaymentPanel ({ amountDue }: { amountDue: string }) {
-  const [paymentType, setPaymentType] = useState<ReservationPaymentType>('credit-card')
-  const [fields, setFields] = useState<PaymentFieldState>(() =>
-    createEmptyPaymentFields(amountDue)
-  )
-
-  useEffect(() => {
-    setFields(createEmptyPaymentFields(amountDue))
-  }, [paymentType, amountDue])
-
-  function updateField<K extends keyof PaymentFieldState> (
+export function ReservationPaymentPanel ({
+  paymentType,
+  onPaymentTypeChange,
+  paymentAmount,
+  onPaymentAmountChange,
+  fields,
+  onFieldChange,
+  paymentDisabled = false
+}: {
+  paymentType: ReservationPaymentType
+  onPaymentTypeChange: (value: ReservationPaymentType) => void
+  paymentAmount: string
+  onPaymentAmountChange: (value: string) => void
+  fields: ReservationPaymentFields
+  onFieldChange: <K extends keyof ReservationPaymentFields>(
     key: K,
-    value: PaymentFieldState[K]
-  ) {
-    setFields(current => ({ ...current, [key]: value }))
-  }
-
+    value: ReservationPaymentFields[K]
+  ) => void
+  paymentDisabled?: boolean
+}) {
   return (
     <div className='space-y-1.5 border-t border-border/50 pt-3'>
       <h3 className='text-sm font-semibold text-foreground'>
@@ -422,9 +475,12 @@ export function ReservationPaymentPanel ({ amountDue }: { amountDue: string }) {
       <div className='rounded-lg border border-border/60 p-2.5'>
         <PaymentFormFields
           paymentType={paymentType}
-          onPaymentTypeChange={setPaymentType}
+          onPaymentTypeChange={onPaymentTypeChange}
+          paymentAmount={paymentAmount}
+          onPaymentAmountChange={onPaymentAmountChange}
           fields={fields}
-          onFieldChange={updateField}
+          onFieldChange={onFieldChange}
+          paymentDisabled={paymentDisabled}
         />
       </div>
     </div>
