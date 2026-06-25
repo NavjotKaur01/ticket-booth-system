@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 
 import type { ComicInfo } from "@/data/comedian-info"
 import type { CalendarEvent } from "@/data/calendarEvents"
@@ -63,6 +63,7 @@ export default function EditComicDialog({
       open={open}
       onOpenChange={onOpenChange}
       stageName={dialogData?.stageName ?? event.performer}
+      nested
       isLoading={isLoading || !dialogData}
       onSave={
         dialogData
@@ -72,3 +73,4 @@ export default function EditComicDialog({
     />
   )
 }
+
