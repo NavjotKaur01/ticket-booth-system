@@ -13,6 +13,7 @@ import type { RowSelectionState } from '@tanstack/react-table'
 import {
   IconActionButton
 } from '@/components/forms/form-fields'
+import { ShowTimePicker } from '@/components/common/show-time-picker'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -405,51 +406,6 @@ function OriginSegmentedControl ({
   )
 }
 
-function ShowTimePicker ({
-  showTime,
-  onShowTimeChange
-}: {
-  showTime: string
-  onShowTimeChange: (value: string) => void
-}) {
-  return (
-    <div className='flex w-auto shrink-0 items-stretch gap-1.5'>
-      {showOptions.map(show => {
-        const isSelected = showTime === show.id
-
-        return (
-          <button
-            key={show.id}
-            type='button'
-            title={show.label}
-            onClick={() => onShowTimeChange(show.id)}
-            className={cn(
-              'flex w-[6.75rem] shrink-0 flex-col rounded-lg px-2.5 py-2 text-left transition-colors',
-              isSelected
-                ? 'bg-primary text-primary-foreground'
-                : 'border border-border/60 bg-background text-foreground hover:bg-muted/30'
-            )}
-          >
-            <span className='truncate text-sm font-semibold'>
-              {show.time ?? show.label}
-            </span>
-            <span
-              className={cn(
-                'truncate text-xs',
-                isSelected
-                  ? 'text-primary-foreground/85'
-                  : 'text-muted-foreground'
-              )}
-            >
-              {show.subtitle ?? 'Main Theater'}
-            </span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
 function BookingOptionsBar ({
   showTime,
   onShowTimeChange
@@ -462,6 +418,7 @@ function BookingOptionsBar ({
       <span className={INLINE_LABEL}>Show / Time</span>
       <div className='flex min-w-0 items-center gap-2 overflow-hidden'>
         <ShowTimePicker
+          shows={showOptions}
           showTime={showTime}
           onShowTimeChange={onShowTimeChange}
         />

@@ -1,10 +1,11 @@
-import { FileDown, Printer } from "lucide-react"
+import { FileDown, Plus, Printer, Zap } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
 import { checkInRecords } from "@/data/check-in"
-import { showOptions } from "@/data/reservation"
+import { reservationShowMeta, showOptions } from "@/data/reservation"
+import { CheckInTabBar } from "@/features/check-in/check-in-tab-bar"
 import {
   CheckInTabs,
   type CheckInTab,
@@ -17,12 +18,10 @@ import { CheckInToolbar } from "@/features/check-in/toolbar"
 import { AddReservationDialog } from "@/features/reservations/add-reservation-dialog"
 import { filterCheckInRecords } from "@/lib/filter-check-in"
 
-// Check-In page: booth tools tab and reservation guest-list tab.
 export function CheckIn() {
   const [activeTab, setActiveTab] = useState<CheckInTab>("check-in")
 
-  // --- Show context (which performance is being checked in) ---
-  const [showDate, setShowDate] = useState("2026-06-18")
+  const [showDate, setShowDate] = useState(reservationShowMeta.showDateInput)
   const [showTime, setShowTime] = useState(showOptions[0]?.id ?? "")
   const [refreshValue, setRefreshValue] = useState("999")
   const [cancelled, setCancelled] = useState(false)
@@ -30,7 +29,6 @@ export function CheckIn() {
   const [cancelledShow, setCancelledShow] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
 
-  // --- Search criteria for finding an existing reservation ---
   const [lastName, setLastName] = useState("")
   const [firstName, setFirstName] = useState("")
   const [ccLast4, setCcLast4] = useState("")
@@ -58,10 +56,38 @@ export function CheckIn() {
   }
 
   return (
-    <div className="space-y-2">
-      <CheckInTabs
+    <div className="space-y-3">
+      <CheckInTabBar
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        actions={
+          activeTab === "check-in" ? (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 gap-1.5"
+                onClick={() => setAddOpen(true)}
+              >
+                <Plus className="size-3.5" />
+                Add Reservation
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1.5 border-emerald-600 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+              >
+                <Zap className="size-3.5" />
+                Express Walkup
+              </Button>
+            </>
+          ) : undefined
+        }
+      />
+
+      <CheckInTabs
+        activeTab={activeTab}
         checkInPanel={
           <div className="space-y-2">
             <CheckInToolbar
@@ -77,7 +103,6 @@ export function CheckIn() {
               onDisplayCheckedInChange={setDisplayCheckedIn}
               cancelledShow={cancelledShow}
               onCancelledShowChange={setCancelledShow}
-              onAddReservation={() => setAddOpen(true)}
             />
 
             <PanelCard>
@@ -94,6 +119,9 @@ export function CheckIn() {
                 onPhoneNoChange={setPhoneNo}
                 onClear={clearSearch}
               />
+            </PanelCard>
+
+            <PanelCard>
               <CheckInExpressPanel />
             </PanelCard>
           </div>
