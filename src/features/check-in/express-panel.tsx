@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { promoOptions, sectionOptions } from "@/data/reservation"
+import { ProcessPaymentDialog } from "@/features/check-in/dialogs/process-payment-dialog"
 import { SalesTransactionDialog } from "@/features/check-in/dialogs/sales-transaction-dialog"
 import { PaymentNumberFieldset } from "@/features/check-in/payment-number-fieldset"
 import {
@@ -175,20 +176,37 @@ export function CheckInExpressPanel() {
       </div>
 
       {activeTransaction ? (
-        <SalesTransactionDialog
-          key={`${activeTransaction.paymentType}-${activeTransaction.quantity}-${transactionTotals.paymentDue}`}
-          open
-          onOpenChange={(nextOpen) => {
-            if (!nextOpen) {
-              setActiveTransaction(null)
-            }
-          }}
-          paymentType={activeTransaction.paymentType}
-          paymentDue={transactionTotals.paymentDue}
-          onOk={handleSalesTransactionOk}
-        />
+        activeTransaction.paymentType === "Cash" ? (
+          <SalesTransactionDialog
+            key={`${activeTransaction.paymentType}-${activeTransaction.quantity}-${transactionTotals.paymentDue}`}
+            open
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) {
+                setActiveTransaction(null)
+              }
+            }}
+            paymentType={activeTransaction.paymentType}
+            paymentDue={transactionTotals.paymentDue}
+            onOk={handleSalesTransactionOk}
+          />
+        ) : (
+          <ProcessPaymentDialog
+            key={`${activeTransaction.paymentType}-${activeTransaction.quantity}-${transactionTotals.paymentDue}`}
+            open
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) {
+                setActiveTransaction(null)
+              }
+            }}
+            quantity={activeTransaction.quantity}
+            paymentAmount={transactionTotals.total}
+            onOk={handleSalesTransactionOk}
+          />
+        )
       ) : null}
     </>
   )
 }
+
+
 
