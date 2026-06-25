@@ -7,10 +7,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import type { Customer } from "@/types/customer"
 
-const CUSTOMER_ACTIONS = ["Edit", "Delete"] as const
+type CustomerRowActionsMenuProps = {
+  customer: Customer
+  onDetails?: (customer: Customer) => void
+  onEdit?: (customer: Customer) => void
+  onDelete?: (customer: Customer) => void
+}
 
-export function CustomerRowActionsMenu() {
+export function CustomerRowActionsMenu({
+  customer,
+  onDetails,
+  onEdit,
+  onDelete,
+}: CustomerRowActionsMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -20,14 +31,19 @@ export function CustomerRowActionsMenu() {
           size="icon-sm"
           className="bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
           aria-label="Customer actions"
+          onClick={(event) => event.stopPropagation()}
         >
           <MoreVertical className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[8rem]">
-        {CUSTOMER_ACTIONS.map((action) => (
-          <DropdownMenuItem key={action}>{action}</DropdownMenuItem>
-        ))}
+        <DropdownMenuItem onSelect={() => onDetails?.(customer)}>
+          Details
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onEdit?.(customer)}>Edit</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onDelete?.(customer)}>
+          Delete
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -29,6 +29,8 @@ export type ShowOption = {
   time?: string
   /** Secondary line under the time (e.g. venue or show type). */
   subtitle?: string
+  /** Formatted headliner name for the selected show. */
+  headliner?: string
 }
 
 export type SectionTone = 'regular' | 'vip'
@@ -41,6 +43,18 @@ export type SectionOption = {
   seats: number
   available: number
   tone: SectionTone
+}
+
+export type ReservationSectionOption = SectionOption & {
+  showId: string
+  showDetId: string
+  showSec: string
+  showPrice: number
+  showDinner: string
+  dayOfShowFee: number
+  phoneInFee: number
+  walkUpFee: number
+  webFee: number
 }
 
 export type ReservationCounts = {

@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button"
 import { customers } from "@/data/customers"
 import { AddCustomerDialog } from "@/features/customers/add-customer-dialog"
 import { CustomerDataTable } from "@/features/customers/customer-data-table"
+import { CustomerDetailsDialog } from "@/features/customers/customer-details-dialog"
 import { CustomerSearchToolbar } from "@/features/customers/customer-search-toolbar"
 import { useAppSession } from "@/hooks/use-app-session"
 import { customerFormToSearchFilters } from "@/lib/build-save-customer-request"
 import { filterCustomers } from "@/lib/filter-customers"
-import type { CustomerSearchFilters } from "@/types/customer"
+import type { Customer, CustomerSearchFilters } from "@/types/customer"
 import type { CustomerFormValues } from "@/types/customer-form"
 
 const EMPTY_FILTERS: CustomerSearchFilters = {
@@ -30,6 +31,8 @@ export function CommentCards() {
   const [appliedFilters, setAppliedFilters] =
     useState<CustomerSearchFilters>(EMPTY_FILTERS)
   const [addOpen, setAddOpen] = useState(false)
+  const [detailsCustomer, setDetailsCustomer] = useState<Customer | null>(null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
 
   const filteredCustomers = useMemo(
     () => filterCustomers(customers, appliedFilters),
@@ -56,6 +59,18 @@ export function CommentCards() {
     const filters = customerFormToSearchFilters(form)
     setDraftFilters(filters)
     setAppliedFilters(filters)
+  }
+
+  function handleOpenDetails(customer: Customer) {
+    setDetailsCustomer(customer)
+    setDetailsOpen(true)
+  }
+
+  function handleDetailsOpenChange(open: boolean) {
+    setDetailsOpen(open)
+    if (!open) {
+      setDetailsCustomer(null)
+    }
   }
 
   return (
@@ -102,8 +117,21 @@ export function CommentCards() {
           </div>
         </div>
 
-        <CustomerDataTable data={filteredCustomers} />
+        <CustomerDataTable
+          data={filteredCustomers}
+          onDetails={handleOpenDetails}
+        />
       </PanelCard>
+
+      <CustomerDetailsDialog
+        open={detailsOpen}
+        onOpenChange={handleDetailsOpenChange}
+        customer={detailsCustomer}
+        connectionName={connectionName}
+        locationId={locationId}
+        lastUpdateId={username}
+        onCustomerSaved={handleCustomerCreated}
+      />
 
       <AddCustomerDialog
         open={addOpen}

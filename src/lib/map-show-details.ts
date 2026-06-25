@@ -43,6 +43,9 @@ export function mapShowDetailsToOptions(
     return {
       id: show.ShowId,
       label,
+      time,
+      subtitle: "Main Theater",
+      headliner: headliner || undefined,
     }
   })
 }

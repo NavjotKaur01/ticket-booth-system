@@ -7,6 +7,10 @@ import {
   formatSectionDesktopPrice,
   formatSectionSeatAvailability,
 } from "@/data/reservation"
+import {
+  calculateReservationTotals,
+  formatReservationMoney,
+} from "@/lib/calculate-reservation-totals"
 
 export type AddReservationOption = {
   id: string
@@ -206,25 +210,19 @@ export function calculateAddReservationTotals(
   sectionOptions: AddReservationSectionOption[]
 ): AddReservationTotals {
   const section = sectionOptions.find((option) => option.id === formValues.sectionId)
-  const party = Math.max(0, Number(formValues.party) || 0)
-  const passes = Math.max(0, Number(formValues.passes) || 0)
-  const unitPrice = Number(section?.price.replace(/[^0-9.]/g, "") || 0)
-  const ticketCount = Math.max(party, passes)
-  const subtotal = unitPrice * ticketCount
-  const serviceCharge = subtotal > 0 ? 2 * ticketCount : 0
-  const discount = formValues.promoId === "comedy10" ? subtotal * 0.1 : 0
-  const taxable = Math.max(0, subtotal + serviceCharge - discount)
-  const taxes = taxable * 0.08
-  const total = taxable + taxes
-
-  const formatMoney = (value: number) => `$${value.toFixed(2)}`
+  const totals = calculateReservationTotals({
+    sectionPrice: section?.price ?? "$0.00",
+    party: Math.max(0, Number(formValues.party) || 0),
+    passes: Math.max(0, Number(formValues.passes) || 0),
+    promo: null,
+  })
 
   return {
-    subtotal: formatMoney(subtotal),
-    serviceCharge: formatMoney(serviceCharge),
-    discount: formatMoney(discount),
-    taxes: formatMoney(taxes),
-    total: formatMoney(total),
+    subtotal: formatReservationMoney(totals.subtotal),
+    serviceCharge: formatReservationMoney(totals.serviceCharge),
+    discount: formatReservationMoney(totals.discount),
+    taxes: formatReservationMoney(totals.taxes),
+    total: formatReservationMoney(totals.total),
   }
 }
 
