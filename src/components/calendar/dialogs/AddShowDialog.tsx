@@ -38,6 +38,7 @@ import type {
   ShowTimeOption,
 } from "@/types/calendar-show"
 import type { RecurrenceState } from "@/types/recurrence"
+import type { CalendarEvent } from "@/types/calendar-event"
 import type { ApiDefaultShowSection } from "@/types/api/save-show"
 
 const emptyFormValues: AddShowFormValues = {
@@ -79,12 +80,46 @@ const showDetailCheckboxes: { field: ShowDetailCheckboxField; label: string }[] 
   { field: "showOnWeb", label: "Show On Web" },
 ]
 
+function normalizePerformerName(value: string) {
+  return value.replace(/\s+/g, " ").trim().toLowerCase()
+}
+
+function resolveInitialHeadlinerId(
+  performers: PerformerOption[],
+  initialEvent: CalendarEvent | null | undefined
+) {
+  if (!initialEvent) {
+    return ""
+  }
+
+  if (initialEvent.comicId) {
+    const directMatch = performers.find(
+      (performer) => performer.id === initialEvent.comicId
+    )
+
+    if (directMatch) {
+      return directMatch.id
+    }
+  }
+
+  const candidateNames = [initialEvent.performer, initialEvent.title]
+    .filter(Boolean)
+    .map(normalizePerformerName)
+
+  const nameMatch = performers.find((performer) =>
+    candidateNames.includes(normalizePerformerName(performer.name))
+  )
+
+  return nameMatch?.id ?? ""
+}
+
 type AddShowDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onBack?: () => void
   onSave?: (values: AddShowFormValues) => void
   recurrence: RecurrenceState | null
+  initialEvent?: CalendarEvent | null
   connectionString: string
   locationId: string
   username: string
@@ -291,6 +326,7 @@ export default function AddShowDialog({
   onBack,
   onSave,
   recurrence,
+  initialEvent = null,
   connectionString,
   locationId,
   username,
@@ -331,6 +367,7 @@ export default function AddShowDialog({
         setDialogData(data)
         setFormValues({
           ...emptyFormValues,
+          headlinerId: resolveInitialHeadlinerId(data.performers, initialEvent),
           selectedShowTimeIds: data.showTimes
             .filter((showTime) => showTime.enabled)
             .map((showTime) => showTime.id),
@@ -351,7 +388,7 @@ export default function AddShowDialog({
     return () => {
       isActive = false
     }
-  }, [open, recurrence, connectionString, locationId])
+  }, [open, recurrence, initialEvent, connectionString, locationId])
 
   const performers = dialogData?.performers ?? []
   const showTimes = dialogData?.showTimes ?? []
@@ -680,6 +717,10 @@ export default function AddShowDialog({
     </>
   )
 }
+
+
+
+
 
 
 

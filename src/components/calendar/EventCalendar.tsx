@@ -19,6 +19,7 @@ import CalendarEventCard, {
 } from "./CalendarEvent"
 import CalendarShowMore from "./CalendarShowMore"
 import CalendarToolbar from "./CalendarToolbar"
+import { createTodayFirstMonthView } from "./views/TodayFirstMonthView"
 import {
   getCalendarAction,
   shouldBlockPastDateAction,
@@ -71,6 +72,12 @@ function isTodayOrFuture(date: Date) {
   return getStartOfDay(date) >= getStartOfDay(new Date())
 }
 
+function buildTime(hour: number, minute = 0) {
+  const value = new Date()
+  value.setHours(hour, minute, 0, 0)
+  return value
+}
+
 export default function EventCalendar() {
   const { switchLocation } = useAuth()
   const {
@@ -87,6 +94,8 @@ export default function EventCalendar() {
   const [refreshInterval, setRefreshInterval] = useState(DEFAULT_REFRESH_SECONDS)
   const [calendarDate, setCalendarDate] = useState(() => new Date())
   const [calendarView, setCalendarView] = useState<View>("month")
+  const [shouldShiftInitialCurrentMonth, setShouldShiftInitialCurrentMonth] =
+    useState(true)
   const [recurrenceDate, setRecurrenceDate] = useState<Date | null>(null)
   const [recurrenceState, setRecurrenceState] = useState<RecurrenceState | null>(null)
   const [recurrenceError, setRecurrenceError] = useState<string | null>(null)
@@ -98,6 +107,7 @@ export default function EventCalendar() {
   const [adjustSeatsEvent, setAdjustSeatsEvent] = useState<CalendarEvent | null>(null)
   const [cancelShowEvent, setCancelShowEvent] = useState<CalendarEvent | null>(null)
   const [editComicEvent, setEditComicEvent] = useState<CalendarEvent | null>(null)
+  const [editShowEvent, setEditShowEvent] = useState<CalendarEvent | null>(null)
   const [editShowRecurrence, setEditShowRecurrence] = useState<RecurrenceState | null>(null)
   const [moveShowEvent, setMoveShowEvent] = useState<CalendarEvent | null>(null)
   const [privatePreSaleEvent, setPrivatePreSaleEvent] = useState<CalendarEvent | null>(null)
@@ -129,6 +139,26 @@ export default function EventCalendar() {
     showCancelled,
     refreshInterval,
     isReady
+  )
+
+  useEffect(() => {
+    if (
+      shouldShiftInitialCurrentMonth &&
+      !dayjs(calendarDate).isSame(dayjs(), "month")
+    ) {
+      setShouldShiftInitialCurrentMonth(false)
+    }
+  }, [calendarDate, shouldShiftInitialCurrentMonth])
+
+  const defaultMinTime = useMemo(() => buildTime(0), [])
+  const defaultMaxTime = useMemo(() => buildTime(23, 59), [])
+  const defaultScrollTime = useMemo(() => buildTime(8), [])
+  const calendarViews = useMemo(
+    () => ({
+      month: createTodayFirstMonthView(shouldShiftInitialCurrentMonth),
+      week: true,
+    }),
+    [shouldShiftInitialCurrentMonth]
   )
 
   const suppressNextSlotSelection = useCallback(() => {
@@ -226,6 +256,7 @@ export default function EventCalendar() {
       }
 
       if (action.dialog === "editShow") {
+        setEditShowEvent(event)
         setEditShowRecurrence(mapCalendarEventToRecurrenceState(event))
         setIsEditShowOpen(true)
         return
@@ -284,6 +315,7 @@ export default function EventCalendar() {
   }, [refetch])
 
   const handleEditShowSaved = useCallback(() => {
+    setEditShowEvent(null)
     setEditShowRecurrence(null)
     refetch()
   }, [refetch])
@@ -291,6 +323,7 @@ export default function EventCalendar() {
   const handleEditShowOpenChange = useCallback((open: boolean) => {
     setIsEditShowOpen(open)
     if (!open) {
+      setEditShowEvent(null)
       setEditShowRecurrence(null)
     }
   }, [])
@@ -387,7 +420,10 @@ export default function EventCalendar() {
         onNavigate={setCalendarDate}
         view={calendarView}
         onView={setCalendarView}
-        views={["month", "week"]}
+        views={calendarViews}
+        min={defaultMinTime}
+        max={defaultMaxTime}
+        scrollToTime={defaultScrollTime}
         showAllEvents={false}
         className="min-h-0 flex-1"
         components={components}
@@ -423,6 +459,7 @@ export default function EventCalendar() {
         isEditShowOpen={isEditShowOpen}
         onEditShowOpenChange={handleEditShowOpenChange}
         editShowRecurrence={editShowRecurrence}
+        editShowEvent={editShowEvent}
         onEditShowSaved={handleEditShowSaved}
         isMoveShowOpen={isMoveShowOpen}
         setIsMoveShowOpen={setIsMoveShowOpen}
@@ -455,3 +492,9 @@ export default function EventCalendar() {
     </div>
   )
 }
+
+
+
+
+
+

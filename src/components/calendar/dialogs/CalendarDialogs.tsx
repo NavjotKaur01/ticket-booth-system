@@ -45,6 +45,7 @@ type CalendarDialogsProps = {
   isEditShowOpen: boolean
   onEditShowOpenChange: (open: boolean) => void
   editShowRecurrence: RecurrenceState | null
+  editShowEvent: CalendarEvent | null
   onEditShowSaved?: () => void
   isMoveShowOpen: boolean
   setIsMoveShowOpen: (open: boolean) => void
@@ -103,6 +104,7 @@ export default function CalendarDialogs({
   isEditShowOpen,
   onEditShowOpenChange,
   editShowRecurrence,
+  editShowEvent,
   onEditShowSaved,
   isMoveShowOpen,
   setIsMoveShowOpen,
@@ -179,6 +181,7 @@ export default function CalendarDialogs({
         open={isEditShowOpen}
         onOpenChange={onEditShowOpenChange}
         recurrence={editShowRecurrence}
+        initialEvent={editShowEvent}
         connectionString={connectionString}
         locationId={locationId}
         username={username}
