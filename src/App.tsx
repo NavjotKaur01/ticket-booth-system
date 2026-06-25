@@ -16,6 +16,7 @@ import { Users } from "@/pages/users"
 import { BusinessContacts } from "@/pages/business-contacts"
 import { CommentCards } from "@/pages/comment-cards"
 import { GiftCards } from "@/pages/gift-cards"
+import { GiftCertificate } from "@/pages/gift-certificate"
 import { Reports } from "@/pages/reports"
 import { Transactions } from "@/pages/transactions"
 import { TicketDefault } from "@/pages/ticket-default"
@@ -63,6 +64,7 @@ function App() {
             <Route path="business-contacts" element={<BusinessContacts />} />
             <Route path="comment-cards" element={<CommentCards />} />
             <Route path="gift-cards" element={<GiftCards />} />
+            <Route path="gift-certificate" element={<GiftCertificate />} />
           </Route>
         </Route>
       </Routes>
