@@ -15,10 +15,13 @@ import { performers as initialPerformers } from "@/data/performers"
 import { AddPerformerDialog } from "@/features/performers/add-performer-dialog"
 import { PerformerDataTable } from "@/features/performers/performer-data-table"
 import { PerformerFiltersCard } from "@/features/performers/performer-filters-card"
+import { UpdatePerformerDialog } from "@/features/performers/update-performer-dialog"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useLocations } from "@/hooks/use-locations"
 import { filterPerformers } from "@/lib/filter-performers"
+import { mapUpdateFormToPerformer } from "@/lib/map-performer-form"
 import type { Performer, PerformerFilters } from "@/types/performer"
+import type { UpdatePerformerFormValues } from "@/types/performer-form"
 
 export function Performers() {
   const { clubSlug, locationId } = useAppSession()
@@ -33,15 +36,34 @@ export function Performers() {
   })
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [addOpen, setAddOpen] = useState(false)
+  const [editingPerformer, setEditingPerformer] = useState<Performer | null>(
+    null
+  )
 
   useEffect(() => {
-    if (locationId) {
-      setFilters((current) =>
-        current.locationId === locationId
-          ? current
-          : { ...current, locationId }
-      )
+    if (!locationId) {
+      return
     }
+
+    setFilters((current) =>
+      current.locationId === locationId
+        ? current
+        : { ...current, locationId }
+    )
+
+    // Static seed data uses a placeholder location id; align it with the
+    // signed-in location so the default filter does not hide every row.
+    setRows((current) => {
+      const usesPlaceholderLocation = current.every(
+        (row) => row.locationId === "standupmedia"
+      )
+
+      if (!usesPlaceholderLocation) {
+        return current
+      }
+
+      return current.map((row) => ({ ...row, locationId }))
+    })
   }, [locationId])
 
   const filteredPerformers = useMemo(
@@ -72,6 +94,36 @@ export function Performers() {
       )
     )
     setRowSelection({})
+  }
+
+  function handleEditPerformer(performer: Performer) {
+    setEditingPerformer(performer)
+  }
+
+  function handleDeletePerformer(performer: Performer) {
+    setRows((current) => current.filter((row) => row.id !== performer.id))
+    setRowSelection((current) => {
+      if (!current[performer.id]) {
+        return current
+      }
+
+      const next = { ...current }
+      delete next[performer.id]
+      return next
+    })
+  }
+
+  function handlePerformerUpdated(
+    performer: Performer,
+    form: UpdatePerformerFormValues
+  ) {
+    const updatedPerformer = mapUpdateFormToPerformer(performer, form)
+
+    setRows((current) =>
+      current.map((row) =>
+        row.id === performer.id ? updatedPerformer : row
+      )
+    )
   }
 
   return (
@@ -136,10 +188,23 @@ export function Performers() {
           data={filteredPerformers}
           rowSelection={rowSelection}
           onRowSelectionChange={setRowSelection}
+          onEdit={handleEditPerformer}
+          onDelete={handleDeletePerformer}
         />
       </PanelCard>
 
       <AddPerformerDialog open={addOpen} onOpenChange={setAddOpen} />
+
+      <UpdatePerformerDialog
+        open={editingPerformer !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingPerformer(null)
+          }
+        }}
+        performer={editingPerformer}
+        onUpdate={handlePerformerUpdated}
+      />
     </div>
   )
 }

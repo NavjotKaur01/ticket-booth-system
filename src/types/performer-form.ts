@@ -9,6 +9,16 @@ export type PerformerFormValues = {
   embeddedVideoCode: string
 }
 
+export type UpdatePerformerFormValues = PerformerFormValues & {
+  useGlobalPicture: boolean
+  useGlobalBio: boolean
+  globalBio: string
+  localImageFileName: string
+  globalImageFileName: string
+  comicSliderPicFileName: string
+  comicBannerPicFileName: string
+}
+
 export const EMPTY_PERFORMER_FORM: PerformerFormValues = {
   firstName: "",
   lastName: "",
@@ -18,4 +28,15 @@ export const EMPTY_PERFORMER_FORM: PerformerFormValues = {
   facebookPage: "",
   twitterName: "",
   embeddedVideoCode: "",
+}
+
+export const EMPTY_UPDATE_PERFORMER_FORM: UpdatePerformerFormValues = {
+  ...EMPTY_PERFORMER_FORM,
+  useGlobalPicture: true,
+  useGlobalBio: true,
+  globalBio: "",
+  localImageFileName: "",
+  globalImageFileName: "",
+  comicSliderPicFileName: "",
+  comicBannerPicFileName: "",
 }
