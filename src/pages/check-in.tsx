@@ -11,6 +11,7 @@ import {
   type CheckInTab,
 } from "@/features/check-in/check-in-tabs"
 import { CheckInDataTable } from "@/features/check-in/data-table"
+import { ExpressWalkupDialog } from "@/features/check-in/dialogs/express-walkup-dialog"
 import { CheckInExpressPanel } from "@/features/check-in/express-panel"
 import { CheckInSearchCriteria } from "@/features/check-in/search-criteria"
 import { CheckInStatusLegend } from "@/features/check-in/status-legend"
@@ -28,6 +29,7 @@ export function CheckIn() {
   const [displayCheckedIn, setDisplayCheckedIn] = useState(false)
   const [cancelledShow, setCancelledShow] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const [expressWalkupOpen, setExpressWalkupOpen] = useState(false)
 
   const [lastName, setLastName] = useState("")
   const [firstName, setFirstName] = useState("")
@@ -77,6 +79,7 @@ export function CheckIn() {
                 size="sm"
                 variant="outline"
                 className="h-8 gap-1.5 border-emerald-600 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                onClick={() => setExpressWalkupOpen(true)}
               >
                 <Zap className="size-3.5" />
                 Express Walkup
@@ -145,6 +148,13 @@ export function CheckIn() {
       />
 
       <AddReservationDialog open={addOpen} onOpenChange={setAddOpen} />
+      <ExpressWalkupDialog
+        open={expressWalkupOpen}
+        onOpenChange={setExpressWalkupOpen}
+        showDate={showDate}
+        showTimeId={showTime}
+        shows={showOptions}
+      />
     </div>
   )
 }
