@@ -27,6 +27,8 @@ export type ShowOption = {
   label: string
   /** Short time label for chip buttons (e.g. "7:30 PM"). */
   time?: string
+  /** Secondary line under the time (e.g. venue or show type). */
+  subtitle?: string
 }
 
 export type SectionTone = 'regular' | 'vip'

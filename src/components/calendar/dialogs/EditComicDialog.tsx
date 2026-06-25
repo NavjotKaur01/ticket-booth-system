@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 
+import type { ComicInfo } from "@/data/comedian-info"
 import type { CalendarEvent } from "@/data/calendarEvents"
 import { ComicInfoDialog } from "@/features/reservations/comic-info-dialog"
 
@@ -65,7 +66,7 @@ export default function EditComicDialog({
       isLoading={isLoading || !dialogData}
       onSave={
         dialogData
-          ? (values) => saveEditComicInfo(dialogData.eventId, values)
+          ? (values: ComicInfo) => saveEditComicInfo(dialogData.eventId, values)
           : undefined
       }
     />

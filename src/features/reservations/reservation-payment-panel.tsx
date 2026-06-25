@@ -397,7 +397,7 @@ export function ReservationPaymentActions ({
 }
 
 export function ReservationPaymentPanel ({ amountDue }: { amountDue: string }) {
-  const [paymentType, setPaymentType] = useState<ReservationPaymentType>('cash')
+  const [paymentType, setPaymentType] = useState<ReservationPaymentType>('credit-card')
   const [fields, setFields] = useState<PaymentFieldState>(() =>
     createEmptyPaymentFields(amountDue)
   )
