@@ -30,7 +30,9 @@ import {
 } from "@/types/search-reservation"
 
 const INPUT_CLASS = "h-9 w-full min-w-0"
-const FIELD_CLASS = "min-w-0 w-full"
+const CUSTOMER_FIELD_CLASS = "min-w-0 flex-1 basis-[8.5rem]"
+const CUSTOMER_PHONE_FIELD_CLASS = "min-w-0 flex-[1.35] basis-[12rem]"
+const SINGLE_FIELD_CLASS = "min-w-0 w-full sm:max-w-xs sm:flex-1 sm:basis-[12rem]"
 
 type SearchReservationDialogProps = {
   open: boolean
@@ -123,7 +125,7 @@ export function SearchReservationDialog({
           <FormField
             label="Confirmation Number"
             htmlFor="search-confirmation-number"
-            className={`${FIELD_CLASS} sm:max-w-xs`}
+            className={SINGLE_FIELD_CLASS}
           >
             <Input
               id="search-confirmation-number"
@@ -143,7 +145,7 @@ export function SearchReservationDialog({
             <FormField
               label="Last Name"
               htmlFor="search-last-name"
-              className={FIELD_CLASS}
+              className={CUSTOMER_FIELD_CLASS}
             >
               <Input
                 id="search-last-name"
@@ -158,7 +160,7 @@ export function SearchReservationDialog({
             <FormField
               label="First Name"
               htmlFor="search-first-name"
-              className={FIELD_CLASS}
+              className={CUSTOMER_FIELD_CLASS}
             >
               <Input
                 id="search-first-name"
@@ -170,7 +172,7 @@ export function SearchReservationDialog({
                 className={INPUT_CLASS}
               />
             </FormField>
-            <FormField label="Phone" className={FIELD_CLASS}>
+            <FormField label="Phone" className={CUSTOMER_PHONE_FIELD_CLASS}>
               <PhoneInputGroup
                 idPrefix="search-phone"
                 value={{
@@ -188,7 +190,7 @@ export function SearchReservationDialog({
             <FormField
               label="Since"
               htmlFor="search-since"
-              className={FIELD_CLASS}
+              className={CUSTOMER_FIELD_CLASS}
             >
               <Input
                 id="search-since"
@@ -208,7 +210,7 @@ export function SearchReservationDialog({
           <FormField
             label="Comedian"
             htmlFor="search-comedian"
-            className={`${FIELD_CLASS} sm:max-w-xs`}
+            className={SINGLE_FIELD_CLASS}
           >
             <Input
               id="search-comedian"
@@ -227,7 +229,7 @@ export function SearchReservationDialog({
           <FormField
             label="Show Date"
             htmlFor="search-show-date"
-            className={`${FIELD_CLASS} sm:max-w-xs`}
+            className={SINGLE_FIELD_CLASS}
           >
             <Input
               id="search-show-date"
@@ -246,7 +248,7 @@ export function SearchReservationDialog({
           <FormField
             label="Payment Reference"
             htmlFor="search-payment-reference"
-            className={`${FIELD_CLASS} sm:max-w-xs`}
+            className={SINGLE_FIELD_CLASS}
           >
             <Input
               id="search-payment-reference"
@@ -267,8 +269,6 @@ export function SearchReservationDialog({
 
   const criteriaTitle =
     draftFilters.option === "customer" ? "Customer Search" : "Search Criteria"
-
-  const isCustomerSearch = draftFilters.option === "customer"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -315,16 +315,8 @@ export function SearchReservationDialog({
 
               <div className="border-t border-border/60 pt-4">
                 <FormSection title={criteriaTitle} className="space-y-3">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:gap-3">
-                    <div
-                      className={
-                        isCustomerSearch
-                          ? "grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
-                          : "min-w-0 flex-1"
-                      }
-                    >
-                      {renderCriteriaFields()}
-                    </div>
+                  <div className="flex flex-wrap items-end gap-2">
+                    {renderCriteriaFields()}
                     <SearchCriteriaActions onClear={handleClear} />
                   </div>
                 </FormSection>

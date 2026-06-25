@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { PanelCard } from "@/components/common/panel-card"
 import { DataTable } from "@/components/data-table/data-table"
 import {
-  FILTER_SELECT_CLASS,
+  createFilterSearchHandlers,
   FormField,
   FormSection,
   IconActionButton,
@@ -34,9 +34,31 @@ import {
   type PaymentHistorySearchBy,
 } from "@/types/payment-history"
 
+const INPUT_CLASS = "h-9 w-full min-w-0"
+const FILTER_FIELD_CLASS = "min-w-0 flex-1 basis-[9rem] sm:max-w-xs"
+
 type PaymentHistoryDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+}
+
+function SearchCriteriaActions({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="flex shrink-0 items-center gap-1.5">
+      <IconActionButton
+        label="Search"
+        icon={Search}
+        variant="default"
+        type="submit"
+      />
+      <IconActionButton
+        label="Clear"
+        icon={X}
+        variant="outline"
+        onClick={onClear}
+      />
+    </div>
+  )
 }
 
 export function PaymentHistoryDialog({
@@ -50,6 +72,20 @@ export function PaymentHistoryDialog({
     DEFAULT_PAYMENT_HISTORY_FILTERS
   )
   const [searched, setSearched] = useState(false)
+
+  function handleSearch() {
+    setAppliedFilters(draftFilters)
+    setSearched(true)
+  }
+
+  function handleClear() {
+    setDraftFilters(DEFAULT_PAYMENT_HISTORY_FILTERS)
+    setAppliedFilters(DEFAULT_PAYMENT_HISTORY_FILTERS)
+    setSearched(true)
+  }
+
+  const { handleSubmit, handleInputKeyDown } =
+    createFilterSearchHandlers(handleSearch)
 
   useEffect(() => {
     if (!open) {
@@ -81,16 +117,10 @@ export function PaymentHistoryDialog({
     setDraftFilters((current) => ({ ...current, [field]: value }))
   }
 
-  function handleSearch() {
-    setAppliedFilters(draftFilters)
-    setSearched(true)
-  }
-
-  function handleClear() {
-    setDraftFilters(DEFAULT_PAYMENT_HISTORY_FILTERS)
-    setAppliedFilters(DEFAULT_PAYMENT_HISTORY_FILTERS)
-    setSearched(true)
-  }
+  const searchValueLabel =
+    PAYMENT_HISTORY_SEARCH_BY_OPTIONS.find(
+      (option) => option.value === draftFilters.searchBy
+    )?.label ?? "Search Value"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -112,71 +142,64 @@ export function PaymentHistoryDialog({
           </div>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
           <PanelCard>
-            <FormSection title="Search Criteria" className="space-y-1.5 border-b p-3">
-              <div className="flex flex-wrap items-end gap-2">
-                <FormField
-                  label="Search By"
-                  htmlFor="payment-search-by"
-                  className="w-full sm:w-44"
-                >
-                  <Select
-                    value={draftFilters.searchBy}
-                    onValueChange={(value) =>
-                      updateDraftField(
-                        "searchBy",
-                        value as PaymentHistorySearchBy
-                      )
-                    }
+            <form className="p-3" onSubmit={handleSubmit}>
+              <FormSection title="Search Criteria" className="space-y-3">
+                <div className="flex flex-wrap items-end gap-2">
+                  <FormField
+                    label="Search By"
+                    htmlFor="payment-search-by"
+                    className={FILTER_FIELD_CLASS}
                   >
-                    <SelectTrigger
-                      id="payment-search-by"
-                      className={FILTER_SELECT_CLASS}
+                    <Select
+                      value={draftFilters.searchBy}
+                      onValueChange={(value) =>
+                        updateDraftField(
+                          "searchBy",
+                          value as PaymentHistorySearchBy
+                        )
+                      }
                     >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PAYMENT_HISTORY_SEARCH_BY_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormField>
+                      <SelectTrigger
+                        id="payment-search-by"
+                        className={INPUT_CLASS}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAYMENT_HISTORY_SEARCH_BY_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
 
-                <FormField
-                  label={
-                    PAYMENT_HISTORY_SEARCH_BY_OPTIONS.find(
-                      (option) => option.value === draftFilters.searchBy
-                    )?.label ?? "Search Value"
-                  }
-                  htmlFor="payment-search-value"
-                  className="w-full sm:w-48"
-                >
-                  <Input
-                    id="payment-search-value"
-                    value={draftFilters.searchValue}
-                    onChange={(event) =>
-                      updateDraftField("searchValue", event.target.value)
-                    }
-                    className="h-9"
-                  />
-                </FormField>
+                  <FormField
+                    label={searchValueLabel}
+                    htmlFor="payment-search-value"
+                    className={FILTER_FIELD_CLASS}
+                  >
+                    <Input
+                      id="payment-search-value"
+                      value={draftFilters.searchValue}
+                      onChange={(event) =>
+                        updateDraftField("searchValue", event.target.value)
+                      }
+                      onKeyDown={handleInputKeyDown}
+                      className={INPUT_CLASS}
+                    />
+                  </FormField>
 
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <IconActionButton
-                    label="Search"
-                    icon={Search}
-                    variant="default"
-                    onClick={handleSearch}
-                  />
-                  <IconActionButton label="Clear" icon={X} onClick={handleClear} />
+                  <SearchCriteriaActions onClear={handleClear} />
                 </div>
-              </div>
-            </FormSection>
+              </FormSection>
+            </form>
+          </PanelCard>
 
+          <PanelCard>
             <DataTable
               columns={paymentHistoryColumns}
               data={results}
