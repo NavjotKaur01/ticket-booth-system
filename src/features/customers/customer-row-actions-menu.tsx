@@ -11,14 +11,12 @@ import type { Customer } from "@/types/customer"
 
 type CustomerRowActionsMenuProps = {
   customer: Customer
-  onDetails?: (customer: Customer) => void
   onEdit?: (customer: Customer) => void
   onDelete?: (customer: Customer) => void
 }
 
 export function CustomerRowActionsMenu({
   customer,
-  onDetails,
   onEdit,
   onDelete,
 }: CustomerRowActionsMenuProps) {
@@ -37,9 +35,6 @@ export function CustomerRowActionsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[8rem]">
-        <DropdownMenuItem onSelect={() => onDetails?.(customer)}>
-          Details
-        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onEdit?.(customer)}>Edit</DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onDelete?.(customer)}>
           Delete

@@ -2,6 +2,7 @@ import { useCallback, useState } from "react"
 
 import { getClubmanErrorMessage } from "@/store/api/baseQuery"
 import { useSearchCustomersMutation } from "@/store/api/clubmanApi"
+import { hasCustomerSearchCriteria } from "@/lib/build-customer-search-request"
 import { mapCustomerSearchResults } from "@/lib/map-customer-search"
 import type { Customer, CustomerSearchFilters } from "@/types/customer"
 
@@ -17,6 +18,7 @@ type UseCustomerSearchResult = {
   error: string | null
   hasSearched: boolean
   search: (filters: CustomerSearchFilters) => Promise<void>
+  removeCustomer: (customerId: string) => void
   clear: () => void
 }
 
@@ -38,6 +40,15 @@ export function useCustomerSearch({
         return
       }
 
+      if (!hasCustomerSearchCriteria(filters)) {
+        const proceed = window.confirm(
+          "No search criteria entered. Search may take a long time to load customers. Continue?"
+        )
+        if (!proceed) {
+          return
+        }
+      }
+
       setHasSearched(true)
 
       try {
@@ -53,6 +64,12 @@ export function useCustomerSearch({
     },
     [connectionName, locationId, enabled, searchCustomers]
   )
+
+  const removeCustomer = useCallback((customerId: string) => {
+    setCustomers((current) =>
+      current.filter((customer) => customer.id !== customerId)
+    )
+  }, [])
 
   const clear = useCallback(() => {
     setCustomers([])
@@ -75,6 +92,7 @@ export function useCustomerSearch({
     error: errorMessage,
     hasSearched,
     search,
+    removeCustomer,
     clear,
   }
 }

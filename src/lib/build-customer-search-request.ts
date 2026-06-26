@@ -26,3 +26,14 @@ export function buildCustomerSearchRequest({
     PageNumber: pageNumber,
   }
 }
+
+export function hasCustomerSearchCriteria(filters: CustomerSearchFilters) {
+  return Boolean(
+    filters.lastName.trim() ||
+      filters.firstName.trim() ||
+      filters.email.trim() ||
+      filters.areaCode.trim() ||
+      filters.phone1.trim() ||
+      filters.phone2.trim()
+  )
+}

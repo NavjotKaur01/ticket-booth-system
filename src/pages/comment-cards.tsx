@@ -1,16 +1,18 @@
 import { FileDown, Plus } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
-import { customers } from "@/data/customers"
+import { ROUTES } from "@/constants/routes"
 import { AddCustomerDialog } from "@/features/customers/add-customer-dialog"
 import { CustomerDataTable } from "@/features/customers/customer-data-table"
 import { CustomerDetailsDialog } from "@/features/customers/customer-details-dialog"
 import { CustomerSearchToolbar } from "@/features/customers/customer-search-toolbar"
 import { useAppSession } from "@/hooks/use-app-session"
+import { useCustomerSearch } from "@/hooks/use-customer-search"
 import { customerFormToSearchFilters } from "@/lib/build-save-customer-request"
-import { filterCustomers } from "@/lib/filter-customers"
+import { deleteCustomerRecord } from "@/lib/delete-customer"
 import type { Customer, CustomerSearchFilters } from "@/types/customer"
 import type { CustomerFormValues } from "@/types/customer-form"
 
@@ -24,20 +26,24 @@ const EMPTY_FILTERS: CustomerSearchFilters = {
 }
 
 export function CommentCards() {
-  const { connectionName, locationId, username } = useAppSession()
+  const navigate = useNavigate()
+  const { connectionName, locationId, username, userRight, isReady } =
+    useAppSession()
+
+  const { customers, loading, error, hasSearched, search, removeCustomer, clear } =
+    useCustomerSearch({
+      connectionName,
+      locationId,
+      enabled: isReady,
+    })
 
   const [draftFilters, setDraftFilters] =
     useState<CustomerSearchFilters>(EMPTY_FILTERS)
-  const [appliedFilters, setAppliedFilters] =
-    useState<CustomerSearchFilters>(EMPTY_FILTERS)
   const [addOpen, setAddOpen] = useState(false)
+  const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
   const [detailsCustomer, setDetailsCustomer] = useState<Customer | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
-
-  const filteredCustomers = useMemo(
-    () => filterCustomers(customers, appliedFilters),
-    [appliedFilters]
-  )
+  const [actionError, setActionError] = useState<string | null>(null)
 
   function updateDraftField(
     field: keyof CustomerSearchFilters,
@@ -47,21 +53,44 @@ export function CommentCards() {
   }
 
   function handleSearch() {
-    setAppliedFilters(draftFilters)
+    setActionError(null)
+    void search(draftFilters)
   }
 
   function handleClear() {
     setDraftFilters(EMPTY_FILTERS)
-    setAppliedFilters(EMPTY_FILTERS)
+    setActionError(null)
+    clear()
   }
 
-  function handleCustomerCreated(form: CustomerFormValues) {
+  async function handleCustomerSaved(form: CustomerFormValues) {
     const filters = customerFormToSearchFilters(form)
     setDraftFilters(filters)
-    setAppliedFilters(filters)
+    await search(filters)
+  }
+
+  function handleOpenAdd() {
+    setEditCustomer(null)
+    setAddOpen(true)
+  }
+
+  function handleOpenEdit(customer: Customer) {
+    setDetailsOpen(false)
+    setDetailsCustomer(null)
+    setEditCustomer(customer)
+    setAddOpen(true)
+  }
+
+  function handleAddOpenChange(open: boolean) {
+    setAddOpen(open)
+    if (!open) {
+      setEditCustomer(null)
+    }
   }
 
   function handleOpenDetails(customer: Customer) {
+    setAddOpen(false)
+    setEditCustomer(null)
     setDetailsCustomer(customer)
     setDetailsOpen(true)
   }
@@ -72,6 +101,49 @@ export function CommentCards() {
       setDetailsCustomer(null)
     }
   }
+
+  function handleBuyCertificate(customer: Customer) {
+    navigate(ROUTES.giftCertificate, {
+      state: { customerId: customer.id },
+    })
+  }
+
+  async function handleDelete(customer: Customer) {
+    setActionError(null)
+
+    try {
+      const deleted = await deleteCustomerRecord({
+        customer,
+        connectionName,
+        username,
+        userRight,
+      })
+
+      if (!deleted) {
+        return
+      }
+
+      removeCustomer(customer.id)
+      setDetailsOpen(false)
+      setDetailsCustomer(null)
+      setAddOpen(false)
+      setEditCustomer(null)
+    } catch (requestError) {
+      const message =
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to delete customer."
+      setActionError(message)
+      window.alert(message)
+    }
+  }
+
+  const tableLoading = loading
+  const emptyMessage = tableLoading
+    ? "Searching customers..."
+    : hasSearched
+      ? "No record found"
+      : "Enter search criteria and click Search"
 
   return (
     <div className="space-y-3">
@@ -92,13 +164,13 @@ export function CommentCards() {
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2">
           <p className="text-xs text-muted-foreground">
             <span className="font-semibold text-foreground">Note:</span> Double
-            click to edit and buy gift certificate
+            click to view details and buy gift certificate
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-xs text-muted-foreground">
               Records:{" "}
               <span className="font-semibold tabular-nums text-foreground">
-                {filteredCustomers.length}
+                {customers.length}
               </span>
             </p>
             <Button variant="outline" size="sm" className="gap-1.5">
@@ -109,7 +181,7 @@ export function CommentCards() {
               type="button"
               size="sm"
               className="gap-1.5"
-              onClick={() => setAddOpen(true)}
+              onClick={handleOpenAdd}
             >
               <Plus className="size-3.5" />
               Add
@@ -117,9 +189,19 @@ export function CommentCards() {
           </div>
         </div>
 
+        {error || actionError ? (
+          <p className="px-3 py-2 text-sm text-destructive">
+            {error ?? actionError}
+          </p>
+        ) : null}
+
         <CustomerDataTable
-          data={filteredCustomers}
+          data={customers}
+          loading={tableLoading}
+          emptyMessage={emptyMessage}
           onDetails={handleOpenDetails}
+          onEdit={handleOpenEdit}
+          onDelete={(customer) => void handleDelete(customer)}
         />
       </PanelCard>
 
@@ -130,16 +212,19 @@ export function CommentCards() {
         connectionName={connectionName}
         locationId={locationId}
         lastUpdateId={username}
-        onCustomerSaved={handleCustomerCreated}
+        onBuyCertificate={handleBuyCertificate}
+        onDelete={(customer) => void handleDelete(customer)}
+        onCustomerSaved={handleCustomerSaved}
       />
 
       <AddCustomerDialog
         open={addOpen}
-        onOpenChange={setAddOpen}
+        onOpenChange={handleAddOpenChange}
         connectionName={connectionName}
         locationId={locationId}
         lastUpdateId={username}
-        onSaved={handleCustomerCreated}
+        customer={editCustomer}
+        onSaved={handleCustomerSaved}
       />
     </div>
   )

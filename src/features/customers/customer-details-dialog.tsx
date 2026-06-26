@@ -12,7 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { AddCustomerDialog } from "@/features/customers/add-customer-dialog"
-import { mapCustomerToDetails } from "@/lib/map-customer-details"
+import { getCustomerById } from "@/lib/api/customers"
+import { mapApiCustomerToDetails } from "@/lib/map-api-customer-to-form"
 import type { Customer } from "@/types/customer"
 import type { CustomerDetails } from "@/types/customer-details"
 import type { CustomerFormValues } from "@/types/customer-form"
@@ -146,21 +147,70 @@ export function CustomerDetailsDialog({
   const [activeTab, setActiveTab] =
     useState<CustomerDetailTab>("client-info")
   const [editOpen, setEditOpen] = useState(false)
+  const [details, setDetails] = useState<CustomerDetails | null>(null)
+  const [detailsVersion, setDetailsVersion] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (open) {
+    if (!open || !customer) {
       setActiveTab("client-info")
-    } else {
       setEditOpen(false)
+      setDetails(null)
+      setLoading(false)
+      setError(null)
+      return
     }
-  }, [open, customer?.id])
 
-  const details = customer ? mapCustomerToDetails(customer) : null
+    const customerId = customer.id
+    let cancelled = false
+
+    async function loadDetails() {
+      setLoading(true)
+      setError(null)
+
+      try {
+        const data = await getCustomerById({
+          connectionName,
+          locationId,
+          customerId,
+        })
+
+        if (!cancelled) {
+          setDetails(mapApiCustomerToDetails(data))
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setDetails(null)
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to load customer details."
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void loadDetails()
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, customer, connectionName, locationId, detailsVersion])
+
+  async function handleNestedSave(form: CustomerFormValues) {
+    await onCustomerSaved?.(form)
+    setDetailsVersion((current) => current + 1)
+  }
 
   return (
     <>
       <Dialog open={open && customer != null} onOpenChange={onOpenChange}>
-        {customer && details ? (
+        {customer ? (
           <DialogContent
             showCloseButton
             className="flex max-h-[88vh] max-w-4xl flex-col overflow-hidden p-0 sm:max-w-4xl"
@@ -171,14 +221,16 @@ export function CustomerDetailsDialog({
                   Customer Details
                 </DialogTitle>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onBuyCertificate?.(customer)}
-                  >
-                    Buy Certificate
-                  </Button>
+                  {onBuyCertificate ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onBuyCertificate(customer)}
+                    >
+                      Buy Certificate
+                    </Button>
+                  ) : null}
                   <Button
                     type="button"
                     variant="outline"
@@ -204,22 +256,30 @@ export function CustomerDetailsDialog({
             </DialogHeader>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-              <div className="space-y-4">
-                <SegmentedTabList
-                  tabs={CUSTOMER_DETAIL_TABS}
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
-                  ariaLabel="Customer detail sections"
-                />
+              {loading ? (
+                <p className="text-sm text-muted-foreground">
+                  Loading customer details...
+                </p>
+              ) : error ? (
+                <p className="text-sm text-destructive">{error}</p>
+              ) : details ? (
+                <div className="space-y-4">
+                  <SegmentedTabList
+                    tabs={CUSTOMER_DETAIL_TABS}
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
+                    ariaLabel="Customer detail sections"
+                  />
 
-                <div role="tabpanel" id={`customer-panel-${activeTab}`}>
-                  {activeTab === "client-info" ? (
-                    <ClientInfoPanel details={details} />
-                  ) : (
-                    <AdditionalInfoPanel details={details} />
-                  )}
+                  <div role="tabpanel" id={`customer-panel-${activeTab}`}>
+                    {activeTab === "client-info" ? (
+                      <ClientInfoPanel details={details} />
+                    ) : (
+                      <AdditionalInfoPanel details={details} />
+                    )}
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </div>
 
             <DialogFooter className="shrink-0 border-t px-4 py-2 sm:justify-end">
@@ -244,7 +304,7 @@ export function CustomerDetailsDialog({
         connectionName={connectionName}
         locationId={locationId}
         lastUpdateId={lastUpdateId}
-        onSaved={onCustomerSaved}
+        onSaved={handleNestedSave}
       />
     </>
   )

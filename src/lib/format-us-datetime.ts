@@ -1,3 +1,18 @@
+/** Matches desktop `Convert.ToString(DateTime.Now)` (no comma). */
+export function formatDesktopDateTime(date: Date) {
+  return date
+    .toLocaleString("en-US", {
+      month: "numeric",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    })
+    .replace(",", "")
+}
+
 /** Matches desktop `DateTime.USDateTimeFormat()` → MM/dd/yyyy hh:mm:ss tt */
 export function formatUsDateTime(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0")

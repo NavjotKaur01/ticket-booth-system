@@ -6,7 +6,7 @@ import {
   buildArchiveBusinessContactRequest,
   buildSaveBusinessContactRequest,
 } from "@/lib/build-save-business-contact-request"
-import { buildSaveCustomerRequest } from "@/lib/build-save-customer-request"
+import { buildSaveCustomerRequest, buildUpdateCustomerRequest } from "@/lib/build-save-customer-request"
 import { buildReservationDayRange } from "@/lib/reservation-date-range"
 import { buildGetReservationPromotionsRequest } from "@/lib/build-get-reservation-promotions-request"
 import { buildSearchPromotionRequest } from "@/lib/build-search-promotion-request"
@@ -35,6 +35,7 @@ import type {
   SaveShowRequestModel,
 } from "@/types/api/save-show"
 import type { ApiCustomerSearchItem } from "@/types/api/customer-search"
+import type { ApiCustomerDetail, CustomerRequest } from "@/types/api/customer"
 import type {
   ApiBusinessContactItem,
   BusinessCustomerRequest,
@@ -175,6 +176,76 @@ export const clubmanApi = createApi({
       }),
       invalidatesTags: (_result, _error, arg) => [
         { type: "Customer", id: arg.locationId },
+      ],
+    }),
+
+    updateCustomer: builder.mutation({
+      query: ({
+        connectionName,
+        locationId,
+        lastUpdateId,
+        form,
+        customerId,
+      }: {
+        connectionName: string
+        locationId: string
+        lastUpdateId: string
+        form: CustomerFormValues
+        customerId: string
+      }) => ({
+        url: administratorApiPath("UpdateCustomer"),
+        method: "POST",
+        body: buildUpdateCustomerRequest({
+          connectionName,
+          locationId,
+          lastUpdateId,
+          form,
+          customerId,
+        }),
+      }),
+      invalidatesTags: (_result, _error, arg) => [
+        { type: "Customer", id: arg.locationId },
+      ],
+    }),
+
+    getCustomerById: builder.mutation({
+      query: ({
+        connectionName,
+        locationId,
+        customerId,
+      }: {
+        connectionName: string
+        locationId: string
+        customerId: string
+      }) => ({
+        url: reservationApiPath(
+          connectionName,
+          locationId,
+          customerId,
+          "GetCustomerById"
+        ),
+        method: "GET",
+      }),
+      transformResponse: (response: ApiCustomerDetail) => response,
+    }),
+
+    getCustomerDeleteDetail: builder.mutation({
+      query: (body: CustomerRequest) => ({
+        url: administratorApiPath("GetCustomerReservationBookedDetail"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: ApiCustomerDetail) => response,
+    }),
+
+    archiveCustomer: builder.mutation({
+      query: (body: CustomerRequest) => ({
+        url: administratorApiPath("ArchiveCustomer"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: () => [
+        { type: "Customer", id: "archive" },
       ],
     }),
 
@@ -605,6 +676,10 @@ export const {
   useSearchReservationCustomersMutation,
   useSearchReservationBusinessCustomersMutation,
   useSaveCustomerMutation,
+  useUpdateCustomerMutation,
+  useGetCustomerByIdMutation,
+  useGetCustomerDeleteDetailMutation,
+  useArchiveCustomerMutation,
   useSearchBusinessContactsMutation,
   useSaveBusinessContactMutation,
   useUpdateBusinessContactMutation,

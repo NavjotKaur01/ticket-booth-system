@@ -23,7 +23,8 @@ import {
   dobMonthOptions,
   usStateOptions,
 } from "@/data/customer-form-options"
-import { saveCustomer } from "@/lib/api/customers"
+import { saveCustomer, updateCustomer, getCustomerById } from "@/lib/api/customers"
+import { mapApiCustomerToForm } from "@/lib/map-api-customer-to-form"
 import { mapCustomerToForm } from "@/lib/map-customer-form"
 import { cn } from "@/lib/utils"
 import type { Customer } from "@/types/customer"
@@ -45,6 +46,7 @@ type AddCustomerDialogProps = {
   initialValues?: CustomerFormValues | null
   nested?: boolean
   onBack?: () => void
+  onBuyCertificate?: (customer: Customer) => void
   onSaved?: (form: CustomerFormValues) => Promise<void> | void
 }
 
@@ -58,39 +60,88 @@ export function AddCustomerDialog({
   initialValues = null,
   nested = false,
   onBack,
+  onBuyCertificate,
   onSaved,
 }: AddCustomerDialogProps) {
   const isEditMode = customer != null
   const [form, setForm] = useState<CustomerFormValues>(EMPTY_CUSTOMER_FORM)
+  const [loadingDetails, setLoadingDetails] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) {
       setForm(EMPTY_CUSTOMER_FORM)
+      setLoadingDetails(false)
       setSaving(false)
       setError(null)
       return
     }
 
-    if (customer) {
-      setForm(mapCustomerToForm(customer))
+    if (!customer) {
+      if (initialValues) {
+        setForm({
+          ...EMPTY_CUSTOMER_FORM,
+          ...initialValues,
+          phone: { ...EMPTY_CUSTOMER_FORM.phone, ...initialValues.phone },
+          altPhone1: {
+            ...EMPTY_CUSTOMER_FORM.altPhone1,
+            ...initialValues.altPhone1,
+          },
+          altPhone2: {
+            ...EMPTY_CUSTOMER_FORM.altPhone2,
+            ...initialValues.altPhone2,
+          },
+        })
+        return
+      }
+
+      setForm(EMPTY_CUSTOMER_FORM)
       return
     }
 
-    if (initialValues) {
-      setForm({
-        ...EMPTY_CUSTOMER_FORM,
-        ...initialValues,
-        phone: { ...EMPTY_CUSTOMER_FORM.phone, ...initialValues.phone },
-        altPhone1: { ...EMPTY_CUSTOMER_FORM.altPhone1, ...initialValues.altPhone1 },
-        altPhone2: { ...EMPTY_CUSTOMER_FORM.altPhone2, ...initialValues.altPhone2 },
-      })
-      return
+    const customerId = customer.id
+    const fallbackCustomer = customer
+    let cancelled = false
+
+    async function loadCustomerDetails() {
+      setLoadingDetails(true)
+      setError(null)
+
+      try {
+        const details = await getCustomerById({
+          connectionName,
+          locationId,
+          customerId,
+        })
+
+        if (cancelled) {
+          return
+        }
+
+        setForm(mapApiCustomerToForm(details))
+      } catch (requestError) {
+        if (!cancelled) {
+          setForm(mapCustomerToForm(fallbackCustomer))
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to load customer details."
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingDetails(false)
+        }
+      }
     }
 
-    setForm(EMPTY_CUSTOMER_FORM)
-  }, [open, customer, initialValues])
+    void loadCustomerDetails()
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, customer, initialValues, connectionName, locationId])
 
   function updateField<K extends keyof CustomerFormValues>(
     field: K,
@@ -136,12 +187,22 @@ export function AddCustomerDialog({
     setError(null)
 
     try {
-      await saveCustomer({
-        connectionName,
-        locationId,
-        lastUpdateId,
-        form,
-      })
+      if (isEditMode && customer) {
+        await updateCustomer({
+          connectionName,
+          locationId,
+          lastUpdateId,
+          form,
+          customerId: customer.id,
+        })
+      } else {
+        await saveCustomer({
+          connectionName,
+          locationId,
+          lastUpdateId,
+          form,
+        })
+      }
 
       await onSaved?.(form)
       onOpenChange(false)
@@ -206,6 +267,11 @@ export function AddCustomerDialog({
             <p className="mb-2 text-sm text-destructive">{error}</p>
           ) : null}
 
+          {loadingDetails ? (
+            <p className="text-sm text-muted-foreground">
+              Loading customer details...
+            </p>
+          ) : (
           <div className="space-y-2">
             <div className={FIELD_GRID_3}>
               <FormField label="Last Name" htmlFor="add-customer-last-name">
@@ -405,12 +471,15 @@ export function AddCustomerDialog({
               />
             </FormField>
           </div>
+          )}
         </div>
 
         <DialogFooter
           className={cn(
             "shrink-0 border-t px-4 py-2",
-            isEditMode ? "sm:justify-end" : "sm:justify-between"
+            isEditMode && !onBuyCertificate
+              ? "sm:justify-end"
+              : "sm:justify-between"
           )}
         >
           {!isEditMode ? (
@@ -421,6 +490,15 @@ export function AddCustomerDialog({
               onClick={handleClear}
             >
               Clear
+            </Button>
+          ) : onBuyCertificate && customer ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saving || loadingDetails}
+              onClick={() => onBuyCertificate(customer)}
+            >
+              Buy Certificate
             </Button>
           ) : null}
           <div className="flex flex-col-reverse gap-2 sm:flex-row">
@@ -434,7 +512,7 @@ export function AddCustomerDialog({
             </Button>
             <Button
               type="button"
-              disabled={saving}
+              disabled={saving || loadingDetails}
               onClick={() => void handleSave()}
             >
               {saving ? "Saving..." : "Save"}

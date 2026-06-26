@@ -64,7 +64,27 @@ export function getClubmanErrorMessage(error: unknown): string {
     return "Request failed"
   }
 
+  if ("data" in error && typeof error.data === "string" && error.data.trim()) {
+    const firstLine = error.data.trim().split("\n")[0]?.trim()
+    if (firstLine && !firstLine.startsWith("{")) {
+      return firstLine
+    }
+  }
+
   if ("error" in error && typeof error.error === "string") {
+    if (
+      "status" in error &&
+      error.status === "PARSING_ERROR" &&
+      "data" in error &&
+      typeof error.data === "string" &&
+      error.data.trim()
+    ) {
+      const firstLine = error.data.trim().split("\n")[0]?.trim()
+      if (firstLine) {
+        return firstLine
+      }
+    }
+
     return error.error
   }
 

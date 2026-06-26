@@ -6,13 +6,11 @@ import { DataTableColumnHeader } from "@/components/data-table/data-table-column
 import type { Customer } from "@/types/customer"
 
 type CustomerColumnsOptions = {
-  onDetails?: (customer: Customer) => void
   onEdit?: (customer: Customer) => void
   onDelete?: (customer: Customer) => void
 }
 
 export function createCustomerColumns({
-  onDetails,
   onEdit,
   onDelete,
 }: CustomerColumnsOptions = {}): ColumnDef<Customer>[] {
@@ -92,7 +90,6 @@ export function createCustomerColumns({
       cell: ({ row }) => (
         <CustomerRowActionsMenu
           customer={row.original}
-          onDetails={onDetails}
           onEdit={onEdit}
           onDelete={onDelete}
         />

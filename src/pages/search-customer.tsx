@@ -10,6 +10,7 @@ import { CustomerFiltersCard } from "@/features/customers/customer-filters-card"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useCustomerSearch } from "@/hooks/use-customer-search"
 import { customerFormToSearchFilters } from "@/lib/build-save-customer-request"
+import { deleteCustomerRecord } from "@/lib/delete-customer"
 import type { Customer, CustomerSearchFilters } from "@/types/customer"
 import type { CustomerFormValues } from "@/types/customer-form"
 
@@ -23,19 +24,23 @@ const EMPTY_FILTERS: CustomerSearchFilters = {
 }
 
 export function SearchCustomer() {
-  const { connectionName, locationId, username, isReady } = useAppSession()
+  const { connectionName, locationId, username, userRight, isReady } =
+    useAppSession()
 
-  const { customers, loading, error, hasSearched, search, clear } = useCustomerSearch({
-    connectionName,
-    locationId,
-    enabled: isReady,
-  })
+  const { customers, loading, error, hasSearched, search, removeCustomer, clear } =
+    useCustomerSearch({
+      connectionName,
+      locationId,
+      enabled: isReady,
+    })
 
   const [draftFilters, setDraftFilters] =
     useState<CustomerSearchFilters>(EMPTY_FILTERS)
   const [addOpen, setAddOpen] = useState(false)
+  const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
   const [detailsCustomer, setDetailsCustomer] = useState<Customer | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   function updateDraftField(
     field: keyof CustomerSearchFilters,
@@ -45,21 +50,44 @@ export function SearchCustomer() {
   }
 
   function handleSearch() {
+    setActionError(null)
     void search(draftFilters)
   }
 
   function handleClear() {
     setDraftFilters(EMPTY_FILTERS)
+    setActionError(null)
     clear()
   }
 
-  async function handleCustomerCreated(form: CustomerFormValues) {
+  async function handleCustomerSaved(form: CustomerFormValues) {
     const filters = customerFormToSearchFilters(form)
     setDraftFilters(filters)
     await search(filters)
   }
 
+  function handleOpenAdd() {
+    setEditCustomer(null)
+    setAddOpen(true)
+  }
+
+  function handleOpenEdit(customer: Customer) {
+    setDetailsOpen(false)
+    setDetailsCustomer(null)
+    setEditCustomer(customer)
+    setAddOpen(true)
+  }
+
+  function handleAddOpenChange(open: boolean) {
+    setAddOpen(open)
+    if (!open) {
+      setEditCustomer(null)
+    }
+  }
+
   function handleOpenDetails(customer: Customer) {
+    setAddOpen(false)
+    setEditCustomer(null)
     setDetailsCustomer(customer)
     setDetailsOpen(true)
   }
@@ -68,6 +96,36 @@ export function SearchCustomer() {
     setDetailsOpen(open)
     if (!open) {
       setDetailsCustomer(null)
+    }
+  }
+
+  async function handleDelete(customer: Customer) {
+    setActionError(null)
+
+    try {
+      const deleted = await deleteCustomerRecord({
+        customer,
+        connectionName,
+        username,
+        userRight,
+      })
+
+      if (!deleted) {
+        return
+      }
+
+      removeCustomer(customer.id)
+      setDetailsOpen(false)
+      setDetailsCustomer(null)
+      setAddOpen(false)
+      setEditCustomer(null)
+    } catch (requestError) {
+      const message =
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to delete customer."
+      setActionError(message)
+      window.alert(message)
     }
   }
 
@@ -101,7 +159,7 @@ export function SearchCustomer() {
             type="button"
             size="sm"
             className="gap-1.5"
-            onClick={() => setAddOpen(true)}
+            onClick={handleOpenAdd}
           >
             <Plus className="size-3.5" />
             Add
@@ -111,7 +169,7 @@ export function SearchCustomer() {
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-3 py-2">
           <p className="text-xs text-muted-foreground">
             <span className="font-semibold text-foreground">Note:</span> Double
-            click to edit and buy gift certificate
+            click to view customer details
           </p>
           <p className="shrink-0 text-xs text-muted-foreground">
             Records:{" "}
@@ -121,8 +179,10 @@ export function SearchCustomer() {
           </p>
         </div>
 
-        {error ? (
-          <p className="px-3 py-2 text-sm text-destructive">{error}</p>
+        {error || actionError ? (
+          <p className="px-3 py-2 text-sm text-destructive">
+            {error ?? actionError}
+          </p>
         ) : null}
 
         <CustomerDataTable
@@ -130,6 +190,8 @@ export function SearchCustomer() {
           loading={tableLoading}
           emptyMessage={emptyMessage}
           onDetails={handleOpenDetails}
+          onEdit={handleOpenEdit}
+          onDelete={(customer) => void handleDelete(customer)}
         />
       </PanelCard>
 
@@ -140,16 +202,18 @@ export function SearchCustomer() {
         connectionName={connectionName}
         locationId={locationId}
         lastUpdateId={username}
-        onCustomerSaved={handleCustomerCreated}
+        onDelete={(customer) => void handleDelete(customer)}
+        onCustomerSaved={handleCustomerSaved}
       />
 
       <AddCustomerDialog
         open={addOpen}
-        onOpenChange={setAddOpen}
+        onOpenChange={handleAddOpenChange}
         connectionName={connectionName}
         locationId={locationId}
         lastUpdateId={username}
-        onSaved={handleCustomerCreated}
+        customer={editCustomer}
+        onSaved={handleCustomerSaved}
       />
     </div>
   )

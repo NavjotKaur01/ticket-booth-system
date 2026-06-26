@@ -22,8 +22,8 @@ export function CustomerDataTable({
   onDelete,
 }: CustomerDataTableProps) {
   const columns = useMemo(
-    () => createCustomerColumns({ onDetails, onEdit, onDelete }),
-    [onDetails, onEdit, onDelete]
+    () => createCustomerColumns({ onEdit, onDelete }),
+    [onEdit, onDelete]
   )
 
   return (
@@ -33,6 +33,8 @@ export function CustomerDataTable({
       emptyMessage={loading ? "Searching customers..." : emptyMessage}
       entityLabel="records"
       pageSize={10}
+      getRowId={(row) => row.id}
+      onRowDoubleClick={(row) => onDetails?.(row.original)}
     />
   )
 }
