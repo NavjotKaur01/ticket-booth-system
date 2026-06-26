@@ -1,13 +1,8 @@
-import { FileDown, FileText, Printer, Search } from "lucide-react"
-import type { ReactNode } from "react"
+﻿import { FileDown, FileText, Printer } from "lucide-react"
 
-import {
-  createFilterSearchHandlers,
-  FILTER_SELECT_CLASS,
-  IconActionButton,
-} from "@/components/forms/form-fields"
+import CalendarDatePickerControl from "@/components/calendar/controls/CalendarDatePickerControl"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -16,18 +11,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { reportTypeOptions } from "@/data/manager-checkout-reports"
 import { cn } from "@/lib/utils"
-import type { ReportFilters } from "@/types/manager-checkout-report"
+import type {
+  ReportViewerFilters,
+  ReportViewerLocationOption,
+  ReportViewerOption,
+} from "@/features/reports/reports.service"
 
 type ReportFiltersToolbarProps = {
-  filters: ReportFilters
-  hideDateFilters?: boolean
-  embedded?: boolean
-  leading?: ReactNode
-  onFilterChange: <K extends keyof ReportFilters>(
+  filters: ReportViewerFilters
+  reportOptions: ReportViewerOption[]
+  locationOptions: ReportViewerLocationOption[]
+  isGenerating?: boolean
+  activeQuickRange?: "today" | "yesterday" | null
+  onFilterChange: <K extends keyof ReportViewerFilters>(
     key: K,
-    value: ReportFilters[K]
+    value: ReportViewerFilters[K]
   ) => void
   onGenerate: () => void
   onToday: () => void
@@ -37,13 +36,12 @@ type ReportFiltersToolbarProps = {
   onPdf: () => void
 }
 
-const compactFieldClassName = "h-9 w-full sm:w-44"
-
 export function ReportFiltersToolbar({
   filters,
-  hideDateFilters = false,
-  embedded = false,
-  leading,
+  reportOptions,
+  locationOptions,
+  isGenerating = false,
+  activeQuickRange = null,
   onFilterChange,
   onGenerate,
   onToday,
@@ -52,126 +50,179 @@ export function ReportFiltersToolbar({
   onExport,
   onPdf,
 }: ReportFiltersToolbarProps) {
-  const { handleSubmit, handleInputKeyDown } =
-    createFilterSearchHandlers(onGenerate)
-
   return (
-    <form
-      className={cn(
-        "flex flex-col gap-3 p-3 md:flex-row md:items-end md:justify-between",
-        !embedded && "border-b"
-      )}
-      onSubmit={handleSubmit}
-    >
-      {leading ? <div className="shrink-0">{leading}</div> : null}
+    <div className="border-b border-border/70 bg-background px-4 py-4">
+      <div className="space-y-4 rounded-xl border border-border/70 bg-muted/10 p-4 sm:p-3.5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              Report Viewer
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Set filters, then generate the report when you are ready.
+            </p>
+          </div>
 
-      <div
-        className={cn(
-          "flex min-w-0 flex-wrap items-end gap-2",
-          leading && "flex-1 md:justify-end"
-        )}
-      >
-        <div className="w-full space-y-1 sm:w-auto sm:min-w-48">
-          <Label htmlFor="report-type" className="text-xs font-medium">
-            Report
-          </Label>
-          <Select
-            value={filters.reportType}
-            onValueChange={(value) => onFilterChange("reportType", value)}
-          >
-            <SelectTrigger id="report-type" className={`${FILTER_SELECT_CLASS} w-full`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {reportTypeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 px-3"
+              onClick={onPrint}
+            >
+              <Printer className="size-3.5" />
+              Print
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 px-3"
+              onClick={onExport}
+            >
+              <FileDown className="size-3.5" />
+              Export
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 px-3"
+              onClick={onPdf}
+            >
+              <FileText className="size-3.5" />
+              PDF
+            </Button>
+          </div>
         </div>
 
-        {!hideDateFilters ? (
-          <>
-            <div className="w-full space-y-1 sm:w-auto">
-              <Label htmlFor="report-date-from" className="text-xs font-medium">
-                From
-              </Label>
-              <Input
-                id="report-date-from"
-                type="date"
-                value={filters.dateFrom}
-                onChange={(event) => onFilterChange("dateFrom", event.target.value)}
-                onKeyDown={handleInputKeyDown}
-                className={compactFieldClassName}
-              />
+        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-[minmax(15rem,19rem)_minmax(11rem,13rem)_minmax(11rem,13rem)_1fr] 2xl:items-end">
+          <div className="space-y-1.5">
+            <Label htmlFor="report-viewer-type">Report</Label>
+            <Select
+              value={filters.reportType}
+              onValueChange={(value) => onFilterChange("reportType", value)}
+            >
+              <SelectTrigger id="report-viewer-type" className="h-9 w-full bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {reportOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="report-viewer-from">From</Label>
+            <CalendarDatePickerControl
+              id="report-viewer-from"
+              value={filters.dateFrom}
+              onChange={(value) => onFilterChange("dateFrom", value)}
+              className="h-9 w-full bg-background"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="report-viewer-to">To</Label>
+            <CalendarDatePickerControl
+              id="report-viewer-to"
+              value={filters.dateTo}
+              onChange={(value) => onFilterChange("dateTo", value)}
+              className="h-9 w-full bg-background"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 pt-2 md:col-span-2 2xl:col-span-1 2xl:justify-end 2xl:pt-0">
+            <Button
+              type="button"
+              variant="outline"
+              className={cn(
+                "h-8 px-3 text-xs sm:text-sm",
+                activeQuickRange === "today" &&
+                  "border-primary bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
+              )}
+              onClick={onToday}
+            >
+              Today
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className={cn(
+                "h-8 px-3 text-xs sm:text-sm",
+                activeQuickRange === "yesterday" &&
+                  "border-primary bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
+              )}
+              onClick={onYesterday}
+            >
+              Yesterday
+            </Button>
+
+            <div className="hidden h-6 w-px bg-border lg:block" />
+
+            <Button
+              type="button"
+              className="h-9 px-4 lg:ml-2"
+              onClick={onGenerate}
+              disabled={isGenerating}
+            >
+              {isGenerating ? "Generating..." : "Generate Report"}
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="report-viewer-location">Location</Label>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
+            <div className="w-full max-w-[19rem]">
+              <Select
+                value={filters.locationId}
+                onValueChange={(value) => onFilterChange("locationId", value)}
+              >
+                <SelectTrigger id="report-viewer-location" className="h-9 w-full bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {locationOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="w-full space-y-1 sm:w-auto">
-              <Label htmlFor="report-date-to" className="text-xs font-medium">
-                To
-              </Label>
-              <Input
-                id="report-date-to"
-                type="date"
-                value={filters.dateTo}
-                onChange={(event) => onFilterChange("dateTo", event.target.value)}
-                onKeyDown={handleInputKeyDown}
-                className={compactFieldClassName}
-              />
-            </div>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <Checkbox
+                  checked={filters.withEmailAddress}
+                  onCheckedChange={(value) =>
+                    onFilterChange("withEmailAddress", value === true)
+                  }
+                />
+                With Email Address
+              </label>
 
-            <div className="flex flex-wrap items-center gap-1.5">
-              <IconActionButton
-                label="Generate Report"
-                icon={Search}
-                variant="default"
-                type="submit"
-              />
-              <Button type="button" size="sm" variant="outline" onClick={onToday}>
-                Today
-              </Button>
-              <Button type="button" size="sm" variant="outline" onClick={onYesterday}>
-                Yesterday
-              </Button>
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <Checkbox
+                  checked={filters.withAddress}
+                  onCheckedChange={(value) =>
+                    onFilterChange("withAddress", value === true)
+                  }
+                />
+                With Address
+              </label>
             </div>
-          </>
-        ) : null}
-
-        <div className="flex flex-wrap items-center gap-2 md:ml-auto">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={onPrint}
-          >
-            <Printer className="size-3.5" />
-            Print
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={onExport}
-          >
-            <FileDown className="size-3.5" />
-            Export
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={onPdf}
-          >
-            <FileText className="size-3.5" />
-            PDF
-          </Button>
+          </div>
         </div>
       </div>
-    </form>
+    </div>
   )
 }
+

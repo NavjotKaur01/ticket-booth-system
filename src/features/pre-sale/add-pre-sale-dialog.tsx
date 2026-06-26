@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 
+import CalendarDatePickerControl from "@/components/calendar/controls/CalendarDatePickerControl"
 import { FormField } from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
 import {
@@ -71,13 +72,10 @@ export function AddPreSaleDialog({
         <div className="overflow-y-auto px-4 py-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField label="Show Date" htmlFor="pre-sale-show-date">
-              <Input
+              <CalendarDatePickerControl
                 id="pre-sale-show-date"
-                type="date"
                 value={form.showDate}
-                onChange={(event) =>
-                  updateField("showDate", event.target.value)
-                }
+                onChange={(value) => updateField("showDate", value)}
               />
             </FormField>
 
@@ -128,13 +126,10 @@ export function AddPreSaleDialog({
             </FormField>
 
             <FormField label="Start Date" htmlFor="pre-sale-start-date">
-              <Input
+              <CalendarDatePickerControl
                 id="pre-sale-start-date"
-                type="date"
                 value={form.startDate}
-                onChange={(event) =>
-                  updateField("startDate", event.target.value)
-                }
+                onChange={(value) => updateField("startDate", value)}
               />
             </FormField>
 
@@ -150,13 +145,10 @@ export function AddPreSaleDialog({
             </FormField>
 
             <FormField label="End Date" htmlFor="pre-sale-end-date">
-              <Input
+              <CalendarDatePickerControl
                 id="pre-sale-end-date"
-                type="date"
                 value={form.endDate}
-                onChange={(event) =>
-                  updateField("endDate", event.target.value)
-                }
+                onChange={(value) => updateField("endDate", value)}
               />
             </FormField>
 

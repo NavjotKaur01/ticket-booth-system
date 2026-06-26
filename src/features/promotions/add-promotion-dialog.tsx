@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 
+import CalendarDatePickerControl from "@/components/calendar/controls/CalendarDatePickerControl"
 import { FormField, FormSection } from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -210,24 +211,18 @@ export function AddPromotionDialog({
                   </Select>
                 </FormField>
                 <FormField label="Start Date" htmlFor="add-promo-start-date">
-                  <Input
+                  <CalendarDatePickerControl
                     id="add-promo-start-date"
-                    type="date"
                     value={form.startDate}
-                    onChange={(event) =>
-                      updateField("startDate", event.target.value)
-                    }
+                    onChange={(value) => updateField("startDate", value)}
                     className="w-[10.5rem]"
                   />
                 </FormField>
                 <FormField label="End Date" htmlFor="add-promo-end-date">
-                  <Input
+                  <CalendarDatePickerControl
                     id="add-promo-end-date"
-                    type="date"
                     value={form.endDate}
-                    onChange={(event) =>
-                      updateField("endDate", event.target.value)
-                    }
+                    onChange={(value) => updateField("endDate", value)}
                     className="w-[10.5rem]"
                   />
                 </FormField>

@@ -1,291 +1,163 @@
+﻿import dayjs from "dayjs"
 import { useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 
 import { PanelCard } from "@/components/common/panel-card"
-import {
-  managerCheckoutShows,
-  reportTypeOptions,
-} from "@/data/manager-checkout-reports"
-import { ManagerCheckoutShowReport } from "@/features/reports/manager-checkout-show-report"
-import { PastCustomerReport } from "@/features/reports/past-customer-report"
-import { ReportFiltersToolbar } from "@/features/reports/report-filters-toolbar"
-import { TodaySalesReport } from "@/features/reports/today-sales-report"
 import { useAppSession } from "@/hooks/use-app-session"
+import { ReportFiltersToolbar } from "@/features/reports/report-filters-toolbar"
+import { ReportViewerResults } from "@/features/reports/report-viewer-results"
 import {
-  EMPTY_REPORT_FILTERS,
-  type ReportFilters,
-} from "@/types/manager-checkout-report"
+  createDefaultReportFilters,
+  createReportCsv,
+  createReportPdfBlob,
+  createReportViewerLocationOptions,
+  downloadBlob,
+  generateReportViewerResult,
+  openReportPrintWindow,
+  reportViewerOptions,
+  resolveReportType,
+  type ReportViewerFilters,
+  type ReportViewerResult,
+} from "@/features/reports/reports.service"
 
-function getReportTypeFromParams(searchParams: URLSearchParams) {
-  const reportType = searchParams.get("report")
-  if (
-    reportType &&
-    reportTypeOptions.some((option) => option.id === reportType)
-  ) {
-    return reportType
-  }
-
-  return EMPTY_REPORT_FILTERS.reportType
-}
-
-function isoDateValue(date: Date) {
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  return `${date.getFullYear()}-${month}-${day}`
-}
-
-function shiftDate(days: number) {
-  const date = new Date()
-  date.setDate(date.getDate() + days)
-  return isoDateValue(date)
-}
-
-function isTodaySalesReport(reportType: string) {
-  return reportType === "today-sales"
+function buildFilename(base: string, extension: string) {
+  const safeBase = base.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+  const stamp = dayjs().format("YYYYMMDD-HHmm")
+  return `${safeBase || "report"}-${stamp}.${extension}`
 }
 
 export function Reports() {
-  const { clubSlug, locationId, locationName } = useAppSession()
+  const { locationId, locationName, locations } = useAppSession()
   const [searchParams] = useSearchParams()
-  const initialReportType = getReportTypeFromParams(searchParams)
 
-  const [draftFilters, setDraftFilters] = useState<ReportFilters>({
-    ...EMPTY_REPORT_FILTERS,
-    reportType: initialReportType,
-  })
-  const [appliedFilters, setAppliedFilters] = useState<ReportFilters | null>(null)
+  const locationOptions = useMemo(
+    () => createReportViewerLocationOptions(locations, locationId, locationName),
+    [locationId, locationName, locations]
+  )
+  const initialReportType = resolveReportType(searchParams.get("report"))
 
-  const isTodaySalesView =
-    draftFilters.reportType === "today-sales" ||
-    getReportTypeFromParams(searchParams) === "today-sales"
+  const [draftFilters, setDraftFilters] = useState<ReportViewerFilters>(() =>
+    createDefaultReportFilters({
+      locationId: locationOptions[0]?.id ?? locationId,
+      reportType: initialReportType,
+    })
+  )
+  const [generatedResult, setGeneratedResult] = useState<ReportViewerResult | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [activeQuickRange, setActiveQuickRange] = useState<"today" | "yesterday" | null>(null)
 
   useEffect(() => {
-    const reportType = getReportTypeFromParams(searchParams)
-    const paramReport = searchParams.get("report")
-
-    setDraftFilters((current) => ({ ...current, reportType }))
-
-    if (!paramReport) {
+    if (!locationOptions.length) {
       return
     }
 
-    const today = isoDateValue(new Date())
-    const filters: ReportFilters = {
-      ...EMPTY_REPORT_FILTERS,
-      reportType,
-      dateFrom: today,
-      dateTo: today,
-    }
-
-    setDraftFilters(filters)
-
-    if (isTodaySalesReport(reportType) && !locationId) {
-      return
-    }
-
-    setAppliedFilters(filters)
-  }, [searchParams, locationId])
-
-  const selectedReportLabel = useMemo(
-    () =>
-      reportTypeOptions.find((option) => option.id === draftFilters.reportType)
-        ?.label ?? "Report",
-    [draftFilters.reportType]
-  )
-
-  function maybeAutoApplyTodaySales(nextFilters: ReportFilters) {
-    if (!isTodaySalesReport(nextFilters.reportType)) {
-      return
-    }
-
-    if (locationId) {
-      setAppliedFilters(nextFilters)
-    }
-  }
-
-  function updateDraftField<K extends keyof ReportFilters>(
-    key: K,
-    value: ReportFilters[K]
-  ) {
     setDraftFilters((current) => {
-      const next = { ...current, [key]: value }
-
-      if (key === "reportType" && !isTodaySalesReport(String(value))) {
-        setAppliedFilters(null)
-      } else {
-        maybeAutoApplyTodaySales(next)
+      if (current.locationId && locationOptions.some((option) => option.id === current.locationId)) {
+        return current
       }
 
-      return next
+      return {
+        ...current,
+        locationId: locationOptions[0].id,
+      }
     })
-  }
+  }, [locationOptions])
 
-  function applyFilters(nextFilters: ReportFilters) {
-    setDraftFilters(nextFilters)
+  function updateDraftField<K extends keyof ReportViewerFilters>(
+    key: K,
+    value: ReportViewerFilters[K]
+  ) {
+    setDraftFilters((current) => ({ ...current, [key]: value }))
 
-    if (isTodaySalesReport(nextFilters.reportType) && !locationId) {
-      return
+    if (key === "dateFrom" || key === "dateTo") {
+      setActiveQuickRange(null)
     }
-
-    setAppliedFilters(nextFilters)
   }
 
-  function handleGenerate() {
-    applyFilters(draftFilters)
+  async function handleGenerate(nextFilters = draftFilters) {
+    setIsGenerating(true)
+
+    try {
+      const result = await generateReportViewerResult({
+        filters: nextFilters,
+        locationOptions,
+      })
+      setGeneratedResult(result)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  function applyPreset(nextDate: string, range: "today" | "yesterday") {
+    setDraftFilters((current) => ({
+      ...current,
+      dateFrom: nextDate,
+      dateTo: nextDate,
+    }))
+    setActiveQuickRange(range)
   }
 
   function handleToday() {
-    const today = isoDateValue(new Date())
-    applyFilters({
-      ...draftFilters,
-      dateFrom: today,
-      dateTo: today,
-    })
+    applyPreset(dayjs().format("YYYY-MM-DD"), "today")
   }
 
   function handleYesterday() {
-    applyFilters({
-      ...draftFilters,
-      dateFrom: shiftDate(-1),
-      dateTo: shiftDate(-1),
-    })
+    applyPreset(dayjs().subtract(1, "day").format("YYYY-MM-DD"), "yesterday")
   }
 
-  const toolbarProps = {
-    filters: draftFilters,
-    hideDateFilters: isTodaySalesView,
-    onFilterChange: updateDraftField,
-    onGenerate: handleGenerate,
-    onToday: handleToday,
-    onYesterday: handleYesterday,
-    onPrint: () => window.print(),
-    onExport: () => undefined,
-    onPdf: () => undefined,
+  function handlePrint() {
+    if (!generatedResult) {
+      return
+    }
+
+    openReportPrintWindow(generatedResult)
   }
 
-  const showManagerCheckout =
-    appliedFilters?.reportType === "manager-checkout" && appliedFilters != null
+  function handleExport() {
+    if (!generatedResult) {
+      return
+    }
 
-  const showPastCustomers =
-    appliedFilters?.reportType === "past-customers" && appliedFilters != null
+    const csv = createReportCsv(generatedResult)
+    downloadBlob(
+      new Blob([csv], { type: "text/csv;charset=utf-8" }),
+      buildFilename(generatedResult.title, "csv")
+    )
+  }
 
-  const showTodaySales =
-    appliedFilters?.reportType === "today-sales" &&
-    appliedFilters != null &&
-    Boolean(locationId)
+  function handlePdf() {
+    if (!generatedResult) {
+      return
+    }
 
-  const pendingTodaySales =
-    getReportTypeFromParams(searchParams) === "today-sales" &&
-    !appliedFilters &&
-    !locationId
+    downloadBlob(
+      createReportPdfBlob(generatedResult),
+      buildFilename(generatedResult.title, "pdf")
+    )
+  }
 
   return (
     <div className="space-y-3">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">
-        Report Viewer
-      </h1>
+      <PanelCard className="overflow-hidden rounded-2xl border-border/70 bg-card shadow-sm">
+        <ReportFiltersToolbar
+          filters={draftFilters}
+          reportOptions={reportViewerOptions}
+          locationOptions={locationOptions}
+          isGenerating={isGenerating}
+          activeQuickRange={activeQuickRange}
+          onFilterChange={updateDraftField}
+          onGenerate={() => void handleGenerate()}
+          onToday={handleToday}
+          onYesterday={handleYesterday}
+          onPrint={handlePrint}
+          onExport={handleExport}
+          onPdf={handlePdf}
+        />
 
-      {isTodaySalesView ? (
-        pendingTodaySales ? (
-          <PanelCard>
-            <ReportFiltersToolbar {...toolbarProps} />
-            <div className="px-4 py-10 text-center">
-              <p className="text-sm font-medium text-foreground">
-                Select a location from the header to view today&apos;s sales.
-              </p>
-            </div>
-          </PanelCard>
-        ) : showTodaySales ? (
-          <TodaySalesReport
-            clubSlug={clubSlug}
-            location={locationId}
-            locationsReady={Boolean(locationId)}
-            toolbar={<ReportFiltersToolbar {...toolbarProps} embedded />}
-          />
-        ) : (
-          <PanelCard>
-            <ReportFiltersToolbar {...toolbarProps} />
-            <div className="px-4 py-10 text-center">
-              <p className="text-sm font-medium text-foreground">
-                Select a location from the header to view today&apos;s sales.
-              </p>
-            </div>
-          </PanelCard>
-        )
-      ) : (
-        <>
-          <PanelCard>
-            <ReportFiltersToolbar {...toolbarProps} />
-          </PanelCard>
-
-          {!appliedFilters ? (
-            <PanelCard>
-              <div className="px-4 py-10 text-center">
-                <p className="text-sm font-medium text-foreground">
-                  Choose a report and date range, then generate.
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Use Today or Yesterday for quick date presets.
-                </p>
-              </div>
-            </PanelCard>
-          ) : showPastCustomers ? (
-            <PastCustomerReport
-              dateFrom={appliedFilters.dateFrom}
-              dateTo={appliedFilters.dateTo}
-            />
-          ) : showManagerCheckout ? (
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-                <p className="text-sm text-muted-foreground">
-                  Showing{" "}
-                  <span className="font-semibold text-foreground">
-                    {selectedReportLabel}
-                  </span>{" "}
-                  for{" "}
-                  <span className="font-semibold tabular-nums text-foreground">
-                    {appliedFilters.dateFrom}
-                  </span>
-                  {appliedFilters.dateFrom !== appliedFilters.dateTo && (
-                    <>
-                      {" "}
-                      to{" "}
-                      <span className="font-semibold tabular-nums text-foreground">
-                        {appliedFilters.dateTo}
-                      </span>
-                    </>
-                  )}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {managerCheckoutShows.length} show
-                  {managerCheckoutShows.length === 1 ? "" : "s"}
-                </p>
-              </div>
-
-              {managerCheckoutShows.map((show) => (
-                <PanelCard key={show.id} className="p-3 sm:p-4">
-                  <ManagerCheckoutShowReport
-                    clubName={locationName}
-                    show={show}
-                  />
-                </PanelCard>
-              ))}
-            </div>
-          ) : (
-            <PanelCard>
-              <div className="px-4 py-10 text-center">
-                <p className="text-sm font-medium text-foreground">
-                  {selectedReportLabel} is not available yet.
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Past Customers, Today Sales, and Manager Checkout are fully
-                  supported. Other report types are coming soon.
-                </p>
-              </div>
-            </PanelCard>
-          )}
-        </>
-      )}
+        <div className="min-h-[38rem] bg-background">
+          <ReportViewerResults result={generatedResult} isLoading={isGenerating} />
+        </div>
+      </PanelCard>
     </div>
   )
 }
