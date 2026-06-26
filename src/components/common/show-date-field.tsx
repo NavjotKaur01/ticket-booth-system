@@ -1,14 +1,37 @@
-import { Calendar } from "lucide-react"
-import { useRef } from "react"
+﻿import dayjs from "dayjs"
+import { Calendar as CalendarIcon } from "lucide-react"
+import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
+function getStartOfDay(date: Date) {
+  const value = new Date(date)
+  value.setHours(0, 0, 0, 0)
+  return value
+}
+
+function parseDateValue(value: string) {
+  if (!value) {
+    return null
+  }
+
+  const parsed = dayjs(value)
+  return parsed.isValid() ? parsed.toDate() : null
+}
+
 function formatShowDate(dateValue: string) {
-  const date = new Date(`${dateValue}T00:00:00`)
-  if (Number.isNaN(date.getTime())) {
+  const date = parseDateValue(dateValue)
+  if (!date) {
     return dateValue
   }
+
   return date.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -21,56 +44,87 @@ type ShowDateFieldProps = {
   showDate: string
   onShowDateChange: (value: string) => void
   className?: string
+  disabled?: boolean
 }
 
-/** Formatted show date with calendar button that opens the native date picker. */
 export function ShowDateField({
   showDate,
   onShowDateChange,
   className,
+  disabled = false,
 }: ShowDateFieldProps) {
-  const dateInputRef = useRef<HTMLInputElement>(null)
+  const selectedDate = parseDateValue(showDate)
+  const [isOpen, setIsOpen] = useState(false)
+  const [visibleMonth, setVisibleMonth] = useState<Date>(() => selectedDate ?? new Date())
 
-  function openDatePicker() {
-    const input = dateInputRef.current
-    if (!input) return
+  useEffect(() => {
+    if (selectedDate) {
+      setVisibleMonth(selectedDate)
+    }
+  }, [showDate])
 
-    if (typeof input.showPicker === "function") {
-      try {
-        input.showPicker()
-        return
-      } catch {
-        // Fall through to click() if showPicker is blocked.
-      }
+  function handleOpenChange(nextOpen: boolean) {
+    if (disabled) {
+      setIsOpen(false)
+      return
     }
 
-    input.click()
+    setIsOpen(nextOpen)
+
+    if (nextOpen && selectedDate) {
+      setVisibleMonth(selectedDate)
+    }
+  }
+
+  if (disabled) {
+    return (
+      <div
+        aria-disabled="true"
+        className={cn(
+          "inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/25 px-2.5 py-1.5 opacity-70",
+          className
+        )}
+      >
+        <span className="text-sm leading-none text-muted-foreground">
+          {formatShowDate(showDate)}
+        </span>
+        <CalendarIcon className="size-4 shrink-0 text-muted-foreground/80" />
+      </div>
+    )
   }
 
   return (
-    <div className={cn("inline-flex items-center gap-1", className)}>
-      <span className="text-sm leading-none text-foreground">
-        {formatShowDate(showDate)}
-      </span>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
-        aria-label="Change show date"
-        onClick={openDatePicker}
-      >
-        <Calendar className="size-4" />
-      </Button>
-      <input
-        ref={dateInputRef}
-        type="date"
-        value={showDate}
-        onChange={(event) => onShowDateChange(event.target.value)}
-        className="sr-only"
-        tabIndex={-1}
-        aria-hidden
-      />
-    </div>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          className={cn(
+            "h-auto items-center gap-1 px-0 py-0 text-left font-normal hover:bg-transparent",
+            className
+          )}
+        >
+          <span className="text-sm leading-none text-foreground">
+            {formatShowDate(showDate)}
+          </span>
+          <CalendarIcon className="size-4 shrink-0 text-muted-foreground" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto p-0">
+        <Calendar
+          mode="single"
+          month={visibleMonth}
+          onMonthChange={setVisibleMonth}
+          selected={selectedDate ?? undefined}
+          onSelect={(nextDate) => {
+            if (nextDate) {
+              onShowDateChange(dayjs(getStartOfDay(nextDate)).format("YYYY-MM-DD"))
+              setIsOpen(false)
+            }
+          }}
+        />
+      </PopoverContent>
+    </Popover>
   )
 }
+

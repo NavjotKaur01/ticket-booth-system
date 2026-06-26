@@ -1,4 +1,4 @@
-import { Plus, Search, X } from "lucide-react"
+﻿import { Plus, Search, X } from "lucide-react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import {
@@ -9,6 +9,7 @@ import {
   FILTER_SELECT_CLASS,
   IconActionButton,
 } from "@/components/forms/form-fields"
+import CalendarDatePickerControl from "@/components/calendar/controls/CalendarDatePickerControl"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -20,8 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { dobMonthOptions } from "@/data/customer-form-options"
 import { performers } from "@/data/performers"
+import { dobMonthOptions } from "@/data/customer-form-options"
 import type { MarketingFilterForm } from "@/types/marketing-filter"
 
 type MarketingFilterFiltersCardProps = {
@@ -148,24 +149,20 @@ export function MarketingFilterFiltersCard({
             Only include new customer since:
           </Label>
           <div className="flex flex-wrap items-center gap-2">
-            <Input
-              type="date"
+            <CalendarDatePickerControl
+              id="marketing-filter-from-date"
               value={filters.newCustomerFrom}
-              onChange={(event) =>
-                onFilterChange("newCustomerFrom", event.target.value)
-              }
+              onChange={(value) => onFilterChange("newCustomerFrom", value)}
+              placeholder="From date"
               className="w-[10.5rem]"
-              aria-label="From date"
             />
             <span className="text-xs text-muted-foreground">To</span>
-            <Input
-              type="date"
+            <CalendarDatePickerControl
+              id="marketing-filter-to-date"
               value={filters.newCustomerTo}
-              onChange={(event) =>
-                onFilterChange("newCustomerTo", event.target.value)
-              }
+              onChange={(value) => onFilterChange("newCustomerTo", value)}
+              placeholder="To date"
               className="w-[10.5rem]"
-              aria-label="To date"
             />
           </div>
         </div>
@@ -194,9 +191,9 @@ export function MarketingFilterFiltersCard({
         </div>
 
         <div className="space-y-2 border-t pt-3">
-          <p className="text-xs font-semibold text-foreground">
-            Comedian Attended
-          </p>
+            <p className="text-xs font-semibold text-foreground">
+              Comedian Attended
+            </p>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="min-h-24 flex-1 rounded-md border bg-muted/20 p-2">
               {selectedComics.length === 0 ? (
