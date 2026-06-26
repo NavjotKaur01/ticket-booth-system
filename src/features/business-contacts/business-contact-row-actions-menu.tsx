@@ -7,10 +7,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import type { BusinessContact } from "@/types/business-contact"
 
-const BUSINESS_CONTACT_ACTIONS = ["Edit", "Delete"] as const
+type BusinessContactRowActionsMenuProps = {
+  contact: BusinessContact
+  onEdit?: (contact: BusinessContact) => void
+  onDelete?: (contact: BusinessContact) => void
+}
 
-export function BusinessContactRowActionsMenu() {
+export function BusinessContactRowActionsMenu({
+  contact,
+  onEdit,
+  onDelete,
+}: BusinessContactRowActionsMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -25,9 +34,15 @@ export function BusinessContactRowActionsMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[8rem]">
-        {BUSINESS_CONTACT_ACTIONS.map((action) => (
-          <DropdownMenuItem key={action}>{action}</DropdownMenuItem>
-        ))}
+        <DropdownMenuItem onSelect={() => onEdit?.(contact)}>
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          variant="destructive"
+          onSelect={() => onDelete?.(contact)}
+        >
+          Delete
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

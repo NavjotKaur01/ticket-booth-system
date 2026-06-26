@@ -62,6 +62,7 @@ type DataTableProps<TData> = {
   onRowSelectionChange?: OnChangeFn<RowSelectionState>
   getRowId?: (originalRow: TData, index: number) => string
   onRowClick?: (row: Row<TData>) => void
+  onRowDoubleClick?: (row: Row<TData>) => void
   /** Noun shown in pagination, e.g. "records" or "reservations". */
   entityLabel?: string
 }
@@ -79,6 +80,7 @@ export function DataTable<TData>({
   onRowSelectionChange,
   getRowId,
   onRowClick,
+  onRowDoubleClick,
   entityLabel = "records",
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([])
@@ -140,9 +142,10 @@ export function DataTable<TData>({
                   data-state={row.getIsSelected() && "selected"}
                   className={cn(
                     "group border-b last:border-0 hover:bg-muted/40",
-                    onRowClick && "cursor-pointer"
+                    (onRowClick || onRowDoubleClick) && "cursor-pointer"
                   )}
                   onClick={() => onRowClick?.(row)}
+                  onDoubleClick={() => onRowDoubleClick?.(row)}
                 >
                   {row.getVisibleCells().map((cell) => {
                     const rowSpan = cell.column.columnDef.meta?.getRowSpan?.(row)

@@ -1,6 +1,11 @@
 import { createApi } from "@reduxjs/toolkit/query/react"
 
 import { buildCustomerSearchRequest } from "@/lib/build-customer-search-request"
+import { buildBusinessContactSearchRequest } from "@/lib/build-business-contact-search-request"
+import {
+  buildArchiveBusinessContactRequest,
+  buildSaveBusinessContactRequest,
+} from "@/lib/build-save-business-contact-request"
 import { buildSaveCustomerRequest } from "@/lib/build-save-customer-request"
 import { buildReservationDayRange } from "@/lib/reservation-date-range"
 import { buildGetReservationPromotionsRequest } from "@/lib/build-get-reservation-promotions-request"
@@ -30,6 +35,10 @@ import type {
   SaveShowRequestModel,
 } from "@/types/api/save-show"
 import type { ApiCustomerSearchItem } from "@/types/api/customer-search"
+import type {
+  ApiBusinessContactItem,
+  BusinessCustomerRequest,
+} from "@/types/api/business-contact"
 import type { ApiLocation } from "@/types/api/locations"
 import type { ApiPromotionSearchItem } from "@/types/api/promotion-search"
 import type { ApiSystemLookupItem } from "@/types/api/system-lookup"
@@ -49,6 +58,8 @@ import type {
 } from "@/types/api/system-users"
 import type { CustomerSearchFilters } from "@/types/customer"
 import type { CustomerFormValues } from "@/types/customer-form"
+import type { BusinessContactFormValues } from "@/types/business-contact"
+import type { BusinessContactSearchFilters } from "@/types/business-contact"
 import type { PromotionFilters } from "@/types/promotion"
 
 export const clubmanApi = createApi({
@@ -58,6 +69,7 @@ export const clubmanApi = createApi({
     "Location",
     "SystemUser",
     "Customer",
+    "BusinessContact",
     "Promotion",
     "Reservation",
     "ShowDetails",
@@ -163,6 +175,141 @@ export const clubmanApi = createApi({
       }),
       invalidatesTags: (_result, _error, arg) => [
         { type: "Customer", id: arg.locationId },
+      ],
+    }),
+
+    searchBusinessContacts: builder.mutation({
+      query: ({
+        connectionName,
+        locationId,
+        filters,
+      }: {
+        connectionName: string
+        locationId: string
+        filters: BusinessContactSearchFilters
+      }) => ({
+        url: administratorApiPath("BusniessCustomerSearch"),
+        method: "PUT",
+        body: buildBusinessContactSearchRequest({
+          connectionName,
+          locationId,
+          filters,
+        }),
+      }),
+      transformResponse: (response: ApiBusinessContactItem[]) => response,
+      invalidatesTags: (_result, _error, arg) => [
+        { type: "BusinessContact", id: arg.locationId },
+      ],
+    }),
+
+    saveBusinessContact: builder.mutation({
+      query: ({
+        connectionName,
+        locationId,
+        lastUpdateId,
+        form,
+      }: {
+        connectionName: string
+        locationId: string
+        lastUpdateId: string
+        form: BusinessContactFormValues
+      }) => ({
+        url: administratorApiPath("SaveBusinessCustomer"),
+        method: "POST",
+        body: buildSaveBusinessContactRequest({
+          connectionName,
+          locationId,
+          lastUpdateId,
+          form,
+        }),
+      }),
+      invalidatesTags: (_result, _error, arg) => [
+        { type: "BusinessContact", id: arg.locationId },
+      ],
+    }),
+
+    updateBusinessContact: builder.mutation({
+      query: ({
+        connectionName,
+        locationId,
+        lastUpdateId,
+        form,
+        businessId,
+      }: {
+        connectionName: string
+        locationId: string
+        lastUpdateId: string
+        form: BusinessContactFormValues
+        businessId: string
+      }) => ({
+        url: administratorApiPath("UpdateBusinessCustomer"),
+        method: "PUT",
+        body: buildSaveBusinessContactRequest({
+          connectionName,
+          locationId,
+          lastUpdateId,
+          form,
+          businessId,
+        }),
+      }),
+      invalidatesTags: (_result, _error, arg) => [
+        { type: "BusinessContact", id: arg.locationId },
+      ],
+    }),
+
+    getBusinessContactById: builder.mutation({
+      query: ({
+        connectionName,
+        locationId,
+        businessId,
+      }: {
+        connectionName: string
+        locationId: string
+        businessId: string
+      }) => ({
+        url: reservationApiPath(
+          connectionName,
+          locationId,
+          businessId,
+          "GetBusinessCustomerById"
+        ),
+        method: "GET",
+      }),
+      transformResponse: (response: ApiBusinessContactItem) => response,
+    }),
+
+    getBusinessContactDeleteDetail: builder.mutation({
+      query: (body: BusinessCustomerRequest) => ({
+        url: administratorApiPath("GetBusineesCustomerReservationBookedDetail"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: ApiBusinessContactItem) => response,
+    }),
+
+    archiveBusinessContact: builder.mutation({
+      query: ({
+        connectionName,
+        locationId,
+        businessId,
+        lastUpdateId,
+      }: {
+        connectionName: string
+        locationId: string
+        businessId: string
+        lastUpdateId: string
+      }) => ({
+        url: administratorApiPath("ArchiveBusniessCustomer"),
+        method: "PUT",
+        body: buildArchiveBusinessContactRequest({
+          connectionName,
+          locationId,
+          businessId,
+          lastUpdateId,
+        }),
+      }),
+      invalidatesTags: (_result, _error, arg) => [
+        { type: "BusinessContact", id: arg.locationId },
       ],
     }),
 
@@ -458,6 +605,12 @@ export const {
   useSearchReservationCustomersMutation,
   useSearchReservationBusinessCustomersMutation,
   useSaveCustomerMutation,
+  useSearchBusinessContactsMutation,
+  useSaveBusinessContactMutation,
+  useUpdateBusinessContactMutation,
+  useGetBusinessContactByIdMutation,
+  useGetBusinessContactDeleteDetailMutation,
+  useArchiveBusinessContactMutation,
   useGetSystemUsersQuery,
   useSaveSystemUserMutation,
   useUpdateSystemUserMutation,

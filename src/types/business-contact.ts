@@ -11,6 +11,7 @@ export type BusinessContact = {
   address: string
   phoneNo: string
   fax: string
+  lastUpdateId?: string
 }
 
 export type BusinessContactSearchFilters = {
@@ -56,7 +57,7 @@ export const EMPTY_BUSINESS_CONTACT_FORM: BusinessContactFormValues = {
   fax: EMPTY_PHONE_PARTS,
   address1: "",
   address2: "",
-  country: "usa",
+  country: "US",
   city: "",
   state: "",
   zipCode: "",
