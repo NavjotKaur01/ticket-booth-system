@@ -1,16 +1,57 @@
-import type {
+﻿import type {
   Reservation,
   ReservationCounts,
   SectionOption,
   ShowOption,
 } from "@/types/reservation"
 
-/** Static reservation data for the booth UI — replace with API calls when wired up. */
+/** Static reservation data for the booth UI â€” replace with API calls when wired up. */
 export const showOptions: ShowOption[] = [
   { id: "1", label: "7:30 PM Benson, Doug", time: "7:30 PM", subtitle: "Main Theater" },
   { id: "2", label: "9:30 PM Benson, Doug", time: "9:30 PM", subtitle: "Main Theater" },
   { id: "3", label: "11:00 PM Benson, Doug", time: "11:00 PM", subtitle: "Main Theater" },
 ]
+
+const showOptionsByWeekday: Record<number, ShowOption[]> = {
+  0: [
+    { id: "sun-1", label: "6:00 PM Benson, Doug", time: "6:00 PM", subtitle: "Main Theater" },
+    { id: "sun-2", label: "8:30 PM Benson, Doug", time: "8:30 PM", subtitle: "Main Theater" },
+  ],
+  1: [
+    { id: "mon-1", label: "7:00 PM Benson, Doug", time: "7:00 PM", subtitle: "Main Theater" },
+    { id: "mon-2", label: "10:00 PM Benson, Doug", time: "10:00 PM", subtitle: "Main Theater" },
+  ],
+  2: [
+    { id: "tue-1", label: "7:30 PM Benson, Doug", time: "7:30 PM", subtitle: "Main Theater" },
+    { id: "tue-2", label: "9:30 PM Benson, Doug", time: "9:30 PM", subtitle: "Main Theater" },
+  ],
+  3: [
+    { id: "wed-1", label: "7:30 PM Benson, Doug", time: "7:30 PM", subtitle: "Main Theater" },
+    { id: "wed-2", label: "9:45 PM Benson, Doug", time: "9:45 PM", subtitle: "Main Theater" },
+  ],
+  4: showOptions,
+  5: [
+    { id: "fri-1", label: "7:30 PM Benson, Doug", time: "7:30 PM", subtitle: "Main Theater" },
+    { id: "fri-2", label: "9:45 PM Benson, Doug", time: "9:45 PM", subtitle: "Main Theater" },
+    { id: "fri-3", label: "11:59 PM Benson, Doug", time: "11:59 PM", subtitle: "Main Theater" },
+  ],
+  6: [
+    { id: "sat-1", label: "6:30 PM Benson, Doug", time: "6:30 PM", subtitle: "Main Theater" },
+    { id: "sat-2", label: "8:45 PM Benson, Doug", time: "8:45 PM", subtitle: "Main Theater" },
+    { id: "sat-3", label: "11:00 PM Benson, Doug", time: "11:00 PM", subtitle: "Main Theater" },
+  ],
+}
+
+export function getShowOptionsForDate(showDate: string): ShowOption[] {
+  const date = new Date(`${showDate}T00:00:00`)
+
+  if (Number.isNaN(date.getTime())) {
+    return showOptions
+  }
+
+  const scheduledShows = showOptionsByWeekday[date.getDay()] ?? showOptions
+  return scheduledShows.map((show) => ({ ...show }))
+}
 
 export function formatSectionDesktopPrice (price: string) {
   return price.startsWith('$ ') ? price : `$ ${price.slice(1)}`
@@ -176,7 +217,7 @@ export const reservations: Reservation[] = [
     source: "Phone",
     tables: "",
     seatNo: "",
-    notes: "Comp — manager approval",
+    notes: "Comp â€” manager approval",
     promo: "COMP",
     din: "Y",
     section: "VIP",
@@ -245,7 +286,7 @@ export const reservations: Reservation[] = [
     source: "Phone",
     tables: "T-2",
     seatNo: "",
-    notes: "Group booking — 6 guests",
+    notes: "Group booking â€” 6 guests",
     promo: "",
     din: "Y",
     section: "VIP",
@@ -266,3 +307,4 @@ export const reservationShowMeta = {
   showDate: "Thursday, June 18, 2026",
   showDateInput: "2026-06-18",
 }
+

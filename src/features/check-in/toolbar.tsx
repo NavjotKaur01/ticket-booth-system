@@ -1,4 +1,4 @@
-import { PanelCard } from '@/components/common/panel-card'
+﻿import { PanelCard } from '@/components/common/panel-card'
 import { ShowDateField } from '@/components/common/show-date-field'
 import { ShowTimeField } from '@/components/common/show-time-picker'
 import { CheckInStatsGrid } from '@/features/check-in/check-in-stats-grid'
@@ -30,14 +30,17 @@ type CheckInToolbarProps = {
   cancelledShow: boolean
   onCancelledShowChange: (value: boolean) => void
   shows?: ShowOption[]
+  disableShowDateChange?: boolean
 }
 
 function ToolbarEventInfo ({
   showDate,
-  onShowDateChange
+  onShowDateChange,
+  disableShowDateChange = false,
 }: {
   showDate: string
   onShowDateChange: (value: string) => void
+  disableShowDateChange?: boolean
 }) {
   return (
     <div className='flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 md:flex-nowrap'>
@@ -45,6 +48,7 @@ function ToolbarEventInfo ({
         showDate={showDate}
         onShowDateChange={onShowDateChange}
         className='shrink-0'
+        disabled={disableShowDateChange}
       />
       <span className='min-w-0 truncate text-sm font-medium leading-none text-foreground'>
         {reservationShowMeta.comicName}
@@ -134,16 +138,17 @@ export function CheckInToolbar ({
   onDisplayCheckedInChange,
   cancelledShow,
   onCancelledShowChange,
-  shows = showOptions
+  shows = showOptions,
+  disableShowDateChange = false,
 }: CheckInToolbarProps) {
   return (
     <PanelCard className='overflow-hidden'>
-      {/* Row 1: event info (left) + refresh / checkboxes (right) */}
       <div className='flex flex-col gap-4 border-b px-3 py-3 lg:flex-row lg:items-center lg:justify-between lg:gap-3'>
         <div className='min-w-0 lg:flex-1 lg:pr-3'>
           <ToolbarEventInfo
             showDate={showDate}
             onShowDateChange={onShowDateChange}
+            disableShowDateChange={disableShowDateChange}
           />
         </div>
         <ToolbarControls
@@ -158,7 +163,6 @@ export function CheckInToolbar ({
         />
       </div>
 
-      {/* Row 2: show / time (left) + stats (right) */}
       <div className='flex flex-col gap-3 px-3 py-2.5 md:flex-row md:items-end md:justify-between md:gap-4'>
         <ShowTimeField
           shows={shows}

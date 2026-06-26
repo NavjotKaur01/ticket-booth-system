@@ -1,10 +1,11 @@
+﻿import dayjs from "dayjs"
 import { FileDown, Plus, Printer, Zap } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
 import { checkInRecords } from "@/data/check-in"
-import { reservationShowMeta, showOptions } from "@/data/reservation"
+import { getShowOptionsForDate } from "@/data/reservation"
 import { CheckInTabBar } from "@/features/check-in/check-in-tab-bar"
 import {
   CheckInTabs,
@@ -22,8 +23,12 @@ import { filterCheckInRecords } from "@/lib/filter-check-in"
 export function CheckIn() {
   const [activeTab, setActiveTab] = useState<CheckInTab>("check-in")
 
-  const [showDate, setShowDate] = useState(reservationShowMeta.showDateInput)
-  const [showTime, setShowTime] = useState(showOptions[0]?.id ?? "")
+  const [showDate] = useState(() => dayjs().format("YYYY-MM-DD"))
+  const availableShows = useMemo(
+    () => getShowOptionsForDate(showDate),
+    [showDate]
+  )
+  const [showTime, setShowTime] = useState(availableShows[0]?.id ?? "")
   const [refreshValue, setRefreshValue] = useState("999")
   const [cancelled, setCancelled] = useState(false)
   const [displayCheckedIn, setDisplayCheckedIn] = useState(false)
@@ -36,6 +41,12 @@ export function CheckIn() {
   const [ccLast4, setCcLast4] = useState("")
   const [tableNo, setTableNo] = useState("")
   const [phoneNo, setPhoneNo] = useState("")
+
+  useEffect(() => {
+    if (!availableShows.some((show) => show.id === showTime)) {
+      setShowTime(availableShows[0]?.id ?? "")
+    }
+  }, [availableShows, showTime])
 
   const filteredRecords = useMemo(
     () =>
@@ -95,7 +106,7 @@ export function CheckIn() {
           <div className="space-y-2">
             <CheckInToolbar
               showDate={showDate}
-              onShowDateChange={setShowDate}
+              onShowDateChange={() => undefined}
               showTime={showTime}
               onShowTimeChange={setShowTime}
               refreshValue={refreshValue}
@@ -106,6 +117,8 @@ export function CheckIn() {
               onDisplayCheckedInChange={setDisplayCheckedIn}
               cancelledShow={cancelledShow}
               onCancelledShowChange={setCancelledShow}
+              shows={availableShows}
+              disableShowDateChange
             />
 
             <PanelCard>
@@ -153,8 +166,9 @@ export function CheckIn() {
         onOpenChange={setExpressWalkupOpen}
         showDate={showDate}
         showTimeId={showTime}
-        shows={showOptions}
+        shows={availableShows}
       />
     </div>
   )
 }
+

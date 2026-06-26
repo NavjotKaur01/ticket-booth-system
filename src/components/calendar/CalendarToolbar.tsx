@@ -1,4 +1,4 @@
-import type { ToolbarProps, View } from "react-big-calendar"
+﻿import type { ToolbarProps, View } from "react-big-calendar"
 import {
   CalendarDays,
   CalendarRange,
@@ -55,9 +55,9 @@ export default function CalendarToolbar({
   isRefreshing = false,
 }: CalendarToolbarProps) {
   return (
-    <div className="grid shrink-0 gap-2 bg-primary px-2 py-2 text-primary-foreground sm:px-3 xl:grid-cols-[minmax(13rem,17rem)_minmax(18rem,1fr)_auto] xl:items-center xl:gap-3">
+    <div className="grid shrink-0 gap-2 border-b border-border bg-background px-2 py-2 text-foreground sm:px-3 xl:grid-cols-[minmax(13rem,17rem)_minmax(18rem,1fr)_auto] xl:items-center xl:gap-3">
       <div className="flex min-w-0 items-center gap-2">
-        <Label className="shrink-0 text-sm font-medium text-primary-foreground">
+        <Label className="shrink-0 text-sm font-medium text-foreground">
           Location
         </Label>
         <CalendarSelectControl
@@ -79,7 +79,7 @@ export default function CalendarToolbar({
           variant="ghost"
           size="icon"
           onClick={() => onNavigate("PREV")}
-          className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground"
+          className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
           aria-label="Previous period"
         >
           <ChevronLeft size={18} />
@@ -93,7 +93,7 @@ export default function CalendarToolbar({
           variant="ghost"
           size="icon"
           onClick={() => onNavigate("NEXT")}
-          className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground"
+          className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
           aria-label="Next period"
         >
           <ChevronRight size={18} />
@@ -103,14 +103,14 @@ export default function CalendarToolbar({
           variant="outline"
           size="sm"
           onClick={() => onNavigate("TODAY")}
-          className="h-8 border-primary-foreground/60 bg-background px-2 text-xs text-foreground hover:bg-primary-foreground/90 sm:px-3 sm:text-sm"
+          className="h-8 border-border bg-background px-2 text-xs text-foreground hover:bg-muted sm:px-3 sm:text-sm"
         >
           Today
         </Button>
       </div>
 
       <div className="grid grid-cols-2 items-center gap-2 sm:grid-cols-[auto_auto_auto] sm:justify-between md:justify-start xl:justify-end">
-        <div className="col-span-2 flex w-full rounded-md border border-primary-foreground/40 bg-primary-foreground/10 p-0.5 sm:col-span-1 sm:w-auto">
+        <div className="col-span-2 flex w-full rounded-md border border-border bg-muted/40 p-0.5 sm:col-span-1 sm:w-auto">
           {viewOptions.map(({ value, label: optionLabel, icon: Icon }) => (
             <Button
               key={value}
@@ -119,9 +119,9 @@ export default function CalendarToolbar({
               size="sm"
               onClick={() => onView(value)}
               className={cn(
-                "h-7 flex-1 gap-1 rounded-sm px-2 text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground sm:flex-none",
+                "h-7 flex-1 gap-1 rounded-sm border border-transparent px-2 text-muted-foreground hover:bg-background hover:text-foreground sm:flex-none",
                 view === value &&
-                  "bg-background text-foreground hover:bg-background hover:text-foreground"
+                  "border-border bg-background text-foreground shadow-xs hover:bg-background hover:text-foreground"
               )}
               aria-pressed={view === value}
             >
@@ -132,7 +132,7 @@ export default function CalendarToolbar({
         </div>
 
         <div className="flex min-w-0 items-center gap-2">
-          <Label className="shrink-0 text-sm text-primary-foreground">
+          <Label className="shrink-0 text-sm text-foreground">
             Refresh
           </Label>
           <Input
@@ -150,7 +150,7 @@ export default function CalendarToolbar({
             onClick={onRefresh}
             disabled={!onRefresh || isRefreshing}
             aria-label="Refresh calendar"
-            className="hidden h-8 w-8 text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground md:inline-flex"
+            className="hidden h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground md:inline-flex"
           >
             <RefreshCw
               size={16}
@@ -165,11 +165,10 @@ export default function CalendarToolbar({
             id="cancelled"
             checked={showCancelled}
             onCheckedChange={(val) => setShowCancelled(val as boolean)}
-            className="border-primary-foreground data-checked:border-primary-foreground data-checked:bg-primary-foreground dark:data-checked:bg-primary-foreground data-checked:[&_[data-slot=checkbox-indicator]]:text-primary dark:data-checked:[&_[data-slot=checkbox-indicator]]:text-primary"
           />
           <Label
             htmlFor="cancelled"
-            className="cursor-pointer text-sm text-primary-foreground"
+            className="cursor-pointer text-sm text-foreground"
           >
             Cancelled
           </Label>
@@ -178,3 +177,4 @@ export default function CalendarToolbar({
     </div>
   )
 }
+
