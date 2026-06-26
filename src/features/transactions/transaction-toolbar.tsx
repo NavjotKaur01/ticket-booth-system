@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { showOptions } from "@/data/reservation"
+import { sanitizeRefreshSecondsInput } from "@/lib/parse-refresh-interval"
+import type { ShowOption } from "@/types/reservation"
 import type { TransactionFilters } from "@/types/transaction"
 
 function todayDateValue() {
@@ -23,6 +24,9 @@ function todayDateValue() {
 
 type TransactionToolbarProps = {
   filters: TransactionFilters
+  shows: ShowOption[]
+  showsLoading?: boolean
+  showsError?: string | null
   onFilterChange: <K extends keyof TransactionFilters>(
     key: K,
     value: TransactionFilters[K]
@@ -32,6 +36,9 @@ type TransactionToolbarProps = {
 
 export function TransactionToolbar({
   filters,
+  shows,
+  showsLoading = false,
+  showsError = null,
   onFilterChange,
   onRefresh,
 }: TransactionToolbarProps) {
@@ -68,20 +75,32 @@ export function TransactionToolbar({
           Show Time
         </Label>
         <Select
-          value={filters.showTimeId}
+          value={filters.showTimeId || undefined}
           onValueChange={(value) => onFilterChange("showTimeId", value)}
+          disabled={showsLoading || shows.length === 0}
         >
           <SelectTrigger id="transaction-show-time" className={fieldClassName}>
-            <SelectValue />
+            <SelectValue
+              placeholder={
+                showsLoading
+                  ? "Loading shows..."
+                  : shows.length === 0
+                    ? "No shows found"
+                    : "Select show"
+              }
+            />
           </SelectTrigger>
           <SelectContent>
-            {showOptions.map((option) => (
+            {shows.map((option) => (
               <SelectItem key={option.id} value={option.id}>
                 {option.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        {showsError ? (
+          <p className="text-xs text-destructive">{showsError}</p>
+        ) : null}
       </div>
 
       <div className="space-y-1 sm:ml-auto">
@@ -94,7 +113,10 @@ export function TransactionToolbar({
             inputMode="numeric"
             value={filters.refreshSeconds}
             onChange={(event) =>
-              onFilterChange("refreshSeconds", event.target.value)
+              onFilterChange(
+                "refreshSeconds",
+                sanitizeRefreshSecondsInput(event.target.value)
+              )
             }
             className="w-16 tabular-nums"
           />

@@ -65,6 +65,7 @@ type DataTableProps<TData> = {
   onRowDoubleClick?: (row: Row<TData>) => void
   /** Noun shown in pagination, e.g. "records" or "reservations". */
   entityLabel?: string
+  getRowClassName?: (row: TData) => string | undefined
 }
 
 export function DataTable<TData>({
@@ -82,6 +83,7 @@ export function DataTable<TData>({
   onRowClick,
   onRowDoubleClick,
   entityLabel = "records",
+  getRowClassName,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [internalRowSelection, setInternalRowSelection] =
@@ -142,7 +144,8 @@ export function DataTable<TData>({
                   data-state={row.getIsSelected() && "selected"}
                   className={cn(
                     "group border-b last:border-0 hover:bg-muted/40",
-                    (onRowClick || onRowDoubleClick) && "cursor-pointer"
+                    (onRowClick || onRowDoubleClick) && "cursor-pointer",
+                    getRowClassName?.(row.original)
                   )}
                   onClick={() => onRowClick?.(row)}
                   onDoubleClick={() => onRowDoubleClick?.(row)}

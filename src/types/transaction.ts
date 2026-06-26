@@ -10,8 +10,19 @@ export type Transaction = {
   paymentType: string
   ccType: string
   amount: number
-  showDate: string
-  showTimeId: string
+  resStatus: string
+  reservationId: string
+  customerId: string
+  resSource: string
+  notes: string
+  promo: string
+  pendingStatus: string
+  dinner: string
+  section: string
+  partyNo: number
+  checkedIn: number
+  price: number
+  total: number
 }
 
 export type TransactionFilters = {
@@ -20,8 +31,4 @@ export type TransactionFilters = {
   refreshSeconds: string
 }
 
-export const DEFAULT_TRANSACTION_FILTERS: TransactionFilters = {
-  showDate: "2026-06-18",
-  showTimeId: "1",
-  refreshSeconds: "20",
-}
+export const DEFAULT_TRANSACTION_REFRESH_SECONDS = "20"

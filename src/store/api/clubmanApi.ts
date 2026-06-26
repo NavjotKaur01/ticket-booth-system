@@ -47,6 +47,7 @@ import type { RecentSalesReportData } from "@/types/api/recent-sales"
 import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { ReservationCustomerSearchItem } from "@/types/api/reservation-customer-search"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
+import type { DailyTransactionItem } from "@/types/api/daily-transaction"
 import type {
   GetShowDetailsByDateRequest,
   ShowDetailsByDateItem,
@@ -76,6 +77,7 @@ export const clubmanApi = createApi({
     "ShowDetails",
     "RecentSales",
     "Calendar",
+    "DailyTransaction",
   ],
   endpoints: (builder) => ({
     getLocations: builder.query({
@@ -650,6 +652,27 @@ export const clubmanApi = createApi({
       invalidatesTags: ["Calendar"],
     }),
 
+    getDailyTransactionData: builder.query({
+      query: ({
+        connectionString,
+        showId,
+      }: {
+        connectionString: string
+        showId: string
+      }) => ({
+        url: reservationApiPath(
+          connectionString,
+          showId,
+          "GetDailyTransactionData"
+        ),
+        headers: { Accept: "application/json" },
+      }),
+      transformResponse: (response: DailyTransactionItem[]) => response,
+      providesTags: (_result, _error, arg) => [
+        { type: "DailyTransaction", id: arg.showId },
+      ],
+    }),
+
     getRecentSalesReport: builder.query({
       query: ({
         clubSlug,
@@ -696,6 +719,7 @@ export const {
   useGetShowSectionsQuery,
   useSaveReservationMutation,
   useUpdateReservationMutation,
+  useGetDailyTransactionDataQuery,
   useGetRecentSalesReportQuery,
   useGetCalendarDataQuery,
   useSearchComediansMutation,

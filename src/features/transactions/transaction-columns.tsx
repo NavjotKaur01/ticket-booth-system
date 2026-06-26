@@ -1,7 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { dataTableActionsColumn } from "@/components/data-table/data-table-actions-column"
 import { formatCurrency } from "@/lib/format-currency"
 import { cn } from "@/lib/utils"
 import type { Transaction } from "@/types/transaction"
@@ -55,11 +54,17 @@ export const transactionColumns: ColumnDef<Transaction>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader label="Payment Status" column={column} />
     ),
+    cell: ({ row }) => (
+      <span className="block text-center">{row.original.paymentStatus || "\u00A0"}</span>
+    ),
   },
   {
     accessorKey: "paymentType",
     header: ({ column }) => (
       <DataTableColumnHeader label="Payment Type" column={column} />
+    ),
+    cell: ({ row }) => (
+      <span className="block text-center">{row.original.paymentType || "\u00A0"}</span>
     ),
   },
   {
@@ -72,14 +77,14 @@ export const transactionColumns: ColumnDef<Transaction>[] = [
   {
     accessorKey: "amount",
     header: ({ column }) => (
-      <div className="flex justify-end">
+      <div className="flex justify-center">
         <DataTableColumnHeader label="Amount" column={column} />
       </div>
     ),
     cell: ({ row }) => (
       <span
         className={cn(
-          "block text-right tabular-nums",
+          "block text-center tabular-nums",
           row.original.amount < 0 && "text-destructive"
         )}
       >
@@ -87,7 +92,4 @@ export const transactionColumns: ColumnDef<Transaction>[] = [
       </span>
     ),
   },
-  dataTableActionsColumn<Transaction>({
-    ariaLabel: "Transaction actions",
-  }),
 ]
