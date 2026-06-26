@@ -2,6 +2,7 @@ import type { Table } from "@tanstack/react-table"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { getPaginationRange } from "@/lib/pagination-range"
 import { cn } from "@/lib/utils"
 
 type DataTablePaginationProps<TData> = {
@@ -23,6 +24,7 @@ export function DataTablePagination<TData>({
   const from = total === 0 ? 0 : pageIndex * pageSize + 1
   const to = Math.min((pageIndex + 1) * pageSize, total)
   const pageCount = table.getPageCount()
+  const visiblePages = getPaginationRange(pageIndex, pageCount)
 
   return (
     <div
@@ -44,39 +46,52 @@ export function DataTablePagination<TData>({
         )}
       </p>
 
-      <div className="flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="icon-sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          <ChevronLeft className="size-4" />
-          <span className="sr-only">Previous page</span>
-        </Button>
-
-        {Array.from({ length: pageCount }, (_, i) => i + 1).map((page) => (
+      {pageCount > 1 ? (
+        <div className="flex items-center gap-1">
           <Button
-            key={page}
-            variant={pageIndex + 1 === page ? "default" : "outline"}
+            variant="outline"
             size="icon-sm"
-            className="size-8"
-            onClick={() => table.setPageIndex(page - 1)}
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
           >
-            {page}
+            <ChevronLeft className="size-4" />
+            <span className="sr-only">Previous page</span>
           </Button>
-        ))}
 
-        <Button
-          variant="outline"
-          size="icon-sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          <ChevronRight className="size-4" />
-          <span className="sr-only">Next page</span>
-        </Button>
-      </div>
+          {visiblePages.map((page, index) =>
+            page === "ellipsis" ? (
+              <span
+                key={`ellipsis-${index}`}
+                className="flex size-8 items-center justify-center text-xs text-muted-foreground"
+                aria-hidden
+              >
+                …
+              </span>
+            ) : (
+              <Button
+                key={page}
+                variant={pageIndex + 1 === page ? "default" : "outline"}
+                size="icon-sm"
+                className="size-8"
+                onClick={() => table.setPageIndex(page - 1)}
+                aria-current={pageIndex + 1 === page ? "page" : undefined}
+              >
+                {page}
+              </Button>
+            )
+          )}
+
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            <ChevronRight className="size-4" />
+            <span className="sr-only">Next page</span>
+          </Button>
+        </div>
+      ) : null}
     </div>
   )
 }
