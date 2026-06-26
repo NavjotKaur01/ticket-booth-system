@@ -1,3 +1,4 @@
+import { Info } from "lucide-react"
 import { useState } from "react"
 
 import {
@@ -6,6 +7,11 @@ import {
   ReadOnlyValue,
 } from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   Dialog,
   DialogContent,
@@ -34,20 +40,117 @@ const PROMO_OPTIONS = [
 
 const PROMOTION_ROWS = Array.from({ length: 5 }, (_, i) => i)
 
-const RESERVATION_DETAIL_FIELDS = [
-  { label: "Subtotal", value: "$0.00" },
-  { label: "SVC", value: "$0.00" },
-  { label: "Disc", value: "$0.00" },
-  { label: "Taxes", value: "$0.00" },
-  { label: "Total", value: "$0.00" },
-  { label: "Party Number", value: "0" },
-  { label: "Price Per Ticket", value: "$10.00" },
-  { label: "UnDiscount", value: "0" },
+const RESERVATION_LINE_META = [
+  { key: "sub", label: "Subtotal", info: null },
+  {
+    key: "svc",
+    label: "Service Charge",
+    info: "Service charge applied per ticket",
+  },
+  { key: "disc", label: "Discount", info: null },
+  { key: "tax", label: "Taxes", info: "Sales tax on this reservation" },
 ] as const
+
+const DEFAULT_RESERVATION_TOTALS = {
+  subtotal: "$0.00",
+  serviceCharge: "$0.00",
+  discount: "$0.00",
+  taxes: "$0.00",
+  total: "$0.00",
+  pricePerTicket: "$10.00",
+  unDiscount: "0",
+} as const
+
+function TotalsLine({
+  label,
+  value,
+  info,
+}: {
+  label: string
+  value: string
+  info?: string | null
+}) {
+  return (
+    <div className="flex items-center justify-between gap-6">
+      <span className="inline-flex items-center gap-1 text-muted-foreground">
+        {label}
+        {info ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="text-muted-foreground/60 hover:text-foreground"
+                aria-label={`About ${label}`}
+              >
+                <Info className="size-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">{info}</TooltipContent>
+          </Tooltip>
+        ) : null}
+      </span>
+      <span className="shrink-0 font-medium tabular-nums">{value}</span>
+    </div>
+  )
+}
+
+function MultiplePromotionsReservationDetails({
+  partyNumber,
+}: {
+  partyNumber: number | null
+}) {
+  const lineValues: Record<
+    (typeof RESERVATION_LINE_META)[number]["key"],
+    string
+  > = {
+    sub: DEFAULT_RESERVATION_TOTALS.subtotal,
+    svc: DEFAULT_RESERVATION_TOTALS.serviceCharge,
+    disc: DEFAULT_RESERVATION_TOTALS.discount,
+    tax: DEFAULT_RESERVATION_TOTALS.taxes,
+  }
+
+  return (
+    <div className="rounded-lg border border-border/60 p-2.5">
+      <div className="space-y-2.5 text-sm">
+        {RESERVATION_LINE_META.map((line) => (
+          <TotalsLine
+            key={line.key}
+            label={line.label}
+            value={lineValues[line.key]}
+            info={line.info}
+          />
+        ))}
+
+        <TotalsLine
+          label="Party Number"
+          value={partyNumber === null ? "0" : String(partyNumber)}
+        />
+        <TotalsLine
+          label="Price Per Ticket"
+          value={DEFAULT_RESERVATION_TOTALS.pricePerTicket}
+        />
+        <TotalsLine
+          label="UnDiscount"
+          value={DEFAULT_RESERVATION_TOTALS.unDiscount}
+        />
+
+        <div className="space-y-2 border-t border-border/50 pt-2">
+          <div className="flex items-center justify-between gap-4">
+            <span className="font-semibold">Total</span>
+            <span className="shrink-0 text-base font-bold tabular-nums">
+              {DEFAULT_RESERVATION_TOTALS.total}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 type MultiplePromotionsDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onConfirm?: (partyNumber: number | null) => void
 }
 
 /** Party-size picker (1–15) — matches the desktop booth app. */
@@ -121,11 +224,24 @@ function PromotionRow({ showDivider }: { showDivider: boolean }) {
 export function MultiplePromotionsDialog({
   open,
   onOpenChange,
+  onConfirm,
 }: MultiplePromotionsDialogProps) {
   const [partyNumber, setPartyNumber] = useState<number | null>(null)
 
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      setPartyNumber(null)
+    }
+    onOpenChange(nextOpen)
+  }
+
+  function handleConfirm() {
+    onConfirm?.(partyNumber)
+    handleOpenChange(false)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         showCloseButton
         className="flex max-h-[92vh] max-w-3xl flex-col overflow-hidden sm:max-w-3xl"
@@ -155,13 +271,7 @@ export function MultiplePromotionsDialog({
           </FormSection>
 
           <FormSection title="Reservation Details">
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              {RESERVATION_DETAIL_FIELDS.map((field) => (
-                <FormField key={field.label} label={field.label}>
-                  <ReadOnlyValue value={field.value} />
-                </FormField>
-              ))}
-            </div>
+            <MultiplePromotionsReservationDetails partyNumber={partyNumber} />
           </FormSection>
         </div>
 
@@ -169,11 +279,11 @@ export function MultiplePromotionsDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleOpenChange(false)}
           >
             Cancel
           </Button>
-          <Button type="button" onClick={() => onOpenChange(false)}>
+          <Button type="button" onClick={handleConfirm}>
             OK
           </Button>
         </DialogFooter>

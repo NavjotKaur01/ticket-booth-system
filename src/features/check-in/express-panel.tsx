@@ -1,6 +1,8 @@
-﻿import { useMemo, useState } from "react"
+﻿import { PlusCircle } from "lucide-react"
+import { useMemo, useState } from "react"
 
 import { FormField, FormSection } from "@/components/forms/form-fields"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -12,6 +14,7 @@ import {
 import { promoOptions, sectionOptions } from "@/data/reservation"
 import { ProcessPaymentDialog } from "@/features/check-in/dialogs/process-payment-dialog"
 import { SalesTransactionDialog } from "@/features/check-in/dialogs/sales-transaction-dialog"
+import { MultiplePromotionsDialog } from "@/features/check-in/multiple-promotions-dialog"
 import { PaymentNumberFieldset } from "@/features/check-in/payment-number-fieldset"
 import {
   calculateExpressPanelTotals,
@@ -33,6 +36,7 @@ export function CheckInExpressPanel() {
   const [cashNumber, setCashNumber] = useState<number | null>(null)
   const [cardNumber, setCardNumber] = useState<number | null>(null)
   const [activeTransaction, setActiveTransaction] = useState<ActiveTransaction | null>(null)
+  const [multiplePromotionsOpen, setMultiplePromotionsOpen] = useState(false)
 
   const passQuantity = Math.max(0, Number(passes) || 0)
   const totals = useMemo(
@@ -110,18 +114,29 @@ export function CheckInExpressPanel() {
                 </FormField>
               </div>
 
-              <FormField label="Passes" className="w-full max-w-[6.5rem]">
-                <Input
-                  type="number"
-                  min={1}
-                  value={passes}
-                  onChange={(event) => {
-                    setPasses(event.target.value)
-                    setCashNumber(null)
-                    setCardNumber(null)
-                  }}
-                  className="h-8 text-center text-xs tabular-nums"
-                />
+              <FormField label="Passes" className="w-full max-w-[8.5rem]">
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={passes}
+                    onChange={(event) => {
+                      setPasses(event.target.value)
+                      setCashNumber(null)
+                      setCardNumber(null)
+                    }}
+                    className="h-8 min-w-0 flex-1 text-center text-xs tabular-nums"
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    className="size-8 shrink-0"
+                    aria-label="Open multiple promotions"
+                    onClick={() => setMultiplePromotionsOpen(true)}
+                  >
+                    <PlusCircle className="size-4" />
+                  </Button>
+                </div>
               </FormField>
             </div>
 
@@ -204,6 +219,18 @@ export function CheckInExpressPanel() {
           />
         )
       ) : null}
+
+      <MultiplePromotionsDialog
+        open={multiplePromotionsOpen}
+        onOpenChange={setMultiplePromotionsOpen}
+        onConfirm={(partyNumber) => {
+          if (partyNumber != null) {
+            setPasses(String(partyNumber))
+            setCashNumber(null)
+            setCardNumber(null)
+          }
+        }}
+      />
     </>
   )
 }
