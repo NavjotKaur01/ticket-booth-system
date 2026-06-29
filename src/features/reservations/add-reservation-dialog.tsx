@@ -1,4 +1,4 @@
-import {
+﻿import {
   Calendar,
   Info,
   Search,
@@ -75,23 +75,32 @@ import { validateReservationPayment } from '@/lib/validate-reservation-payment'
 import { todayDateValue } from '@/lib/today-date-value'
 import { cn } from '@/lib/utils'
 import { useAppSession } from '@/hooks/use-app-session'
+import { createTicketPrintData } from '@/services/ticket-print.service'
 import type { CustomerFormValues } from '@/types/customer-form'
-import type { ReservationPaymentType } from '@/data/reservation-payment-options'
+import {
+  RESERVATION_PAYMENT_TYPES,
+  type ReservationPaymentType
+} from '@/data/reservation-payment-options'
 import {
   createEmptyReservationPaymentFields,
   type ReservationPaymentFields
 } from '@/types/reservation-payment'
 import type { ReservationPromoOption } from '@/types/reservation-promo'
 import type { ReservationSectionOption, SectionOption } from '@/types/reservation'
+import type { TicketPrintData } from '@/types/ticket-print'
 
 type AddReservationDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSaved?: (reservationIds: string[]) => void | Promise<void>
+  onSaved?: (
+    reservationIds: string[],
+    ticketData?: TicketPrintData
+  ) => void | Promise<void>
 }
 
 const COMPACT_INPUT = 'h-9 text-sm'
-const COMPACT_NUMBER = 'h-9 w-14 px-1 text-center text-sm tabular-nums'
+const COMPACT_FIELD_HOVER = 'hover:border-ring/60 hover:bg-accent/15'
+const COMPACT_NUMBER = `h-9 w-14 px-1 text-center text-sm tabular-nums ${COMPACT_FIELD_HOVER} focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40`
 const COMPACT_SELECT = 'h-9 w-44 min-w-0 text-sm'
 const INLINE_LABEL = 'mb-1.5 block text-xs font-medium text-muted-foreground'
 
@@ -214,38 +223,45 @@ function SectionPicker ({
           {sections.map(option => (
             <div
               key={option.id}
-              className='flex items-center gap-2 px-2.5 py-1.5'
+              className='flex items-start gap-2 px-2.5 py-1.5'
             >
               <label
                 htmlFor={`section-${option.id}`}
-                className='flex min-w-0 flex-1 cursor-pointer items-center gap-2 max-sm:grid max-sm:grid-cols-[auto_minmax(0,1fr)] max-sm:items-center max-sm:gap-x-2 max-sm:gap-y-1'
+                className='flex min-w-0 flex-1 cursor-pointer items-start gap-2 max-sm:grid max-sm:grid-cols-[auto_minmax(0,1fr)] max-sm:items-center max-sm:gap-x-2 max-sm:gap-y-1'
               >
                 <RadioGroupItem
                   value={option.id}
                   id={`section-${option.id}`}
                   className='shrink-0 max-sm:row-span-2 max-sm:self-center'
                 />
-                <span className='shrink-0 text-sm font-semibold text-foreground max-sm:col-start-2 max-sm:row-start-1 sm:w-14'>
+                <span className='min-w-0 text-sm font-semibold leading-tight text-foreground whitespace-normal max-sm:col-start-2 max-sm:row-start-1 sm:min-w-[10rem] sm:max-w-[11rem]'>
                   {option.name}
                 </span>
                 <SectionSeatDisplay option={option} />
               </label>
-              <Input
-                type='number'
-                min={0}
-                value={partyBySection[option.id] ?? 0}
-                onChange={event =>
-                  onPartyChange(option.id, Number(event.target.value) || 0)
-                }
-                onFocus={selectNumericInput}
-                onClick={event => {
-                  event.stopPropagation()
-                  event.currentTarget.select()
-                }}
-                onPointerDown={event => event.stopPropagation()}
-                className={cn(COMPACT_NUMBER, 'shrink-0 self-center')}
-                aria-label={`${option.name} party size`}
-              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Input
+                    type='number'
+                    min={0}
+                    value={partyBySection[option.id] ?? 0}
+                    onChange={event =>
+                      onPartyChange(option.id, Number(event.target.value) || 0)
+                    }
+                    onFocus={selectNumericInput}
+                    onClick={event => {
+                      event.stopPropagation()
+                      event.currentTarget.select()
+                    }}
+                    onPointerDown={event => event.stopPropagation()}
+                    className={cn(COMPACT_NUMBER, 'shrink-0 self-start sm:self-center')}
+                    aria-label={`${option.name} party size`}
+                  />
+                </TooltipTrigger>
+                <TooltipContent side='top'>
+                  Number of customers to reserve in {option.name}
+                </TooltipContent>
+              </Tooltip>
             </div>
           ))}
         </div>
@@ -263,7 +279,7 @@ function SectionPicker ({
             onValueChange={onPromoChange}
             disabled={promoLoading}
           >
-            <SelectTrigger className={cn(COMPACT_SELECT, 'w-full min-w-0 sm:w-44')}>
+            <SelectTrigger className={cn(COMPACT_SELECT, COMPACT_FIELD_HOVER, 'w-full min-w-0 sm:w-44')}>
               <SelectValue
                 placeholder={
                   promoLoading ? 'Loading promo codes...' : 'Select promo code'
@@ -762,7 +778,7 @@ export function AddReservationDialog ({
   onOpenChange,
   onSaved
 }: AddReservationDialogProps) {
-  const { connectionName, locationId, username, userRight, isReady } =
+  const { connectionName, locationId, locationName, username, userRight, isReady } =
     useAppSession()
   const dateInputRef = useRef<HTMLInputElement>(null)
   const notesInputRef = useRef<HTMLTextAreaElement>(null)
@@ -942,6 +958,7 @@ export function AddReservationDialog ({
     effectivePromo === 'none' ? null : promoById.get(effectivePromo) ?? null
 
   const selectedShow = availableShows.find(show => show.id === activeShowTime)
+  const selectedShowLabel = selectedShow?.label ?? ''
   const comicName =
     selectedShow?.headliner ?? reservationShowMeta.comicName
 
@@ -1037,6 +1054,27 @@ export function AddReservationDialog ({
     openAddCustomerDialog(
       mapReservationSearchCriteriaToCustomerForm(searchCriteria)
     )
+  }
+
+  function getPrintablePaymentType(value: ReservationPaymentType) {
+    switch (value) {
+      case 'credit-card':
+      case 'hold-cc':
+      case 'pos':
+        return 'Credit Card'
+      case 'gift-card':
+        return 'Gift Card'
+      case 'gift-cert':
+      case 'web-gift-cert':
+        return 'Gift Certificate'
+      case 'cash':
+        return 'Cash'
+      default:
+        return (
+          RESERVATION_PAYMENT_TYPES.find(option => option.id === value)?.label ??
+          'Cash'
+        )
+    }
   }
 
   function handlePaymentTypeChange (value: ReservationPaymentType) {
@@ -1199,7 +1237,26 @@ export function AddReservationDialog ({
         )
       }
 
-      await onSaved?.([reservationId])
+      const ticketData = createTicketPrintData({
+        reservationId,
+        firstName: customerDetails.firstName,
+        lastName: customerDetails.lastName,
+        partySize: saveParty,
+        checkedInCount: 0,
+        totalAmount: saveTotals.total,
+        paidAmount: shouldApplyPayment
+          ? parseReservationMoney(savePaymentAmount)
+          : 0,
+        paymentType: getPrintablePaymentType(paymentType),
+        source: origin,
+        section: saveSection.name,
+        showDate,
+        showLabel: selectedShowLabel,
+        locationName,
+        qrValue: reservationId
+      })
+
+      await onSaved?.([reservationId], ticketData)
       onOpenChange(false)
     } catch (requestError) {
       setSaveReservationError(
@@ -1611,3 +1668,9 @@ export function AddReservationDialog ({
     </>
   )
 }
+
+
+
+
+
+

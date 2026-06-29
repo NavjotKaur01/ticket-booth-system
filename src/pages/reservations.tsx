@@ -1,4 +1,4 @@
-import { FileDown, Plus, Search } from "lucide-react"
+﻿import { FileDown, Plus, Search } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
@@ -9,10 +9,13 @@ import { reservationCounts } from "@/data/reservation"
 import { AddReservationDialog } from "@/features/reservations/add-reservation-dialog"
 import { ReservationDataTable } from "@/features/reservations/reservation-data-table"
 import { ReservationFiltersCard } from "@/features/reservations/reservation-filters-card"
+import { printReservationTicket } from "@/services/ticket-print.service"
+import { ReprintTicketDialog } from "@/features/ticket-print/reprint-ticket-dialog"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useReservationData } from "@/hooks/use-reservation-data"
 import { useShowDetailsByDate } from "@/hooks/use-show-details-by-date"
 import { filterReservations } from "@/lib/filter-reservations"
+import type { Reservation } from "@/types/reservation"
 
 /** ISO date string (yyyy-mm-dd) for the local calendar day. */
 function todayDateValue() {
@@ -24,13 +27,16 @@ function todayDateValue() {
 
 /** Reservations list with show filters and add-reservation workflow. */
 export function Reservations() {
-  const { connectionName, locationId, isReady } = useAppSession()
+  const { connectionName, locationId, locationName, isReady } = useAppSession()
 
   const [showDate, setShowDate] = useState(todayDateValue)
   const [showTime, setShowTime] = useState("")
   const [refreshValue, setRefreshValue] = useState("999")
   const [search, setSearch] = useState("")
   const [addOpen, setAddOpen] = useState(false)
+  const [reprintOpen, setReprintOpen] = useState(false)
+  const [selectedReservation, setSelectedReservation] =
+    useState<Reservation | null>(null)
   const [cancelledShow, setCancelledShow] = useState(false)
   const [showCancelled, setShowCancelled] = useState(false)
   const [displayNone, setDisplayNone] = useState(false)
@@ -95,8 +101,43 @@ export function Reservations() {
     [reservations]
   )
 
+  const selectedShowLabel = useMemo(
+    () => shows.find((show) => show.id === showTime)?.label ?? "",
+    [showTime, shows]
+  )
+
   function handleTodayClick() {
     setShowDate(todayDateValue())
+  }
+
+  function handleOpenReprintTicket(reservation: Reservation) {
+    setSelectedReservation(reservation)
+    setReprintOpen(true)
+  }
+
+  function handleReprintOpenChange(open: boolean) {
+    setReprintOpen(open)
+    if (!open) {
+      setSelectedReservation(null)
+    }
+  }
+
+  async function handleReservationSaved(
+    _reservationIds: string[],
+    ticketData?: import("@/types/ticket-print").TicketPrintData
+  ) {
+    if (!ticketData) {
+      return
+    }
+
+    const didStart = await printReservationTicket({
+      ticket: ticketData,
+      ticketCount: ticketData.reservation.partySize,
+    })
+
+    if (!didStart) {
+      throw new Error("Reservation saved, but printing could not be started.")
+    }
   }
 
   return (
@@ -186,10 +227,22 @@ export function Reservations() {
         <ReservationDataTable
           data={filteredReservations}
           loading={reservationsLoading}
+          onPrintTickets={handleOpenReprintTicket}
         />
       </PanelCard>
 
-      <AddReservationDialog open={addOpen} onOpenChange={setAddOpen} />
+      <AddReservationDialog open={addOpen} onOpenChange={setAddOpen} onSaved={handleReservationSaved} />
+      <ReprintTicketDialog
+        open={reprintOpen}
+        onOpenChange={handleReprintOpenChange}
+        reservation={selectedReservation}
+        showDate={showDate}
+        showLabel={selectedShowLabel}
+        locationName={locationName}
+      />
     </div>
   )
 }
+
+
+
