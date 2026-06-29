@@ -246,9 +246,11 @@ export function ExpressWalkupDialog({
           showCloseButton
           className="flex max-h-[92vh] w-[96vw] max-w-[96vw] flex-col overflow-hidden p-0 sm:max-w-[92vw] xl:w-[88rem] xl:max-w-[88rem]"
         >
-          <DialogHeader className="shrink-0 border-b bg-primary px-4 py-3 pr-12 text-primary-foreground">
-            <DialogTitle className="text-base font-semibold">
-              {dialogData?.title ?? "Express Walkup"}
+          <DialogHeader className="shrink-0 gap-0 border-b px-4 py-3 pr-12">
+            <DialogTitle className="text-lg leading-snug font-normal">
+              <span className="font-semibold text-foreground">
+                {dialogData?.title ?? "Express Walkup"}
+              </span>
             </DialogTitle>
           </DialogHeader>
 
