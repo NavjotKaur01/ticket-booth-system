@@ -1,11 +1,13 @@
-/** Application route paths — keep in sync with App.tsx route definitions. */
+﻿/** Application route paths - keep in sync with App.tsx route definitions. */
 export const ROUTES = {
   dashboard: "/",
   reservations: "/reservations",
   checkIn: "/check-in",
   administrator: "/administrator",
+  venueInfo: "/venue/venue-info",
+  venueShowTimes: "/venue/venue-show-times",
   ticketbooth: "/ticketbooth",
-  calendar: "/calendar",  // temporary adding calendar route
+  calendar: "/calendar",
   searchCustomer: "/administrator/customers",
   performers: "/administrator/performers",
   marketingFilter: "/administrator/marketing-filter",
@@ -50,6 +52,8 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.systemDefaults]: "System Defaults",
   [ROUTES.userAccess]: "User Access",
   [ROUTES.users]: "User",
+  [ROUTES.venueInfo]: "Venue Info",
+  [ROUTES.venueShowTimes]: "Venue Show Times",
   [ROUTES.businessContacts]: "Business Contacts",
   [ROUTES.commentCards]: "Comment Cards",
   [ROUTES.giftCards]: "Gift Cards",
@@ -71,6 +75,9 @@ export function getActiveNavId(pathname: string) {
   if (pathname === ROUTES.checkIn) return "check-in"
   if (pathname === ROUTES.reports) return "reports"
   if (pathname === ROUTES.transactions) return "transactions"
+  if (pathname === ROUTES.venueInfo || pathname === ROUTES.venueShowTimes) {
+    return "venue-manager"
+  }
   if (pathname === ROUTES.dashboard) return "dashboard"
   return "dashboard"
 }

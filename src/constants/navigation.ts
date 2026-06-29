@@ -1,6 +1,7 @@
-import {
+﻿import {
   BarChart3,
   Bookmark,
+  Building2,
   Calendar,
   LayoutDashboard,
   Receipt,
@@ -36,6 +37,16 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
       { id: "system-defaults", label: "System Defaults", href: ROUTES.systemDefaults },
       { id: "user-access", label: "User Access", href: ROUTES.userAccess },
       { id: "user", label: "User", href: ROUTES.users },
+    ],
+  },
+  {
+    id: "venue-manager",
+    label: "Venue Manager",
+    href: "#",
+    icon: Building2,
+    items: [
+      { id: "venue-info", label: "Venue Info", href: ROUTES.venueInfo },
+      { id: "venue-show-times", label: "Venue Show Times", href: ROUTES.venueShowTimes },
     ],
   },
   {
