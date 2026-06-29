@@ -21,8 +21,27 @@ const ROW_ACTIONS = [
   "Resend Ticket",
 ] as const
 
-/** Three-dot row action menu — shared by Reservations and Check-In tables. */
-export function RowActionsMenu() {
+type RowActionsMenuProps = {
+  onPrintTickets?: () => void
+  onPrintIndividualTickets?: () => void
+}
+
+/** Three-dot row action menu shared by Reservations and Check-In tables. */
+export function RowActionsMenu({
+  onPrintTickets,
+  onPrintIndividualTickets,
+}: RowActionsMenuProps) {
+  function handleActionSelect(action: (typeof ROW_ACTIONS)[number]) {
+    if (action === "Print Ticket(s)") {
+      onPrintTickets?.()
+      return
+    }
+
+    if (action === "Print Individual Tickets") {
+      onPrintIndividualTickets?.()
+    }
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -38,7 +57,12 @@ export function RowActionsMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[12.5rem]">
         {ROW_ACTIONS.map((action) => (
-          <DropdownMenuItem key={action}>{action}</DropdownMenuItem>
+          <DropdownMenuItem
+            key={action}
+            onSelect={() => handleActionSelect(action)}
+          >
+            {action}
+          </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>

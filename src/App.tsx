@@ -1,31 +1,32 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom"
+﻿import { BrowserRouter, Route, Routes } from "react-router-dom"
 
 import { ProtectedLayout } from "@/components/auth/protected-layout"
 import { Dashboard } from "@/components/dashboard/dashboard"
+import { BusinessContacts } from "@/pages/business-contacts"
+import { ChangePassword } from "@/pages/change-password"
+import { CheckIn } from "@/pages/check-in"
+import { CommentCards } from "@/pages/comment-cards"
+import { GiftCards } from "@/pages/gift-cards"
+import { GiftCertificate } from "@/pages/gift-certificate"
+import { Login } from "@/pages/login"
 import { MarketingFilter } from "@/pages/marketing-filter"
 import { Performers } from "@/pages/performers"
 import { PreSalePrivateShow } from "@/pages/pre-sale-private-show"
 import { Promotions } from "@/pages/promotions"
-import { CheckIn } from "@/pages/check-in"
+import { Reports } from "@/pages/reports"
 import { Reservations } from "@/pages/reservations"
-import { ShowTimes } from "@/pages/show-times"
 import { SearchCustomer } from "@/pages/search-customer"
+import { ShowTimes } from "@/pages/show-times"
 import { SystemDefaults } from "@/pages/system-defaults"
+import { TicketDefault } from "@/pages/ticket-default"
+import { Transactions } from "@/pages/transactions"
 import { UserAccess } from "@/pages/user-access"
 import { Users } from "@/pages/users"
-import { BusinessContacts } from "@/pages/business-contacts"
-import { CommentCards } from "@/pages/comment-cards"
-import { GiftCards } from "@/pages/gift-cards"
-import { GiftCertificate } from "@/pages/gift-certificate"
-import { Reports } from "@/pages/reports"
-import { Transactions } from "@/pages/transactions"
-import { TicketDefault } from "@/pages/ticket-default"
-import { ChangePassword } from "@/pages/change-password"
-import { Login } from "@/pages/login"
-// import { userSession } from "@/data/dashboard"
+import { VenueInfo } from "@/pages/venue-info"
+import { VenueShowTimes } from "@/pages/venue-show-times"
 import EventCalendar from "./components/calendar/EventCalendar"
 
-/** Root router — login is public; app routes require auth. */
+/** Root router - login is public; app routes require auth. */
 function App() {
   return (
     <BrowserRouter>
@@ -58,6 +59,11 @@ function App() {
             <Route path="system-defaults" element={<SystemDefaults />} />
             <Route path="user-access" element={<UserAccess />} />
             <Route path="users" element={<Users />} />
+          </Route>
+
+          <Route path="venue">
+            <Route path="venue-info" element={<VenueInfo />} />
+            <Route path="venue-show-times" element={<VenueShowTimes />} />
           </Route>
 
           <Route path="ticketbooth">
