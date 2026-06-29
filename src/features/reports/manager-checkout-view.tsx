@@ -160,10 +160,6 @@ function Td({
   )
 }
 
-function fmtZero(v: number): string {
-  return v === 0 ? "$0.00" : fmt(v)
-}
-
 // ─── Payment breakdown table ───────────────────────────────────────────────────
 
 function PaymentTable({ show }: { show: ManagerCheckoutApiShow }) {

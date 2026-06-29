@@ -21,6 +21,8 @@ export type DoorCheckoutApiRow = {
   CCType?: string
   PymtStatus?: string
   Total?: number
+  /** Set by the React app when "Separate by users" is active */
+  _userLabel?: string
 }
 
 type DrillRow = {
@@ -157,11 +159,14 @@ function Th({ children, right, className }: { children: React.ReactNode; right?:
   )
 }
 
-function Td({ children, right, bold, blue, className }: {
-  children: React.ReactNode; right?: boolean; bold?: boolean; blue?: boolean; className?: string
+function Td({ children, right, bold, blue, className, rowSpan, colSpan }: {
+  children?: React.ReactNode; right?: boolean; bold?: boolean; blue?: boolean; className?: string; rowSpan?: number; colSpan?: number
 }) {
   return (
-    <td className={cn(
+    <td
+      rowSpan={rowSpan}
+      colSpan={colSpan}
+      className={cn(
       "border border-border px-2 py-1 text-xs whitespace-nowrap",
       right && "text-right tabular-nums",
       bold && "font-semibold",
@@ -477,6 +482,17 @@ type DoorCheckoutViewProps = {
   drillContext?: ReportDrillContext
 }
 
+/** Group rows by CreatedDate, preserving insertion order. */
+function groupByDate(rows: DoorCheckoutApiRow[]): [string, DoorCheckoutApiRow[]][] {
+  const map = new Map<string, DoorCheckoutApiRow[]>()
+  for (const row of rows) {
+    const key = row.CreatedDate ?? "Unknown"
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(row)
+  }
+  return Array.from(map.entries())
+}
+
 export function DoorCheckoutView({ rawData, subtitle, generatedAt, drillContext }: DoorCheckoutViewProps) {
   const rows = Array.isArray(rawData) ? (rawData as DoorCheckoutApiRow[]) : []
 
@@ -488,13 +504,8 @@ export function DoorCheckoutView({ rawData, subtitle, generatedAt, drillContext 
     )
   }
 
-  const dateMap = new Map<string, DoorCheckoutApiRow[]>()
-  for (const row of rows) {
-    const key = row.CreatedDate ?? "Unknown"
-    if (!dateMap.has(key)) dateMap.set(key, [])
-    dateMap.get(key)!.push(row)
-  }
-  const dateGroups = Array.from(dateMap.entries())
+  // Detect separate-by-user mode: any row has a _userLabel set
+  const isSeparateByUsers = rows.some((r) => r._userLabel !== undefined)
 
   return (
     <div className="space-y-3 p-4">
@@ -506,12 +517,36 @@ export function DoorCheckoutView({ rawData, subtitle, generatedAt, drillContext 
         <p className="text-xs text-muted-foreground">Generated {generatedAt}</p>
       </div>
 
-      {dateGroups.map(([date, dateRows]) => (
-        <DateSection key={date} date={date} rows={dateRows} drillContext={drillContext} />
-      ))}
+      {isSeparateByUsers ? (
+        // ── Grouped by user ───────────────────────────────────────────────
+        (() => {
+          const userMap = new Map<string, DoorCheckoutApiRow[]>()
+          for (const row of rows) {
+            const key = row._userLabel ?? ""
+            if (!userMap.has(key)) userMap.set(key, [])
+            userMap.get(key)!.push(row)
+          }
+          return Array.from(userMap.entries()).map(([userName, userRows]) => (
+            <div key={userName} className="space-y-2">
+              {/* Cyan "User:" bar matching desktop app */}
+              <div className="rounded-md bg-cyan-100 dark:bg-cyan-900/40 px-3 py-1.5 text-xs font-semibold text-cyan-800 dark:text-cyan-200 border border-cyan-300 dark:border-cyan-700">
+                User: {userName || "(unknown)"}
+              </div>
+              {groupByDate(userRows).map(([date, dateRows]) => (
+                <DateSection key={date} date={date} rows={dateRows} drillContext={drillContext} />
+              ))}
+            </div>
+          ))
+        })()
+      ) : (
+        // ── Normal mode: grouped by date only ─────────────────────────────
+        groupByDate(rows).map(([date, dateRows]) => (
+          <DateSection key={date} date={date} rows={dateRows} drillContext={drillContext} />
+        ))
+      )}
 
       <p className="text-right text-xs text-muted-foreground">
-        {dateGroups.length} checkout date{dateGroups.length !== 1 ? "s" : ""}
+        {rows.length} row{rows.length !== 1 ? "s" : ""}
       </p>
     </div>
   )
