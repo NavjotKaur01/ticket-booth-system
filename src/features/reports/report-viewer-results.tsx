@@ -15,6 +15,7 @@ import { WebCountsView } from "@/features/reports/web-counts-view"
 import { ReconcileReportView } from "@/features/reports/reconcile-report-view"
 import { TicketPriceBreakdownView } from "@/features/reports/ticket-price-breakdown-view"
 import { PromoReportView } from "@/features/reports/promo-report-view"
+import { SalesByShowView } from "@/features/reports/sales-by-show-view"
 
 type ReportViewerResultsProps = {
   result: ReportViewerResult | null
@@ -128,6 +129,16 @@ export function ReportViewerResults({
   if (result.reportType === "promo-report") {
     return (
       <PromoReportView
+        rawData={result.rawData}
+        subtitle={result.subtitle}
+        generatedAt={result.generatedAt}
+      />
+    )
+  }
+
+  if (result.reportType === "sales-by-show") {
+    return (
+      <SalesByShowView
         rawData={result.rawData}
         subtitle={result.subtitle}
         generatedAt={result.generatedAt}

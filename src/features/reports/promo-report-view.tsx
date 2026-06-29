@@ -157,7 +157,7 @@ export function buildPromoReportData(raw: unknown): PromoReportData {
 
 // ─── Table primitives ─────────────────────────────────────────────────────────
 
-function Th({ children, className }: { children: React.ReactNode; className?: string }) {
+function Th({ children, className }: { children?: React.ReactNode; className?: string }) {
   return (
     <th className={cn(
       "border border-border bg-muted/50 px-2 py-1 text-[11px] font-semibold text-muted-foreground whitespace-nowrap",

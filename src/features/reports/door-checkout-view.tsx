@@ -159,11 +159,14 @@ function Th({ children, right, className }: { children: React.ReactNode; right?:
   )
 }
 
-function Td({ children, right, bold, blue, className }: {
-  children: React.ReactNode; right?: boolean; bold?: boolean; blue?: boolean; className?: string
+function Td({ children, right, bold, blue, className, rowSpan, colSpan }: {
+  children?: React.ReactNode; right?: boolean; bold?: boolean; blue?: boolean; className?: string; rowSpan?: number; colSpan?: number
 }) {
   return (
-    <td className={cn(
+    <td
+      rowSpan={rowSpan}
+      colSpan={colSpan}
+      className={cn(
       "border border-border px-2 py-1 text-xs whitespace-nowrap",
       right && "text-right tabular-nums",
       bold && "font-semibold",

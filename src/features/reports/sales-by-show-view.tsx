@@ -138,10 +138,11 @@ export function buildSalesByShowData(raw: unknown): SaleByShowDateGroup[] {
 
 // ─── Table primitives ─────────────────────────────────────────────────────────
 
-function Th({ children, className }: { children: React.ReactNode; className?: string }) {
+function Th({ children, className, right }: { children?: React.ReactNode; className?: string; right?: boolean }) {
   return (
     <th className={cn(
       "border border-border bg-muted/40 px-2 py-1 text-left text-[11px] font-semibold text-muted-foreground whitespace-nowrap",
+      right && "text-right",
       className
     )}>
       {children}
@@ -149,11 +150,14 @@ function Th({ children, className }: { children: React.ReactNode; className?: st
   )
 }
 
-function Td({ children, className, right, blue, bold }: {
-  children: React.ReactNode; className?: string; right?: boolean; blue?: boolean; bold?: boolean
+function Td({ children, className, right, blue, bold, colSpan, rowSpan }: {
+  children?: React.ReactNode; className?: string; right?: boolean; blue?: boolean; bold?: boolean; colSpan?: number; rowSpan?: number
 }) {
   return (
-    <td className={cn(
+    <td
+      colSpan={colSpan}
+      rowSpan={rowSpan}
+      className={cn(
       "border border-border px-2 py-1 text-xs whitespace-nowrap",
       right && "text-right tabular-nums",
       blue && "text-blue-600 font-medium",

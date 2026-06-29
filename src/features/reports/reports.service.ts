@@ -661,75 +661,16 @@ function transformSalesByShow(
   subtitle: string,
   generatedAt: string
 ): ReportViewerResult {
-  const columns: ReportViewerColumn[] = [
-    { key: "location",     label: "Location" },
-    { key: "showDate",     label: "Show Date" },
-    { key: "showTime",     label: "Time" },
-    { key: "comicName",    label: "Comic" },
-    { key: "party",        label: "Party",         align: "right" },
-    { key: "tixPaid",      label: "Paid",          align: "right" },
-    { key: "tixComp",      label: "Comp",          align: "right" },
-    { key: "tixDisc",      label: "Disc",          align: "right" },
-    { key: "checkedIn",    label: "Checked In",    align: "right" },
-    { key: "ciPaid",       label: "CI Paid",       align: "right" },
-    { key: "ciComp",       label: "CI Comp",       align: "right" },
-    { key: "ciDisc",       label: "CI Disc",       align: "right" },
-    { key: "dailyPaid",    label: "Daily Paid",    align: "right" },
-    { key: "defCollected", label: "Def Collected", align: "right" },
-    { key: "net",          label: "Net",           align: "right" },
-  ]
-  const raw = toRows(data)
-  const rows: ReportViewerRow[] = []
-
-  function pushShowRow(
-    location: string,
-    dateLabel: string,
-    show: ApiRow
-  ) {
-    const promo = (show.PromoNewCountData ?? show) as ApiRow
-    const dailyPaid    = toNum(show.DailyPaid)
-    const defCollected = toNum(show.DefCollected)
-    const net          = dailyPaid + defCollected
-
-    rows.push({
-      location,
-      showDate:  dateLabel || formatQuickViewDate(show.ShowDate ?? show.ShowDt),
-      showTime:  formatShowTime(show.ShowTm ?? show.ShowTimeStr, show.ShowTime),
-      comicName: safeStr(show.ComicName),
-      party:     String(toNum(promo.Party ?? show.Party ?? show.PartyNo)),
-      tixPaid:   String(toNum(promo.Tixpaid ?? show.Tixpaid ?? show.TixPaid)),
-      tixComp:   String(toNum(promo.Tixcomp ?? show.Tixcomp ?? show.TixComp)),
-      tixDisc:   String(toNum(promo.Tixdisc ?? show.Tixdisc ?? show.TixDisc)),
-      checkedIn: String(toNum(promo.CheckedIn ?? show.CheckedIn)),
-      ciPaid:    String(toNum(promo.CheckinPaid ?? show.CheckinPaid)),
-      ciComp:    String(toNum(promo.CheckinComp ?? show.CheckinComp)),
-      ciDisc:    String(toNum(promo.CheckinDisc ?? show.CheckinDisc)),
-      dailyPaid:    formatCurrency(dailyPaid),
-      defCollected: formatCurrency(defCollected),
-      net:          formatCurrency(net),
-    })
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns: [],
+    rows: [],
+    emptyMessage: toRows(data).length === 0 ? "No records found" : "",
+    generatedAt,
+    rawData: data,
   }
-
-  for (const loc of raw) {
-    const showList: ApiRow[] =
-      Array.isArray(loc.ShowAndComedianList) ? (loc.ShowAndComedianList as ApiRow[]) :
-      Array.isArray(loc.SaleByShowDateData)  ? (loc.SaleByShowDateData as ApiRow[]) :
-      Array.isArray(loc.ShowList)            ? (loc.ShowList as ApiRow[]) :
-      []
-
-    const location = safeStr(loc.LocName ?? loc.LocsName ?? loc.Location ?? loc.LocationName)
-    const dateLabel = formatQuickViewDate(loc.ShowDate ?? loc.ShowDt)
-
-    for (const show of showList) {
-      pushShowRow(location, dateLabel, show)
-    }
-
-    if (!showList.length && (loc.ShowTm || loc.ComicName)) {
-      pushShowRow(location, formatQuickViewDate(loc.ShowDate ?? loc.ShowDt), loc)
-    }
-  }
-
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
 }
 
 function transformManagerCheckout(
@@ -1165,14 +1106,13 @@ function transformPromoReport(
   subtitle: string,
   generatedAt: string
 ): ReportViewerResult {
-  const rows = toRows(data)
   return {
     reportType,
     title,
     subtitle,
     columns: [],
     rows: [],
-    emptyMessage: "No records found",
+    emptyMessage: toRows(data).length === 0 ? "No records found" : "",
     generatedAt,
     rawData: data,
   }
