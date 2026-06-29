@@ -19,10 +19,16 @@ import type {
   ReportViewerOption,
 } from "@/features/reports/reports.service"
 
+type ComedianOption = {
+  id: string
+  label: string
+}
+
 type ReportFiltersToolbarProps = {
   filters: ReportViewerFilters
   reportOptions: ReportViewerOption[]
   locationOptions: ReportViewerLocationOption[]
+  comedianOptions?: ComedianOption[]
   isGenerating?: boolean
   activeQuickRange?: "today" | "yesterday" | null
   onFilterChange: <K extends keyof ReportViewerFilters>(
@@ -41,6 +47,7 @@ export function ReportFiltersToolbar({
   filters,
   reportOptions,
   locationOptions,
+  comedianOptions = [],
   isGenerating = false,
   activeQuickRange = null,
   onFilterChange,
@@ -54,6 +61,10 @@ export function ReportFiltersToolbar({
   const config = getReportConfig(filters.reportType)
   const showCustomerFilters = config.showCustomerFilters
   const showDateRange = config.showDateRange
+  const showComicPicker = config.showComicPicker
+  const showAllDatesOption = config.showAllDatesOption
+  const showWebReservationOnly = config.showWebReservationOnly
+  const effectiveDateRange = showDateRange && !filters.isAllDates
 
   return (
     <div className="border-b border-border/70 bg-background px-4 py-4">
@@ -105,7 +116,7 @@ export function ReportFiltersToolbar({
         <div
           className={cn(
             "grid gap-3",
-            showDateRange
+            effectiveDateRange
               ? "md:grid-cols-2 2xl:grid-cols-[minmax(15rem,19rem)_minmax(11rem,13rem)_minmax(11rem,13rem)_1fr] 2xl:items-end"
               : "md:grid-cols-2 2xl:grid-cols-[minmax(15rem,19rem)_1fr] 2xl:items-end"
           )}
@@ -119,7 +130,7 @@ export function ReportFiltersToolbar({
               <SelectTrigger id="report-viewer-type" className="h-9 w-full bg-background">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper" className="max-h-72">
                 {reportOptions.map((option) => (
                   <SelectItem key={option.id} value={option.id}>
                     {option.label}
@@ -129,7 +140,7 @@ export function ReportFiltersToolbar({
             </Select>
           </div>
 
-          {showDateRange && (
+          {effectiveDateRange && (
             <>
               <div className="space-y-1.5">
                 <Label htmlFor="report-viewer-from">From</Label>
@@ -156,7 +167,7 @@ export function ReportFiltersToolbar({
           <div
             className={cn(
               "flex flex-wrap items-center gap-2 pt-2",
-              showDateRange
+              effectiveDateRange
                 ? "md:col-span-2 2xl:col-span-1 2xl:justify-end 2xl:pt-0"
                 : "2xl:justify-end 2xl:pt-0"
             )}
@@ -172,6 +183,7 @@ export function ReportFiltersToolbar({
                       "border-primary bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
                   )}
                   onClick={onToday}
+                  disabled={filters.isAllDates}
                 >
                   Today
                 </Button>
@@ -185,6 +197,7 @@ export function ReportFiltersToolbar({
                       "border-primary bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
                   )}
                   onClick={onYesterday}
+                  disabled={filters.isAllDates}
                 >
                   Yesterday
                 </Button>
@@ -224,6 +237,51 @@ export function ReportFiltersToolbar({
                 </SelectContent>
               </Select>
             </div>
+
+            {showComicPicker && (
+              <div className="w-full max-w-[19rem] space-y-1.5 md:mt-0">
+                <Label htmlFor="report-viewer-comic">Comic Name</Label>
+                <Select
+                  value={filters.headlinerId}
+                  onValueChange={(value) => onFilterChange("headlinerId", value)}
+                >
+                  <SelectTrigger id="report-viewer-comic" className="h-9 w-full bg-background">
+                    <SelectValue placeholder="Select a comedian…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {comedianOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {showAllDatesOption && (
+              <label className="flex items-center gap-2 text-sm text-foreground md:mt-5">
+                <Checkbox
+                  checked={filters.isAllDates}
+                  onCheckedChange={(value) =>
+                    onFilterChange("isAllDates", value === true)
+                  }
+                />
+                All Dates
+              </label>
+            )}
+
+            {showWebReservationOnly && (
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <Checkbox
+                  checked={filters.isWebReservationOnly}
+                  onCheckedChange={(value) =>
+                    onFilterChange("isWebReservationOnly", value === true)
+                  }
+                />
+                Web Reservation Only
+              </label>
+            )}
 
             {showCustomerFilters && (
               <div className="flex flex-wrap items-center gap-x-6 gap-y-3">

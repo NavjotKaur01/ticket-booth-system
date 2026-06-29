@@ -8,6 +8,12 @@
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import type { ReportViewerResult } from "@/features/reports/reports.service"
+import { ManagerCheckoutView } from "@/features/reports/manager-checkout-view"
+import { DoorCheckoutView } from "@/features/reports/door-checkout-view"
+import { AuditReportView } from "@/features/reports/audit-report-view"
+import { WebCountsView } from "@/features/reports/web-counts-view"
+import { ReconcileReportView } from "@/features/reports/reconcile-report-view"
+import { TicketPriceBreakdownView } from "@/features/reports/ticket-price-breakdown-view"
 
 type ReportViewerResultsProps = {
   result: ReportViewerResult | null
@@ -51,6 +57,70 @@ export function ReportViewerResults({
           Today and Yesterday only update the date range until you generate.
         </p>
       </div>
+    )
+  }
+
+  if (result.reportType === "manager-checkout") {
+    return (
+      <ManagerCheckoutView
+        rawData={result.rawData}
+        subtitle={result.subtitle}
+        generatedAt={result.generatedAt}
+      />
+    )
+  }
+
+  if (result.reportType === "door-checkout") {
+    return (
+      <DoorCheckoutView
+        rawData={result.rawData}
+        subtitle={result.subtitle}
+        generatedAt={result.generatedAt}
+        drillContext={result.drillContext}
+      />
+    )
+  }
+
+  if (result.reportType === "audit-report") {
+    return (
+      <AuditReportView
+        rawData={result.rawData}
+        subtitle={result.subtitle}
+        generatedAt={result.generatedAt}
+        drillContext={result.drillContext}
+      />
+    )
+  }
+
+  if (result.reportType === "web-counts") {
+    return (
+      <WebCountsView
+        rawData={result.rawData}
+        subtitle={result.subtitle}
+        generatedAt={result.generatedAt}
+        drillContext={result.drillContext}
+      />
+    )
+  }
+
+  if (result.reportType === "reconcile-report") {
+    return (
+      <ReconcileReportView
+        rawData={result.rawData}
+        subtitle={result.subtitle}
+        generatedAt={result.generatedAt}
+        drillContext={result.drillContext}
+      />
+    )
+  }
+
+  if (result.reportType === "ticket-price-breakdown") {
+    return (
+      <TicketPriceBreakdownView
+        rawData={result.rawData}
+        subtitle={result.subtitle}
+        generatedAt={result.generatedAt}
+      />
     )
   }
 

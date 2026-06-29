@@ -13,4 +13,7 @@ export type ReportRequestModel = {
   ShowId?: string
   DrillType?: string
   CreatedBy?: string
+  ShowDateStr?: string
+  PymtType?: string
+  CCType?: string
 }

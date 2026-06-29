@@ -21,7 +21,7 @@ import {
   type ReportViewerFilters,
   type ReportViewerResult,
 } from "@/features/reports/reports.service"
-import { useGenerateReportMutation } from "@/store/api/clubmanApi"
+import { useGenerateReportMutation, useGetComedianListQuery } from "@/store/api/clubmanApi"
 
 function buildFilename(base: string, extension: string) {
   const safeBase = base.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
@@ -51,6 +51,20 @@ export function Reports() {
   const [activeQuickRange, setActiveQuickRange] = useState<"today" | "yesterday" | null>(null)
   const [generateError, setGenerateError] = useState<string | null>(null)
 
+  const isComicReport = draftFilters.reportType === "comic-ticket-revenue"
+  const { data: rawComedianList = [] } = useGetComedianListQuery(connectionName, {
+    skip: !connectionName || !isComicReport,
+  })
+
+  const comedianOptions = useMemo(
+    () =>
+      rawComedianList.map((c) => ({
+        id: c.ComicID,
+        label: c.StageName || c.ComicID,
+      })),
+    [rawComedianList]
+  )
+
   useEffect(() => {
     if (!locationOptions.length) {
       return
@@ -68,11 +82,32 @@ export function Reports() {
     })
   }, [locationOptions])
 
+  useEffect(() => {
+    if (comedianOptions.length > 0 && !draftFilters.headlinerId) {
+      setDraftFilters((current) => ({
+        ...current,
+        headlinerId: comedianOptions[0].id,
+      }))
+    }
+  }, [comedianOptions, draftFilters.headlinerId])
+
   function updateDraftField<K extends keyof ReportViewerFilters>(
     key: K,
     value: ReportViewerFilters[K]
   ) {
-    setDraftFilters((current) => ({ ...current, [key]: value }))
+    if (key === "reportType") {
+      const nextType = value as string
+      const nextConfig = getReportConfig(nextType)
+      setDraftFilters((current) => ({
+        ...current,
+        [key]: value,
+        headlinerId: nextConfig.showComicPicker ? current.headlinerId : "",
+        isAllDates: nextConfig.showAllDatesOption ? current.isAllDates : false,
+        isWebReservationOnly: nextConfig.showWebReservationOnly ? current.isWebReservationOnly : false,
+      }))
+    } else {
+      setDraftFilters((current) => ({ ...current, [key]: value }))
+    }
 
     if (key === "dateFrom" || key === "dateTo") {
       setActiveQuickRange(null)
@@ -80,13 +115,18 @@ export function Reports() {
   }
 
   async function handleGenerate(nextFilters = draftFilters) {
+    const config = getReportConfig(nextFilters.reportType)
+
+    if (config.showComicPicker && !nextFilters.headlinerId) {
+      setGenerateError("Please select a comedian before generating this report.")
+      return
+    }
+
     setIsGenerating(true)
     setGenerateError(null)
 
     try {
-      const config = getReportConfig(nextFilters.reportType)
       const requestBody = buildReportRequest(nextFilters, connectionName)
-
       const apiData = await generateReport({
         endpoint: config.endpoint,
         body: requestBody,
@@ -97,6 +137,7 @@ export function Reports() {
         data: apiData,
         filters: nextFilters,
         locationOptions,
+        connectionName,
       })
 
       setGeneratedResult(result)
@@ -169,6 +210,7 @@ export function Reports() {
           filters={draftFilters}
           reportOptions={reportViewerOptions}
           locationOptions={locationOptions}
+          comedianOptions={comedianOptions}
           isGenerating={isGenerating}
           activeQuickRange={activeQuickRange}
           onFilterChange={updateDraftField}

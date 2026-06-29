@@ -45,6 +45,11 @@ import type { ApiPromotionSearchItem } from "@/types/api/promotion-search"
 import type { ApiSystemLookupItem } from "@/types/api/system-lookup"
 import type { RecentSalesReportData } from "@/types/api/recent-sales"
 import type { ReportRequestModel } from "@/types/api/report-request"
+
+export type ApiReportComedian = {
+  ComicID: string
+  StageName: string
+}
 import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { ReservationCustomerSearchItem } from "@/types/api/reservation-customer-search"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
@@ -698,6 +703,14 @@ export const clubmanApi = createApi({
         body,
       }),
     }),
+
+    getComedianList: builder.query<ApiReportComedian[], string>({
+      query: (connectionName) => ({
+        url: reportApiPath(connectionName, "GetComedianList"),
+        method: "GET",
+      }),
+      transformResponse: (response: ApiReportComedian[]) => response ?? [],
+    }),
   }),
 })
 
@@ -735,4 +748,5 @@ export const {
   useGetDefaultShowSectionsMutation,
   useSaveShowMutation,
   useGenerateReportMutation,
+  useGetComedianListQuery,
 } = clubmanApi
