@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { getReportConfig } from "@/features/reports/reports.service"
 import type {
   ReportViewerFilters,
   ReportViewerLocationOption,
@@ -50,6 +51,10 @@ export function ReportFiltersToolbar({
   onExport,
   onPdf,
 }: ReportFiltersToolbarProps) {
+  const config = getReportConfig(filters.reportType)
+  const showCustomerFilters = config.showCustomerFilters
+  const showDateRange = config.showDateRange
+
   return (
     <div className="border-b border-border/70 bg-background px-4 py-4">
       <div className="space-y-4 rounded-xl border border-border/70 bg-muted/10 p-4 sm:p-3.5">
@@ -97,7 +102,14 @@ export function ReportFiltersToolbar({
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-[minmax(15rem,19rem)_minmax(11rem,13rem)_minmax(11rem,13rem)_1fr] 2xl:items-end">
+        <div
+          className={cn(
+            "grid gap-3",
+            showDateRange
+              ? "md:grid-cols-2 2xl:grid-cols-[minmax(15rem,19rem)_minmax(11rem,13rem)_minmax(11rem,13rem)_1fr] 2xl:items-end"
+              : "md:grid-cols-2 2xl:grid-cols-[minmax(15rem,19rem)_1fr] 2xl:items-end"
+          )}
+        >
           <div className="space-y-1.5">
             <Label htmlFor="report-viewer-type">Report</Label>
             <Select
@@ -117,54 +129,69 @@ export function ReportFiltersToolbar({
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="report-viewer-from">From</Label>
-            <CalendarDatePickerControl
-              id="report-viewer-from"
-              value={filters.dateFrom}
-              onChange={(value) => onFilterChange("dateFrom", value)}
-              className="h-9 w-full bg-background"
-            />
-          </div>
+          {showDateRange && (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="report-viewer-from">From</Label>
+                <CalendarDatePickerControl
+                  id="report-viewer-from"
+                  value={filters.dateFrom}
+                  onChange={(value) => onFilterChange("dateFrom", value)}
+                  className="h-9 w-full bg-background"
+                />
+              </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="report-viewer-to">To</Label>
-            <CalendarDatePickerControl
-              id="report-viewer-to"
-              value={filters.dateTo}
-              onChange={(value) => onFilterChange("dateTo", value)}
-              className="h-9 w-full bg-background"
-            />
-          </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="report-viewer-to">To</Label>
+                <CalendarDatePickerControl
+                  id="report-viewer-to"
+                  value={filters.dateTo}
+                  onChange={(value) => onFilterChange("dateTo", value)}
+                  className="h-9 w-full bg-background"
+                />
+              </div>
+            </>
+          )}
 
-          <div className="flex flex-wrap items-center gap-2 pt-2 md:col-span-2 2xl:col-span-1 2xl:justify-end 2xl:pt-0">
-            <Button
-              type="button"
-              variant="outline"
-              className={cn(
-                "h-8 px-3 text-xs sm:text-sm",
-                activeQuickRange === "today" &&
-                  "border-primary bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
-              )}
-              onClick={onToday}
-            >
-              Today
-            </Button>
+          <div
+            className={cn(
+              "flex flex-wrap items-center gap-2 pt-2",
+              showDateRange
+                ? "md:col-span-2 2xl:col-span-1 2xl:justify-end 2xl:pt-0"
+                : "2xl:justify-end 2xl:pt-0"
+            )}
+          >
+            {showDateRange && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={cn(
+                    "h-8 px-3 text-xs sm:text-sm",
+                    activeQuickRange === "today" &&
+                      "border-primary bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
+                  )}
+                  onClick={onToday}
+                >
+                  Today
+                </Button>
 
-            <Button
-              type="button"
-              variant="outline"
-              className={cn(
-                "h-8 px-3 text-xs sm:text-sm",
-                activeQuickRange === "yesterday" &&
-                  "border-primary bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
-              )}
-              onClick={onYesterday}
-            >
-              Yesterday
-            </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={cn(
+                    "h-8 px-3 text-xs sm:text-sm",
+                    activeQuickRange === "yesterday" &&
+                      "border-primary bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
+                  )}
+                  onClick={onYesterday}
+                >
+                  Yesterday
+                </Button>
 
-            <div className="hidden h-6 w-px bg-border lg:block" />
+                <div className="hidden h-6 w-px bg-border lg:block" />
+              </>
+            )}
 
             <Button
               type="button"
@@ -198,31 +225,32 @@ export function ReportFiltersToolbar({
               </Select>
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-              <label className="flex items-center gap-2 text-sm text-foreground">
-                <Checkbox
-                  checked={filters.withEmailAddress}
-                  onCheckedChange={(value) =>
-                    onFilterChange("withEmailAddress", value === true)
-                  }
-                />
-                With Email Address
-              </label>
+            {showCustomerFilters && (
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                <label className="flex items-center gap-2 text-sm text-foreground">
+                  <Checkbox
+                    checked={filters.withEmailAddress}
+                    onCheckedChange={(value) =>
+                      onFilterChange("withEmailAddress", value === true)
+                    }
+                  />
+                  With Email Address
+                </label>
 
-              <label className="flex items-center gap-2 text-sm text-foreground">
-                <Checkbox
-                  checked={filters.withAddress}
-                  onCheckedChange={(value) =>
-                    onFilterChange("withAddress", value === true)
-                  }
-                />
-                With Address
-              </label>
-            </div>
+                <label className="flex items-center gap-2 text-sm text-foreground">
+                  <Checkbox
+                    checked={filters.withAddress}
+                    onCheckedChange={(value) =>
+                      onFilterChange("withAddress", value === true)
+                    }
+                  />
+                  With Address
+                </label>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   )
 }
-

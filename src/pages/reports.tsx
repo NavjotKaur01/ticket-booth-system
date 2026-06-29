@@ -7,18 +7,21 @@ import { useAppSession } from "@/hooks/use-app-session"
 import { ReportFiltersToolbar } from "@/features/reports/report-filters-toolbar"
 import { ReportViewerResults } from "@/features/reports/report-viewer-results"
 import {
+  buildReportRequest,
   createDefaultReportFilters,
   createReportCsv,
   createReportPdfBlob,
   createReportViewerLocationOptions,
   downloadBlob,
-  generateReportViewerResult,
+  getReportConfig,
   openReportPrintWindow,
   reportViewerOptions,
   resolveReportType,
+  transformReportApiResponse,
   type ReportViewerFilters,
   type ReportViewerResult,
 } from "@/features/reports/reports.service"
+import { useGenerateReportMutation } from "@/store/api/clubmanApi"
 
 function buildFilename(base: string, extension: string) {
   const safeBase = base.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
@@ -27,8 +30,9 @@ function buildFilename(base: string, extension: string) {
 }
 
 export function Reports() {
-  const { locationId, locationName, locations } = useAppSession()
+  const { locationId, locationName, locations, connectionName } = useAppSession()
   const [searchParams] = useSearchParams()
+  const [generateReport] = useGenerateReportMutation()
 
   const locationOptions = useMemo(
     () => createReportViewerLocationOptions(locations, locationId, locationName),
@@ -45,6 +49,7 @@ export function Reports() {
   const [generatedResult, setGeneratedResult] = useState<ReportViewerResult | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [activeQuickRange, setActiveQuickRange] = useState<"today" | "yesterday" | null>(null)
+  const [generateError, setGenerateError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!locationOptions.length) {
@@ -76,13 +81,34 @@ export function Reports() {
 
   async function handleGenerate(nextFilters = draftFilters) {
     setIsGenerating(true)
+    setGenerateError(null)
 
     try {
-      const result = await generateReportViewerResult({
+      const config = getReportConfig(nextFilters.reportType)
+      const requestBody = buildReportRequest(nextFilters, connectionName)
+
+      const apiData = await generateReport({
+        endpoint: config.endpoint,
+        body: requestBody,
+      }).unwrap()
+
+      const result = transformReportApiResponse({
+        reportType: nextFilters.reportType,
+        data: apiData,
         filters: nextFilters,
         locationOptions,
       })
+
       setGeneratedResult(result)
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null && "error" in error
+            ? String((error as { error: unknown }).error)
+            : "Failed to generate report. Please try again."
+      setGenerateError(message)
+      setGeneratedResult(null)
     } finally {
       setIsGenerating(false)
     }
@@ -155,7 +181,11 @@ export function Reports() {
         />
 
         <div className="min-h-[38rem] bg-background">
-          <ReportViewerResults result={generatedResult} isLoading={isGenerating} />
+          <ReportViewerResults
+            result={generatedResult}
+            isLoading={isGenerating}
+            errorMessage={generateError}
+          />
         </div>
       </PanelCard>
     </div>

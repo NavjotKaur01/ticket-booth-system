@@ -12,16 +12,31 @@ import type { ReportViewerResult } from "@/features/reports/reports.service"
 type ReportViewerResultsProps = {
   result: ReportViewerResult | null
   isLoading?: boolean
+  errorMessage?: string | null
 }
 
 export function ReportViewerResults({
   result,
   isLoading = false,
+  errorMessage = null,
 }: ReportViewerResultsProps) {
   if (isLoading) {
     return (
       <div className="flex min-h-[24rem] items-center justify-center text-sm text-muted-foreground">
         Generating report...
+      </div>
+    )
+  }
+
+  if (errorMessage) {
+    return (
+      <div className="flex min-h-[32rem] flex-col items-center justify-center px-6 text-center">
+        <p className="text-2xl font-medium text-destructive">
+          Failed to generate report
+        </p>
+        <p className="mt-2 max-w-md text-sm text-muted-foreground">
+          {errorMessage}
+        </p>
       </div>
     )
   }
@@ -63,42 +78,47 @@ export function ReportViewerResults({
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              {result.columns.map((column) => (
-                <TableHead
-                  key={column.key}
-                  className={cn(
-                    "h-10 bg-muted/45 px-3 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase",
-                    column.align === "right" && "text-right"
-                  )}
-                >
-                  {column.label}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {result.rows.map((row, index) => (
-              <TableRow key={`${result.reportType}-${index}`}>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
                 {result.columns.map((column) => (
-                  <TableCell
+                  <TableHead
                     key={column.key}
                     className={cn(
-                      "px-3 py-2.5 text-sm text-foreground",
-                      column.align === "right" && "text-right tabular-nums"
+                      "h-10 bg-muted/45 px-3 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase whitespace-nowrap",
+                      column.align === "right" && "text-right"
                     )}
                   >
-                    {String(row[column.key] ?? "")}
-                  </TableCell>
+                    {column.label}
+                  </TableHead>
                 ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {result.rows.map((row, index) => (
+                <TableRow key={`${result.reportType}-${index}`}>
+                  {result.columns.map((column) => (
+                    <TableCell
+                      key={column.key}
+                      className={cn(
+                        "px-3 py-2.5 text-sm text-foreground",
+                        column.align === "right" && "text-right tabular-nums"
+                      )}
+                    >
+                      {String(row[column.key] ?? "")}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
+
+      <p className="text-right text-xs text-muted-foreground">
+        {result.rows.length} record{result.rows.length !== 1 ? "s" : ""}
+      </p>
     </div>
   )
 }
-
