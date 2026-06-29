@@ -14,6 +14,7 @@ import { AuditReportView } from "@/features/reports/audit-report-view"
 import { WebCountsView } from "@/features/reports/web-counts-view"
 import { ReconcileReportView } from "@/features/reports/reconcile-report-view"
 import { TicketPriceBreakdownView } from "@/features/reports/ticket-price-breakdown-view"
+import { PromoReportView } from "@/features/reports/promo-report-view"
 
 type ReportViewerResultsProps = {
   result: ReportViewerResult | null
@@ -124,6 +125,16 @@ export function ReportViewerResults({
     )
   }
 
+  if (result.reportType === "promo-report") {
+    return (
+      <PromoReportView
+        rawData={result.rawData}
+        subtitle={result.subtitle}
+        generatedAt={result.generatedAt}
+      />
+    )
+  }
+
   if (!result.rows.length || !result.columns.length) {
     return (
       <div className="flex min-h-[32rem] flex-col items-center justify-center px-6 text-center">
@@ -181,6 +192,27 @@ export function ReportViewerResults({
                   ))}
                 </TableRow>
               ))}
+              {result.footerRow && (
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  {result.columns.map((column) => (
+                    <TableCell
+                      key={column.key}
+                      className={cn(
+                        "px-3 py-2.5 text-sm font-semibold text-foreground",
+                        column.align === "right" && "text-right tabular-nums",
+                        column.key === "comicName" && "text-center",
+                        column.key === "performer" && "text-center",
+                        column.key === "paymentDate" && "text-center",
+                        column.key === "recLastName" && "text-center",
+                        column.key === "zipCode" && "text-center",
+                        column.key === "customer" && "text-center"
+                      )}
+                    >
+                      {String(result.footerRow?.[column.key] ?? "")}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>

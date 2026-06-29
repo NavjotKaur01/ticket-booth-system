@@ -23,6 +23,7 @@ export type ReportViewerFilters = {
   headlinerId: string
   isAllDates: boolean
   isWebReservationOnly: boolean
+  isSeparateByUsers: boolean
 }
 
 export type ReportViewerColumn = {
@@ -46,6 +47,7 @@ export type ReportViewerResult = {
   subtitle: string
   columns: ReportViewerColumn[]
   rows: ReportViewerRow[]
+  footerRow?: ReportViewerRow
   emptyMessage: string
   generatedAt: string
   rawData?: unknown
@@ -60,10 +62,11 @@ export type ReportConfig = {
   showComicPicker: boolean
   showAllDatesOption: boolean
   showWebReservationOnly: boolean
+  showSeparateByUsers: boolean
 }
 
-const BASE: Pick<ReportConfig, "showCustomerFilters" | "showComicPicker" | "showAllDatesOption" | "showWebReservationOnly"> = {
-  showCustomerFilters: false, showComicPicker: false, showAllDatesOption: false, showWebReservationOnly: false,
+const BASE: Pick<ReportConfig, "showCustomerFilters" | "showComicPicker" | "showAllDatesOption" | "showWebReservationOnly" | "showSeparateByUsers"> = {
+  showCustomerFilters: false, showComicPicker: false, showAllDatesOption: false, showWebReservationOnly: false, showSeparateByUsers: false,
 }
 
 export const REPORT_CONFIGS: Record<string, ReportConfig> = {
@@ -71,7 +74,7 @@ export const REPORT_CONFIGS: Record<string, ReportConfig> = {
   "banned-inactive-customers": { ...BASE, endpoint: "GetBannedCustomerReport",          title: "Banned\\Inactive Customers", showDateRange: true,  showCustomerFilters: true },
   "comic-sales-breakdown":     { ...BASE, endpoint: "ComicSaleBreakDownReport",          title: "Comic Sales Breakdown",      showDateRange: true },
   "comic-ticket-revenue":      { ...BASE, endpoint: "GetComicTicketRevenueReport",       title: "Comic Ticket Revenue",       showDateRange: true,  showComicPicker: true, showAllDatesOption: true },
-  "door-checkout":             { ...BASE, endpoint: "GetDoorCheckOutReport",             title: "Door Checkout",              showDateRange: true },
+  "door-checkout":             { ...BASE, endpoint: "GetDoorCheckOutReport",             title: "Door Checkout",              showDateRange: true,  showSeparateByUsers: true },
   "export-shows-attendees":    { ...BASE, endpoint: "GetExportShowsAttendeesReport",     title: "Export Shows Attendees",     showDateRange: true,  showWebReservationOnly: true },
   "manager-checkout":          { ...BASE, endpoint: "GetManagerCheckOutReport",          title: "Manager Checkout",           showDateRange: true },
   "new-customers":             { ...BASE, endpoint: "GetNewCustomerReport",              title: "New Customers",              showDateRange: true,  showCustomerFilters: true },
@@ -100,6 +103,7 @@ export function getReportConfig(reportType: string): ReportConfig {
     showDateRange: true,
     showComicPicker: false,
     showWebReservationOnly: false,
+    showSeparateByUsers: false,
     showAllDatesOption: false,
   }
 }
@@ -146,6 +150,39 @@ function formatDisplayDateTime(value: string | null | undefined) {
   if (!value) return "-"
   const parsed = dayjs(value)
   return parsed.isValid() ? parsed.format("DD/MM/YYYY HH:mm") : value
+}
+
+function formatQuickViewDate(value: unknown): string {
+  if (!value) return "-"
+  const parsed = dayjs(String(value))
+  return parsed.isValid() ? parsed.format("MM/DD/YYYY") : String(value)
+}
+
+/** WPF Revenue report Time column uses StringFormat=t (short time, e.g. 7:45 PM). */
+function formatRevenueTime(value: unknown): string {
+  if (!value) return "-"
+  const parsed = dayjs(String(value))
+  return parsed.isValid() ? parsed.format("h:mm A") : String(value)
+}
+
+/** Sale-by-day / sale-by-show time — prefers ShowTimeStr from API; handles min DateTime. */
+function formatShowTime(value: unknown, fallback?: unknown): string {
+  const raw = value ?? fallback
+  if (raw == null || raw === "") return "-"
+  const str = String(raw).trim()
+  // Pre-formatted from API (e.g. "7:35AM")
+  if (/^\d{1,2}:\d{2}\s?(AM|PM)$/i.test(str) || /^\d{1,2}:\d{2}(AM|PM)$/i.test(str)) {
+    return str
+  }
+  const parsed = dayjs(str)
+  if (!parsed.isValid()) return str
+  if (parsed.year() <= 1) return "-"
+  return parsed.format("h:mm A")
+}
+
+function toNum(value: unknown): number {
+  const num = typeof value === "number" ? value : parseFloat(String(value ?? "0"))
+  return Number.isFinite(num) ? num : 0
 }
 
 function safeStr(value: unknown): string {
@@ -220,6 +257,7 @@ export function createDefaultReportFilters({
     headlinerId: "",
     isAllDates: false,
     isWebReservationOnly: false,
+    isSeparateByUsers: false,
   }
 }
 
@@ -293,21 +331,29 @@ function transformBannedCustomers(
   generatedAt: string
 ): ReportViewerResult {
   const columns: ReportViewerColumn[] = [
-    { key: "lastName", label: "Last Name" },
+    { key: "lastName",  label: "Last Name" },
     { key: "firstName", label: "First Name" },
-    { key: "email", label: "Email" },
-    { key: "address", label: "Address" },
-    { key: "city", label: "City" },
-    { key: "status", label: "Status" },
+    { key: "email",     label: "Email Address" },
+    { key: "address",   label: "Address" },
+    { key: "city",      label: "City" },
+    { key: "state",     label: "State" },
+    { key: "zip",       label: "Zip" },
+    { key: "country",   label: "Country" },
+    { key: "phone",     label: "Phone" },
+    { key: "status",    label: "Status" },
     { key: "createdOn", label: "Created On" },
   ]
   const rows = toRows(data).map((row) => ({
-    lastName: safeStr(row.LastName),
+    lastName:  safeStr(row.LastName),
     firstName: safeStr(row.FirstName),
-    email: safeStr(row.Email),
-    address: safeStr(row.Address),
-    city: [row.City, row.State].filter(Boolean).join(", ") || "-",
-    status: safeStr(row.Status),
+    email:     safeStr(row.Email),
+    address:   safeStr(row.Address),
+    city:      safeStr(row.City),
+    state:     safeStr(row.State),
+    zip:       safeStr(row.Zip ?? row.ZipCode),
+    country:   safeStr(row.Country),
+    phone:     safeStr(row.Phone),
+    status:    safeStr(row.Status),
     createdOn: formatDisplayDate(String(row.DateCreated ?? "")),
   }))
   return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
@@ -321,22 +367,26 @@ function transformNewCustomers(
   generatedAt: string
 ): ReportViewerResult {
   const columns: ReportViewerColumn[] = [
-    { key: "createdOn", label: "Created On" },
-    { key: "lastName", label: "Last Name" },
+    { key: "lastName",  label: "Last Name" },
     { key: "firstName", label: "First Name" },
-    { key: "email", label: "Email" },
-    { key: "address", label: "Address" },
-    { key: "city", label: "City" },
-    { key: "phone", label: "Phone" },
+    { key: "email",     label: "Email Address" },
+    { key: "address",   label: "Address" },
+    { key: "city",      label: "City" },
+    { key: "state",     label: "State" },
+    { key: "phone",     label: "Phone" },
+    { key: "zip",       label: "Zip" },
+    { key: "createdOn", label: "Created On" },
   ]
   const rows = toRows(data).map((row) => ({
-    createdOn: formatDisplayDate(String(row.DateCreated ?? "")),
-    lastName: safeStr(row.LastName),
+    lastName:  safeStr(row.LastName),
     firstName: safeStr(row.FirstName),
-    email: safeStr(row.Email1 ?? row.Email),
-    address: [row.Addr1, row.Addr2].filter(Boolean).join(", ") || "-",
-    city: [row.City, row.State].filter(Boolean).join(", ") || "-",
-    phone: safeStr(row.Phone),
+    email:     safeStr(row.Email1 ?? row.Email),
+    address:   [row.Addr1, row.Addr2].filter(Boolean).join(", ") || "-",
+    city:      safeStr(row.City),
+    state:     safeStr(row.State),
+    phone:     safeStr(row.Phone),
+    zip:       safeStr(row.Zip ?? row.ZipCode),
+    createdOn: formatDisplayDate(String(row.DateCreated ?? "")),
   }))
   return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
 }
@@ -349,21 +399,25 @@ function transformPastCustomers(
   generatedAt: string
 ): ReportViewerResult {
   const columns: ReportViewerColumn[] = [
-    { key: "lastName", label: "Last Name" },
+    { key: "lastName",  label: "Last Name" },
     { key: "firstName", label: "First Name" },
-    { key: "email", label: "Email" },
-    { key: "address", label: "Address" },
-    { key: "city", label: "City" },
-    { key: "phone", label: "Phone" },
+    { key: "email",     label: "Email Address" },
+    { key: "address",   label: "Address" },
+    { key: "city",      label: "City" },
+    { key: "state",     label: "State" },
+    { key: "phone",     label: "Phone" },
+    { key: "zip",       label: "Zip" },
     { key: "createdOn", label: "Created On" },
   ]
   const rows = toRows(data).map((row) => ({
-    lastName: safeStr(row.LastName),
+    lastName:  safeStr(row.LastName),
     firstName: safeStr(row.FirstName),
-    email: safeStr(row.Email1 ?? row.Email),
-    address: [row.Addr1, row.Addr2].filter(Boolean).join(", ") || "-",
-    city: [row.City, row.State].filter(Boolean).join(", ") || "-",
-    phone: safeStr(row.Phone),
+    email:     safeStr(row.Email1 ?? row.Email),
+    address:   [row.Addr1, row.Addr2].filter(Boolean).join(", ") || "-",
+    city:      safeStr(row.City),
+    state:     safeStr(row.State),
+    phone:     safeStr(row.Phone),
+    zip:       safeStr(row.Zip ?? row.ZipCode),
     createdOn: formatDisplayDate(String(row.DateCreated ?? "")),
   }))
   return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
@@ -378,27 +432,111 @@ function transformQuickViewSales(
 ): ReportViewerResult {
   const columns: ReportViewerColumn[] = [
     { key: "day", label: "Day" },
-    { key: "showDt", label: "Show Date/Time" },
-    { key: "comicName", label: "Comic" },
+    { key: "date", label: "Date" },
+    { key: "comicName", label: "Comic Name" },
     { key: "seats", label: "Seats", align: "right" },
-    { key: "booked", label: "Booked", align: "right" },
-    { key: "nPaid", label: "Paid", align: "right" },
-    { key: "nComp", label: "Comp", align: "right" },
-    { key: "nDisc", label: "Disc", align: "right" },
-    { key: "netTotal", label: "Net Total", align: "right" },
+    { key: "seated", label: "Seated", align: "right" },
+    { key: "scan", label: "Scan", align: "right" },
+    { key: "dine", label: "Dinner", align: "right" },
+    { key: "nComp", label: "NComp", align: "right" },
+    { key: "nDisc", label: "NDisc", align: "right" },
+    { key: "nPaid", label: "NPaid", align: "right" },
+    { key: "paid", label: "Paid", align: "right" },
+    { key: "saleTax", label: "Sale Tax", align: "right" },
+    { key: "afterTax", label: "After Tax", align: "right" },
+    { key: "svc", label: "SVC", align: "right" },
+    { key: "netTotal", label: "Net", align: "right" },
   ]
-  const rows = toRows(data).map((row) => ({
-    day: safeStr(row.Day),
-    showDt: formatDisplayDateTime(String(row.ShowDt ?? "")),
-    comicName: safeStr(row.ComicName),
-    seats: safeStr(row.Seats),
-    booked: safeStr(row.Booked),
-    nPaid: safeStr(row.NPaid),
-    nComp: safeStr(row.NComp),
-    nDisc: safeStr(row.NDisc),
-    netTotal: formatCurrency(row.NetTotal as number),
-  }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+
+  const totals = {
+    seats: 0,
+    seated: 0,
+    scan: 0,
+    dine: 0,
+    nComp: 0,
+    nDisc: 0,
+    nPaid: 0,
+    paid: 0,
+    saleTax: 0,
+    afterTax: 0,
+    svc: 0,
+    netTotal: 0,
+  }
+
+  const rows = toRows(data).map((row) => {
+    const seats = toNum(row.Seats)
+    const seated = toNum(row.Seated)
+    const scan = toNum(row.ScannerIn ?? row.Scan)
+    const dine = toNum(row.Dine)
+    const nComp = toNum(row.NComp)
+    const nDisc = toNum(row.NDisc)
+    const nPaid = toNum(row.NPaid)
+    const paid = toNum(row.Paid)
+    const saleTax = toNum(row.SalesTax ?? row.SaleTax)
+    const afterTax = toNum(row.AfterTax)
+    const svc = toNum(row.SVC)
+    const netTotal = toNum(row.NetTotal)
+
+    totals.seats += seats
+    totals.seated += seated
+    totals.scan += scan
+    totals.dine += dine
+    totals.nComp += nComp
+    totals.nDisc += nDisc
+    totals.nPaid += nPaid
+    totals.paid += paid
+    totals.saleTax += saleTax
+    totals.afterTax += afterTax
+    totals.svc += svc
+    totals.netTotal += netTotal
+
+    return {
+      day: safeStr(row.Day),
+      date: formatQuickViewDate(row.ShowDt),
+      comicName: safeStr(row.ComicName),
+      seats: String(seats),
+      seated: String(seated),
+      scan: String(scan),
+      dine: String(dine),
+      nComp: String(nComp),
+      nDisc: String(nDisc),
+      nPaid: String(nPaid),
+      paid: formatCurrency(paid),
+      saleTax: formatCurrency(saleTax),
+      afterTax: formatCurrency(afterTax),
+      svc: formatCurrency(svc),
+      netTotal: formatCurrency(netTotal),
+    }
+  })
+
+  const footerRow: ReportViewerRow = {
+    day: "",
+    date: "",
+    comicName: "Total",
+    seats: String(totals.seats),
+    seated: String(totals.seated),
+    scan: String(totals.scan),
+    dine: String(totals.dine),
+    nComp: String(totals.nComp),
+    nDisc: String(totals.nDisc),
+    nPaid: String(totals.nPaid),
+    paid: formatCurrency(totals.paid),
+    saleTax: formatCurrency(totals.saleTax),
+    afterTax: formatCurrency(totals.afterTax),
+    svc: formatCurrency(totals.svc),
+    netTotal: formatCurrency(totals.netTotal),
+  }
+
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    footerRow,
+    emptyMessage: "No records found",
+    generatedAt,
+  }
 }
 
 function transformRevenue(
@@ -412,19 +550,51 @@ function transformRevenue(
     { key: "day", label: "Day" },
     { key: "time", label: "Time" },
     { key: "performer", label: "Performer" },
-    { key: "ticketPurchased", label: "Tickets", align: "right" },
+    { key: "ticketPurchased", label: "Ticket Purchased", align: "right" },
     { key: "prepaidRedeemed", label: "Prepaid Redeemed", align: "right" },
     { key: "totalEarned", label: "Total Earned", align: "right" },
   ]
-  const rows = toRows(data).map((row) => ({
-    day: safeStr(row.Day),
-    time: safeStr(row.Time),
-    performer: safeStr(row.Performer),
-    ticketPurchased: safeStr(row.TicketPurchased),
-    prepaidRedeemed: safeStr(row.PerpaidRedeemed ?? row.PrepaidRedeemed),
-    totalEarned: formatCurrency(row.TotalEarned as number),
-  }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+
+  const totals = { ticketPurchased: 0, prepaidRedeemed: 0, totalEarned: 0 }
+
+  const rows = toRows(data).map((row) => {
+    const ticketPurchased = toNum(row.TicketPurchased)
+    const prepaidRedeemed = toNum(row.PerpaidRedeemed ?? row.PrepaidRedeemed)
+    const totalEarned = toNum(row.TotalEarned)
+
+    totals.ticketPurchased += ticketPurchased
+    totals.prepaidRedeemed += prepaidRedeemed
+    totals.totalEarned += totalEarned
+
+    return {
+      day: formatQuickViewDate(row.Day),
+      time: formatRevenueTime(row.Time),
+      performer: safeStr(row.Performer),
+      ticketPurchased: formatCurrency(ticketPurchased),
+      prepaidRedeemed: formatCurrency(prepaidRedeemed),
+      totalEarned: formatCurrency(totalEarned),
+    }
+  })
+
+  const footerRow: ReportViewerRow = {
+    day: "",
+    time: "",
+    performer: "Total",
+    ticketPurchased: formatCurrency(totals.ticketPurchased),
+    prepaidRedeemed: formatCurrency(totals.prepaidRedeemed),
+    totalEarned: formatCurrency(totals.totalEarned),
+  }
+
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    footerRow,
+    emptyMessage: "No records found",
+    generatedAt,
+  }
 }
 
 function transformSalesByDay(
@@ -437,20 +607,51 @@ function transformSalesByDay(
   const columns: ReportViewerColumn[] = [
     { key: "showDate", label: "Show Date" },
     { key: "showTime", label: "Show Time" },
-    { key: "comicName", label: "Comic" },
-    { key: "phoneIn", label: "Phone In", align: "right" },
-    { key: "walkup", label: "Walk Up", align: "right" },
+    { key: "comicName", label: "Comic Name" },
+    { key: "phoneIn", label: "PhoneIn", align: "right" },
+    { key: "walkup", label: "Walkup", align: "right" },
     { key: "web", label: "Web", align: "right" },
   ]
-  const rows = toRows(data).map((row) => ({
-    showDate: formatDisplayDate(String(row.ShowDate ?? "")),
-    showTime: safeStr(row.ShowTime),
-    comicName: safeStr(row.ComicName),
-    phoneIn: safeStr(row.PhoneIn),
-    walkup: safeStr(row.Walkup),
-    web: safeStr(row.Web),
-  }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+
+  const totals = { phoneIn: 0, walkup: 0, web: 0 }
+
+  const rows = toRows(data).map((row) => {
+    const phoneIn = toNum(row.PhoneIn)
+    const walkup = toNum(row.Walkup)
+    const web = toNum(row.Web)
+    totals.phoneIn += phoneIn
+    totals.walkup += walkup
+    totals.web += web
+
+    return {
+      showDate: formatQuickViewDate(row.ShowDate),
+      showTime: formatShowTime(row.ShowTimeStr, row.ShowTime),
+      comicName: safeStr(row.ComicName),
+      phoneIn: String(phoneIn),
+      walkup: String(walkup),
+      web: String(web),
+    }
+  })
+
+  const footerRow: ReportViewerRow = {
+    showDate: "",
+    showTime: "",
+    comicName: "Total",
+    phoneIn: String(totals.phoneIn),
+    walkup: String(totals.walkup),
+    web: String(totals.web),
+  }
+
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    footerRow,
+    emptyMessage: "No records found",
+    generatedAt,
+  }
 }
 
 function transformSalesByShow(
@@ -460,11 +661,6 @@ function transformSalesByShow(
   subtitle: string,
   generatedAt: string
 ): ReportViewerResult {
-  // WPF VM uses: SaleByShowDataModel { LocName, ShowDate, SaleByShowDateData[] }
-  // SaleByShowDateData: ShowTm, ComicName, Party, Tixpaid, Tixcomp, Tixdisc,
-  //   CheckedIn, CheckinPaid, CheckinComp, CheckinDisc,
-  //   DailyPaid, DefCollected, Net(=DailyPaid+DefCollected),
-  //   SaleByShowPromoList[]
   const columns: ReportViewerColumn[] = [
     { key: "location",     label: "Location" },
     { key: "showDate",     label: "Show Date" },
@@ -485,61 +681,51 @@ function transformSalesByShow(
   const raw = toRows(data)
   const rows: ReportViewerRow[] = []
 
+  function pushShowRow(
+    location: string,
+    dateLabel: string,
+    show: ApiRow
+  ) {
+    const promo = (show.PromoNewCountData ?? show) as ApiRow
+    const dailyPaid    = toNum(show.DailyPaid)
+    const defCollected = toNum(show.DefCollected)
+    const net          = dailyPaid + defCollected
+
+    rows.push({
+      location,
+      showDate:  dateLabel || formatQuickViewDate(show.ShowDate ?? show.ShowDt),
+      showTime:  formatShowTime(show.ShowTm ?? show.ShowTimeStr, show.ShowTime),
+      comicName: safeStr(show.ComicName),
+      party:     String(toNum(promo.Party ?? show.Party ?? show.PartyNo)),
+      tixPaid:   String(toNum(promo.Tixpaid ?? show.Tixpaid ?? show.TixPaid)),
+      tixComp:   String(toNum(promo.Tixcomp ?? show.Tixcomp ?? show.TixComp)),
+      tixDisc:   String(toNum(promo.Tixdisc ?? show.Tixdisc ?? show.TixDisc)),
+      checkedIn: String(toNum(promo.CheckedIn ?? show.CheckedIn)),
+      ciPaid:    String(toNum(promo.CheckinPaid ?? show.CheckinPaid)),
+      ciComp:    String(toNum(promo.CheckinComp ?? show.CheckinComp)),
+      ciDisc:    String(toNum(promo.CheckinDisc ?? show.CheckinDisc)),
+      dailyPaid:    formatCurrency(dailyPaid),
+      defCollected: formatCurrency(defCollected),
+      net:          formatCurrency(net),
+    })
+  }
+
   for (const loc of raw) {
-    // WPF uses SaleByShowDateData; fallback to ShowList for older API shapes
     const showList: ApiRow[] =
-      Array.isArray(loc.SaleByShowDateData) ? (loc.SaleByShowDateData as ApiRow[]) :
+      Array.isArray(loc.ShowAndComedianList) ? (loc.ShowAndComedianList as ApiRow[]) :
+      Array.isArray(loc.SaleByShowDateData)  ? (loc.SaleByShowDateData as ApiRow[]) :
       Array.isArray(loc.ShowList)            ? (loc.ShowList as ApiRow[]) :
       []
 
     const location = safeStr(loc.LocName ?? loc.LocsName ?? loc.Location ?? loc.LocationName)
-    const dateLabel = formatDisplayDate(String(loc.ShowDate ?? loc.ShowDt ?? ""))
+    const dateLabel = formatQuickViewDate(loc.ShowDate ?? loc.ShowDt)
 
     for (const show of showList) {
-      const dailyPaid    = (show.DailyPaid    ?? 0) as number
-      const defCollected = (show.DefCollected ?? 0) as number
-      const net          = dailyPaid + defCollected
-
-      rows.push({
-        location,
-        showDate:     dateLabel || formatDisplayDate(String(show.ShowDate ?? show.ShowDt ?? "")),
-        showTime:     safeStr(show.ShowTm ?? show.ShowTime),
-        comicName:    safeStr(show.ComicName),
-        party:        safeStr(show.Party      ?? show.Tixpaid  ?? show.PartyNo),
-        tixPaid:      safeStr(show.Tixpaid    ?? show.TixPaid),
-        tixComp:      safeStr(show.Tixcomp    ?? show.TixComp),
-        tixDisc:      safeStr(show.Tixdisc    ?? show.TixDisc),
-        checkedIn:    safeStr(show.CheckedIn),
-        ciPaid:       safeStr(show.CheckinPaid),
-        ciComp:       safeStr(show.CheckinComp),
-        ciDisc:       safeStr(show.CheckinDisc),
-        dailyPaid:    formatCurrency(dailyPaid),
-        defCollected: formatCurrency(defCollected),
-        net:          formatCurrency(net),
-      })
+      pushShowRow(location, dateLabel, show)
     }
 
-    // Flat row fallback (when API returns rows directly, not wrapped in a location object)
     if (!showList.length && (loc.ShowTm || loc.ComicName)) {
-      const dailyPaid    = (loc.DailyPaid    ?? 0) as number
-      const defCollected = (loc.DefCollected ?? 0) as number
-      rows.push({
-        location,
-        showDate:     formatDisplayDate(String(loc.ShowDate ?? loc.ShowDt ?? "")),
-        showTime:     safeStr(loc.ShowTm ?? loc.ShowTime),
-        comicName:    safeStr(loc.ComicName),
-        party:        safeStr(loc.Party ?? loc.PartyNo),
-        tixPaid:      safeStr(loc.Tixpaid    ?? loc.TixPaid),
-        tixComp:      safeStr(loc.Tixcomp    ?? loc.TixComp),
-        tixDisc:      safeStr(loc.Tixdisc    ?? loc.TixDisc),
-        checkedIn:    safeStr(loc.CheckedIn),
-        ciPaid:       safeStr(loc.CheckinPaid),
-        ciComp:       safeStr(loc.CheckinComp),
-        ciDisc:       safeStr(loc.CheckinDisc),
-        dailyPaid:    formatCurrency(dailyPaid),
-        defCollected: formatCurrency(defCollected),
-        net:          formatCurrency(dailyPaid + defCollected),
-      })
+      pushShowRow(location, formatQuickViewDate(loc.ShowDate ?? loc.ShowDt), loc)
     }
   }
 
@@ -659,11 +845,32 @@ function transformZipCodeBreakdown(
     { key: "zipCode", label: "Zip Code" },
     { key: "count", label: "Count", align: "right" },
   ]
-  const rows = toRows(data).map((row) => ({
-    zipCode: safeStr(row.ZipCode),
-    count: safeStr(row.Count),
-  }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+
+  let totalCount = 0
+  const rows = toRows(data).map((row) => {
+    const count = toNum(row.Count)
+    totalCount += count
+    return {
+      zipCode: safeStr(row.ZipCode),
+      count: String(count),
+    }
+  })
+
+  const footerRow: ReportViewerRow = {
+    zipCode: "Total",
+    count: String(totalCount),
+  }
+
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    footerRow,
+    emptyMessage: "No records found",
+    generatedAt,
+  }
 }
 
 function transformWebReservationsForDay(
@@ -683,36 +890,66 @@ function transformWebReservationsForDay(
     { key: "total", label: "Total", align: "right" },
   ]
 
-  const flatRows: ApiRow[] = []
-  for (const item of toRows(data)) {
-    const children = Array.isArray(item.WebReservationChildList)
-      ? (item.WebReservationChildList as ApiRow[])
-      : []
-    if (children.length) {
-      for (const child of children) {
-        if (!child.FooterVisibilty) {
-          flatRows.push({
-            ShowDate: item.ShowDate,
-            ShowTime: item.ShowTime,
-            ComicName: item.ComicName,
-            ...child,
-          })
-        }
-      }
-    } else if (!item.FooterVisibilty) {
-      flatRows.push(item)
+  const rows: ReportViewerRow[] = []
+  const raw = toRows(data)
+
+  function mapReservationRow(row: ApiRow, showDate: string, showTime: string, comicName: string, isFooter: boolean) {
+    return {
+      showDate: isFooter ? "" : showDate,
+      showTime: isFooter ? "" : showTime,
+      comicName: isFooter ? "" : comicName,
+      customer: isFooter
+        ? "Total"
+        : safeStr(row.CustomerName ?? `${row.LastName ?? ""} ${row.FirstName ?? ""}`.trim()),
+      promotion: isFooter ? "" : safeStr(row.Promotion),
+      inParty: String(toNum(row.InParty)),
+      total: formatCurrency(toNum(row.Total)),
     }
   }
 
-  const rows = flatRows.map((row) => ({
-    showDate: formatDisplayDate(String(row.ShowDate ?? "")),
-    showTime: safeStr(row.ShowTime),
-    comicName: safeStr(row.ComicName),
-    customer: safeStr(row.CustomerName ?? `${row.LastName ?? ""} ${row.FirstName ?? ""}`.trim()),
-    promotion: safeStr(row.Promotion),
-    inParty: safeStr(row.InParty),
-    total: formatCurrency(row.Total as number),
-  }))
+  // Pre-grouped response (includes per-show footer rows)
+  if (raw.some((item) => Array.isArray(item.WebReservationChildList))) {
+    for (const item of raw) {
+      const showDate = formatQuickViewDate(item.ShowDate)
+      const showTime = formatShowTime(item.ShowTime ?? item.ShowTimeStr)
+      const comicName = safeStr(item.ComicName)
+      const children = (item.WebReservationChildList as ApiRow[]) ?? []
+      for (const child of children) {
+        rows.push(mapReservationRow(child, showDate, showTime, comicName, Boolean(child.FooterVisibilty)))
+      }
+    }
+    return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+  }
+
+  // Flat API list — group by show date/time like WPF
+  const groups = new Map<string, ApiRow[]>()
+  for (const row of raw) {
+    const key = `${String(row.ShowDate ?? "")}|${String(row.ShowTime ?? row.ShowTimeStr ?? "")}`
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(row)
+  }
+
+  for (const group of groups.values()) {
+    const first = group[0]
+    const showDate = formatQuickViewDate(first.ShowDate)
+    const showTime = formatShowTime(first.ShowTime ?? first.ShowTimeStr)
+    const comicName = safeStr(first.ComicName)
+
+    for (const row of group) {
+      rows.push(mapReservationRow(row, showDate, showTime, comicName, false))
+    }
+
+    rows.push({
+      showDate: "",
+      showTime: "",
+      comicName: "",
+      customer: "Total",
+      promotion: "",
+      inParty: String(group.reduce((s, r) => s + toNum(r.InParty), 0)),
+      total: formatCurrency(group.reduce((s, r) => s + toNum(r.Total), 0)),
+    })
+  }
+
   return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
 }
 
@@ -738,17 +975,49 @@ function transformWebGiftCertificates(
     ? (data as ApiRow[])
     : (((data as ApiRow)?.WebGiftCertificatesReportList as ApiRow[]) ?? [])
 
-  const rows = rawList.map((row) => ({
-    createDate: formatDisplayDate(String(row.CreateDt ?? row.Createdate ?? "")),
-    lastName: safeStr(row.LastName),
-    firstName: safeStr(row.FirstName),
-    recLastName: safeStr(row.RecLastName),
-    recFirstName: safeStr(row.RecFirstName),
-    originalAmount: formatCurrency(row.OrginalAmount as number),
-    amount: formatCurrency(row.Amount as number),
-    paidAmount: formatCurrency(row.PaidAmount as number),
-  }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+  const totals = { originalAmount: 0, amount: 0, paidAmount: 0 }
+
+  const rows = rawList.map((row) => {
+    const originalAmount = toNum(row.OrginalAmount ?? row.OriginalAmount)
+    const amount = toNum(row.Amount)
+    const paidAmount = toNum(row.PaidAmount)
+    totals.originalAmount += originalAmount
+    totals.amount += amount
+    totals.paidAmount += paidAmount
+
+    return {
+      createDate: formatQuickViewDate(row.CreateDt ?? row.Createdate),
+      lastName: safeStr(row.LastName),
+      firstName: safeStr(row.FirstName),
+      recLastName: safeStr(row.RecLastName),
+      recFirstName: safeStr(row.RecFirstName),
+      originalAmount: formatCurrency(originalAmount),
+      amount: formatCurrency(amount),
+      paidAmount: formatCurrency(paidAmount),
+    }
+  })
+
+  const footerRow: ReportViewerRow = {
+    createDate: "",
+    lastName: "",
+    firstName: "",
+    recLastName: "Total",
+    recFirstName: "",
+    originalAmount: formatCurrency(totals.originalAmount),
+    amount: formatCurrency(totals.amount),
+    paidAmount: formatCurrency(totals.paidAmount),
+  }
+
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    footerRow,
+    emptyMessage: "No records found",
+    generatedAt,
+  }
 }
 
 function transformExportShowsAttendees(
@@ -801,22 +1070,92 @@ function transformReceipts(
     { key: "totalPaid", label: "Total Paid", align: "right" },
     { key: "total", label: "Total", align: "right" },
   ]
-  const rows = toRows(data).map((row) => ({
-    paymentDate: formatDisplayDate(String(row.PaymentDate ?? row.ReportDate ?? "")),
-    cash: formatCurrency(row.Cash as number),
-    american: formatCurrency(row.American as number),
-    masterCard: formatCurrency(row.MasterCard as number),
-    visa: formatCurrency(row.Visa as number),
-    discover: formatCurrency(row.Discover as number),
-    creditCard: formatCurrency((row.CreditCard ?? row.CreditCatrd) as number),
-    giftCard: formatCurrency(row.GiftCard as number),
-    webGiftCard: formatCurrency(row.WebGiftCard as number),
-    refund: formatCurrency(row.Refund as number),
-    deferedPaid: formatCurrency(row.DeferedPaid as number),
-    totalPaid: formatCurrency(row.TotalPaid as number),
-    total: formatCurrency(row.Total as number),
-  }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+
+  const totals = {
+    cash: 0,
+    american: 0,
+    masterCard: 0,
+    visa: 0,
+    discover: 0,
+    creditCard: 0,
+    giftCard: 0,
+    webGiftCard: 0,
+    refund: 0,
+    deferedPaid: 0,
+    totalPaid: 0,
+    total: 0,
+  }
+
+  const rows = toRows(data).map((row) => {
+    const cash = toNum(row.Cash)
+    const american = toNum(row.American)
+    const masterCard = toNum(row.MasterCard)
+    const visa = toNum(row.Visa)
+    const discover = toNum(row.Discover)
+    const creditCard = toNum(row.CreditCard ?? row.CreditCatrd)
+    const giftCard = toNum(row.GiftCard)
+    const webGiftCard = toNum(row.WebGiftCard)
+    const refund = toNum(row.Refund)
+    const deferedPaid = toNum(row.DeferedPaid)
+    const totalPaid = toNum(row.TotalPaid)
+    const total = toNum(row.Total)
+
+    totals.cash += cash
+    totals.american += american
+    totals.masterCard += masterCard
+    totals.visa += visa
+    totals.discover += discover
+    totals.creditCard += creditCard
+    totals.giftCard += giftCard
+    totals.webGiftCard += webGiftCard
+    totals.refund += refund
+    totals.deferedPaid += deferedPaid
+    totals.totalPaid += totalPaid
+    totals.total += total
+
+    return {
+      paymentDate: formatDisplayDate(String(row.PaymentDate ?? row.ReportDate ?? "")),
+      cash: formatCurrency(cash),
+      american: formatCurrency(american),
+      masterCard: formatCurrency(masterCard),
+      visa: formatCurrency(visa),
+      discover: formatCurrency(discover),
+      creditCard: formatCurrency(creditCard),
+      giftCard: formatCurrency(giftCard),
+      webGiftCard: formatCurrency(webGiftCard),
+      refund: formatCurrency(refund),
+      deferedPaid: formatCurrency(deferedPaid),
+      totalPaid: formatCurrency(totalPaid),
+      total: formatCurrency(total),
+    }
+  })
+
+  const footerRow: ReportViewerRow = {
+    paymentDate: "Total",
+    cash: formatCurrency(totals.cash),
+    american: formatCurrency(totals.american),
+    masterCard: formatCurrency(totals.masterCard),
+    visa: formatCurrency(totals.visa),
+    discover: formatCurrency(totals.discover),
+    creditCard: formatCurrency(totals.creditCard),
+    giftCard: formatCurrency(totals.giftCard),
+    webGiftCard: formatCurrency(totals.webGiftCard),
+    refund: formatCurrency(totals.refund),
+    deferedPaid: formatCurrency(totals.deferedPaid),
+    totalPaid: formatCurrency(totals.totalPaid),
+    total: formatCurrency(totals.total),
+  }
+
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    footerRow,
+    emptyMessage: "No records found",
+    generatedAt,
+  }
 }
 
 function transformPromoReport(
@@ -826,29 +1165,17 @@ function transformPromoReport(
   subtitle: string,
   generatedAt: string
 ): ReportViewerResult {
-  const columns: ReportViewerColumn[] = [
-    { key: "promoName", label: "Promo" },
-    { key: "showDate", label: "Show Date" },
-    { key: "day", label: "Day" },
-    { key: "comic", label: "Comic" },
-    { key: "partyOrgin", label: "Made", align: "right" },
-    { key: "checkedIn", label: "Checked In", align: "right" },
-    { key: "promoAmount", label: "Promo Amount", align: "right" },
-    { key: "checkInAmount", label: "CI Amount", align: "right" },
-    { key: "scanAmount", label: "Scan Amount", align: "right" },
-  ]
-  const rows = toRows(data).map((row) => ({
-    promoName: safeStr(row.PromoName),
-    showDate: formatDisplayDate(String(row.ShowDate ?? "")),
-    day: safeStr(row.Day),
-    comic: safeStr(row.Comic),
-    partyOrgin: safeStr(row.PartyOrgin),
-    checkedIn: safeStr(row.ChecekedIn ?? row.CheckedIn),
-    promoAmount: formatCurrency(row.PromoAmount as number),
-    checkInAmount: formatCurrency(row.CheckedInAmount as number),
-    scanAmount: formatCurrency(row.ScanAmount as number),
-  }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+  const rows = toRows(data)
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns: [],
+    rows: [],
+    emptyMessage: "No records found",
+    generatedAt,
+    rawData: data,
+  }
 }
 
 function transformAuditReport(

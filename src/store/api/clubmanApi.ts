@@ -48,7 +48,11 @@ import type { ReportRequestModel } from "@/types/api/report-request"
 
 export type ApiReportComedian = {
   ComicID: string
-  StageName: string
+  ComicName?: string   // Primary display field returned by GetComedianList API
+  StageName?: string   // Also sometimes present
+  CominName?: string   // WPF client-side alias for ComicName
+  FirstName?: string
+  LastName?: string
 }
 import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { ReservationCustomerSearchItem } from "@/types/api/reservation-customer-search"

@@ -64,6 +64,7 @@ export function ReportFiltersToolbar({
   const showComicPicker = config.showComicPicker
   const showAllDatesOption = config.showAllDatesOption
   const showWebReservationOnly = config.showWebReservationOnly
+  const showSeparateByUsers = config.showSeparateByUsers
   const effectiveDateRange = showDateRange && !filters.isAllDates
 
   return (
@@ -268,6 +269,18 @@ export function ReportFiltersToolbar({
                   }
                 />
                 All Dates
+              </label>
+            )}
+
+            {showSeparateByUsers && (
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <Checkbox
+                  checked={filters.isSeparateByUsers}
+                  onCheckedChange={(value) =>
+                    onFilterChange("isSeparateByUsers", value === true)
+                  }
+                />
+                Separate Report By Users
               </label>
             )}
 

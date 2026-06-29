@@ -58,10 +58,14 @@ export function Reports() {
 
   const comedianOptions = useMemo(
     () =>
-      rawComedianList.map((c) => ({
-        id: c.ComicID,
-        label: c.StageName || c.ComicID,
-      })),
+      rawComedianList.map((c) => {
+        // The API returns "ComicName" as the display field.
+        // WPF maps it to "CominName" client-side; StageName and First/LastName are fallbacks.
+        // Per spec: show blank if name is unavailable (never fall back to the GUID).
+        const nameParts = [c.LastName, c.FirstName].filter(Boolean).join(", ")
+        const label = c.ComicName || c.CominName || c.StageName || nameParts || ""
+        return { id: c.ComicID, label }
+      }),
     [rawComedianList]
   )
 
@@ -104,6 +108,7 @@ export function Reports() {
         headlinerId: nextConfig.showComicPicker ? current.headlinerId : "",
         isAllDates: nextConfig.showAllDatesOption ? current.isAllDates : false,
         isWebReservationOnly: nextConfig.showWebReservationOnly ? current.isWebReservationOnly : false,
+        isSeparateByUsers: nextConfig.showSeparateByUsers ? current.isSeparateByUsers : false,
       }))
     } else {
       setDraftFilters((current) => ({ ...current, [key]: value }))
@@ -127,10 +132,38 @@ export function Reports() {
 
     try {
       const requestBody = buildReportRequest(nextFilters, connectionName)
-      const apiData = await generateReport({
-        endpoint: config.endpoint,
-        body: requestBody,
-      }).unwrap()
+      let apiData: unknown
+
+      if (nextFilters.reportType === "door-checkout" && nextFilters.isSeparateByUsers) {
+        // ── Separate by users: get user list → per-user data ─────────────
+        const userListRaw = await generateReport({
+          endpoint: "GetDoorCheckOutByUserName",
+          body: requestBody,
+        }).unwrap()
+
+        const userList = Array.isArray(userListRaw)
+          ? (userListRaw as Array<Record<string, unknown>>)
+          : []
+
+        const allRows: Array<Record<string, unknown>> = []
+        for (const user of userList) {
+          const userName = String(user.CreatedBy ?? user.UserName ?? "")
+          const userData = await generateReport({
+            endpoint: "GetDoorCheckOutSeparetUserData",
+            body: { ...requestBody, CreatedBy: userName },
+          }).unwrap()
+          const rows = Array.isArray(userData) ? (userData as Array<Record<string, unknown>>) : []
+          for (const row of rows) {
+            allRows.push({ ...row, _userLabel: userName })
+          }
+        }
+        apiData = allRows
+      } else {
+        apiData = await generateReport({
+          endpoint: config.endpoint,
+          body: requestBody,
+        }).unwrap()
+      }
 
       const result = transformReportApiResponse({
         reportType: nextFilters.reportType,
