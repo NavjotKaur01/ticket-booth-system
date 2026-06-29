@@ -44,6 +44,16 @@ import type { ApiLocation } from "@/types/api/locations"
 import type { ApiPromotionSearchItem } from "@/types/api/promotion-search"
 import type { ApiSystemLookupItem } from "@/types/api/system-lookup"
 import type { RecentSalesReportData } from "@/types/api/recent-sales"
+import type { ReportRequestModel } from "@/types/api/report-request"
+
+export type ApiReportComedian = {
+  ComicID: string
+  ComicName?: string   // Primary display field returned by GetComedianList API
+  StageName?: string   // Also sometimes present
+  CominName?: string   // WPF client-side alias for ComicName
+  FirstName?: string
+  LastName?: string
+}
 import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { ReservationCustomerSearchItem } from "@/types/api/reservation-customer-search"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
@@ -689,6 +699,22 @@ export const clubmanApi = createApi({
         { type: "RecentSales", id: arg.locationId },
       ],
     }),
+
+    generateReport: builder.mutation<unknown, { endpoint: string; body: ReportRequestModel }>({
+      query: ({ endpoint, body }) => ({
+        url: `/clubman/api/Report/${endpoint}`,
+        method: "PUT",
+        body,
+      }),
+    }),
+
+    getComedianList: builder.query<ApiReportComedian[], string>({
+      query: (connectionName) => ({
+        url: reportApiPath(connectionName, "GetComedianList"),
+        method: "GET",
+      }),
+      transformResponse: (response: ApiReportComedian[]) => response ?? [],
+    }),
   }),
 })
 
@@ -725,4 +751,6 @@ export const {
   useSearchComediansMutation,
   useGetDefaultShowSectionsMutation,
   useSaveShowMutation,
+  useGenerateReportMutation,
+  useGetComedianListQuery,
 } = clubmanApi

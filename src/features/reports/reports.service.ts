@@ -1,6 +1,7 @@
 ﻿import dayjs from "dayjs"
 
 import type { AppLocation } from "@/types/api/locations"
+import type { ReportRequestModel } from "@/types/api/report-request"
 
 export type ReportViewerOption = {
   id: string
@@ -19,6 +20,10 @@ export type ReportViewerFilters = {
   dateTo: string
   withEmailAddress: boolean
   withAddress: boolean
+  headlinerId: string
+  isAllDates: boolean
+  isWebReservationOnly: boolean
+  isSeparateByUsers: boolean
 }
 
 export type ReportViewerColumn = {
@@ -29,188 +34,160 @@ export type ReportViewerColumn = {
 
 export type ReportViewerRow = Record<string, string | number>
 
+export type ReportDrillContext = {
+  connectionName: string
+  startDate: string
+  endDate: string
+  locationId: string
+}
+
 export type ReportViewerResult = {
   reportType: string
   title: string
   subtitle: string
   columns: ReportViewerColumn[]
   rows: ReportViewerRow[]
+  footerRow?: ReportViewerRow
   emptyMessage: string
   generatedAt: string
+  rawData?: unknown
+  drillContext?: ReportDrillContext
 }
 
-type MockCustomerRow = {
-  id: string
-  locationId: string
-  createdOn: string
-  lastName: string
-  firstName: string
-  email: string
-  address: string
-  city: string
-  status: string
+export type ReportConfig = {
+  endpoint: string
+  title: string
+  showCustomerFilters: boolean
+  showDateRange: boolean
+  showComicPicker: boolean
+  showAllDatesOption: boolean
+  showWebReservationOnly: boolean
+  showSeparateByUsers: boolean
 }
 
-type MockSalesRow = {
-  id: string
-  locationId: string
-  showDate: string
-  showTime: string
-  comicName: string
-  sold: number
-  comps: number
-  revenue: number
-  cash: number
-  cards: number
+const BASE: Pick<ReportConfig, "showCustomerFilters" | "showComicPicker" | "showAllDatesOption" | "showWebReservationOnly" | "showSeparateByUsers"> = {
+  showCustomerFilters: false, showComicPicker: false, showAllDatesOption: false, showWebReservationOnly: false, showSeparateByUsers: false,
+}
+
+export const REPORT_CONFIGS: Record<string, ReportConfig> = {
+  "audit-report":              { ...BASE, endpoint: "GetAduitReport",                  title: "Audit Report",              showDateRange: true },
+  "banned-inactive-customers": { ...BASE, endpoint: "GetBannedCustomerReport",          title: "Banned\\Inactive Customers", showDateRange: true,  showCustomerFilters: true },
+  "comic-sales-breakdown":     { ...BASE, endpoint: "ComicSaleBreakDownReport",          title: "Comic Sales Breakdown",      showDateRange: true },
+  "comic-ticket-revenue":      { ...BASE, endpoint: "GetComicTicketRevenueReport",       title: "Comic Ticket Revenue",       showDateRange: true,  showComicPicker: true, showAllDatesOption: true },
+  "door-checkout":             { ...BASE, endpoint: "GetDoorCheckOutReport",             title: "Door Checkout",              showDateRange: true,  showSeparateByUsers: true },
+  "export-shows-attendees":    { ...BASE, endpoint: "GetExportShowsAttendeesReport",     title: "Export Shows Attendees",     showDateRange: true,  showWebReservationOnly: true },
+  "manager-checkout":          { ...BASE, endpoint: "GetManagerCheckOutReport",          title: "Manager Checkout",           showDateRange: true },
+  "new-customers":             { ...BASE, endpoint: "GetNewCustomerReport",              title: "New Customers",              showDateRange: true,  showCustomerFilters: true },
+  "past-customers":            { ...BASE, endpoint: "GetOldCustomerReport",              title: "Past Customers",             showDateRange: true,  showCustomerFilters: true },
+  "projected-sales":           { ...BASE, endpoint: "GetProjectedReport",               title: "Projected Sales",            showDateRange: true },
+  "promo-report":              { ...BASE, endpoint: "GetPromoReport",                   title: "Promo Report",               showDateRange: true },
+  "quick-view-sales":          { ...BASE, endpoint: "GetQuickViewSaleReport",           title: "Quick View Sales",           showDateRange: true },
+  "receipts":                  { ...BASE, endpoint: "GetReceiptReport",                 title: "Receipts",                   showDateRange: true },
+  "reconcile-report":          { ...BASE, endpoint: "GetReconcileReport",               title: "Reconcile Report",           showDateRange: true },
+  "revenue":                   { ...BASE, endpoint: "GetRevenueReport",                 title: "Revenue",                    showDateRange: true },
+  "sales-by-day":              { ...BASE, endpoint: "GetSaleByDayReport",              title: "Sales By Day",               showDateRange: true },
+  "sales-by-show":             { ...BASE, endpoint: "GetSaleByShowReport",             title: "Sales By Show",              showDateRange: true },
+  "ticket-price-breakdown":    { ...BASE, endpoint: "GetTicketPriceBreakDownReport",    title: "Ticket Price Breakdown",     showDateRange: true },
+  "today-sales":               { ...BASE, endpoint: "GetQuickViewSaleReport",           title: "Today Sales",                showDateRange: true },
+  "web-counts":                { ...BASE, endpoint: "GetWebCountReport",               title: "Web Counts",                 showDateRange: true },
+  "web-gift-certificates":     { ...BASE, endpoint: "GetWebGiftCertificatesReport",    title: "Web Gift Certificates",      showDateRange: true },
+  "web-reservations-for-day":  { ...BASE, endpoint: "GetWebReservationForDayReport",   title: "Web Reservations for Day",   showDateRange: true },
+  "zipcode-breakdown":         { ...BASE, endpoint: "GetZipCodeBreakDownReport",        title: "ZipCode Breakdown",          showDateRange: false },
+}
+
+export function getReportConfig(reportType: string): ReportConfig {
+  return REPORT_CONFIGS[reportType] ?? {
+    endpoint: reportType,
+    title: reportType,
+    showCustomerFilters: false,
+    showDateRange: true,
+    showComicPicker: false,
+    showWebReservationOnly: false,
+    showSeparateByUsers: false,
+    showAllDatesOption: false,
+  }
 }
 
 export const reportViewerOptions: ReportViewerOption[] = [
-  { id: "banned-inactive-customers", label: "Banned\\Inactive Customers" },
-  { id: "past-customers", label: "Past Customers" },
-  { id: "today-sales", label: "Today Sales" },
   { id: "manager-checkout", label: "Manager Checkout" },
+  { id: "banned-inactive-customers", label: "Banned\\Inactive Customers" },
+  { id: "comic-sales-breakdown", label: "Comic Sales Breakdown" },
+  { id: "comic-ticket-revenue", label: "Comic Ticket Revenue" },
   { id: "door-checkout", label: "Door Checkout" },
+  { id: "export-shows-attendees", label: "Export Shows Attendees" },
+  { id: "audit-report", label: "Audit Report" },
+  { id: "new-customers", label: "New Customers" },
+  { id: "past-customers", label: "Past Customers" },
+  { id: "projected-sales", label: "Projected Sales" },
+  { id: "promo-report", label: "Promo Report" },
   { id: "quick-view-sales", label: "Quick View Sales" },
+  { id: "receipts", label: "Receipts" },
+  { id: "reconcile-report", label: "Reconcile Report" },
   { id: "revenue", label: "Revenue" },
-  { id: "sales-by-show", label: "Sales By Show" },
   { id: "sales-by-day", label: "Sales By Day" },
+  { id: "sales-by-show", label: "Sales By Show" },
+  { id: "ticket-price-breakdown", label: "Ticket Price Breakdown" },
+  { id: "web-counts", label: "Web Counts" },
+  { id: "web-gift-certificates", label: "Web Gift Certificates" },
+  { id: "web-reservations-for-day", label: "Web Reservations for Day" },
+  { id: "zipcode-breakdown", label: "ZipCode Breakdown" },
+  { id: "today-sales", label: "Today Sales" },
 ]
 
-const CUSTOMER_COLUMNS: ReportViewerColumn[] = [
-  { key: "lastName", label: "Last Name" },
-  { key: "firstName", label: "First Name" },
-  { key: "email", label: "Email" },
-  { key: "address", label: "Address" },
-  { key: "city", label: "City" },
-  { key: "status", label: "Status" },
-  { key: "createdOn", label: "Created On" },
-]
-
-const SALES_COLUMNS: ReportViewerColumn[] = [
-  { key: "showDate", label: "Show Date" },
-  { key: "showTime", label: "Show Time" },
-  { key: "comicName", label: "Comic" },
-  { key: "sold", label: "Sold", align: "right" },
-  { key: "comps", label: "Comp", align: "right" },
-  { key: "revenue", label: "Revenue", align: "right" },
-]
-
-const CHECKOUT_COLUMNS: ReportViewerColumn[] = [
-  { key: "showDate", label: "Show Date" },
-  { key: "showTime", label: "Show Time" },
-  { key: "comicName", label: "Comic" },
-  { key: "cash", label: "Cash", align: "right" },
-  { key: "cards", label: "Cards", align: "right" },
-  { key: "revenue", label: "Total", align: "right" },
-]
-
-const mockCustomerRows: MockCustomerRow[] = [
-  {
-    id: "cust-1",
-    locationId: "standupmedia",
-    createdOn: "2026-06-26",
-    lastName: "Rider",
-    firstName: "Max",
-    email: "max.rider@email.com",
-    address: "12 Beacon St",
-    city: "Boston, MA",
-    status: "Banned",
-  },
-  {
-    id: "cust-2",
-    locationId: "standupmedia",
-    createdOn: "2026-06-26",
-    lastName: "Johnson",
-    firstName: "Sarah",
-    email: "",
-    address: "44 Hanover Ave",
-    city: "Cambridge, MA",
-    status: "Inactive",
-  },
-  {
-    id: "cust-3",
-    locationId: "standupmedia",
-    createdOn: "2026-06-26",
-    lastName: "Chen",
-    firstName: "Emily",
-    email: "emily.chen@email.com",
-    address: "",
-    city: "Somerville, MA",
-    status: "Past Customer",
-  },
-  {
-    id: "cust-4",
-    locationId: "venue-b",
-    createdOn: "2026-06-25",
-    lastName: "Patel",
-    firstName: "Priya",
-    email: "priya.patel@email.com",
-    address: "89 River Rd",
-    city: "Quincy, MA",
-    status: "Banned",
-  },
-  {
-    id: "cust-5",
-    locationId: "standupmedia",
-    createdOn: "2026-06-24",
-    lastName: "Martinez",
-    firstName: "Carlos",
-    email: "carlos.m@email.com",
-    address: "305 Center Plaza",
-    city: "Boston, MA",
-    status: "Past Customer",
-  },
-]
-
-const mockSalesRows: MockSalesRow[] = [
-  {
-    id: "sale-1",
-    locationId: "standupmedia",
-    showDate: "2026-06-26",
-    showTime: "7:30 PM",
-    comicName: "Doug Benson",
-    sold: 86,
-    comps: 5,
-    revenue: 1125,
-    cash: 225,
-    cards: 900,
-  },
-  {
-    id: "sale-2",
-    locationId: "standupmedia",
-    showDate: "2026-06-26",
-    showTime: "10:00 PM",
-    comicName: "Doug Benson",
-    sold: 54,
-    comps: 2,
-    revenue: 760,
-    cash: 160,
-    cards: 600,
-  },
-  {
-    id: "sale-3",
-    locationId: "standupmedia",
-    showDate: "2026-06-25",
-    showTime: "7:00 PM",
-    comicName: "Midweek Madness",
-    sold: 33,
-    comps: 1,
-    revenue: 495,
-    cash: 95,
-    cards: 400,
-  },
-]
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(value)
+function formatCurrency(value: string | number | null | undefined) {
+  const num = typeof value === "number" ? value : parseFloat(String(value ?? "0"))
+  if (isNaN(num)) return "-"
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(num)
 }
 
-function formatDisplayDate(value: string) {
+function formatDisplayDate(value: string | null | undefined) {
+  if (!value) return "-"
   const parsed = dayjs(value)
   return parsed.isValid() ? parsed.format("DD/MM/YYYY") : value
+}
+
+function formatDisplayDateTime(value: string | null | undefined) {
+  if (!value) return "-"
+  const parsed = dayjs(value)
+  return parsed.isValid() ? parsed.format("DD/MM/YYYY HH:mm") : value
+}
+
+function formatQuickViewDate(value: unknown): string {
+  if (!value) return "-"
+  const parsed = dayjs(String(value))
+  return parsed.isValid() ? parsed.format("MM/DD/YYYY") : String(value)
+}
+
+/** WPF Revenue report Time column uses StringFormat=t (short time, e.g. 7:45 PM). */
+function formatRevenueTime(value: unknown): string {
+  if (!value) return "-"
+  const parsed = dayjs(String(value))
+  return parsed.isValid() ? parsed.format("h:mm A") : String(value)
+}
+
+/** Sale-by-day / sale-by-show time — prefers ShowTimeStr from API; handles min DateTime. */
+function formatShowTime(value: unknown, fallback?: unknown): string {
+  const raw = value ?? fallback
+  if (raw == null || raw === "") return "-"
+  const str = String(raw).trim()
+  // Pre-formatted from API (e.g. "7:35AM")
+  if (/^\d{1,2}:\d{2}\s?(AM|PM)$/i.test(str) || /^\d{1,2}:\d{2}(AM|PM)$/i.test(str)) {
+    return str
+  }
+  const parsed = dayjs(str)
+  if (!parsed.isValid()) return str
+  if (parsed.year() <= 1) return "-"
+  return parsed.format("h:mm A")
+}
+
+function toNum(value: unknown): number {
+  const num = typeof value === "number" ? value : parseFloat(String(value ?? "0"))
+  return Number.isFinite(num) ? num : 0
+}
+
+function safeStr(value: unknown): string {
+  if (value == null) return "-"
+  return String(value).trim() || "-"
 }
 
 function resolveLocationLabel(
@@ -223,14 +200,42 @@ function resolveLocationLabel(
   )
 }
 
+function buildSubtitle(
+  filters: ReportViewerFilters,
+  locationOptions: ReportViewerLocationOption[]
+): string {
+  const config = getReportConfig(filters.reportType)
+  const locationLabel = resolveLocationLabel(filters.locationId, locationOptions)
+  if (!config.showDateRange) {
+    return locationLabel
+  }
+  return `${locationLabel} · ${formatDisplayDate(filters.dateFrom)} - ${formatDisplayDate(filters.dateTo)}`
+}
+
+function buildEmptyResult(
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns: [],
+    rows: [],
+    emptyMessage: "No records found",
+    generatedAt,
+  }
+}
+
 export function resolveReportType(reportType?: string | null) {
   if (!reportType) {
-    return "banned-inactive-customers"
+    return reportViewerOptions[0].id
   }
-
   return reportViewerOptions.some((option) => option.id === reportType)
     ? reportType
-    : "banned-inactive-customers"
+    : reportViewerOptions[0].id
 }
 
 export function createDefaultReportFilters({
@@ -249,6 +254,10 @@ export function createDefaultReportFilters({
     dateTo: today,
     withEmailAddress: false,
     withAddress: false,
+    headlinerId: "",
+    isAllDates: false,
+    isWebReservationOnly: false,
+    isSeparateByUsers: false,
   }
 }
 
@@ -276,178 +285,1034 @@ export function createReportViewerLocationOptions(
   return [{ id: "standupmedia", label: "Standupmedia" }]
 }
 
-function isWithinDateRange(value: string, fromDate: string, toDate: string) {
-  const target = dayjs(value)
-  const from = dayjs(fromDate)
-  const to = dayjs(toDate)
-
-  if (!target.isValid()) {
-    return false
-  }
-
-  if (from.isValid() && target.isBefore(from, "day")) {
-    return false
-  }
-
-  if (to.isValid() && target.isAfter(to, "day")) {
-    return false
-  }
-
-  return true
-}
-
-function shouldFilterByLocation(selectedLocationId: string, rowLocationIds: string[]) {
-  if (!selectedLocationId) {
-    return false
-  }
-
-  return rowLocationIds.some((locationId) => locationId === selectedLocationId)
-}
-
-function filterCustomerRows(
+export function buildReportRequest(
   filters: ReportViewerFilters,
-  statuses: string[]
-): MockCustomerRow[] {
-  const enforceLocation = shouldFilterByLocation(
-    filters.locationId,
-    mockCustomerRows.map((row) => row.locationId)
-  )
+  connectionName: string
+): ReportRequestModel {
+  const config = getReportConfig(filters.reportType)
 
-  return mockCustomerRows.filter((row) => {
-    if (enforceLocation && row.locationId !== filters.locationId) {
-      return false
-    }
+  let startDate = dayjs(filters.dateFrom).format("MM/DD/YYYY")
+  let endDate = dayjs(filters.dateTo).format("MM/DD/YYYY")
 
-    if (!statuses.includes(row.status)) {
-      return false
-    }
-
-    if (!isWithinDateRange(row.createdOn, filters.dateFrom, filters.dateTo)) {
-      return false
-    }
-
-    if (filters.withEmailAddress && !row.email.trim()) {
-      return false
-    }
-
-    if (filters.withAddress && !row.address.trim()) {
-      return false
-    }
-
-    return true
-  })
-}
-
-function filterSalesRows(filters: ReportViewerFilters) {
-  const enforceLocation = shouldFilterByLocation(
-    filters.locationId,
-    mockSalesRows.map((row) => row.locationId)
-  )
-
-  return mockSalesRows.filter((row) => {
-    if (enforceLocation && row.locationId !== filters.locationId) {
-      return false
-    }
-
-    return isWithinDateRange(row.showDate, filters.dateFrom, filters.dateTo)
-  })
-}
-
-function buildCustomerResult(
-  filters: ReportViewerFilters,
-  locationOptions: ReportViewerLocationOption[],
-  statuses: string[],
-  title: string
-): ReportViewerResult {
-  const rows = filterCustomerRows(filters, statuses).map((row) => ({
-    lastName: row.lastName,
-    firstName: row.firstName,
-    email: row.email || "-",
-    address: row.address || "-",
-    city: row.city,
-    status: row.status,
-    createdOn: formatDisplayDate(row.createdOn),
-  }))
+  if (config.showAllDatesOption && filters.isAllDates) {
+    startDate = dayjs().subtract(20, "year").format("MM/DD/YYYY")
+    endDate = dayjs().add(20, "year").format("MM/DD/YYYY")
+  }
 
   return {
-    reportType: filters.reportType,
-    title,
-    subtitle: `${resolveLocationLabel(filters.locationId, locationOptions)} · ${formatDisplayDate(filters.dateFrom)} - ${formatDisplayDate(filters.dateTo)}`,
-    columns: CUSTOMER_COLUMNS,
-    rows,
-    emptyMessage: "No record found",
-    generatedAt: dayjs().format("DD/MM/YYYY HH:mm"),
+    Connection: connectionName,
+    StartDate: startDate,
+    EndDate: endDate,
+    LocaltionId: filters.locationId,
+    IsAddress: filters.withAddress,
+    IsEmail: filters.withEmailAddress,
+    ...(config.showComicPicker && filters.headlinerId
+      ? { HeadlinerId: filters.headlinerId }
+      : {}),
+    // Door Checkout requires CreatedBy (empty = no user filter) — server crashes without it
+    ...(filters.reportType === "door-checkout" ? { CreatedBy: "" } : {}),
+    ...(config.showWebReservationOnly ? { IsWebReservationOnly: filters.isWebReservationOnly } : {}),
   }
 }
 
-function buildSalesResult(
-  filters: ReportViewerFilters,
-  locationOptions: ReportViewerLocationOption[],
+// --- Report-specific transformers ---
+
+type ApiRow = Record<string, unknown>
+
+function toRows(data: unknown): ApiRow[] {
+  return Array.isArray(data) ? (data as ApiRow[]) : []
+}
+
+function transformBannedCustomers(
+  data: unknown,
+  reportType: string,
   title: string,
-  columns: ReportViewerColumn[]
+  subtitle: string,
+  generatedAt: string
 ): ReportViewerResult {
-  const rows = filterSalesRows(filters).map((row) => ({
-    showDate: formatDisplayDate(row.showDate),
-    showTime: row.showTime,
-    comicName: row.comicName,
-    sold: row.sold,
-    comps: row.comps,
-    cash: formatCurrency(row.cash),
-    cards: formatCurrency(row.cards),
-    revenue: formatCurrency(row.revenue),
+  const columns: ReportViewerColumn[] = [
+    { key: "lastName",  label: "Last Name" },
+    { key: "firstName", label: "First Name" },
+    { key: "email",     label: "Email Address" },
+    { key: "address",   label: "Address" },
+    { key: "city",      label: "City" },
+    { key: "state",     label: "State" },
+    { key: "zip",       label: "Zip" },
+    { key: "country",   label: "Country" },
+    { key: "phone",     label: "Phone" },
+    { key: "status",    label: "Status" },
+    { key: "createdOn", label: "Created On" },
+  ]
+  const rows = toRows(data).map((row) => ({
+    lastName:  safeStr(row.LastName),
+    firstName: safeStr(row.FirstName),
+    email:     safeStr(row.Email),
+    address:   safeStr(row.Address),
+    city:      safeStr(row.City),
+    state:     safeStr(row.State),
+    zip:       safeStr(row.Zip ?? row.ZipCode),
+    country:   safeStr(row.Country),
+    phone:     safeStr(row.Phone),
+    status:    safeStr(row.Status),
+    createdOn: formatDisplayDate(String(row.DateCreated ?? "")),
   }))
+  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+}
+
+function transformNewCustomers(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const columns: ReportViewerColumn[] = [
+    { key: "lastName",  label: "Last Name" },
+    { key: "firstName", label: "First Name" },
+    { key: "email",     label: "Email Address" },
+    { key: "address",   label: "Address" },
+    { key: "city",      label: "City" },
+    { key: "state",     label: "State" },
+    { key: "phone",     label: "Phone" },
+    { key: "zip",       label: "Zip" },
+    { key: "createdOn", label: "Created On" },
+  ]
+  const rows = toRows(data).map((row) => ({
+    lastName:  safeStr(row.LastName),
+    firstName: safeStr(row.FirstName),
+    email:     safeStr(row.Email1 ?? row.Email),
+    address:   [row.Addr1, row.Addr2].filter(Boolean).join(", ") || "-",
+    city:      safeStr(row.City),
+    state:     safeStr(row.State),
+    phone:     safeStr(row.Phone),
+    zip:       safeStr(row.Zip ?? row.ZipCode),
+    createdOn: formatDisplayDate(String(row.DateCreated ?? "")),
+  }))
+  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+}
+
+function transformPastCustomers(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const columns: ReportViewerColumn[] = [
+    { key: "lastName",  label: "Last Name" },
+    { key: "firstName", label: "First Name" },
+    { key: "email",     label: "Email Address" },
+    { key: "address",   label: "Address" },
+    { key: "city",      label: "City" },
+    { key: "state",     label: "State" },
+    { key: "phone",     label: "Phone" },
+    { key: "zip",       label: "Zip" },
+    { key: "createdOn", label: "Created On" },
+  ]
+  const rows = toRows(data).map((row) => ({
+    lastName:  safeStr(row.LastName),
+    firstName: safeStr(row.FirstName),
+    email:     safeStr(row.Email1 ?? row.Email),
+    address:   [row.Addr1, row.Addr2].filter(Boolean).join(", ") || "-",
+    city:      safeStr(row.City),
+    state:     safeStr(row.State),
+    phone:     safeStr(row.Phone),
+    zip:       safeStr(row.Zip ?? row.ZipCode),
+    createdOn: formatDisplayDate(String(row.DateCreated ?? "")),
+  }))
+  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+}
+
+function transformQuickViewSales(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const columns: ReportViewerColumn[] = [
+    { key: "day", label: "Day" },
+    { key: "date", label: "Date" },
+    { key: "comicName", label: "Comic Name" },
+    { key: "seats", label: "Seats", align: "right" },
+    { key: "seated", label: "Seated", align: "right" },
+    { key: "scan", label: "Scan", align: "right" },
+    { key: "dine", label: "Dinner", align: "right" },
+    { key: "nComp", label: "NComp", align: "right" },
+    { key: "nDisc", label: "NDisc", align: "right" },
+    { key: "nPaid", label: "NPaid", align: "right" },
+    { key: "paid", label: "Paid", align: "right" },
+    { key: "saleTax", label: "Sale Tax", align: "right" },
+    { key: "afterTax", label: "After Tax", align: "right" },
+    { key: "svc", label: "SVC", align: "right" },
+    { key: "netTotal", label: "Net", align: "right" },
+  ]
+
+  const totals = {
+    seats: 0,
+    seated: 0,
+    scan: 0,
+    dine: 0,
+    nComp: 0,
+    nDisc: 0,
+    nPaid: 0,
+    paid: 0,
+    saleTax: 0,
+    afterTax: 0,
+    svc: 0,
+    netTotal: 0,
+  }
+
+  const rows = toRows(data).map((row) => {
+    const seats = toNum(row.Seats)
+    const seated = toNum(row.Seated)
+    const scan = toNum(row.ScannerIn ?? row.Scan)
+    const dine = toNum(row.Dine)
+    const nComp = toNum(row.NComp)
+    const nDisc = toNum(row.NDisc)
+    const nPaid = toNum(row.NPaid)
+    const paid = toNum(row.Paid)
+    const saleTax = toNum(row.SalesTax ?? row.SaleTax)
+    const afterTax = toNum(row.AfterTax)
+    const svc = toNum(row.SVC)
+    const netTotal = toNum(row.NetTotal)
+
+    totals.seats += seats
+    totals.seated += seated
+    totals.scan += scan
+    totals.dine += dine
+    totals.nComp += nComp
+    totals.nDisc += nDisc
+    totals.nPaid += nPaid
+    totals.paid += paid
+    totals.saleTax += saleTax
+    totals.afterTax += afterTax
+    totals.svc += svc
+    totals.netTotal += netTotal
+
+    return {
+      day: safeStr(row.Day),
+      date: formatQuickViewDate(row.ShowDt),
+      comicName: safeStr(row.ComicName),
+      seats: String(seats),
+      seated: String(seated),
+      scan: String(scan),
+      dine: String(dine),
+      nComp: String(nComp),
+      nDisc: String(nDisc),
+      nPaid: String(nPaid),
+      paid: formatCurrency(paid),
+      saleTax: formatCurrency(saleTax),
+      afterTax: formatCurrency(afterTax),
+      svc: formatCurrency(svc),
+      netTotal: formatCurrency(netTotal),
+    }
+  })
+
+  const footerRow: ReportViewerRow = {
+    day: "",
+    date: "",
+    comicName: "Total",
+    seats: String(totals.seats),
+    seated: String(totals.seated),
+    scan: String(totals.scan),
+    dine: String(totals.dine),
+    nComp: String(totals.nComp),
+    nDisc: String(totals.nDisc),
+    nPaid: String(totals.nPaid),
+    paid: formatCurrency(totals.paid),
+    saleTax: formatCurrency(totals.saleTax),
+    afterTax: formatCurrency(totals.afterTax),
+    svc: formatCurrency(totals.svc),
+    netTotal: formatCurrency(totals.netTotal),
+  }
 
   return {
-    reportType: filters.reportType,
+    reportType,
     title,
-    subtitle: `${resolveLocationLabel(filters.locationId, locationOptions)} · ${formatDisplayDate(filters.dateFrom)} - ${formatDisplayDate(filters.dateTo)}`,
+    subtitle,
     columns,
     rows,
-    emptyMessage: "No record found",
-    generatedAt: dayjs().format("DD/MM/YYYY HH:mm"),
+    footerRow,
+    emptyMessage: "No records found",
+    generatedAt,
   }
 }
 
-export async function generateReportViewerResult({
+function transformRevenue(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const columns: ReportViewerColumn[] = [
+    { key: "day", label: "Day" },
+    { key: "time", label: "Time" },
+    { key: "performer", label: "Performer" },
+    { key: "ticketPurchased", label: "Ticket Purchased", align: "right" },
+    { key: "prepaidRedeemed", label: "Prepaid Redeemed", align: "right" },
+    { key: "totalEarned", label: "Total Earned", align: "right" },
+  ]
+
+  const totals = { ticketPurchased: 0, prepaidRedeemed: 0, totalEarned: 0 }
+
+  const rows = toRows(data).map((row) => {
+    const ticketPurchased = toNum(row.TicketPurchased)
+    const prepaidRedeemed = toNum(row.PerpaidRedeemed ?? row.PrepaidRedeemed)
+    const totalEarned = toNum(row.TotalEarned)
+
+    totals.ticketPurchased += ticketPurchased
+    totals.prepaidRedeemed += prepaidRedeemed
+    totals.totalEarned += totalEarned
+
+    return {
+      day: formatQuickViewDate(row.Day),
+      time: formatRevenueTime(row.Time),
+      performer: safeStr(row.Performer),
+      ticketPurchased: formatCurrency(ticketPurchased),
+      prepaidRedeemed: formatCurrency(prepaidRedeemed),
+      totalEarned: formatCurrency(totalEarned),
+    }
+  })
+
+  const footerRow: ReportViewerRow = {
+    day: "",
+    time: "",
+    performer: "Total",
+    ticketPurchased: formatCurrency(totals.ticketPurchased),
+    prepaidRedeemed: formatCurrency(totals.prepaidRedeemed),
+    totalEarned: formatCurrency(totals.totalEarned),
+  }
+
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    footerRow,
+    emptyMessage: "No records found",
+    generatedAt,
+  }
+}
+
+function transformSalesByDay(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const columns: ReportViewerColumn[] = [
+    { key: "showDate", label: "Show Date" },
+    { key: "showTime", label: "Show Time" },
+    { key: "comicName", label: "Comic Name" },
+    { key: "phoneIn", label: "PhoneIn", align: "right" },
+    { key: "walkup", label: "Walkup", align: "right" },
+    { key: "web", label: "Web", align: "right" },
+  ]
+
+  const totals = { phoneIn: 0, walkup: 0, web: 0 }
+
+  const rows = toRows(data).map((row) => {
+    const phoneIn = toNum(row.PhoneIn)
+    const walkup = toNum(row.Walkup)
+    const web = toNum(row.Web)
+    totals.phoneIn += phoneIn
+    totals.walkup += walkup
+    totals.web += web
+
+    return {
+      showDate: formatQuickViewDate(row.ShowDate),
+      showTime: formatShowTime(row.ShowTimeStr, row.ShowTime),
+      comicName: safeStr(row.ComicName),
+      phoneIn: String(phoneIn),
+      walkup: String(walkup),
+      web: String(web),
+    }
+  })
+
+  const footerRow: ReportViewerRow = {
+    showDate: "",
+    showTime: "",
+    comicName: "Total",
+    phoneIn: String(totals.phoneIn),
+    walkup: String(totals.walkup),
+    web: String(totals.web),
+  }
+
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    footerRow,
+    emptyMessage: "No records found",
+    generatedAt,
+  }
+}
+
+function transformSalesByShow(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns: [],
+    rows: [],
+    emptyMessage: toRows(data).length === 0 ? "No records found" : "",
+    generatedAt,
+    rawData: data,
+  }
+}
+
+function transformManagerCheckout(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const rows = toRows(data)
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns: [],
+    rows: [],
+    emptyMessage: rows.length === 0 ? "No records found" : "",
+    generatedAt,
+    rawData: data,
+  }
+}
+
+function transformProjectedSales(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const columns: ReportViewerColumn[] = [
+    { key: "day", label: "Day" },
+    { key: "showDate", label: "Show Date" },
+    { key: "comicName", label: "Comic" },
+    { key: "seats", label: "Seats", align: "right" },
+    { key: "booked", label: "Booked", align: "right" },
+    { key: "perc", label: "%", align: "right" },
+    { key: "comp", label: "Comp", align: "right" },
+    { key: "disc", label: "Disc", align: "right" },
+    { key: "paid", label: "Paid", align: "right" },
+    { key: "total", label: "Total", align: "right" },
+  ]
+  const rows = toRows(data).map((row) => ({
+    day: safeStr(row.Day),
+    showDate: formatDisplayDate(String(row.ShowDate ?? "")),
+    comicName: safeStr(row.ComicName),
+    seats: safeStr(row.Seats),
+    booked: safeStr(row.Booked),
+    perc: safeStr(row.Perc),
+    comp: safeStr(row.Comp),
+    disc: safeStr(row.Disc),
+    paid: safeStr(row.Paid),
+    total: formatCurrency(row.Total as number),
+  }))
+  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+}
+
+function transformComicTicketRevenue(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const columns: ReportViewerColumn[] = [
+    { key: "comicName", label: "Comic" },
+    { key: "paid", label: "Paid", align: "right" },
+    { key: "discounted", label: "Discounted", align: "right" },
+    { key: "comped", label: "Comped", align: "right" },
+    { key: "totalTickets", label: "Total Tickets", align: "right" },
+    { key: "revenue", label: "Revenue", align: "right" },
+  ]
+  const rows = toRows(data).map((row) => ({
+    comicName: safeStr(row.ComicName),
+    paid: safeStr(row.Paid),
+    discounted: safeStr(row.Discounted),
+    comped: safeStr(row.Comped),
+    totalTickets: safeStr(row.TotalTickets),
+    revenue: formatCurrency(row.Revenue as number),
+  }))
+  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+}
+
+function transformComicSalesBreakdown(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const columns: ReportViewerColumn[] = [
+    { key: "comicName", label: "Comic" },
+    { key: "inHouse", label: "In-House", align: "right" },
+    { key: "web", label: "Web", align: "right" },
+    { key: "total", label: "Total", align: "right" },
+  ]
+  const rows = toRows(data).map((row) => ({
+    comicName: safeStr(row.ComicName),
+    inHouse: safeStr(row.InHouseReservation),
+    web: safeStr(row.WebReservations),
+    total: safeStr(row.TotalReservationsCount),
+  }))
+  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+}
+
+function transformZipCodeBreakdown(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const columns: ReportViewerColumn[] = [
+    { key: "zipCode", label: "Zip Code" },
+    { key: "count", label: "Count", align: "right" },
+  ]
+
+  let totalCount = 0
+  const rows = toRows(data).map((row) => {
+    const count = toNum(row.Count)
+    totalCount += count
+    return {
+      zipCode: safeStr(row.ZipCode),
+      count: String(count),
+    }
+  })
+
+  const footerRow: ReportViewerRow = {
+    zipCode: "Total",
+    count: String(totalCount),
+  }
+
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    footerRow,
+    emptyMessage: "No records found",
+    generatedAt,
+  }
+}
+
+function transformWebReservationsForDay(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const columns: ReportViewerColumn[] = [
+    { key: "showDate", label: "Show Date" },
+    { key: "showTime", label: "Show Time" },
+    { key: "comicName", label: "Comic" },
+    { key: "customer", label: "Customer" },
+    { key: "promotion", label: "Promotion" },
+    { key: "inParty", label: "Party", align: "right" },
+    { key: "total", label: "Total", align: "right" },
+  ]
+
+  const rows: ReportViewerRow[] = []
+  const raw = toRows(data)
+
+  function mapReservationRow(row: ApiRow, showDate: string, showTime: string, comicName: string, isFooter: boolean) {
+    return {
+      showDate: isFooter ? "" : showDate,
+      showTime: isFooter ? "" : showTime,
+      comicName: isFooter ? "" : comicName,
+      customer: isFooter
+        ? "Total"
+        : safeStr(row.CustomerName ?? `${row.LastName ?? ""} ${row.FirstName ?? ""}`.trim()),
+      promotion: isFooter ? "" : safeStr(row.Promotion),
+      inParty: String(toNum(row.InParty)),
+      total: formatCurrency(toNum(row.Total)),
+    }
+  }
+
+  // Pre-grouped response (includes per-show footer rows)
+  if (raw.some((item) => Array.isArray(item.WebReservationChildList))) {
+    for (const item of raw) {
+      const showDate = formatQuickViewDate(item.ShowDate)
+      const showTime = formatShowTime(item.ShowTime ?? item.ShowTimeStr)
+      const comicName = safeStr(item.ComicName)
+      const children = (item.WebReservationChildList as ApiRow[]) ?? []
+      for (const child of children) {
+        rows.push(mapReservationRow(child, showDate, showTime, comicName, Boolean(child.FooterVisibilty)))
+      }
+    }
+    return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+  }
+
+  // Flat API list — group by show date/time like WPF
+  const groups = new Map<string, ApiRow[]>()
+  for (const row of raw) {
+    const key = `${String(row.ShowDate ?? "")}|${String(row.ShowTime ?? row.ShowTimeStr ?? "")}`
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(row)
+  }
+
+  for (const group of groups.values()) {
+    const first = group[0]
+    const showDate = formatQuickViewDate(first.ShowDate)
+    const showTime = formatShowTime(first.ShowTime ?? first.ShowTimeStr)
+    const comicName = safeStr(first.ComicName)
+
+    for (const row of group) {
+      rows.push(mapReservationRow(row, showDate, showTime, comicName, false))
+    }
+
+    rows.push({
+      showDate: "",
+      showTime: "",
+      comicName: "",
+      customer: "Total",
+      promotion: "",
+      inParty: String(group.reduce((s, r) => s + toNum(r.InParty), 0)),
+      total: formatCurrency(group.reduce((s, r) => s + toNum(r.Total), 0)),
+    })
+  }
+
+  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+}
+
+function transformWebGiftCertificates(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const columns: ReportViewerColumn[] = [
+    { key: "createDate", label: "Create Date" },
+    { key: "lastName", label: "Last Name" },
+    { key: "firstName", label: "First Name" },
+    { key: "recLastName", label: "Recipient Last" },
+    { key: "recFirstName", label: "Recipient First" },
+    { key: "originalAmount", label: "Original Amt", align: "right" },
+    { key: "amount", label: "Amount", align: "right" },
+    { key: "paidAmount", label: "Paid Amt", align: "right" },
+  ]
+
+  const rawList = Array.isArray(data)
+    ? (data as ApiRow[])
+    : (((data as ApiRow)?.WebGiftCertificatesReportList as ApiRow[]) ?? [])
+
+  const totals = { originalAmount: 0, amount: 0, paidAmount: 0 }
+
+  const rows = rawList.map((row) => {
+    const originalAmount = toNum(row.OrginalAmount ?? row.OriginalAmount)
+    const amount = toNum(row.Amount)
+    const paidAmount = toNum(row.PaidAmount)
+    totals.originalAmount += originalAmount
+    totals.amount += amount
+    totals.paidAmount += paidAmount
+
+    return {
+      createDate: formatQuickViewDate(row.CreateDt ?? row.Createdate),
+      lastName: safeStr(row.LastName),
+      firstName: safeStr(row.FirstName),
+      recLastName: safeStr(row.RecLastName),
+      recFirstName: safeStr(row.RecFirstName),
+      originalAmount: formatCurrency(originalAmount),
+      amount: formatCurrency(amount),
+      paidAmount: formatCurrency(paidAmount),
+    }
+  })
+
+  const footerRow: ReportViewerRow = {
+    createDate: "",
+    lastName: "",
+    firstName: "",
+    recLastName: "Total",
+    recFirstName: "",
+    originalAmount: formatCurrency(totals.originalAmount),
+    amount: formatCurrency(totals.amount),
+    paidAmount: formatCurrency(totals.paidAmount),
+  }
+
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    footerRow,
+    emptyMessage: "No records found",
+    generatedAt,
+  }
+}
+
+function transformExportShowsAttendees(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const columns: ReportViewerColumn[] = [
+    { key: "showDateTime", label: "Show Date/Time" },
+    { key: "comicName", label: "Comic" },
+    { key: "lastName", label: "Last Name" },
+    { key: "firstName", label: "First Name" },
+    { key: "phone", label: "Phone" },
+    { key: "email", label: "Email" },
+    { key: "source", label: "Source" },
+  ]
+  const rows = toRows(data).map((row) => ({
+    showDateTime: formatDisplayDateTime(String(row.ShowDateTime ?? "")),
+    comicName: safeStr(row.ComicName),
+    lastName: safeStr(row.LastName),
+    firstName: safeStr(row.FirstName),
+    phone: safeStr(row.Phone),
+    email: safeStr(row.Email),
+    source: safeStr(row.ReservationSource),
+  }))
+  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+}
+
+function transformReceipts(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const columns: ReportViewerColumn[] = [
+    { key: "paymentDate", label: "Payment Date" },
+    { key: "cash", label: "Cash", align: "right" },
+    { key: "american", label: "AmEx", align: "right" },
+    { key: "masterCard", label: "MasterCard", align: "right" },
+    { key: "visa", label: "Visa", align: "right" },
+    { key: "discover", label: "Discover", align: "right" },
+    { key: "creditCard", label: "Credit Card", align: "right" },
+    { key: "giftCard", label: "Gift Card", align: "right" },
+    { key: "webGiftCard", label: "Web Gift Card", align: "right" },
+    { key: "refund", label: "Refund", align: "right" },
+    { key: "deferedPaid", label: "Deferred Paid", align: "right" },
+    { key: "totalPaid", label: "Total Paid", align: "right" },
+    { key: "total", label: "Total", align: "right" },
+  ]
+
+  const totals = {
+    cash: 0,
+    american: 0,
+    masterCard: 0,
+    visa: 0,
+    discover: 0,
+    creditCard: 0,
+    giftCard: 0,
+    webGiftCard: 0,
+    refund: 0,
+    deferedPaid: 0,
+    totalPaid: 0,
+    total: 0,
+  }
+
+  const rows = toRows(data).map((row) => {
+    const cash = toNum(row.Cash)
+    const american = toNum(row.American)
+    const masterCard = toNum(row.MasterCard)
+    const visa = toNum(row.Visa)
+    const discover = toNum(row.Discover)
+    const creditCard = toNum(row.CreditCard ?? row.CreditCatrd)
+    const giftCard = toNum(row.GiftCard)
+    const webGiftCard = toNum(row.WebGiftCard)
+    const refund = toNum(row.Refund)
+    const deferedPaid = toNum(row.DeferedPaid)
+    const totalPaid = toNum(row.TotalPaid)
+    const total = toNum(row.Total)
+
+    totals.cash += cash
+    totals.american += american
+    totals.masterCard += masterCard
+    totals.visa += visa
+    totals.discover += discover
+    totals.creditCard += creditCard
+    totals.giftCard += giftCard
+    totals.webGiftCard += webGiftCard
+    totals.refund += refund
+    totals.deferedPaid += deferedPaid
+    totals.totalPaid += totalPaid
+    totals.total += total
+
+    return {
+      paymentDate: formatDisplayDate(String(row.PaymentDate ?? row.ReportDate ?? "")),
+      cash: formatCurrency(cash),
+      american: formatCurrency(american),
+      masterCard: formatCurrency(masterCard),
+      visa: formatCurrency(visa),
+      discover: formatCurrency(discover),
+      creditCard: formatCurrency(creditCard),
+      giftCard: formatCurrency(giftCard),
+      webGiftCard: formatCurrency(webGiftCard),
+      refund: formatCurrency(refund),
+      deferedPaid: formatCurrency(deferedPaid),
+      totalPaid: formatCurrency(totalPaid),
+      total: formatCurrency(total),
+    }
+  })
+
+  const footerRow: ReportViewerRow = {
+    paymentDate: "Total",
+    cash: formatCurrency(totals.cash),
+    american: formatCurrency(totals.american),
+    masterCard: formatCurrency(totals.masterCard),
+    visa: formatCurrency(totals.visa),
+    discover: formatCurrency(totals.discover),
+    creditCard: formatCurrency(totals.creditCard),
+    giftCard: formatCurrency(totals.giftCard),
+    webGiftCard: formatCurrency(totals.webGiftCard),
+    refund: formatCurrency(totals.refund),
+    deferedPaid: formatCurrency(totals.deferedPaid),
+    totalPaid: formatCurrency(totals.totalPaid),
+    total: formatCurrency(totals.total),
+  }
+
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    footerRow,
+    emptyMessage: "No records found",
+    generatedAt,
+  }
+}
+
+function transformPromoReport(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns: [],
+    rows: [],
+    emptyMessage: toRows(data).length === 0 ? "No records found" : "",
+    generatedAt,
+    rawData: data,
+  }
+}
+
+function transformAuditReport(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string,
+  drillContext?: ReportDrillContext
+): ReportViewerResult {
+  const rows = toRows(data)
+  return {
+    reportType, title, subtitle,
+    columns: [], rows: [],
+    emptyMessage: rows.length === 0 ? "No records found" : "",
+    generatedAt, rawData: data, drillContext,
+  }
+}
+
+function transformWebCounts(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string,
+  drillContext?: ReportDrillContext
+): ReportViewerResult {
+  const rows = toRows(data)
+  return {
+    reportType, title, subtitle,
+    columns: [], rows: [],
+    emptyMessage: rows.length === 0 ? "No records found" : "",
+    generatedAt, rawData: data, drillContext,
+  }
+}
+
+function transformReconcileReport(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string,
+  drillContext?: ReportDrillContext
+): ReportViewerResult {
+  const rows = toRows(data)
+  return {
+    reportType, title, subtitle,
+    columns: [], rows: [],
+    emptyMessage: rows.length === 0 ? "No records found" : "",
+    generatedAt, rawData: data, drillContext,
+  }
+}
+
+function transformTicketPriceBreakdown(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const rows = toRows(data)
+  return {
+    reportType, title, subtitle,
+    columns: [], rows: [],
+    emptyMessage: rows.length === 0 ? "No records found" : "",
+    generatedAt, rawData: data,
+  }
+}
+
+function transformDoorCheckout(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string,
+  drillContext?: ReportDrillContext
+): ReportViewerResult {
+  const rows = toRows(data)
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns: [],
+    rows: [],
+    emptyMessage: rows.length === 0 ? "No records found" : "",
+    generatedAt,
+    rawData: data,
+    drillContext,
+  }
+}
+
+function transformGeneric(
+  data: unknown,
+  reportType: string,
+  title: string,
+  subtitle: string,
+  generatedAt: string
+): ReportViewerResult {
+  const raw = toRows(data)
+  if (!raw.length) {
+    return buildEmptyResult(reportType, title, subtitle, generatedAt)
+  }
+
+  const firstRow = raw[0]
+  const columns: ReportViewerColumn[] = Object.keys(firstRow).map((key) => ({
+    key,
+    label: key.replace(/([A-Z])/g, " $1").trim(),
+  }))
+
+  const rows = raw.map((row) => {
+    const resultRow: ReportViewerRow = {}
+    columns.forEach((col) => {
+      const val = row[col.key]
+      resultRow[col.key] = val == null ? "-" : String(val)
+    })
+    return resultRow
+  })
+
+  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+}
+
+export function transformReportApiResponse({
+  reportType,
+  data,
   filters,
   locationOptions,
+  connectionName = "",
 }: {
+  reportType: string
+  data: unknown
   filters: ReportViewerFilters
   locationOptions: ReportViewerLocationOption[]
-}): Promise<ReportViewerResult> {
-  await new Promise((resolve) => window.setTimeout(resolve, 140))
+  connectionName?: string
+}): ReportViewerResult {
+  const config = getReportConfig(reportType)
+  const subtitle = buildSubtitle(filters, locationOptions)
+  const generatedAt = dayjs().format("DD/MM/YYYY HH:mm")
 
-  switch (filters.reportType) {
+  switch (reportType) {
     case "banned-inactive-customers":
-      return buildCustomerResult(
-        filters,
-        locationOptions,
-        ["Banned", "Inactive"],
-        "Banned\\Inactive Customers"
-      )
+      return transformBannedCustomers(data, reportType, config.title, subtitle, generatedAt)
+    case "new-customers":
+      return transformNewCustomers(data, reportType, config.title, subtitle, generatedAt)
     case "past-customers":
-      return buildCustomerResult(
-        filters,
-        locationOptions,
-        ["Past Customer"],
-        "Past Customers"
-      )
+      return transformPastCustomers(data, reportType, config.title, subtitle, generatedAt)
+    case "quick-view-sales":
     case "today-sales":
-      return buildSalesResult(filters, locationOptions, "Today Sales", SALES_COLUMNS)
+      return transformQuickViewSales(data, reportType, config.title, subtitle, generatedAt)
+    case "revenue":
+      return transformRevenue(data, reportType, config.title, subtitle, generatedAt)
+    case "sales-by-day":
+      return transformSalesByDay(data, reportType, config.title, subtitle, generatedAt)
+    case "sales-by-show":
+      return transformSalesByShow(data, reportType, config.title, subtitle, generatedAt)
     case "manager-checkout":
-      return buildSalesResult(filters, locationOptions, "Manager Checkout", CHECKOUT_COLUMNS)
+      return transformManagerCheckout(data, reportType, config.title, subtitle, generatedAt)
+    case "door-checkout":
+      return transformDoorCheckout(data, reportType, config.title, subtitle, generatedAt, {
+        connectionName,
+        startDate: filters.dateFrom,
+        endDate: filters.dateTo,
+        locationId: filters.locationId,
+      })
+    case "receipts":
+      return transformReceipts(data, reportType, config.title, subtitle, generatedAt)
+    case "promo-report":
+      return transformPromoReport(data, reportType, config.title, subtitle, generatedAt)
+    case "audit-report":
+      return transformAuditReport(data, reportType, config.title, subtitle, generatedAt, {
+        connectionName, startDate: filters.dateFrom, endDate: filters.dateTo, locationId: filters.locationId,
+      })
+    case "web-counts":
+      return transformWebCounts(data, reportType, config.title, subtitle, generatedAt, {
+        connectionName, startDate: filters.dateFrom, endDate: filters.dateTo, locationId: filters.locationId,
+      })
+    case "reconcile-report":
+      return transformReconcileReport(data, reportType, config.title, subtitle, generatedAt, {
+        connectionName, startDate: filters.dateFrom, endDate: filters.dateTo, locationId: filters.locationId,
+      })
+    case "ticket-price-breakdown":
+      return transformTicketPriceBreakdown(data, reportType, config.title, subtitle, generatedAt)
+    case "projected-sales":
+      return transformProjectedSales(data, reportType, config.title, subtitle, generatedAt)
+    case "comic-ticket-revenue":
+      return transformComicTicketRevenue(data, reportType, config.title, subtitle, generatedAt)
+    case "comic-sales-breakdown":
+      return transformComicSalesBreakdown(data, reportType, config.title, subtitle, generatedAt)
+    case "zipcode-breakdown":
+      return transformZipCodeBreakdown(data, reportType, config.title, subtitle, generatedAt)
+    case "web-reservations-for-day":
+      return transformWebReservationsForDay(data, reportType, config.title, subtitle, generatedAt)
+    case "web-gift-certificates":
+      return transformWebGiftCertificates(data, reportType, config.title, subtitle, generatedAt)
+    case "export-shows-attendees":
+      return transformExportShowsAttendees(data, reportType, config.title, subtitle, generatedAt)
     default:
-      return {
-        reportType: filters.reportType,
-        title:
-          reportViewerOptions.find((option) => option.id === filters.reportType)?.label ??
-          "Report Viewer",
-        subtitle: `${resolveLocationLabel(filters.locationId, locationOptions)} · ${formatDisplayDate(filters.dateFrom)} - ${formatDisplayDate(filters.dateTo)}`,
-        columns: [],
-        rows: [],
-        emptyMessage: "No record found",
-        generatedAt: dayjs().format("DD/MM/YYYY HH:mm"),
-      }
+      return transformGeneric(data, reportType, config.title, subtitle, generatedAt)
   }
 }
 
