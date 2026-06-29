@@ -71,7 +71,7 @@ function TicketCountGrid({
 
 function WalkupDialogSkeleton() {
   return (
-    <div className="space-y-4 px-5 py-4">
+    <div className="space-y-4 px-4 py-4">
       <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-[12rem_minmax(0,1.2fr)_minmax(0,1.2fr)_auto]">
         {Array.from({ length: 4 }).map((_, index) => (
           <div key={index} className="space-y-1.5">
@@ -246,8 +246,8 @@ export function ExpressWalkupDialog({
           showCloseButton
           className="flex max-h-[92vh] w-[96vw] max-w-[96vw] flex-col overflow-hidden p-0 sm:max-w-[92vw] xl:w-[88rem] xl:max-w-[88rem]"
         >
-          <DialogHeader className="shrink-0 border-b bg-primary px-5 py-3 pr-16 text-primary-foreground">
-            <DialogTitle className="max-w-[calc(100%-1rem)] text-base leading-snug font-semibold sm:text-lg xl:text-xl">
+          <DialogHeader className="shrink-0 border-b bg-primary px-4 py-3 pr-12 text-primary-foreground">
+            <DialogTitle className="text-base font-semibold">
               {dialogData?.title ?? "Express Walkup"}
             </DialogTitle>
           </DialogHeader>
@@ -256,7 +256,7 @@ export function ExpressWalkupDialog({
             {isLoading || !dialogData || !formValues || !totals ? (
               <WalkupDialogSkeleton />
             ) : (
-              <div className="space-y-5 px-5 py-4">
+              <div className="space-y-5 px-4 py-4">
                 <FormSection title="Show Details" className="space-y-4">
                   <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-[12rem_minmax(0,1.2fr)_minmax(0,1.2fr)_auto]">
                     <FormField label="Show Date">
@@ -419,7 +419,7 @@ export function ExpressWalkupDialog({
             )}
           </div>
 
-          <DialogFooter className="shrink-0 border-t px-5 py-3 sm:justify-between">
+          <DialogFooter className="shrink-0 border-t px-4 py-3 sm:justify-between">
             <Button
               type="button"
               variant="outline"
