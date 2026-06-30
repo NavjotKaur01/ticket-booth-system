@@ -2,6 +2,7 @@ import { dispatchEndpoint } from "@/lib/api/dispatch-endpoint"
 import { clubmanApi } from "@/store/api/clubmanApi"
 import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
+import type { ReservationNoteRequest } from "@/types/api/reservation-note"
 import type { ReservationDetail } from "@/types/api/reservation-detail"
 import type { ReservationHistoryItem } from "@/types/api/reservation-history"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
@@ -139,6 +140,13 @@ export function cancelReservation(request: CancelReservationRequest) {
 export function revertCancelReservation(request: CancelReservationRequest) {
   return dispatchEndpoint<unknown, CancelReservationRequest>(
     clubmanApi.endpoints.revertCancelReservation,
+    request
+  )
+}
+
+export function saveReservationNote(request: ReservationNoteRequest) {
+  return dispatchEndpoint<unknown, ReservationNoteRequest>(
+    clubmanApi.endpoints.saveReservationNote,
     request
   )
 }
