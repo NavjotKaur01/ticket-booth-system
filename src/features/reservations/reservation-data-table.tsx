@@ -9,6 +9,7 @@ type ReservationDataTableProps = {
   loading?: boolean
   onCancelReservation?: (reservation: Reservation) => void
   onPrintTickets?: (reservation: Reservation) => void
+  onReservationHistory?: (reservation: Reservation) => void
 }
 
 export function ReservationDataTable({
@@ -16,10 +17,16 @@ export function ReservationDataTable({
   loading = false,
   onCancelReservation,
   onPrintTickets,
+  onReservationHistory,
 }: ReservationDataTableProps) {
   const columns = useMemo(
-    () => createReservationColumns({ onCancelReservation, onPrintTickets }),
-    [onCancelReservation, onPrintTickets]
+    () =>
+      createReservationColumns({
+        onCancelReservation,
+        onPrintTickets,
+        onReservationHistory,
+      }),
+    [onCancelReservation, onPrintTickets, onReservationHistory]
   )
 
   return (

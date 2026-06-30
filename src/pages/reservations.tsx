@@ -9,6 +9,7 @@ import { reservationCounts } from "@/data/reservation"
 import { AddReservationDialog } from "@/features/reservations/add-reservation-dialog"
 import { CancelReservationDialog } from "@/features/reservations/cancel-reservation-dialog"
 import { ReservationDataTable } from "@/features/reservations/reservation-data-table"
+import { ReservationHistoryDialog } from "@/features/reservations/reservation-history-dialog"
 import { ReservationFiltersCard } from "@/features/reservations/reservation-filters-card"
 import { printReservationTicket } from "@/services/ticket-print.service"
 import { ReprintTicketDialog } from "@/features/ticket-print/reprint-ticket-dialog"
@@ -41,6 +42,7 @@ export function Reservations() {
   const [addOpen, setAddOpen] = useState(false)
   const [reprintOpen, setReprintOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [selectedReservation, setSelectedReservation] =
     useState<Reservation | null>(null)
   const [isCancellingReservation, setIsCancellingReservation] = useState(false)
@@ -125,6 +127,18 @@ export function Reservations() {
   function handleOpenReprintTicket(reservation: Reservation) {
     setSelectedReservation(reservation)
     setReprintOpen(true)
+  }
+
+  function handleOpenReservationHistory(reservation: Reservation) {
+    setSelectedReservation(reservation)
+    setHistoryOpen(true)
+  }
+
+  function handleHistoryDialogOpenChange(open: boolean) {
+    setHistoryOpen(open)
+    if (!open) {
+      setSelectedReservation(null)
+    }
   }
 
   function handleOpenCancelReservation(reservation: Reservation) {
@@ -293,6 +307,7 @@ export function Reservations() {
           loading={reservationsLoading}
           onCancelReservation={handleOpenCancelReservation}
           onPrintTickets={handleOpenReprintTicket}
+          onReservationHistory={handleOpenReservationHistory}
         />
       </PanelCard>
 
@@ -309,6 +324,12 @@ export function Reservations() {
         isSubmitting={isCancellingReservation}
         error={cancelReservationError}
         onSave={handleSaveCancelReservation}
+      />
+      <ReservationHistoryDialog
+        open={historyOpen}
+        onOpenChange={handleHistoryDialogOpenChange}
+        reservation={selectedReservation}
+        connectionName={connectionName}
       />
       <ReprintTicketDialog
         open={reprintOpen}
