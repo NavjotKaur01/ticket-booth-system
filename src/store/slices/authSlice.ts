@@ -15,6 +15,8 @@ import {
 import { clearStoredLocations } from "@/lib/auth/locations-storage"
 import { assertLoginResponseData } from "@/lib/auth/map-login-credentials"
 import { enrichCredentialsWithLocationCookie } from "@/lib/auth/resolve-session-location"
+import { readBoothSeatDefault } from "@/lib/booth-seat-default"
+import { writeStoredBoothSeatCount } from "@/lib/booth-seat-storage"
 import { findLocationById } from "@/lib/map-location"
 import { clubmanApi } from "@/store/api/clubmanApi"
 import type { AppLocation } from "@/types/api/locations"
@@ -74,12 +76,34 @@ export const login = createAsyncThunk(
     const resolvedLocation =
       findLocationById(apiCredentials.LocationID ?? "", locations) ?? location
 
-    return enrichCredentialsWithLocationCookie(
+    let credentials = enrichCredentialsWithLocationCookie(
       saveLoginSession(apiCredentials, {
         connectionString,
         location: resolvedLocation,
       })
     )
+
+    try {
+      const defaults = await dispatch(
+        clubmanApi.endpoints.getSystemDefaults.initiate({
+          connectionName: connectionString,
+          locationId: resolvedLocation.id,
+        })
+      ).unwrap()
+
+      const defaultSeatCount = readBoothSeatDefault(defaults)
+      if (defaultSeatCount > 0) {
+        writeStoredBoothSeatCount(resolvedLocation.id, defaultSeatCount)
+        credentials = {
+          ...credentials,
+          DefaultSeatCount: defaultSeatCount,
+        }
+      }
+    } catch {
+      // Booth seat defaults are optional; reservations can load them later.
+    }
+
+    return credentials
   }
 )
 

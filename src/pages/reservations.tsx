@@ -16,12 +16,19 @@ import { useAppSession } from "@/hooks/use-app-session"
 import { useReservationData } from "@/hooks/use-reservation-data"
 import { useShowDetailsByDate } from "@/hooks/use-show-details-by-date"
 import { calculateReservationShowStats } from "@/lib/calculate-reservation-show-stats"
+import { readBoothSeatDefault } from "@/lib/booth-seat-default"
+import { writeStoredBoothSeatCount } from "@/lib/booth-seat-storage"
 import { cancelReservation, revertCancelReservation } from "@/lib/api/reservations"
 import { buildCancelReservationRequest } from "@/lib/build-cancel-reservation-request"
+import {
+  readReservationFilters,
+  writeReservationFilters,
+} from "@/lib/reservation-filter-storage"
+import { resolveReservationTotalSeats } from "@/lib/resolve-reservation-total-seats"
 import type { CancelReservationPaymentRow } from "@/types/cancel-reservation-payment"
 import { filterReservations } from "@/lib/filter-reservations"
 import type { Reservation } from "@/types/reservation"
-import { useGetShowSectionsQuery } from "@/store/api/clubmanApi"
+import { useGetShowSectionsQuery, useGetSystemDefaultsQuery } from "@/store/api/clubmanApi"
 
 /** ISO date string (yyyy-mm-dd) for the local calendar day. */
 function todayDateValue() {
@@ -33,12 +40,26 @@ function todayDateValue() {
 
 /** Reservations list with show filters and add-reservation workflow. */
 export function Reservations() {
-  const { connectionName, locationId, locationName, username, userRight, isReady } =
-    useAppSession()
+  const {
+    credentials,
+    connectionName,
+    locationId,
+    locationName,
+    username,
+    userRight,
+    isReady,
+  } = useAppSession()
+
+  const storedFilters = useMemo(
+    () => readReservationFilters(locationId),
+    [locationId]
+  )
 
   const [showDate, setShowDate] = useState(todayDateValue)
   const [showTime, setShowTime] = useState("")
-  const [refreshValue, setRefreshValue] = useState("999")
+  const [refreshValue, setRefreshValue] = useState(
+    storedFilters.refreshValue ?? "999"
+  )
   const [search, setSearch] = useState("")
   const [addOpen, setAddOpen] = useState(false)
   const [reprintOpen, setReprintOpen] = useState(false)
@@ -55,11 +76,15 @@ export function Reservations() {
   >(null)
   const [isUncancellingReservation, setIsUncancellingReservation] =
     useState(false)
-  const [cancelledShow, setCancelledShow] = useState(false)
-  const [showCancelled, setShowCancelled] = useState(false)
+  const [cancelledShow, setCancelledShow] = useState(
+    storedFilters.cancelledShow ?? false
+  )
+  const [showCancelled, setShowCancelled] = useState(
+    storedFilters.showCancelled ?? false
+  )
   const [displayPhone, setDisplayPhone] = useState(false)
 
-  const { shows, loading: showsLoading, error: showsError } =
+  const { shows, loading: showsLoading, error: showsError, refetch: refetchShows } =
     useShowDetailsByDate(
       connectionName,
       locationId,
@@ -72,19 +97,48 @@ export function Reservations() {
     reservations,
     loading: reservationsLoading,
     error: reservationsError,
+    refresh: refreshReservations,
   } = useReservationData(
     connectionName,
     showTime,
     showCancelled,
-    displayPhone,
-    true,
-    Boolean(showTime)
+    Boolean(showTime),
+    refreshValue
   )
 
-  const { data: showSections = [] } = useGetShowSectionsQuery(
-    { connectionString: connectionName, showId: showTime },
-    { skip: !connectionName || !showTime }
+  const { data: showSections = [], refetch: refetchShowSections } =
+    useGetShowSectionsQuery(
+      { connectionString: connectionName, showId: showTime },
+      { skip: !connectionName || !showTime }
+    )
+
+  const { data: systemDefaults = [] } = useGetSystemDefaultsQuery(
+    { connectionName, locationId },
+    { skip: !connectionName || !locationId }
   )
+
+  const boothSeatDefault = useMemo(
+    () => readBoothSeatDefault(systemDefaults),
+    [systemDefaults]
+  )
+
+  useEffect(() => {
+    if (boothSeatDefault > 0 && locationId) {
+      writeStoredBoothSeatCount(locationId, boothSeatDefault)
+    }
+  }, [boothSeatDefault, locationId])
+
+  useEffect(() => {
+    if (!locationId) {
+      return
+    }
+
+    writeReservationFilters(locationId, {
+      showCancelled,
+      cancelledShow,
+      refreshValue,
+    })
+  }, [cancelledShow, locationId, refreshValue, showCancelled])
 
   useEffect(() => {
     if (showsLoading) {
@@ -106,8 +160,19 @@ export function Reservations() {
     [reservations, search]
   )
 
+  const totalSeatsCount = useMemo(
+    () =>
+      resolveReservationTotalSeats(
+        locationId,
+        credentials?.DefaultSeatCount ?? 0,
+        boothSeatDefault,
+        showSections
+      ),
+    [boothSeatDefault, credentials?.DefaultSeatCount, locationId, showSections]
+  )
+
   const statItems = useMemo(() => {
-    const stats = calculateReservationShowStats(showSections, reservations)
+    const stats = calculateReservationShowStats(totalSeatsCount, reservations)
 
     return [
       { label: "Seats", value: stats.seats },
@@ -116,7 +181,7 @@ export function Reservations() {
       { label: "Seated", value: stats.seated },
       { label: "Scanned", value: stats.scanned },
     ]
-  }, [showSections, reservations])
+  }, [totalSeatsCount, reservations])
 
   const selectedShow = useMemo(
     () => shows.find((show) => show.id === showTime),
@@ -127,6 +192,14 @@ export function Reservations() {
 
   function handleTodayClick() {
     setShowDate(todayDateValue())
+  }
+
+  async function handleRefresh() {
+    await Promise.all([
+      refreshReservations(),
+      refetchShowSections(),
+      refetchShows(),
+    ])
   }
 
   function handleOpenReprintTicket(reservation: Reservation) {
@@ -273,6 +346,8 @@ export function Reservations() {
         onShowTimeChange={setShowTime}
         refreshValue={refreshValue}
         onRefreshValueChange={setRefreshValue}
+        onRefresh={() => void handleRefresh()}
+        isRefreshing={reservationsLoading}
         shows={shows}
         showsLoading={showsLoading}
         showsError={showsError}
@@ -382,6 +457,3 @@ export function Reservations() {
     </div>
   )
 }
-
-
-
