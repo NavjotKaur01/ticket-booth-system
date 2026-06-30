@@ -37,12 +37,9 @@ export const ROUTES = {
   login: "/login",
 } as const
 
-export function reportViewerUrl(reportType?: string) {
-  if (!reportType) {
-    return ROUTES.reports
-  }
-
-  return `${ROUTES.reports}?report=${reportType}`
+/** @deprecated Use ROUTES.reports — report type is chosen in the viewer, not via URL. */
+export function reportViewerUrl(_reportType?: string) {
+  return ROUTES.reports
 }
 
 /** Human-readable labels used in breadcrumbs and page titles. */
