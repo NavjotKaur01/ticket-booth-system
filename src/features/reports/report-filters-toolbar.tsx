@@ -72,7 +72,7 @@ export function ReportFiltersToolbar({
   const effectiveDateRange = showDateRange && !filters.isAllDates
 
   return (
-    <div className="border-b border-border/70 bg-background px-4 py-4">
+    <div className="bg-background px-4 py-4">
       <div className="space-y-4 rounded-xl border border-border/70 bg-muted/10 p-4 sm:p-3.5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

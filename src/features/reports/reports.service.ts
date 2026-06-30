@@ -328,6 +328,12 @@ function formatQuickViewDate(value: unknown): string {
   return parsed.isValid() ? parsed.format("MM/DD/YYYY") : String(value)
 }
 
+/** WPF ExtensionMethod.USDateTimeFormat — used for all report API StartDate/EndDate. */
+export function formatUsApiDate(value: string): string {
+  const parsed = dayjs(value)
+  return parsed.isValid() ? parsed.format("MM/DD/YYYY hh:mm:ss A") : value
+}
+
 /** WPF Revenue report Time column uses StringFormat=t (short time, e.g. 7:45 PM). */
 function formatRevenueTime(value: unknown): string {
   if (!value) return "-"
@@ -410,8 +416,10 @@ export function createDefaultReportFilters({
   today?: string
   availableOptions?: ReportViewerOption[]
 }): ReportViewerFilters {
+  const resolvedType = resolveReportType(reportType, availableOptions)
+
   return {
-    reportType: resolveReportType(reportType, availableOptions),
+    reportType: resolvedType,
     locationId,
     dateFrom: today,
     dateTo: today,
@@ -420,7 +428,7 @@ export function createDefaultReportFilters({
     headlinerId: "",
     isAllDates: false,
     isWebReservationOnly: false,
-    isSeparateByUsers: false,
+    isSeparateByUsers: resolvedType === "door-checkout",
   }
 }
 
@@ -454,12 +462,23 @@ export function buildReportRequest(
 ): ReportRequestModel {
   const config = getReportConfig(filters.reportType)
 
-  let startDate = dayjs(filters.dateFrom).format("MM/DD/YYYY")
-  let endDate = dayjs(filters.dateTo).format("MM/DD/YYYY")
+  let startDate = formatUsApiDate(filters.dateFrom)
+  let endDate = formatUsApiDate(filters.dateTo)
 
   if (config.showAllDatesOption && filters.isAllDates) {
-    startDate = dayjs().subtract(20, "year").format("MM/DD/YYYY")
-    endDate = dayjs().add(20, "year").format("MM/DD/YYYY")
+    startDate = formatUsApiDate(dayjs().subtract(20, "year").format("YYYY-MM-DD"))
+    endDate = formatUsApiDate(dayjs().add(20, "year").format("YYYY-MM-DD"))
+  }
+
+  // Door Checkout — WPF sends only these fields (no customer filters)
+  if (filters.reportType === "door-checkout") {
+    return {
+      Connection: connectionName,
+      StartDate: startDate,
+      EndDate: endDate,
+      LocaltionId: filters.locationId,
+      CreatedBy: "",
+    }
   }
 
   return {
@@ -472,8 +491,6 @@ export function buildReportRequest(
     ...(config.showComicPicker && filters.headlinerId
       ? { HeadlinerId: filters.headlinerId }
       : {}),
-    // Door Checkout requires CreatedBy (empty = no user filter) — server crashes without it
-    ...(filters.reportType === "door-checkout" ? { CreatedBy: "" } : {}),
     ...(config.showWebReservationOnly ? { IsWebReservationOnly: filters.isWebReservationOnly } : {}),
   }
 }

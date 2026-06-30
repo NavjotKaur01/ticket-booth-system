@@ -138,7 +138,7 @@ export function Reports() {
         headlinerId: nextConfig.showComicPicker ? current.headlinerId : "",
         isAllDates: nextConfig.showAllDatesOption ? current.isAllDates : false,
         isWebReservationOnly: nextConfig.showWebReservationOnly ? current.isWebReservationOnly : false,
-        isSeparateByUsers: nextConfig.showSeparateByUsers ? current.isSeparateByUsers : false,
+        isSeparateByUsers: nextReportType === "door-checkout" ? true : (nextConfig.showSeparateByUsers ? current.isSeparateByUsers : false),
       }
     })
   }, [reportOptions])
@@ -165,7 +165,7 @@ export function Reports() {
         headlinerId: nextConfig.showComicPicker ? current.headlinerId : "",
         isAllDates: nextConfig.showAllDatesOption ? current.isAllDates : false,
         isWebReservationOnly: nextConfig.showWebReservationOnly ? current.isWebReservationOnly : false,
-        isSeparateByUsers: nextConfig.showSeparateByUsers ? current.isSeparateByUsers : false,
+        isSeparateByUsers: nextType === "door-checkout" ? true : (nextConfig.showSeparateByUsers ? current.isSeparateByUsers : false),
       }))
     } else {
       setDraftFilters((current) => ({ ...current, [key]: value }))
@@ -192,7 +192,16 @@ export function Reports() {
       let apiData: unknown
 
       if (nextFilters.reportType === "door-checkout" && nextFilters.isSeparateByUsers) {
-        // ── Separate by users: get user list → per-user data ─────────────
+        // WPF always loads GetDoorCheckOutReport first, then appends per-user sections.
+        const mainData = await generateReport({
+          endpoint: "GetDoorCheckOutReport",
+          body: requestBody,
+        }).unwrap()
+
+        const mainRows = Array.isArray(mainData)
+          ? (mainData as Array<Record<string, unknown>>)
+          : []
+
         const userListRaw = await generateReport({
           endpoint: "GetDoorCheckOutByUserName",
           body: requestBody,
@@ -202,7 +211,7 @@ export function Reports() {
           ? (userListRaw as Array<Record<string, unknown>>)
           : []
 
-        const allRows: Array<Record<string, unknown>> = []
+        const userRows: Array<Record<string, unknown>> = []
         for (const user of userList) {
           const userName = String(user.CreatedBy ?? user.UserName ?? "")
           const userData = await generateReport({
@@ -211,10 +220,11 @@ export function Reports() {
           }).unwrap()
           const rows = Array.isArray(userData) ? (userData as Array<Record<string, unknown>>) : []
           for (const row of rows) {
-            allRows.push({ ...row, _userLabel: userName })
+            userRows.push({ ...row, _userLabel: userName })
           }
         }
-        apiData = allRows
+
+        apiData = [...mainRows, ...userRows]
       } else {
         apiData = await generateReport({
           endpoint: config.endpoint,
@@ -294,27 +304,29 @@ export function Reports() {
   }
 
   return (
-    <div className="space-y-3">
-      <PanelCard className="overflow-hidden rounded-2xl border-border/70 bg-card shadow-sm">
-        <ReportFiltersToolbar
-          filters={draftFilters}
-          reportOptions={reportOptions}
-          locationOptions={locationOptions}
-          comedianOptions={comedianOptions}
-          isGenerating={isGenerating}
-          isLoadingReportOptions={isLoadingReportOptions}
-          reportOptionsError={isReportOptionsError}
-          activeQuickRange={activeQuickRange}
-          onFilterChange={updateDraftField}
-          onGenerate={() => void handleGenerate()}
-          onToday={handleToday}
-          onYesterday={handleYesterday}
-          onPrint={handlePrint}
-          onExport={handleExport}
-          onPdf={handlePdf}
-        />
+    <div className="flex min-h-0 flex-1 flex-col">
+      <PanelCard className="flex min-h-0 flex-1 flex-col rounded-2xl border-border/70 bg-card shadow-sm">
+        <div className="shrink-0 border-b border-border/70 bg-card">
+          <ReportFiltersToolbar
+            filters={draftFilters}
+            reportOptions={reportOptions}
+            locationOptions={locationOptions}
+            comedianOptions={comedianOptions}
+            isGenerating={isGenerating}
+            isLoadingReportOptions={isLoadingReportOptions}
+            reportOptionsError={isReportOptionsError}
+            activeQuickRange={activeQuickRange}
+            onFilterChange={updateDraftField}
+            onGenerate={() => void handleGenerate()}
+            onToday={handleToday}
+            onYesterday={handleYesterday}
+            onPrint={handlePrint}
+            onExport={handleExport}
+            onPdf={handlePdf}
+          />
+        </div>
 
-        <div className="min-h-[38rem] bg-background">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-background">
           <ReportViewerResults
             result={generatedResult}
             isLoading={isGenerating}

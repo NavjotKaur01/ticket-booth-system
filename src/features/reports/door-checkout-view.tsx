@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { useGenerateReportMutation } from "@/store/api/clubmanApi"
 import type { ReportDrillContext } from "@/features/reports/reports.service"
+import { formatUsApiDate } from "@/features/reports/reports.service"
 import dayjs from "dayjs"
 import {
   Dialog,
@@ -88,21 +89,180 @@ function fmtDatetime(v: string | Date | undefined): string {
   return d.isValid() ? d.format("M/D/YYYY h:mm A") : String(v)
 }
 
-function buildPaymentSummary(rows: DoorCheckoutApiRow[]) {
-  const map = new Map<string, { payments: number; refunds: number }>()
-  for (const row of rows) {
-    const key = row.PymtType || "Unknown"
-    if (!map.has(key)) map.set(key, { payments: 0, refunds: 0 })
-    const entry = map.get(key)!
-    if (isRefund(row)) entry.refunds += row.Total ?? 0
-    else entry.payments += row.Total ?? 0
+function toNum(v: unknown): number {
+  const n = typeof v === "number" ? v : parseFloat(String(v ?? "0"))
+  return Number.isFinite(n) ? n : 0
+}
+
+/** WPF groups by CreatedDate.ToShortDateString() — M/D/YYYY */
+function normalizeCheckoutDate(value: string): string {
+  if (!value) return "Unknown"
+  const d = dayjs(value)
+  return d.isValid() ? d.format("M/D/YYYY") : value
+}
+
+function formatCcLabel(cc: string): string {
+  const key = cc.trim().toLowerCase()
+  if (key === "mastercard") return "MasterCard"
+  if (key === "americanexpress" || key === "american express") return "American Express"
+  if (key === "visa") return "Visa"
+  if (key === "discover") return "Discover"
+  return cc.trim()
+}
+
+/**
+ * WPF aggregates credit cards by CC type (Visa, MasterCard, …), not "Credit Card Payment".
+ * Separate-user API rows may carry the type in CCType instead of PymtType.
+ */
+function resolvePaymentDisplayName(row: DoorCheckoutApiRow): string {
+  const pymt = (row.PymtType ?? "").trim().toLowerCase()
+  const cc = (row.CCType ?? "").trim().toLowerCase()
+
+  if (pymt === "credit card payment" && cc) {
+    return formatCcLabel(cc)
   }
-  return Array.from(map.entries()).map(([type, { payments, refunds }]) => ({
-    type,
-    payments,
-    refunds,
-    total: payments + refunds,
+  if (pymt === "cash" || cc === "cash") return "Cash"
+  if (pymt === "gift card") return "Gift Card"
+  if (pymt === "gift certificate") return "Gift Certificate"
+  if (["visa", "mastercard", "discover", "americanexpress", "american express"].includes(cc)) {
+    return formatCcLabel(cc)
+  }
+  if (row.PymtType?.trim()) {
+    const raw = row.PymtType.trim()
+    return raw.charAt(0).toUpperCase() + raw.slice(1)
+  }
+  if (row.CCType?.trim()) return formatCcLabel(row.CCType)
+  return "Unknown"
+}
+
+export function normalizeDoorCheckoutRows(raw: unknown): DoorCheckoutApiRow[] {
+  if (!Array.isArray(raw)) return []
+  return (raw as Record<string, unknown>[]).map((row) => ({
+    ShowId: String(row.ShowId ?? row.showid ?? ""),
+    Showdt: String(row.Showdt ?? row.showdt ?? ""),
+    CreatedDate: normalizeCheckoutDate(String(row.CreatedDate ?? row.createddate ?? row.CreatedDt ?? "")),
+    ComicName: String(row.ComicName ?? row.comicname ?? ""),
+    PymtType: String(row.PymtType ?? row.pymttype ?? ""),
+    CCType: String(row.CCType ?? row.cctype ?? ""),
+    PymtStatus: String(row.PymtStatus ?? row.pymtstatus ?? ""),
+    Total: toNum(row.Total ?? row.total),
+    _userLabel: row._userLabel != null ? String(row._userLabel) : undefined,
   }))
+}
+
+/**
+ * WPF payment summary binds payCctype — prefer CCType for show-level labels.
+ */
+function showLinePaymentLabel(row: DoorCheckoutApiRow): string {
+  const cc = row.CCType?.trim()
+  if (cc) return cc
+  return resolvePaymentDisplayName(row)
+}
+
+type PayDetail = {
+  payCctype: string
+  paymentType: string
+  payPayments: number
+  payRefund: number
+}
+
+function rowToPayDetail(row: DoorCheckoutApiRow): PayDetail {
+  const total = row.Total ?? 0
+  const detail: PayDetail = {
+    payCctype: row.CCType ?? "",
+    paymentType: row.PymtType ?? "",
+    payPayments: 0,
+    payRefund: 0,
+  }
+  if (isRefund(row)) detail.payRefund = total
+  else detail.payPayments = total
+  return detail
+}
+
+type CollapsedPay = { type: string; payments: number; refunds: number; total: number }
+
+function addToPay(target: CollapsedPay, item: PayDetail) {
+  target.payments += item.payPayments
+  target.refunds += item.payRefund
+  target.total = target.payments + target.refunds
+}
+
+/** Main report — mirrors WPF switch on paymentType, then payCctype for cards. */
+function collapseMainPayments(details: PayDetail[]): CollapsedPay[] {
+  const cash = { type: "", payments: 0, refunds: 0, total: 0 }
+  const visa = { type: "visa", payments: 0, refunds: 0, total: 0 }
+  const master = { type: "mastercard", payments: 0, refunds: 0, total: 0 }
+  const discover = { type: "discover", payments: 0, refunds: 0, total: 0 }
+  const amex = { type: "americanexpress", payments: 0, refunds: 0, total: 0 }
+  const giftCard = { type: "Gift Card", payments: 0, refunds: 0, total: 0 }
+  const giftCert = { type: "Gift Certificate", payments: 0, refunds: 0, total: 0 }
+
+  for (const item of details) {
+    const pymt = item.paymentType.toLowerCase()
+    const cc = item.payCctype.toLowerCase()
+
+    switch (pymt) {
+      case "cash":
+        if (!cash.type) cash.type = item.payCctype || "Cash"
+        addToPay(cash, item)
+        break
+      case "credit card payment":
+        switch (cc) {
+          case "visa": addToPay(visa, item); break
+          case "mastercard": addToPay(master, item); break
+          case "discover": addToPay(discover, item); break
+          case "americanexpress":
+          case "american express": addToPay(amex, item); break
+        }
+        break
+      case "gift card":
+        addToPay(giftCard, item)
+        break
+      case "gift certificate":
+        addToPay(giftCert, item)
+        break
+    }
+  }
+
+  return [cash, master, visa, discover, amex, giftCert, giftCard].filter((r) => r.total !== 0 || r.payments !== 0 || r.refunds !== 0)
+}
+
+/** Per-user API — mirrors WPF GetSeperateUserDetails switch on payCctype only. */
+function collapseUserPayments(details: PayDetail[]): CollapsedPay[] {
+  const cash = { type: "cash", payments: 0, refunds: 0, total: 0 }
+  const visa = { type: "visa", payments: 0, refunds: 0, total: 0 }
+  const master = { type: "mastercard", payments: 0, refunds: 0, total: 0 }
+  const discover = { type: "discover", payments: 0, refunds: 0, total: 0 }
+  const amex = { type: "americanexpress", payments: 0, refunds: 0, total: 0 }
+
+  for (const item of details) {
+    switch (item.payCctype.toLowerCase()) {
+      case "cash":
+        addToPay(cash, item)
+        break
+      case "visa":
+        addToPay(visa, item)
+        break
+      case "mastercard":
+        addToPay(master, item)
+        break
+      case "discover":
+        addToPay(discover, item)
+        break
+      case "americanexpress":
+      case "american express":
+        addToPay(amex, item)
+        break
+    }
+  }
+
+  return [cash, master, visa, discover, amex].filter((r) => r.total !== 0 || r.payments !== 0 || r.refunds !== 0)
+}
+
+function buildPaymentSummary(rows: DoorCheckoutApiRow[]) {
+  const details = rows.map(rowToPayDetail)
+  const isUserSection = rows.some((r) => r._userLabel)
+  return isUserSection ? collapseUserPayments(details) : collapseMainPayments(details)
 }
 
 function buildShowDetails(rows: DoorCheckoutApiRow[]) {
@@ -121,7 +281,7 @@ function buildShowDetails(rows: DoorCheckoutApiRow[]) {
       })
     }
     const show = map.get(key)!
-    const pymtKey = row.PymtType || "Unknown"
+    const pymtKey = showLinePaymentLabel(row)
     if (!show.payments.has(pymtKey)) show.payments.set(pymtKey, { payments: 0, refunds: 0 })
     const p = show.payments.get(pymtKey)!
     if (isRefund(row)) p.refunds += row.Total ?? 0
@@ -205,8 +365,8 @@ function DrillDownDialog({
           endpoint: "GetDoorCheckOutTotalData",
           body: {
             Connection: drillContext.connectionName,
-            StartDate: dayjs(drillContext.startDate).format("MM/DD/YYYY"),
-            EndDate: dayjs(drillContext.endDate).format("MM/DD/YYYY"),
+            StartDate: formatUsApiDate(drillContext.startDate),
+            EndDate: formatUsApiDate(drillContext.endDate),
             LocaltionId: drillContext.locationId,
             ShowId: target.showId || undefined,
             ShowDateStr: dayjs(target.showdt).isValid()
@@ -494,7 +654,7 @@ function groupByDate(rows: DoorCheckoutApiRow[]): [string, DoorCheckoutApiRow[]]
 }
 
 export function DoorCheckoutView({ rawData, subtitle, generatedAt, drillContext }: DoorCheckoutViewProps) {
-  const rows = Array.isArray(rawData) ? (rawData as DoorCheckoutApiRow[]) : []
+  const rows = normalizeDoorCheckoutRows(rawData)
 
   if (!rows.length) {
     return (
@@ -504,8 +664,9 @@ export function DoorCheckoutView({ rawData, subtitle, generatedAt, drillContext 
     )
   }
 
-  // Detect separate-by-user mode: any row has a _userLabel set
-  const isSeparateByUsers = rows.some((r) => r._userLabel !== undefined)
+  const summaryRows = rows.filter((r) => !r._userLabel)
+  const userRows = rows.filter((r) => r._userLabel)
+  const isSeparateByUsers = userRows.length > 0
 
   return (
     <div className="space-y-3 p-4">
@@ -517,29 +678,32 @@ export function DoorCheckoutView({ rawData, subtitle, generatedAt, drillContext 
         <p className="text-xs text-muted-foreground">Generated {generatedAt}</p>
       </div>
 
+      {isSeparateByUsers && summaryRows.length > 0 && (
+        groupByDate(summaryRows).map(([date, dateRows]) => (
+          <DateSection key={`summary-${date}`} date={date} rows={dateRows} drillContext={drillContext} />
+        ))
+      )}
+
       {isSeparateByUsers ? (
-        // ── Grouped by user ───────────────────────────────────────────────
         (() => {
           const userMap = new Map<string, DoorCheckoutApiRow[]>()
-          for (const row of rows) {
+          for (const row of userRows) {
             const key = row._userLabel ?? ""
             if (!userMap.has(key)) userMap.set(key, [])
             userMap.get(key)!.push(row)
           }
-          return Array.from(userMap.entries()).map(([userName, userRows]) => (
+          return Array.from(userMap.entries()).map(([userName, perUserRows]) => (
             <div key={userName} className="space-y-2">
-              {/* Cyan "User:" bar matching desktop app */}
               <div className="rounded-md bg-cyan-100 dark:bg-cyan-900/40 px-3 py-1.5 text-xs font-semibold text-cyan-800 dark:text-cyan-200 border border-cyan-300 dark:border-cyan-700">
                 User: {userName || "(unknown)"}
               </div>
-              {groupByDate(userRows).map(([date, dateRows]) => (
-                <DateSection key={date} date={date} rows={dateRows} drillContext={drillContext} />
+              {groupByDate(perUserRows).map(([date, dateRows]) => (
+                <DateSection key={`${userName}-${date}`} date={date} rows={dateRows} drillContext={drillContext} />
               ))}
             </div>
           ))
         })()
       ) : (
-        // ── Normal mode: grouped by date only ─────────────────────────────
         groupByDate(rows).map(([date, dateRows]) => (
           <DateSection key={date} date={date} rows={dateRows} drillContext={drillContext} />
         ))
