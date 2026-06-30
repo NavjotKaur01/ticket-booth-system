@@ -10,6 +10,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  REPORT_DRILL_BODY_CLASS,
+  REPORT_DRILL_DIALOG_CLASS,
+  REPORT_DRILL_FOOTER_CLASS,
+  REPORT_DRILL_HEADER_CLASS,
+  ReportCard,
+  ReportEmpty,
+  ReportHeader,
+  ReportSectionBar,
+  ReportTable,
+  ReportTableScroll,
+  ReportTd,
+  ReportTh,
+  ReportUserBar,
+  ReportViewShell,
+  reportRowClass,
+} from "@/features/reports/report-ui"
 
 // ─── API shape ────────────────────────────────────────────────────────────────
 
@@ -303,41 +320,6 @@ function buildShowDetails(rows: DoorCheckoutApiRow[]) {
   }))
 }
 
-// ─── Table primitives ──────────────────────────────────────────────────────────
-
-function Th({ children, right, className }: { children: React.ReactNode; right?: boolean; className?: string }) {
-  return (
-    <th
-      className={cn(
-        "border border-border bg-muted/50 px-2 py-1 text-[11px] font-semibold tracking-wide text-muted-foreground whitespace-nowrap",
-        right && "text-right",
-        className
-      )}
-    >
-      {children}
-    </th>
-  )
-}
-
-function Td({ children, right, bold, blue, className, rowSpan, colSpan }: {
-  children?: React.ReactNode; right?: boolean; bold?: boolean; blue?: boolean; className?: string; rowSpan?: number; colSpan?: number
-}) {
-  return (
-    <td
-      rowSpan={rowSpan}
-      colSpan={colSpan}
-      className={cn(
-      "border border-border px-2 py-1 text-xs whitespace-nowrap",
-      right && "text-right tabular-nums",
-      bold && "font-semibold",
-      blue && "text-blue-600",
-      className
-    )}>
-      {children}
-    </td>
-  )
-}
-
 // ─── Drill-down Dialog ─────────────────────────────────────────────────────────
 
 function DrillDownDialog({
@@ -392,8 +374,8 @@ function DrillDownDialog({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className={REPORT_DRILL_DIALOG_CLASS}>
+        <DialogHeader className={REPORT_DRILL_HEADER_CLASS}>
           <DialogTitle className="text-base">
             Door CheckOut Drill Down Report
             {target.label && (
@@ -403,69 +385,71 @@ function DrillDownDialog({
         </DialogHeader>
 
         {isLoading && (
-          <div className="flex flex-1 items-center justify-center py-12 text-sm text-muted-foreground">
+          <div className="flex items-center justify-center px-5 py-12 text-sm text-muted-foreground">
             Loading drill-down data…
           </div>
         )}
 
         {error && (
-          <div className="py-6 text-center text-sm text-destructive">{error}</div>
+          <div className="px-5 py-6 text-center text-sm text-destructive">{error}</div>
         )}
 
         {!isLoading && !error && drillRows && (
-          <div className="flex-1 overflow-auto">
-            <table className="w-full border-collapse text-xs">
+          <div className={REPORT_DRILL_BODY_CLASS}>
+            <ReportTable>
               <thead className="sticky top-0 z-10">
                 <tr>
-                  <Th>Show</Th>
-                  <Th>Status</Th>
-                  <Th>Payment Type</Th>
-                  <Th>CC Type</Th>
-                  <Th>Source</Th>
-                  <Th>Promo</Th>
-                  <Th right>Amount</Th>
-                  <Th>Cust LName</Th>
-                  <Th>Cust FName</Th>
-                  <Th>Pymt LName</Th>
-                  <Th>Pymt FName</Th>
-                  <Th>CreatedBy</Th>
-                  <Th>CreateDt</Th>
+                  <ReportTh>Show</ReportTh>
+                  <ReportTh>Status</ReportTh>
+                  <ReportTh>Payment Type</ReportTh>
+                  <ReportTh>CC Type</ReportTh>
+                  <ReportTh>Source</ReportTh>
+                  <ReportTh>Promo</ReportTh>
+                  <ReportTh right>Amount</ReportTh>
+                  <ReportTh>Cust LName</ReportTh>
+                  <ReportTh>Cust FName</ReportTh>
+                  <ReportTh>Pymt LName</ReportTh>
+                  <ReportTh>Pymt FName</ReportTh>
+                  <ReportTh>CreatedBy</ReportTh>
+                  <ReportTh>CreateDt</ReportTh>
                 </tr>
               </thead>
               <tbody>
                 {drillRows.length === 0 ? (
                   <tr>
-                    <td colSpan={13} className="py-6 text-center text-xs text-muted-foreground">
+                    <ReportTd colSpan={13} center className="py-6 text-muted-foreground">
                       No records found
-                    </td>
+                    </ReportTd>
                   </tr>
                 ) : (
                   drillRows.map((row, i) => (
-                    <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-                      <Td>{fmtDatetime(row.Showdt)}</Td>
-                      <Td>{row.PymtStatus ?? "—"}</Td>
-                      <Td blue>{row.PymtType ?? "—"}</Td>
-                      <Td>{row.CCType ?? "—"}</Td>
-                      <Td>{row.Source ?? "—"}</Td>
-                      <Td>{row.Promo ?? "—"}</Td>
-                      <Td right>${fmt(row.Amount ?? 0)}</Td>
-                      <Td>{row.CustLName ?? "—"}</Td>
-                      <Td>{row.CustFName ?? "—"}</Td>
-                      <Td>{row.PymtLName ?? "—"}</Td>
-                      <Td>{row.PymtFName ?? "—"}</Td>
-                      <Td>{row.CreatedBy ?? "—"}</Td>
-                      <Td>{fmtDatetime(row.CreatedDate)}</Td>
+                    <tr key={i} className={reportRowClass(i)}>
+                      <ReportTd>{fmtDatetime(row.Showdt)}</ReportTd>
+                      <ReportTd>{row.PymtStatus ?? "—"}</ReportTd>
+                      <ReportTd blue>{row.PymtType ?? "—"}</ReportTd>
+                      <ReportTd>{row.CCType ?? "—"}</ReportTd>
+                      <ReportTd>{row.Source ?? "—"}</ReportTd>
+                      <ReportTd>{row.Promo ?? "—"}</ReportTd>
+                      <ReportTd right>${fmt(row.Amount ?? 0)}</ReportTd>
+                      <ReportTd>{row.CustLName ?? "—"}</ReportTd>
+                      <ReportTd>{row.CustFName ?? "—"}</ReportTd>
+                      <ReportTd>{row.PymtLName ?? "—"}</ReportTd>
+                      <ReportTd>{row.PymtFName ?? "—"}</ReportTd>
+                      <ReportTd>{row.CreatedBy ?? "—"}</ReportTd>
+                      <ReportTd>{fmtDatetime(row.CreatedDate)}</ReportTd>
                     </tr>
                   ))
                 )}
               </tbody>
-            </table>
+            </ReportTable>
           </div>
         )}
 
         {!isLoading && drillRows && drillRows.length > 0 && (
-          <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
-            <span className="text-xs text-muted-foreground">{drillRows.length} record{drillRows.length !== 1 ? "s" : ""}</span>
+          <div className={cn(REPORT_DRILL_FOOTER_CLASS, "flex items-center justify-between text-left")}>
+            <span className="text-xs text-muted-foreground">
+              {drillRows.length} record{drillRows.length !== 1 ? "s" : ""}
+            </span>
             <span className="text-sm font-semibold">
               Total : <span className="text-primary">$ {fmt(total)}</span>
             </span>
@@ -503,52 +487,50 @@ function DateSection({
 
   return (
     <>
-      <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-        <div className="bg-muted/60 px-3 py-1.5 text-xs font-semibold text-foreground border-b border-border/70">
-          Checkout Date: {date}
-        </div>
+      <ReportCard>
+        <ReportSectionBar>Checkout Date: {date}</ReportSectionBar>
 
         <div className="space-y-4 p-3">
           {/* 1 — Payment type summary */}
-          <div className="overflow-x-auto">
-            <table className="border-collapse text-xs">
+          <ReportTableScroll>
+            <ReportTable>
               <thead>
                 <tr>
-                  <Th className="min-w-32">Payment Type</Th>
-                  <Th right>Payments</Th>
-                  <Th right>Refunds</Th>
-                  <Th right>Totals</Th>
+                  <ReportTh className="min-w-32">Payment Type</ReportTh>
+                  <ReportTh right>Payments</ReportTh>
+                  <ReportTh right>Refunds</ReportTh>
+                  <ReportTh right>Totals</ReportTh>
                 </tr>
               </thead>
               <tbody>
                 {paymentSummary.map((row, i) => (
-                  <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-                    <Td>{row.type}</Td>
-                    <Td right>{fmt(row.payments)}</Td>
-                    <Td right>{fmt(row.refunds)}</Td>
-                    <Td right blue={row.total !== 0}>{fmt(row.total)}</Td>
+                  <tr key={i} className={reportRowClass(i)}>
+                    <ReportTd>{row.type}</ReportTd>
+                    <ReportTd right>{fmt(row.payments)}</ReportTd>
+                    <ReportTd right>{fmt(row.refunds)}</ReportTd>
+                    <ReportTd right blue={row.total !== 0}>{fmt(row.total)}</ReportTd>
                   </tr>
                 ))}
                 <tr className="bg-muted/10">
-                  <Td />
-                  <Td right>{fmt(grandPayments)}</Td>
-                  <Td right>{fmt(grandRefunds)}</Td>
-                  <Td right blue={grandTotal !== 0}>{fmt(grandTotal)}</Td>
+                  <ReportTd />
+                  <ReportTd right>{fmt(grandPayments)}</ReportTd>
+                  <ReportTd right>{fmt(grandRefunds)}</ReportTd>
+                  <ReportTd right blue={grandTotal !== 0}>{fmt(grandTotal)}</ReportTd>
                 </tr>
               </tbody>
-            </table>
-          </div>
+            </ReportTable>
+          </ReportTableScroll>
 
           {/* 2 — Show details: Payment Type and Total are both clickable */}
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-xs">
+          <ReportTableScroll>
+            <ReportTable>
               <thead>
                 <tr>
-                  <Th>Show</Th>
-                  <Th>Payment Type</Th>
-                  <Th right>Payments</Th>
-                  <Th right>Refunds</Th>
-                  <Th right>Totals</Th>
+                  <ReportTh>Show</ReportTh>
+                  <ReportTh>Payment Type</ReportTh>
+                  <ReportTh right>Payments</ReportTh>
+                  <ReportTh right>Refunds</ReportTh>
+                  <ReportTh right>Totals</ReportTh>
                 </tr>
               </thead>
               <tbody>
@@ -558,31 +540,26 @@ function DateSection({
                       const drillLabel = `${show.showdt}${show.comicName !== "—" ? ` – ${show.comicName}` : ""} (${line.type})`
                       const canDrill = !!drillContext
                       return (
-                        <tr key={`${si}-${li}`} className={cn(si % 2 === 0 ? "bg-background" : "bg-muted/10")}>
+                        <tr key={`${si}-${li}`} className={reportRowClass(si)}>
                           {li === 0 ? (
-                            <Td
-                              className="font-medium"
-                              rowSpan={show.paymentLines.length}
-                            >
+                            <ReportTd className="font-medium" rowSpan={show.paymentLines.length}>
                               {show.showdt}{show.comicName !== "—" ? ` – ${show.comicName}` : ""}
-                            </Td>
+                            </ReportTd>
                           ) : null}
-                          {/* Payment Type cell — clickable blue link */}
                           <td
                             className={cn(
-                              "border border-border px-2 py-1 text-xs whitespace-nowrap text-blue-600 font-medium",
+                              "border border-border px-3 py-2 text-xs whitespace-nowrap text-blue-600 font-medium",
                               canDrill && "cursor-pointer underline hover:text-blue-800 transition-colors"
                             )}
                             onClick={() => canDrill && openDrill(show.showId, show.showdt, drillLabel, line.type)}
                           >
                             {line.type}
                           </td>
-                          <Td right>{fmt(line.payments)}</Td>
-                          <Td right>{fmt(line.refunds)}</Td>
-                          {/* Total cell — also clickable */}
+                          <ReportTd right>{fmt(line.payments)}</ReportTd>
+                          <ReportTd right>{fmt(line.refunds)}</ReportTd>
                           <td
                             className={cn(
-                              "border border-border px-2 py-1 text-xs whitespace-nowrap text-right tabular-nums",
+                              "border border-border px-3 py-2 text-xs whitespace-nowrap text-right tabular-nums",
                               line.total !== 0 && "text-blue-600",
                               canDrill && line.total !== 0 && "cursor-pointer font-medium underline hover:text-blue-800 transition-colors"
                             )}
@@ -594,33 +571,33 @@ function DateSection({
                       )
                     })}
                     <tr className="bg-muted/20">
-                      <Td />
-                      <Td />
-                      <Td right>{fmt(show.totalPayments)}</Td>
-                      <Td right>{fmt(show.totalRefunds)}</Td>
-                      <Td right blue>{fmt(show.total)}</Td>
+                      <ReportTd />
+                      <ReportTd />
+                      <ReportTd right>{fmt(show.totalPayments)}</ReportTd>
+                      <ReportTd right>{fmt(show.totalRefunds)}</ReportTd>
+                      <ReportTd right blue>{fmt(show.total)}</ReportTd>
                     </tr>
                   </>
                 ))}
               </tbody>
-            </table>
-          </div>
+            </ReportTable>
+          </ReportTableScroll>
 
           {/* 3 — Grand Total */}
           <div className="flex justify-end">
-            <table className="border-collapse text-xs">
+            <ReportTable>
               <tbody>
                 <tr className="bg-muted/40">
-                  <td className="border border-border px-4 py-1 text-xs font-semibold">Total</td>
-                  <td className="border border-border px-4 py-1 text-right text-xs tabular-nums font-semibold">{fmt(grandPayments)}</td>
-                  <td className="border border-border px-4 py-1 text-right text-xs tabular-nums font-semibold">{fmt(grandRefunds)}</td>
-                  <td className="border border-border px-4 py-1 text-right text-xs tabular-nums font-bold text-blue-600">{fmt(grandTotal)}</td>
+                  <ReportTd bold>Total</ReportTd>
+                  <ReportTd bold right>{fmt(grandPayments)}</ReportTd>
+                  <ReportTd bold right>{fmt(grandRefunds)}</ReportTd>
+                  <ReportTd bold right blue>{fmt(grandTotal)}</ReportTd>
                 </tr>
               </tbody>
-            </table>
+            </ReportTable>
           </div>
         </div>
-      </div>
+      </ReportCard>
 
       {drillTarget && drillContext && (
         <DrillDownDialog
@@ -657,11 +634,7 @@ export function DoorCheckoutView({ rawData, subtitle, generatedAt, drillContext 
   const rows = normalizeDoorCheckoutRows(rawData)
 
   if (!rows.length) {
-    return (
-      <div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
-        No records found
-      </div>
-    )
+    return <ReportEmpty />
   }
 
   const summaryRows = rows.filter((r) => !r._userLabel)
@@ -669,14 +642,8 @@ export function DoorCheckoutView({ rawData, subtitle, generatedAt, drillContext 
   const isSeparateByUsers = userRows.length > 0
 
   return (
-    <div className="space-y-3 p-4">
-      <div className="flex flex-wrap items-end justify-between gap-2 rounded-xl border border-border/70 bg-muted/10 px-4 py-3">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">Door Checkout</h2>
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
-        </div>
-        <p className="text-xs text-muted-foreground">Generated {generatedAt}</p>
-      </div>
+    <ReportViewShell>
+      <ReportHeader title="Door Checkout" subtitle={subtitle} generatedAt={generatedAt} />
 
       {isSeparateByUsers && summaryRows.length > 0 && (
         groupByDate(summaryRows).map(([date, dateRows]) => (
@@ -694,9 +661,7 @@ export function DoorCheckoutView({ rawData, subtitle, generatedAt, drillContext 
           }
           return Array.from(userMap.entries()).map(([userName, perUserRows]) => (
             <div key={userName} className="space-y-2">
-              <div className="rounded-md bg-cyan-100 dark:bg-cyan-900/40 px-3 py-1.5 text-xs font-semibold text-cyan-800 dark:text-cyan-200 border border-cyan-300 dark:border-cyan-700">
-                User: {userName || "(unknown)"}
-              </div>
+              <ReportUserBar>User: {userName || "(unknown)"}</ReportUserBar>
               {groupByDate(perUserRows).map(([date, dateRows]) => (
                 <DateSection key={`${userName}-${date}`} date={date} rows={dateRows} drillContext={drillContext} />
               ))}
@@ -712,6 +677,6 @@ export function DoorCheckoutView({ rawData, subtitle, generatedAt, drillContext 
       <p className="text-right text-xs text-muted-foreground">
         {rows.length} row{rows.length !== 1 ? "s" : ""}
       </p>
-    </div>
+    </ReportViewShell>
   )
 }

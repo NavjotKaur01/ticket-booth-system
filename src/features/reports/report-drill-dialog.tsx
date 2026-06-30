@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react"
 import dayjs from "dayjs"
-import { cn } from "@/lib/utils"
 import { useGenerateReportMutation } from "@/store/api/clubmanApi"
 import type { ReportRequestModel } from "@/types/api/report-request"
 import {
@@ -9,6 +8,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  REPORT_DRILL_BODY_CLASS,
+  REPORT_DRILL_DIALOG_CLASS,
+  REPORT_DRILL_FOOTER_CLASS,
+  REPORT_DRILL_HEADER_CLASS,
+  ReportRecordCount,
+  ReportTable,
+  ReportTd,
+  ReportTh,
+  reportRowClass,
+} from "@/features/reports/report-ui"
 
 export type DrillColumn = {
   key: string
@@ -66,10 +76,6 @@ function sumColumn(rows: Record<string, unknown>[], col: DrillColumn): number {
   return rows.reduce((s, row) => s + toNum(cellValue(row, col)), 0)
 }
 
-const thClass =
-  "border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground whitespace-nowrap"
-const tdClass = "border border-border px-3 py-2 text-left text-xs whitespace-nowrap"
-
 export function ReportDrillDialog({
   title,
   endpoint,
@@ -105,8 +111,8 @@ export function ReportDrillDialog({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="flex max-h-[85vh] w-[calc(100%-2rem)] max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 sm:max-w-6xl">
-        <DialogHeader className="shrink-0 border-b px-5 py-4 pr-12">
+      <DialogContent className={REPORT_DRILL_DIALOG_CLASS}>
+        <DialogHeader className={REPORT_DRILL_HEADER_CLASS}>
           <DialogTitle className="text-base">{title}</DialogTitle>
         </DialogHeader>
 
@@ -121,67 +127,53 @@ export function ReportDrillDialog({
         )}
 
         {!isLoading && !error && rows && (
-          <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
-            <table className="w-full border-collapse text-xs">
+          <div className={REPORT_DRILL_BODY_CLASS}>
+            <ReportTable>
               <thead className="sticky top-0 z-10">
                 <tr>
                   {columns.map((col) => (
-                    <th
-                      key={col.key}
-                      className={cn(thClass, col.right && "text-right")}
-                    >
+                    <ReportTh key={col.key} right={col.right}>
                       {col.label}
-                    </th>
+                    </ReportTh>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={columns.length}
-                      className="py-6 text-center text-xs text-muted-foreground"
-                    >
+                    <ReportTd colSpan={columns.length} center className="py-6 text-muted-foreground">
                       No records found
-                    </td>
+                    </ReportTd>
                   </tr>
                 ) : (
                   rows.map((row, i) => (
-                    <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
+                    <tr key={i} className={reportRowClass(i)}>
                       {columns.map((col) => (
-                        <td
-                          key={col.key}
-                          className={cn(tdClass, col.right && "text-right tabular-nums")}
-                        >
+                        <ReportTd key={col.key} right={col.right}>
                           {fmtCell(col, cellValue(row, col))}
-                        </td>
+                        </ReportTd>
                       ))}
                     </tr>
                   ))
                 )}
                 {footerTotals && rows.length > 0 && (
                   <tr className="bg-muted/30 font-semibold">
-                    <td colSpan={textCols.length} className={tdClass}>
-                      Total:
-                    </td>
+                    <ReportTd colSpan={textCols.length}>Total:</ReportTd>
                     {numCols.map((col) => (
-                      <td
-                        key={col.key}
-                        className={cn(tdClass, "text-right tabular-nums")}
-                      >
+                      <ReportTd key={col.key} right bold>
                         {fmtCell(col, sumColumn(rows, col))}
-                      </td>
+                      </ReportTd>
                     ))}
                   </tr>
                 )}
               </tbody>
-            </table>
+            </ReportTable>
           </div>
         )}
 
         {!isLoading && rows && rows.length > 0 && (
-          <div className="shrink-0 border-t px-5 py-3 text-right text-xs text-muted-foreground">
-            {rows.length} record{rows.length !== 1 ? "s" : ""}
+          <div className={REPORT_DRILL_FOOTER_CLASS}>
+            <ReportRecordCount count={rows.length} />
           </div>
         )}
       </DialogContent>

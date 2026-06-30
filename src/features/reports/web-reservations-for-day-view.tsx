@@ -1,5 +1,16 @@
-import { cn } from "@/lib/utils"
 import dayjs from "dayjs"
+import {
+  ReportCard,
+  ReportCenteredHeading,
+  ReportEmpty,
+  ReportHeader,
+  ReportTable,
+  ReportTableScroll,
+  ReportTd,
+  ReportTh,
+  ReportViewShell,
+  reportRowClass,
+} from "@/features/reports/report-ui"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -112,7 +123,6 @@ function buildGroup(
 export function buildWebReservationsForDayData(raw: unknown): WebReservationShowGroup[] {
   if (!Array.isArray(raw) || raw.length === 0) return []
 
-  // Pre-grouped parent rows with WebReservationChildList
   if (raw.some((item) => Array.isArray((item as ApiRow).WebReservationChildList))) {
     return (raw as ApiRow[]).map((parent) => {
       const childList = (parent.WebReservationChildList as ApiRow[]) ?? []
@@ -131,7 +141,6 @@ export function buildWebReservationsForDayData(raw: unknown): WebReservationShow
     })
   }
 
-  // Flat API list — group by show date AND show time (WPF child filter uses both)
   const flat: FlatReservation[] = (raw as ApiRow[]).map((row) => ({
     ...mapReservationRow(row),
     showDate: row.ShowDate,
@@ -146,7 +155,6 @@ export function buildWebReservationsForDayData(raw: unknown): WebReservationShow
     grouped.get(row.groupKey)!.push(row)
   }
 
-  // Preserve first-seen order from API (same as WPF iteration)
   const seen = new Set<string>()
   const groups: WebReservationShowGroup[] = []
 
@@ -176,92 +184,62 @@ export function buildWebReservationsForDayData(raw: unknown): WebReservationShow
   return groups
 }
 
-// ─── Table primitives ─────────────────────────────────────────────────────────
-
-function Th({ children, className, center, right }: {
-  children?: React.ReactNode; className?: string; center?: boolean; right?: boolean
-}) {
-  return (
-    <th className={cn(
-      "border-b border-border px-2 py-1.5 text-[13px] font-bold text-foreground whitespace-nowrap",
-      center ? "text-center" : right ? "text-right" : "text-left",
-      className
-    )}>
-      {children}
-    </th>
-  )
-}
-
-function Td({ children, className, center, right, colSpan }: {
-  children?: React.ReactNode; className?: string; center?: boolean; right?: boolean; colSpan?: number
-}) {
-  return (
-    <td
-      colSpan={colSpan}
-      className={cn(
-      "border-b border-border/60 px-2 py-2 text-[13px] whitespace-nowrap",
-      center ? "text-center" : right ? "text-right tabular-nums" : "text-left",
-      className
-    )}>
-      {children}
-    </td>
-  )
-}
-
 // ─── Show section ─────────────────────────────────────────────────────────────
 
 function ShowSection({ group }: { group: WebReservationShowGroup }) {
   return (
     <div className="border-b border-border py-4 last:border-b-0">
-      <p className="text-center text-sm font-semibold text-foreground">
+      <ReportCenteredHeading>
         Web Reservation For Shows On: {group.showDate}
-      </p>
+      </ReportCenteredHeading>
       <p className="mt-1 text-center text-sm font-semibold text-foreground">
         For: {group.showTime}, {group.comicName}
       </p>
 
-      <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[720px] table-fixed border-collapse">
-          <colgroup>
-            <col style={{ width: "28%" }} />
-            <col style={{ width: "12%" }} />
-            <col style={{ width: "12%" }} />
-            <col style={{ width: "14%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "12%" }} />
-            <col style={{ width: "12%" }} />
-          </colgroup>
-          <thead>
-            <tr>
-              <Th>Customer Name</Th>
-              <Th center>C\C Type</Th>
-              <Th center>Promotion</Th>
-              <Th center>Section</Th>
-              <Th center>Dinner</Th>
-              <Th center># in Party</Th>
-              <Th right>Total</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {group.reservations.map((row, i) => (
-              <tr key={i} className={i % 2 === 1 ? "bg-muted/15" : undefined}>
-                <Td>{row.customerName}</Td>
-                <Td center>{row.ccType || "—"}</Td>
-                <Td center>{row.promotion || ""}</Td>
-                <Td center>{row.section || "—"}</Td>
-                <Td center>{row.dinner || "—"}</Td>
-                <Td center>{row.inParty}</Td>
-                <Td right>$ {fmtMoney(row.total)}</Td>
+      <div className="mt-3">
+        <ReportTableScroll>
+          <ReportTable className="min-w-[720px] table-fixed">
+            <colgroup>
+              <col style={{ width: "28%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "12%" }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <ReportTh>Customer Name</ReportTh>
+                <ReportTh center>C\C Type</ReportTh>
+                <ReportTh center>Promotion</ReportTh>
+                <ReportTh center>Section</ReportTh>
+                <ReportTh center>Dinner</ReportTh>
+                <ReportTh center># in Party</ReportTh>
+                <ReportTh right>Total</ReportTh>
               </tr>
-            ))}
-            <tr className="bg-muted/10">
-              <Td colSpan={4} />
-              <Td center className="font-bold">Total</Td>
-              <Td center className="font-bold">{group.totalInParty}</Td>
-              <Td right className="font-bold">$ {fmtMoney(group.totalAmount)}</Td>
-            </tr>
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {group.reservations.map((row, i) => (
+                <tr key={i} className={reportRowClass(i)}>
+                  <ReportTd>{row.customerName}</ReportTd>
+                  <ReportTd center>{row.ccType || "—"}</ReportTd>
+                  <ReportTd center>{row.promotion || ""}</ReportTd>
+                  <ReportTd center>{row.section || "—"}</ReportTd>
+                  <ReportTd center>{row.dinner || "—"}</ReportTd>
+                  <ReportTd center>{row.inParty}</ReportTd>
+                  <ReportTd right>$ {fmtMoney(row.total)}</ReportTd>
+                </tr>
+              ))}
+              <tr className="bg-muted/30">
+                <ReportTd colSpan={4} />
+                <ReportTd center bold>Total</ReportTd>
+                <ReportTd center bold>{group.totalInParty}</ReportTd>
+                <ReportTd right bold>$ {fmtMoney(group.totalAmount)}</ReportTd>
+              </tr>
+            </tbody>
+          </ReportTable>
+        </ReportTableScroll>
       </div>
     </div>
   )
@@ -280,27 +258,17 @@ export function WebReservationsForDayView({ rawData, subtitle, generatedAt }: Pr
   const clubName = subtitle.split(" · ")[0] || subtitle
 
   if (!groups.length) {
-    return (
-      <div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
-        No records found
-      </div>
-    )
+    return <ReportEmpty />
   }
 
   const reservationCount = groups.reduce((s, g) => s + g.reservations.length, 0)
 
   return (
-    <div className="space-y-4 p-4">
-      <div className="flex flex-wrap items-end justify-between gap-2 rounded-xl border border-border/70 bg-muted/10 px-4 py-3">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">Web Reservations for Day</h2>
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
-        </div>
-        <p className="text-xs text-muted-foreground">Generated {generatedAt}</p>
-      </div>
+    <ReportViewShell>
+      <ReportHeader title="Web Reservations for Day" subtitle={subtitle} generatedAt={generatedAt} />
 
-      <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-        <p className="border-b border-border py-3 text-center text-xl font-bold text-foreground">
+      <ReportCard>
+        <p className="border-b border-border px-4 py-3 text-center text-base font-semibold text-foreground">
           CLUB Name: {clubName}
         </p>
         <div className="px-4">
@@ -308,11 +276,11 @@ export function WebReservationsForDayView({ rawData, subtitle, generatedAt }: Pr
             <ShowSection key={`${group.showDate}-${group.showTime}-${i}`} group={group} />
           ))}
         </div>
-      </div>
+      </ReportCard>
 
       <p className="text-right text-xs text-muted-foreground">
         {reservationCount} reservation{reservationCount !== 1 ? "s" : ""} across {groups.length} show{groups.length !== 1 ? "s" : ""}
       </p>
-    </div>
+    </ReportViewShell>
   )
 }

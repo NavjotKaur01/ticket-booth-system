@@ -1,13 +1,15 @@
-﻿import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { cn } from "@/lib/utils"
-import type { ReportViewerResult } from "@/features/reports/reports.service"
+﻿import type { ReportViewerResult } from "@/features/reports/reports.service"
+import {
+  ReportCard,
+  ReportHeader,
+  ReportRecordCount,
+  ReportTable,
+  ReportTableScroll,
+  ReportTd,
+  ReportTh,
+  ReportViewShell,
+  reportRowClass,
+} from "@/features/reports/report-ui"
 import { ManagerCheckoutView } from "@/features/reports/manager-checkout-view"
 import { DoorCheckoutView } from "@/features/reports/door-checkout-view"
 import { AuditReportView } from "@/features/reports/audit-report-view"
@@ -171,78 +173,68 @@ export function ReportViewerResults({
   }
 
   return (
-    <div className="space-y-3 p-4">
-      <div className="flex flex-wrap items-end justify-between gap-2 rounded-xl border border-border/70 bg-muted/10 px-4 py-3">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">{result.title}</h2>
-          <p className="text-sm text-muted-foreground">{result.subtitle}</p>
-        </div>
-        <p className="text-xs text-muted-foreground">Generated {result.generatedAt}</p>
-      </div>
+    <ReportViewShell>
+      <ReportHeader
+        title={result.title}
+        subtitle={result.subtitle}
+        generatedAt={result.generatedAt}
+      />
 
-      <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
+      <ReportCard>
+        <ReportTableScroll>
+          <ReportTable>
+            <thead>
+              <tr>
                 {result.columns.map((column) => (
-                  <TableHead
+                  <ReportTh
                     key={column.key}
-                    className={cn(
-                      "h-10 bg-muted/45 px-3 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase whitespace-nowrap",
-                      column.align === "right" && "text-right"
-                    )}
+                    right={column.align === "right"}
                   >
                     {column.label}
-                  </TableHead>
+                  </ReportTh>
                 ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+              </tr>
+            </thead>
+            <tbody>
               {result.rows.map((row, index) => (
-                <TableRow key={`${result.reportType}-${index}`}>
+                <tr key={`${result.reportType}-${index}`} className={reportRowClass(index)}>
                   {result.columns.map((column) => (
-                    <TableCell
+                    <ReportTd
                       key={column.key}
-                      className={cn(
-                        "px-3 py-2.5 text-sm text-foreground",
-                        column.align === "right" && "text-right tabular-nums"
-                      )}
+                      right={column.align === "right"}
                     >
                       {String(row[column.key] ?? "")}
-                    </TableCell>
+                    </ReportTd>
                   ))}
-                </TableRow>
+                </tr>
               ))}
               {result.footerRow && (
-                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                <tr className="bg-muted/30 font-semibold">
                   {result.columns.map((column) => (
-                    <TableCell
+                    <ReportTd
                       key={column.key}
-                      className={cn(
-                        "px-3 py-2.5 text-sm font-semibold text-foreground",
-                        column.align === "right" && "text-right tabular-nums",
-                        column.key === "comicName" && "text-center",
-                        column.key === "performer" && "text-center",
-                        column.key === "paymentDate" && "text-center",
-                        column.key === "recLastName" && "text-center",
-                        column.key === "zipCode" && "text-center",
-                        column.key === "customer" && "text-center"
-                      )}
+                      bold
+                      right={column.align === "right"}
+                      center={
+                        column.key === "comicName" ||
+                        column.key === "performer" ||
+                        column.key === "paymentDate" ||
+                        column.key === "recLastName" ||
+                        column.key === "zipCode" ||
+                        column.key === "customer"
+                      }
                     >
                       {String(result.footerRow?.[column.key] ?? "")}
-                    </TableCell>
+                    </ReportTd>
                   ))}
-                </TableRow>
+                </tr>
               )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+            </tbody>
+          </ReportTable>
+        </ReportTableScroll>
+      </ReportCard>
 
-      <p className="text-right text-xs text-muted-foreground">
-        {result.rows.length} record{result.rows.length !== 1 ? "s" : ""}
-      </p>
-    </div>
+      <ReportRecordCount count={result.rows.length} />
+    </ReportViewShell>
   )
 }

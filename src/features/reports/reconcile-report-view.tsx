@@ -3,6 +3,12 @@ import { cn } from "@/lib/utils"
 import dayjs from "dayjs"
 import { ReportDrillDialog, type DrillColumn } from "@/features/reports/report-drill-dialog"
 import type { ReportDrillContext } from "@/features/reports/reports.service"
+import {
+  ReportCard,
+  ReportEmpty,
+  ReportHeader,
+  ReportViewShell,
+} from "@/features/reports/report-ui"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -207,7 +213,7 @@ function AmountCell({ value, drillKey, canDrill, onDrill, bold }: AmountCellProp
   return (
     <td
       className={cn(
-        "border border-border px-2 py-1 text-right text-xs tabular-nums whitespace-nowrap",
+        "border border-border px-3 py-2 text-right text-xs tabular-nums whitespace-nowrap",
         bold && "font-semibold",
         clickable && "cursor-pointer text-blue-600 underline hover:text-blue-800"
       )}
@@ -221,7 +227,7 @@ function AmountCell({ value, drillKey, canDrill, onDrill, bold }: AmountCellProp
 function TypeCell({ children, bold }: { children: React.ReactNode; bold?: boolean }) {
   return (
     <td className={cn(
-      "border border-border px-2 py-1 text-xs whitespace-nowrap align-top",
+      "border border-border px-3 py-2 text-xs whitespace-nowrap align-top",
       bold && "font-semibold"
     )}>
       {children}
@@ -231,7 +237,7 @@ function TypeCell({ children, bold }: { children: React.ReactNode; bold?: boolea
 
 function DescCell({ children }: { children: React.ReactNode }) {
   return (
-    <td className="border border-border px-2 py-1 text-xs text-muted-foreground align-top">
+    <td className="border border-border px-3 py-2 text-xs text-muted-foreground align-top">
       {children}
     </td>
   )
@@ -240,7 +246,7 @@ function DescCell({ children }: { children: React.ReactNode }) {
 function SubtotalCell({ value, bold }: { value: number; bold?: boolean }) {
   return (
     <td className={cn(
-      "border border-border px-2 py-1 text-right text-xs tabular-nums whitespace-nowrap",
+      "border border-border px-3 py-2 text-right text-xs tabular-nums whitespace-nowrap",
       bold && "font-semibold"
     )}>
       {fmtAmount(value)}
@@ -249,7 +255,7 @@ function SubtotalCell({ value, bold }: { value: number; bold?: boolean }) {
 }
 
 function EmptyCell() {
-  return <td className="border border-border px-2 py-1" />
+  return <td className="border border-border px-3 py-2" />
 }
 
 // ─── Per-date document ────────────────────────────────────────────────────────
@@ -262,7 +268,7 @@ type ReportDocumentProps = {
 
 function ReportDocument({ row, canDrill, onDrill }: ReportDocumentProps) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+    <ReportCard>
       {/* Header */}
       <div className="border-b border-border px-4 py-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -293,10 +299,10 @@ function ReportDocument({ row, canDrill, onDrill }: ReportDocumentProps) {
               </th>
             </tr>
             <tr className="border-b border-border bg-muted/40">
-              <th className="px-2 py-1 text-left font-semibold">Type</th>
-              <th className="px-2 py-1 text-left font-semibold">Description</th>
-              <th className="px-2 py-1" />
-              <th className="px-2 py-1" />
+              <th className="px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Type</th>
+              <th className="px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Description</th>
+              <th className="px-3 py-2" />
+              <th className="px-3 py-2" />
             </tr>
           </thead>
           <tbody>
@@ -358,10 +364,10 @@ function ReportDocument({ row, canDrill, onDrill }: ReportDocumentProps) {
               </th>
             </tr>
             <tr className="border-b border-border bg-muted/40">
-              <th className="px-2 py-1 text-left font-semibold">Type</th>
-              <th className="px-2 py-1 text-left font-semibold">Description</th>
-              <th className="px-2 py-1" />
-              <th className="px-2 py-1" />
+              <th className="px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Type</th>
+              <th className="px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Description</th>
+              <th className="px-3 py-2" />
+              <th className="px-3 py-2" />
             </tr>
           </thead>
           <tbody>
@@ -565,7 +571,7 @@ function ReportDocument({ row, canDrill, onDrill }: ReportDocumentProps) {
           </table>
         </div>
       </div>
-    </div>
+    </ReportCard>
   )
 }
 
@@ -588,11 +594,7 @@ export function ReconcileReportView({ rawData, subtitle, generatedAt, drillConte
   )
 
   if (!rows.length) {
-    return (
-      <div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
-        No records found
-      </div>
-    )
+    return <ReportEmpty />
   }
 
   function handleDrill(key: keyof typeof DRILL_TYPE) {
@@ -602,14 +604,8 @@ export function ReconcileReportView({ rawData, subtitle, generatedAt, drillConte
   }
 
   return (
-    <div className="space-y-4 p-4">
-      <div className="flex flex-wrap items-end justify-between gap-2 rounded-xl border border-border/70 bg-muted/10 px-4 py-3">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">Reconcile Report</h2>
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
-        </div>
-        <p className="text-xs text-muted-foreground">Generated {generatedAt}</p>
-      </div>
+    <ReportViewShell>
+      <ReportHeader title="Reconcile Report" subtitle={subtitle} generatedAt={generatedAt} />
 
       {rows.map((row, i) => (
         <ReportDocument
@@ -641,6 +637,6 @@ export function ReconcileReportView({ rawData, subtitle, generatedAt, drillConte
           onClose={() => setDrillTarget(null)}
         />
       )}
-    </div>
+    </ReportViewShell>
   )
 }

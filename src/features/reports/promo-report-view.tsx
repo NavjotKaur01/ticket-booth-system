@@ -1,6 +1,16 @@
 import dayjs from "dayjs"
 import { Fragment } from "react"
-import { cn } from "@/lib/utils"
+import {
+  ReportCard,
+  ReportEmpty,
+  ReportHeader,
+  ReportTable,
+  ReportTableScroll,
+  ReportTd,
+  ReportTh,
+  ReportViewShell,
+  reportRowClass,
+} from "@/features/reports/report-ui"
 
 // ─── API shape (GetPromoReport) ───────────────────────────────────────────────
 
@@ -67,7 +77,6 @@ export function buildPromoReportData(raw: unknown): PromoReportData {
     return { headers: [], rows: [], footer: [] }
   }
 
-  // Column headers: one per promo name (ordered by first show date) + Grand Total
   const headerNames = Array.from(
     allPromo.reduce((map, row) => {
       if (!row.promoName) return map
@@ -85,7 +94,6 @@ export function buildPromoReportData(raw: unknown): PromoReportData {
     { name: "Grand Total" },
   ]
 
-  // One row per show date
   const dateKeys = Array.from(
     new Set(allPromo.map((r) => r.showDateKey).filter(Boolean))
   ).sort()
@@ -127,7 +135,6 @@ export function buildPromoReportData(raw: unknown): PromoReportData {
     }
   })
 
-  // Footer: totals per promo column + grand total (sum of row grand-total columns)
   const footerByPromo = headerNames.map((name) => {
     const promoRows = allPromo.filter((r) => r.promoName === name)
     const made = promoRows.reduce((s, r) => s + r.partyOrgin, 0)
@@ -155,41 +162,12 @@ export function buildPromoReportData(raw: unknown): PromoReportData {
   }
 }
 
-// ─── Table primitives ─────────────────────────────────────────────────────────
-
-function Th({ children, className }: { children?: React.ReactNode; className?: string }) {
-  return (
-    <th className={cn(
-      "border border-border bg-muted/50 px-2 py-1 text-[11px] font-semibold text-muted-foreground whitespace-nowrap",
-      className
-    )}>
-      {children}
-    </th>
-  )
-}
-
-function Td({ children, className, bold, colSpan }: {
-  children: React.ReactNode; className?: string; bold?: boolean; colSpan?: number
-}) {
-  return (
-    <td
-      colSpan={colSpan}
-      className={cn(
-      "border border-border px-2 py-1.5 text-xs whitespace-nowrap tabular-nums",
-      bold && "font-semibold",
-      className
-    )}>
-      {children}
-    </td>
-  )
-}
-
 function PromoDetailCells({ detail }: { detail: PromoDetail }) {
   return (
     <>
-      <Td>{detail.made}</Td>
-      <Td>{detail.ci}</Td>
-      <Td>{detail.perc}%</Td>
+      <ReportTd right>{detail.made}</ReportTd>
+      <ReportTd right>{detail.ci}</ReportTd>
+      <ReportTd right>{detail.perc}%</ReportTd>
     </>
   )
 }
@@ -206,86 +184,69 @@ export function PromoReportView({ rawData, subtitle, generatedAt }: PromoReportV
   const { headers, rows, footer } = buildPromoReportData(rawData)
 
   if (!rows.length) {
-    return (
-      <div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
-        No records found
-      </div>
-    )
+    return <ReportEmpty />
   }
 
   return (
-    <div className="space-y-3 p-4">
-      <div className="flex flex-wrap items-end justify-between gap-2 rounded-xl border border-border/70 bg-muted/10 px-4 py-3">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">Promo Report</h2>
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
-        </div>
-        <p className="text-xs text-muted-foreground">Generated {generatedAt}</p>
-      </div>
+    <ReportViewShell>
+      <ReportHeader title="Promo Report" subtitle={subtitle} generatedAt={generatedAt} />
 
-      <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-xs">
+      <ReportCard>
+        <ReportTableScroll>
+          <ReportTable>
             <thead>
-              {/* Row 1: promo group headers */}
               <tr>
-                <Th className="min-w-[5.5rem]">Show Date</Th>
-                <Th className="min-w-[6.5rem]">Comic</Th>
-                <Th className="min-w-[3.5rem]">Day</Th>
+                <ReportTh className="min-w-[5.5rem]">Show Date</ReportTh>
+                <ReportTh className="min-w-[6.5rem]">Comic</ReportTh>
+                <ReportTh className="min-w-[3.5rem]">Day</ReportTh>
                 {headers.map((h) => (
-                  <th
-                    key={h.name}
-                    colSpan={3}
-                    className="border border-border bg-muted/50 px-2 py-1 text-center text-[11px] font-semibold text-muted-foreground whitespace-nowrap"
-                  >
+                  <ReportTh key={h.name} colSpan={3} center>
                     {h.name}
-                  </th>
+                  </ReportTh>
                 ))}
               </tr>
-              {/* Row 2: Made / C/I / Perc sub-headers */}
               <tr>
-                <Th />
-                <Th />
-                <Th />
+                <ReportTh />
+                <ReportTh />
+                <ReportTh />
                 {headers.map((h) => (
                   <Fragment key={h.name}>
-                    <Th className="text-center w-10">Made</Th>
-                    <Th className="text-center w-10">C/I</Th>
-                    <Th className="text-center w-12">Perc</Th>
+                    <ReportTh center className="w-10">Made</ReportTh>
+                    <ReportTh center className="w-10">C/I</ReportTh>
+                    <ReportTh center className="w-12">Perc</ReportTh>
                   </Fragment>
                 ))}
               </tr>
             </thead>
             <tbody>
               {rows.map((row, i) => (
-                <tr key={row.showDate} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-                  <Td>{row.showDate}</Td>
-                  <Td>{row.comic}</Td>
-                  <Td>{row.day}</Td>
+                <tr key={row.showDate} className={reportRowClass(i)}>
+                  <ReportTd>{row.showDate}</ReportTd>
+                  <ReportTd>{row.comic}</ReportTd>
+                  <ReportTd>{row.day}</ReportTd>
                   {row.details.map((detail, di) => (
                     <PromoDetailCells key={di} detail={detail} />
                   ))}
                 </tr>
               ))}
-              {/* Footer total row */}
               <tr className="bg-muted/30">
-                <Td bold colSpan={3}>Total</Td>
+                <ReportTd bold colSpan={3}>Total</ReportTd>
                 {footer.map((detail, i) => (
                   <Fragment key={i}>
-                    <Td bold>{detail.made}</Td>
-                    <Td bold>{detail.ci}</Td>
-                    <Td bold>{detail.perc}%</Td>
+                    <ReportTd bold right>{detail.made}</ReportTd>
+                    <ReportTd bold right>{detail.ci}</ReportTd>
+                    <ReportTd bold right>{detail.perc}%</ReportTd>
                   </Fragment>
                 ))}
               </tr>
             </tbody>
-          </table>
-        </div>
-      </div>
+          </ReportTable>
+        </ReportTableScroll>
+      </ReportCard>
 
       <p className="text-right text-xs text-muted-foreground">
         {rows.length} show date{rows.length !== 1 ? "s" : ""}
       </p>
-    </div>
+    </ReportViewShell>
   )
 }

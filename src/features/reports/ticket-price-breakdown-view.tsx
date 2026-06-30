@@ -1,4 +1,16 @@
 import dayjs from "dayjs"
+import {
+  ReportCard,
+  ReportEmpty,
+  ReportHeader,
+  ReportShowHeader,
+  ReportTable,
+  ReportTableScroll,
+  ReportTd,
+  ReportTh,
+  ReportViewShell,
+  reportRowClass,
+} from "@/features/reports/report-ui"
 
 type SectionRow = {
   ShowSection?: string
@@ -76,22 +88,12 @@ export function TicketPriceBreakdownView({ rawData, subtitle, generatedAt }: Pro
   const shows = groupByShow(rawData)
 
   if (!shows.length) {
-    return (
-      <div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
-        No records found
-      </div>
-    )
+    return <ReportEmpty />
   }
 
   return (
-    <div className="space-y-3 p-4">
-      <div className="flex flex-wrap items-end justify-between gap-2 rounded-xl border border-border/70 bg-muted/10 px-4 py-3">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">Ticket Price Breakdown</h2>
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
-        </div>
-        <p className="text-xs text-muted-foreground">Generated {generatedAt}</p>
-      </div>
+    <ReportViewShell>
+      <ReportHeader title="Ticket Price Breakdown" subtitle={subtitle} generatedAt={generatedAt} />
 
       <div className="space-y-3">
         {shows.map((show, showIdx) => {
@@ -102,12 +104,8 @@ export function TicketPriceBreakdownView({ rawData, subtitle, generatedAt }: Pro
           const grandTotal = show.SectionList?.reduce((s, r) => s + num(r.GrandTotal), 0) ?? 0
 
           return (
-            <div
-              key={showIdx}
-              className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm"
-            >
-              {/* Show header */}
-              <div className="flex flex-wrap items-center gap-3 border-b border-border bg-muted/20 px-4 py-2.5">
+            <ReportCard key={showIdx}>
+              <ReportShowHeader>
                 <span className="font-semibold text-sm text-foreground">
                   {fmtDate(show.ShowDate)}
                 </span>
@@ -118,46 +116,43 @@ export function TicketPriceBreakdownView({ rawData, subtitle, generatedAt }: Pro
                     {show.TotalSeat} total seats
                   </span>
                 )}
-              </div>
+              </ReportShowHeader>
 
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-xs">
+              <ReportTableScroll>
+                <ReportTable>
                   <thead>
                     <tr>
-                      {["Section", "Available", "Sold", "Scanned", "Paid", "Grand Total"].map((h, i) => (
-                        <th
-                          key={i}
-                          className={`border border-border bg-muted/30 px-3 py-2 text-[11px] font-semibold tracking-wide text-muted-foreground whitespace-nowrap ${i > 0 ? "text-right" : "text-left"}`}
-                        >
-                          {h}
-                        </th>
-                      ))}
+                      <ReportTh>Section</ReportTh>
+                      <ReportTh right>Available</ReportTh>
+                      <ReportTh right>Sold</ReportTh>
+                      <ReportTh right>Scanned</ReportTh>
+                      <ReportTh right>Paid</ReportTh>
+                      <ReportTh right>Grand Total</ReportTh>
                     </tr>
                   </thead>
                   <tbody>
                     {(show.SectionList ?? []).map((sec, i) => (
-                      <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-                        <td className="border border-border px-3 py-2 text-xs">{sec.ShowSection ?? "—"}</td>
-                        <td className="border border-border px-3 py-2 text-right text-xs tabular-nums">{num(sec.Available)}</td>
-                        <td className="border border-border px-3 py-2 text-right text-xs tabular-nums">{num(sec.Sold)}</td>
-                        <td className="border border-border px-3 py-2 text-right text-xs tabular-nums">{num(sec.Scanned)}</td>
-                        <td className="border border-border px-3 py-2 text-right text-xs tabular-nums">{num(sec.Paid)}</td>
-                        <td className="border border-border px-3 py-2 text-right text-xs tabular-nums">{fmtCurrency(num(sec.GrandTotal))}</td>
+                      <tr key={i} className={reportRowClass(i)}>
+                        <ReportTd>{sec.ShowSection ?? "—"}</ReportTd>
+                        <ReportTd right>{num(sec.Available)}</ReportTd>
+                        <ReportTd right>{num(sec.Sold)}</ReportTd>
+                        <ReportTd right>{num(sec.Scanned)}</ReportTd>
+                        <ReportTd right>{num(sec.Paid)}</ReportTd>
+                        <ReportTd right>{fmtCurrency(num(sec.GrandTotal))}</ReportTd>
                       </tr>
                     ))}
-                    {/* Subtotal row */}
                     <tr className="bg-muted/40 font-semibold">
-                      <td className="border border-border px-3 py-2 text-xs">Total</td>
-                      <td className="border border-border px-3 py-2 text-right text-xs tabular-nums">{totalAvail}</td>
-                      <td className="border border-border px-3 py-2 text-right text-xs tabular-nums">{totalSold}</td>
-                      <td className="border border-border px-3 py-2 text-right text-xs tabular-nums">{totalScan}</td>
-                      <td className="border border-border px-3 py-2 text-right text-xs tabular-nums">{totalPaid}</td>
-                      <td className="border border-border px-3 py-2 text-right text-xs tabular-nums">{fmtCurrency(grandTotal)}</td>
+                      <ReportTd bold>Total</ReportTd>
+                      <ReportTd right bold>{totalAvail}</ReportTd>
+                      <ReportTd right bold>{totalSold}</ReportTd>
+                      <ReportTd right bold>{totalScan}</ReportTd>
+                      <ReportTd right bold>{totalPaid}</ReportTd>
+                      <ReportTd right bold>{fmtCurrency(grandTotal)}</ReportTd>
                     </tr>
                   </tbody>
-                </table>
-              </div>
-            </div>
+                </ReportTable>
+              </ReportTableScroll>
+            </ReportCard>
           )
         })}
       </div>
@@ -165,6 +160,6 @@ export function TicketPriceBreakdownView({ rawData, subtitle, generatedAt }: Pro
       <p className="text-right text-xs text-muted-foreground">
         {shows.length} show{shows.length !== 1 ? "s" : ""}
       </p>
-    </div>
+    </ReportViewShell>
   )
 }

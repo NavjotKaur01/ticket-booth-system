@@ -1,6 +1,15 @@
-import { cn } from "@/lib/utils"
 import dayjs from "dayjs"
-
+import {
+  ReportCard,
+  ReportEmpty,
+  ReportHeader,
+  ReportSectionBar,
+  ReportTable,
+  ReportTd,
+  ReportTh,
+  ReportViewShell,
+  reportRowClass,
+} from "@/features/reports/report-ui"
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type SaleByShowPromo = {
@@ -136,123 +145,89 @@ export function buildSalesByShowData(raw: unknown): SaleByShowDateGroup[] {
   })
 }
 
-// ─── Table primitives ─────────────────────────────────────────────────────────
-
-function Th({ children, className, right }: { children?: React.ReactNode; className?: string; right?: boolean }) {
-  return (
-    <th className={cn(
-      "border border-border bg-muted/40 px-2 py-1 text-left text-[11px] font-semibold text-muted-foreground whitespace-nowrap",
-      right && "text-right",
-      className
-    )}>
-      {children}
-    </th>
-  )
-}
-
-function Td({ children, className, right, blue, bold, colSpan, rowSpan }: {
-  children?: React.ReactNode; className?: string; right?: boolean; blue?: boolean; bold?: boolean; colSpan?: number; rowSpan?: number
-}) {
-  return (
-    <td
-      colSpan={colSpan}
-      rowSpan={rowSpan}
-      className={cn(
-      "border border-border px-2 py-1 text-xs whitespace-nowrap",
-      right && "text-right tabular-nums",
-      blue && "text-blue-600 font-medium",
-      bold && "font-semibold",
-      className
-    )}>
-      {children}
-    </td>
-  )
-}
-
 // ─── Show block ───────────────────────────────────────────────────────────────
 
 function ShowBlock({ show }: { show: SaleByShowShow }) {
   return (
     <div className="border-b border-border last:border-b-0">
       {/* Main show row */}
-      <table className="w-full border-collapse text-xs">
+      <ReportTable>
         <thead>
           <tr>
-            <Th>Show Time</Th>
-            <Th>Comedian</Th>
-            <Th right>Price</Th>
-            <Th right>Booked</Th>
-            <Th right>Seated</Th>
-            <Th right>F-Paid</Th>
-            <Th right>Comp</Th>
-            <Th right>Disc</Th>
-            <Th right>Disc Val</Th>
-            <Th right>Show Day</Th>
-            <Th right>Deffered Coll</Th>
-            <Th right>Tax</Th>
-            <Th right>Net Door</Th>
+            <ReportTh>Show Time</ReportTh>
+            <ReportTh>Comedian</ReportTh>
+            <ReportTh right>Price</ReportTh>
+            <ReportTh right>Booked</ReportTh>
+            <ReportTh right>Seated</ReportTh>
+            <ReportTh right>F-Paid</ReportTh>
+            <ReportTh right>Comp</ReportTh>
+            <ReportTh right>Disc</ReportTh>
+            <ReportTh right>Disc Val</ReportTh>
+            <ReportTh right>Show Day</ReportTh>
+            <ReportTh right>Deffered Coll</ReportTh>
+            <ReportTh right>Tax</ReportTh>
+            <ReportTh right>Net Door</ReportTh>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <Td>{show.showTm}</Td>
-            <Td>{show.comicName}</Td>
-            <Td right>{fmtMoney(show.showPrice)}</Td>
-            <Td right>{show.party}</Td>
-            <Td right>{show.checkedIn}</Td>
-            <Td right>{show.checkinPaid}</Td>
-            <Td right>{show.checkinComp}</Td>
-            <Td right>{show.checkinDisc}</Td>
-            <Td right>{fmtMoney(show.discount)}</Td>
-            <Td right>{fmtMoney(show.dailyPaid)}</Td>
-            <Td right>{fmtMoney(show.defCollected)}</Td>
-            <Td right />
-            <Td right>{fmtMoney(show.net)}</Td>
+            <ReportTd>{show.showTm}</ReportTd>
+            <ReportTd>{show.comicName}</ReportTd>
+            <ReportTd right>{fmtMoney(show.showPrice)}</ReportTd>
+            <ReportTd right>{show.party}</ReportTd>
+            <ReportTd right>{show.checkedIn}</ReportTd>
+            <ReportTd right>{show.checkinPaid}</ReportTd>
+            <ReportTd right>{show.checkinComp}</ReportTd>
+            <ReportTd right>{show.checkinDisc}</ReportTd>
+            <ReportTd right>{fmtMoney(show.discount)}</ReportTd>
+            <ReportTd right>{fmtMoney(show.dailyPaid)}</ReportTd>
+            <ReportTd right>{fmtMoney(show.defCollected)}</ReportTd>
+            <ReportTd right />
+            <ReportTd right>{fmtMoney(show.net)}</ReportTd>
           </tr>
         </tbody>
-      </table>
+      </ReportTable>
 
       {/* Promo sub-table */}
       <div className="overflow-x-auto pl-8 pb-2">
-        <table className="border-collapse text-xs">
+        <ReportTable>
           <thead>
             <tr>
-              <Th className="min-w-24">Promotion</Th>
-              <Th right className="min-w-16">Party</Th>
-              <Th right className="min-w-16">Seated</Th>
-              <Th right className="min-w-16">Paid</Th>
-              <Th right className="min-w-16">Comp</Th>
-              <Th right className="min-w-16">Disc</Th>
+              <ReportTh className="min-w-24">Promotion</ReportTh>
+              <ReportTh right className="min-w-16">Party</ReportTh>
+              <ReportTh right className="min-w-16">Seated</ReportTh>
+              <ReportTh right className="min-w-16">Paid</ReportTh>
+              <ReportTh right className="min-w-16">Comp</ReportTh>
+              <ReportTh right className="min-w-16">Disc</ReportTh>
             </tr>
           </thead>
           <tbody>
             {show.promos.length === 0 ? (
               <tr>
-                <Td colSpan={6} className="text-muted-foreground">—</Td>
+                <ReportTd colSpan={6} className="text-muted-foreground">—</ReportTd>
               </tr>
             ) : (
               show.promos.map((p, i) => (
-                <tr key={i}>
-                  <Td>{p.promo || "—"}</Td>
-                  <Td right>{p.party}</Td>
-                  <Td right>{p.checkedIn}</Td>
-                  <Td right>{p.checkinPaid}</Td>
-                  <Td right>{p.checkinComp}</Td>
-                  <Td right>{p.checkinDisc}</Td>
+                <tr key={i} className={reportRowClass(i)}>
+                  <ReportTd>{p.promo || "—"}</ReportTd>
+                  <ReportTd right>{p.party}</ReportTd>
+                  <ReportTd right>{p.checkedIn}</ReportTd>
+                  <ReportTd right>{p.checkinPaid}</ReportTd>
+                  <ReportTd right>{p.checkinComp}</ReportTd>
+                  <ReportTd right>{p.checkinDisc}</ReportTd>
                 </tr>
               ))
             )}
-            {/* Totals row */}
             <tr className="bg-muted/20">
-              <Td />
-              <Td right bold>{show.partyTotal}</Td>
-              <Td right bold>{show.checkedInTotal}</Td>
-              <Td right bold blue>{show.checkinPaidTotal}</Td>
-              <Td right bold blue>{show.checkinCompTotal}</Td>
-              <Td right bold blue>{show.checkinDiscTotal}</Td>
+              <ReportTd />
+              <ReportTd right bold>{show.partyTotal}</ReportTd>
+              <ReportTd right bold>{show.checkedInTotal}</ReportTd>
+              <ReportTd right bold blue>{show.checkinPaidTotal}</ReportTd>
+              <ReportTd right bold blue>{show.checkinCompTotal}</ReportTd>
+              <ReportTd right bold blue>{show.checkinDiscTotal}</ReportTd>
             </tr>
           </tbody>
-        </table>
+        </ReportTable>
       </div>
     </div>
   )
@@ -262,24 +237,20 @@ function ShowBlock({ show }: { show: SaleByShowShow }) {
 
 function DateGroupCard({ group }: { group: SaleByShowDateGroup }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+    <ReportCard>
       <div className="bg-[#155abb] px-3 py-1.5 text-xs font-semibold text-white">
         Sales Show for : {group.showDate}
         {group.locName ? ` — ${group.locName}` : ""}
       </div>
-      <div className="bg-neutral-400/30 px-3 py-1 text-center text-xs font-medium text-foreground">
-        Number of Items
-      </div>
+      <ReportSectionBar>Number of Items</ReportSectionBar>
       <div className="divide-y divide-border">
         {group.shows.map((show) => (
           <ShowBlock key={show.showId || `${show.showTm}-${show.comicName}`} show={show} />
         ))}
       </div>
-    </div>
+    </ReportCard>
   )
 }
-
-// ─── Main component ───────────────────────────────────────────────────────────
 
 type Props = {
   rawData: unknown
@@ -291,24 +262,14 @@ export function SalesByShowView({ rawData, subtitle, generatedAt }: Props) {
   const groups = buildSalesByShowData(rawData)
 
   if (!groups.length || groups.every((g) => !g.shows.length)) {
-    return (
-      <div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
-        No records found
-      </div>
-    )
+    return <ReportEmpty />
   }
 
   const showCount = groups.reduce((s, g) => s + g.shows.length, 0)
 
   return (
-    <div className="space-y-4 p-4">
-      <div className="flex flex-wrap items-end justify-between gap-2 rounded-xl border border-border/70 bg-muted/10 px-4 py-3">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">Sales By Show</h2>
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
-        </div>
-        <p className="text-xs text-muted-foreground">Generated {generatedAt}</p>
-      </div>
+    <ReportViewShell>
+      <ReportHeader title="Sales By Show" subtitle={subtitle} generatedAt={generatedAt} />
 
       {groups.map((group, i) => (
         <DateGroupCard key={`${group.showDate}-${i}`} group={group} />
@@ -317,6 +278,6 @@ export function SalesByShowView({ rawData, subtitle, generatedAt }: Props) {
       <p className="text-right text-xs text-muted-foreground">
         {showCount} show{showCount !== 1 ? "s" : ""} across {groups.length} date group{groups.length !== 1 ? "s" : ""}
       </p>
-    </div>
+    </ReportViewShell>
   )
 }

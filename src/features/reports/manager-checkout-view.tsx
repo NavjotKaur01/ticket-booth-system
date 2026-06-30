@@ -1,4 +1,14 @@
-import { cn } from "@/lib/utils"
+import {
+  ReportCard,
+  ReportEmpty,
+  ReportHeader,
+  ReportTable,
+  ReportTableScroll,
+  ReportTd,
+  ReportTh,
+  ReportViewShell,
+  reportRowClass,
+} from "@/features/reports/report-ui"
 
 // ─── API shape ────────────────────────────────────────────────────────────────
 
@@ -112,51 +122,9 @@ function n(v: number | undefined | null): number {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+    <div className="bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
       {children}
     </div>
-  )
-}
-
-function Th({ children, right, className }: { children: React.ReactNode; right?: boolean; className?: string }) {
-  return (
-    <th
-      className={cn(
-        "border border-border bg-muted/50 px-2 py-1 text-[11px] font-semibold tracking-wide text-muted-foreground whitespace-nowrap",
-        right && "text-right",
-        className
-      )}
-    >
-      {children}
-    </th>
-  )
-}
-
-function Td({
-  children,
-  right,
-  bold,
-  red,
-  className,
-}: {
-  children: React.ReactNode
-  right?: boolean
-  bold?: boolean
-  red?: boolean
-  className?: string
-}) {
-  return (
-    <td
-      className={cn(
-        "border border-border px-2 py-1 text-xs whitespace-nowrap",
-        right && "text-right tabular-nums",
-        bold && "font-semibold",
-        red && "text-red-600",
-        className
-      )}
-    >
-      {children}
-    </td>
   )
 }
 
@@ -199,46 +167,45 @@ function PaymentTable({ show }: { show: ManagerCheckoutApiShow }) {
   ]
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-xs">
+    <ReportTableScroll>
+      <ReportTable>
         <thead>
           <tr>
-            <Th className="min-w-22">Type</Th>
+            <ReportTh className="min-w-22">Type</ReportTh>
             {PAYMENT_COLS.map((c) => (
-              <Th key={c} right>{PAYMENT_LABELS[c]}</Th>
+              <ReportTh key={c} right>{PAYMENT_LABELS[c]}</ReportTh>
             ))}
-            <Th right>SubTotal</Th>
-            <Th right>Total</Th>
+            <ReportTh right>SubTotal</ReportTh>
+            <ReportTh right>Total</ReportTh>
           </tr>
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-              <Td bold={row.label === "Totals"}>{row.label}</Td>
+            <tr key={i} className={reportRowClass(i)}>
+              <ReportTd bold={row.label === "Totals"}>{row.label}</ReportTd>
               {PAYMENT_COLS.map((c) => (
-                <Td key={c} right red={(row.data[c] ?? 0) < 0}>
+                <ReportTd key={c} right red={(row.data[c] ?? 0) < 0}>
                   {(row.data[c] ?? 0) !== 0 ? fmt(row.data[c]) : ""}
-                </Td>
+                </ReportTd>
               ))}
-              <Td right>{row.sub !== 0 ? fmt(row.sub) : ""}</Td>
-              <Td right bold>{row.total != null ? fmt(row.total) : ""}</Td>
+              <ReportTd right>{row.sub !== 0 ? fmt(row.sub) : ""}</ReportTd>
+              <ReportTd right bold>{row.total != null ? fmt(row.total) : ""}</ReportTd>
             </tr>
           ))}
-          {/* Totals row */}
           <tr className="bg-muted/40">
-            <Td bold>Totals</Td>
+            <ReportTd bold>Totals</ReportTd>
             {PAYMENT_COLS.map((c) => (
-              <Td key={c} right bold>{(totals[c] ?? 0) !== 0 ? fmt(totals[c]) : "$0.00"}</Td>
+              <ReportTd key={c} right bold>{(totals[c] ?? 0) !== 0 ? fmt(totals[c]) : "$0.00"}</ReportTd>
             ))}
-            <Td right bold>{fmt(totalsSub)}</Td>
-            <Td right bold>{fmt(totalCash)}</Td>
+            <ReportTd right bold>{fmt(totalsSub)}</ReportTd>
+            <ReportTd right bold>{fmt(totalCash)}</ReportTd>
           </tr>
         </tbody>
-      </table>
+      </ReportTable>
 
       {/* Financial summary */}
       <div className="mt-1 flex justify-end">
-        <table className="border-collapse text-xs">
+        <ReportTable>
           <tbody>
             {[
               { label: "Saletax", value: saleTax },
@@ -247,18 +214,16 @@ function PaymentTable({ show }: { show: ManagerCheckoutApiShow }) {
               { label: "Revenue", value: revenue },
             ].map(({ label, value }) => (
               <tr key={label}>
-                <td className="border border-border bg-muted/20 px-3 py-0.5 text-right text-xs font-medium text-muted-foreground">
+                <ReportTd className="bg-muted/20 text-right font-medium text-muted-foreground">
                   {label}
-                </td>
-                <td className="border border-border px-3 py-0.5 text-right text-xs tabular-nums font-semibold">
-                  {fmt(value)}
-                </td>
+                </ReportTd>
+                <ReportTd right bold>{fmt(value)}</ReportTd>
               </tr>
             ))}
           </tbody>
-        </table>
+        </ReportTable>
       </div>
-    </div>
+    </ReportTableScroll>
   )
 }
 
@@ -296,83 +261,82 @@ function CheckedInTable({ show }: { show: ManagerCheckoutApiShow }) {
 
   return (
     <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
-      <div className="overflow-x-auto">
+      <ReportTableScroll>
         <p className="mb-1 text-center text-xs font-semibold text-muted-foreground">Checked-In</p>
-        <table className="border-collapse text-xs">
+        <ReportTable>
           <thead>
             <tr>
-              <Th>Promotion</Th>
-              <Th right>Party</Th>
-              <Th right>Seated</Th>
-              <Th right>Paid</Th>
-              <Th right>Comp</Th>
-              <Th right>Disc</Th>
-              <Th right>Scanned</Th>
-              <Th right>ScanPaid</Th>
-              <Th right>ScanComp</Th>
-              <Th right>ScanDisc</Th>
+              <ReportTh>Promotion</ReportTh>
+              <ReportTh right>Party</ReportTh>
+              <ReportTh right>Seated</ReportTh>
+              <ReportTh right>Paid</ReportTh>
+              <ReportTh right>Comp</ReportTh>
+              <ReportTh right>Disc</ReportTh>
+              <ReportTh right>Scanned</ReportTh>
+              <ReportTh right>ScanPaid</ReportTh>
+              <ReportTh right>ScanComp</ReportTh>
+              <ReportTh right>ScanDisc</ReportTh>
             </tr>
           </thead>
           <tbody>
             {promos.map((p, i) => (
-              <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-                <Td>{p.Promo || "-"}</Td>
-                <Td right>{n(p.PartyNo)}</Td>
-                <Td right>{n(p.CheckedIn)}</Td>
-                <Td right>{n(p.CheckInPaid)}</Td>
-                <Td right>{n(p.CheckInComp)}</Td>
-                <Td right>{n(p.CheckInDisc)}</Td>
-                <Td right>{n(p.ScannerIn)}</Td>
-                <Td right>{n(p.ScannerInPaid)}</Td>
-                <Td right>{n(p.ScannerInComp)}</Td>
-                <Td right>{n(p.ScannerInDisc)}</Td>
+              <tr key={i} className={reportRowClass(i)}>
+                <ReportTd>{p.Promo || "-"}</ReportTd>
+                <ReportTd right>{n(p.PartyNo)}</ReportTd>
+                <ReportTd right>{n(p.CheckedIn)}</ReportTd>
+                <ReportTd right>{n(p.CheckInPaid)}</ReportTd>
+                <ReportTd right>{n(p.CheckInComp)}</ReportTd>
+                <ReportTd right>{n(p.CheckInDisc)}</ReportTd>
+                <ReportTd right>{n(p.ScannerIn)}</ReportTd>
+                <ReportTd right>{n(p.ScannerInPaid)}</ReportTd>
+                <ReportTd right>{n(p.ScannerInComp)}</ReportTd>
+                <ReportTd right>{n(p.ScannerInDisc)}</ReportTd>
               </tr>
             ))}
             <tr className="bg-muted/40">
-              <Td bold>Total</Td>
-              <Td right bold>{sumParty}</Td>
-              <Td right bold>{sumCheckedIn}</Td>
-              <Td right bold>{sumPaid}</Td>
-              <Td right bold>{sumComp}</Td>
-              <Td right bold>{sumDisc}</Td>
-              <Td right bold>{sumScanned}</Td>
-              <Td right bold>{sumScanPaid}</Td>
-              <Td right bold>{sumScanComp}</Td>
-              <Td right bold>{sumScanDisc}</Td>
+              <ReportTd bold>Total</ReportTd>
+              <ReportTd right bold>{sumParty}</ReportTd>
+              <ReportTd right bold>{sumCheckedIn}</ReportTd>
+              <ReportTd right bold>{sumPaid}</ReportTd>
+              <ReportTd right bold>{sumComp}</ReportTd>
+              <ReportTd right bold>{sumDisc}</ReportTd>
+              <ReportTd right bold>{sumScanned}</ReportTd>
+              <ReportTd right bold>{sumScanPaid}</ReportTd>
+              <ReportTd right bold>{sumScanComp}</ReportTd>
+              <ReportTd right bold>{sumScanDisc}</ReportTd>
             </tr>
           </tbody>
-        </table>
-      </div>
+        </ReportTable>
+      </ReportTableScroll>
 
-      {/* Phone-In / Walkup / Web side table */}
-      <div className="overflow-x-auto">
-        <table className="border-collapse text-xs">
+      <ReportTableScroll>
+        <ReportTable>
           <thead>
             <tr>
-              <Th right>Phone-In</Th>
-              <Th right>Walkup</Th>
-              <Th right>Web</Th>
+              <ReportTh right>Phone-In</ReportTh>
+              <ReportTh right>Walkup</ReportTh>
+              <ReportTh right>Web</ReportTh>
             </tr>
           </thead>
           <tbody>
             {promos.map((p, i) => {
               const { phone, walkup, web } = getSources(p.Promo ?? "")
               return (
-                <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-                  <Td right>{phone}</Td>
-                  <Td right>{walkup}</Td>
-                  <Td right>{web}</Td>
+                <tr key={i} className={reportRowClass(i)}>
+                  <ReportTd right>{phone}</ReportTd>
+                  <ReportTd right>{walkup}</ReportTd>
+                  <ReportTd right>{web}</ReportTd>
                 </tr>
               )
             })}
             <tr className="bg-muted/40">
-              <Td right bold>{totalPhone}</Td>
-              <Td right bold>{totalWalkup}</Td>
-              <Td right bold>{totalWeb}</Td>
+              <ReportTd right bold>{totalPhone}</ReportTd>
+              <ReportTd right bold>{totalWalkup}</ReportTd>
+              <ReportTd right bold>{totalWeb}</ReportTd>
             </tr>
           </tbody>
-        </table>
-      </div>
+        </ReportTable>
+      </ReportTableScroll>
     </div>
   )
 }
@@ -389,32 +353,32 @@ function OriginTable({ show }: { show: ManagerCheckoutApiShow }) {
   const totalPaid = origins.reduce((s, o) => s + n(o.Paid), 0)
 
   return (
-    <table className="border-collapse text-xs">
+    <ReportTable>
       <thead>
         <tr>
-          <Th>Origin</Th>
-          <Th right>Party</Th>
-          <Th right>(Pre)Seated</Th>
-          <Th right>Paid</Th>
+          <ReportTh>Origin</ReportTh>
+          <ReportTh right>Party</ReportTh>
+          <ReportTh right>(Pre)Seated</ReportTh>
+          <ReportTh right>Paid</ReportTh>
         </tr>
       </thead>
       <tbody>
         {origins.map((o, i) => (
-          <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-            <Td>{o.Origin}</Td>
-            <Td right>{n(o.Party)}</Td>
-            <Td right>{n(o.Seated)}</Td>
-            <Td right>{fmt(n(o.Paid))}</Td>
+          <tr key={i} className={reportRowClass(i)}>
+            <ReportTd>{o.Origin}</ReportTd>
+            <ReportTd right>{n(o.Party)}</ReportTd>
+            <ReportTd right>{n(o.Seated)}</ReportTd>
+            <ReportTd right>{fmt(n(o.Paid))}</ReportTd>
           </tr>
         ))}
         <tr className="bg-muted/40">
-          <Td bold>Total</Td>
-          <Td right bold>{totalParty}</Td>
-          <Td right bold>{totalSeated}</Td>
-          <Td right bold>{fmt(totalPaid)}</Td>
+          <ReportTd bold>Total</ReportTd>
+          <ReportTd right bold>{totalParty}</ReportTd>
+          <ReportTd right bold>{totalSeated}</ReportTd>
+          <ReportTd right bold>{fmt(totalPaid)}</ReportTd>
         </tr>
       </tbody>
-    </table>
+    </ReportTable>
   )
 }
 
@@ -423,24 +387,24 @@ function ShowSectionsTable({ show }: { show: ManagerCheckoutApiShow }) {
   if (!sections.length) return null
 
   return (
-    <table className="border-collapse text-xs">
+    <ReportTable>
       <thead>
         <tr>
-          <Th>Show Section</Th>
-          <Th right>Party</Th>
-          <Th right>Total Amount</Th>
+          <ReportTh>Show Section</ReportTh>
+          <ReportTh right>Party</ReportTh>
+          <ReportTh right>Total Amount</ReportTh>
         </tr>
       </thead>
       <tbody>
         {sections.map((s, i) => (
-          <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-            <Td>{s.ShowSection || "-"}</Td>
-            <Td right>{n(s.PartyNo)}</Td>
-            <Td right>{fmt(n(s.TotalAmount))}</Td>
+          <tr key={i} className={reportRowClass(i)}>
+            <ReportTd>{s.ShowSection || "-"}</ReportTd>
+            <ReportTd right>{n(s.PartyNo)}</ReportTd>
+            <ReportTd right>{fmt(n(s.TotalAmount))}</ReportTd>
           </tr>
         ))}
       </tbody>
-    </table>
+    </ReportTable>
   )
 }
 
@@ -456,29 +420,18 @@ export function ManagerCheckoutView({ rawData, subtitle, generatedAt }: ManagerC
   const shows = Array.isArray(rawData) ? (rawData as ManagerCheckoutApiShow[]) : []
 
   if (!shows.length) {
-    return (
-      <div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
-        No records found
-      </div>
-    )
+    return <ReportEmpty />
   }
 
   return (
-    <div className="space-y-3 p-4">
-      {/* Report header */}
-      <div className="flex flex-wrap items-end justify-between gap-2 rounded-xl border border-border/70 bg-muted/10 px-4 py-3">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">Manager Checkout</h2>
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
-        </div>
-        <p className="text-xs text-muted-foreground">Generated {generatedAt}</p>
-      </div>
+    <ReportViewShell>
+      <ReportHeader title="Manager Checkout" subtitle={subtitle} generatedAt={generatedAt} />
 
       {shows.map((show, idx) => {
         const ticketPriceStr = (show.TicketPrice ?? []).map((p) => `$${p}`).join(", ") || "N/A"
 
         return (
-          <div key={show.ShowId ?? idx} className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+          <ReportCard key={show.ShowId ?? idx}>
             {/* Show header */}
             <SectionLabel>{show.Location || "—"} — Manager Checkout</SectionLabel>
             <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 px-3 py-2 text-xs sm:grid-cols-3">
@@ -519,13 +472,13 @@ export function ManagerCheckoutView({ rawData, subtitle, generatedAt }: ManagerC
                 <ShowSectionsTable show={show} />
               </div>
             </div>
-          </div>
+          </ReportCard>
         )
       })}
 
       <p className="text-right text-xs text-muted-foreground">
         {shows.length} show{shows.length !== 1 ? "s" : ""}
       </p>
-    </div>
+    </ReportViewShell>
   )
 }

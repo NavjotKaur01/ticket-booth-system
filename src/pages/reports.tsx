@@ -72,7 +72,7 @@ export function Reports() {
 
   const [draftFilters, setDraftFilters] = useState<ReportViewerFilters>(() =>
     createDefaultReportFilters({
-      locationId: locationId ?? locationOptions[0]?.id ?? "",
+      locationId: locationOptions[0]?.id ?? locationId,
       reportType: initialReportType,
     })
   )
@@ -100,12 +100,21 @@ export function Reports() {
   )
 
   useEffect(() => {
-    if (!locationId) return
+    if (!locationOptions.length) {
+      return
+    }
 
-    setDraftFilters((current) =>
-      current.locationId === locationId ? current : { ...current, locationId }
-    )
-  }, [locationId])
+    setDraftFilters((current) => {
+      if (current.locationId && locationOptions.some((option) => option.id === current.locationId)) {
+        return current
+      }
+
+      return {
+        ...current,
+        locationId: locationOptions[0].id,
+      }
+    })
+  }, [locationOptions])
 
   useEffect(() => {
     if (comedianOptions.length > 0 && !draftFilters.headlinerId) {
@@ -301,6 +310,7 @@ export function Reports() {
           <ReportFiltersToolbar
             filters={draftFilters}
             reportOptions={reportOptions}
+            locationOptions={locationOptions}
             comedianOptions={comedianOptions}
             isGenerating={isGenerating}
             isLoadingReportOptions={isLoadingReportOptions}

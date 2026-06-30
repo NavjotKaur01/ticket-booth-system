@@ -3,6 +3,18 @@ import { cn } from "@/lib/utils"
 import dayjs from "dayjs"
 import { ReportDrillDialog, type DrillColumn } from "@/features/reports/report-drill-dialog"
 import type { ReportDrillContext } from "@/features/reports/reports.service"
+import {
+  ReportCard,
+  ReportEmpty,
+  ReportHeader,
+  ReportRecordCount,
+  ReportTable,
+  ReportTableScroll,
+  ReportTd,
+  ReportTh,
+  ReportViewShell,
+  reportRowClass,
+} from "@/features/reports/report-ui"
 
 type AuditRow = {
   ReservationID?: string
@@ -42,37 +54,25 @@ export function AuditReportView({ rawData, subtitle, generatedAt, drillContext }
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   if (!rows.length) {
-    return (
-      <div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
-        No records found
-      </div>
-    )
+    return <ReportEmpty />
   }
 
   return (
-    <div className="space-y-3 p-4">
-      <div className="flex flex-wrap items-end justify-between gap-2 rounded-xl border border-border/70 bg-muted/10 px-4 py-3">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">Audit Report</h2>
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
-        </div>
-        <p className="text-xs text-muted-foreground">Generated {generatedAt}</p>
-      </div>
+    <ReportViewShell>
+      <ReportHeader title="Audit Report" subtitle={subtitle} generatedAt={generatedAt} />
 
-      <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-xs">
+      <ReportCard>
+        <ReportTableScroll>
+          <ReportTable>
             <thead>
               <tr>
-                <th className="border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Create Date</th>
-                <th className="border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Adjusted Date</th>
-                <th className="border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Moved By</th>
-                <th className="border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Created By</th>
-                <th className="border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Comic</th>
-                <th className="border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Type</th>
-                {drillContext && (
-                  <th className="border border-border bg-muted/50 px-3 py-2 text-[11px] font-semibold tracking-wide text-muted-foreground" />
-                )}
+                <ReportTh>Create Date</ReportTh>
+                <ReportTh>Adjusted Date</ReportTh>
+                <ReportTh>Moved By</ReportTh>
+                <ReportTh>Created By</ReportTh>
+                <ReportTh>Comic</ReportTh>
+                <ReportTh>Type</ReportTh>
+                {drillContext && <ReportTh />}
               </tr>
             </thead>
             <tbody>
@@ -81,36 +81,32 @@ export function AuditReportView({ rawData, subtitle, generatedAt, drillContext }
                   ? "Comp"
                   : "Move Reservation"
                 return (
-                  <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-                    <td className="border border-border px-3 py-2 text-xs">{fmtDt(row.CreateDt)}</td>
-                    <td className="border border-border px-3 py-2 text-xs">{fmtDt(row.AdjustedDt)}</td>
-                    <td className="border border-border px-3 py-2 text-xs">{row.MovedBy ?? "—"}</td>
-                    <td className="border border-border px-3 py-2 text-xs">{row.CreatedBy ?? "—"}</td>
-                    <td className="border border-border px-3 py-2 text-xs">{row.ComicName ?? "—"}</td>
-                    <td className={cn("border border-border px-3 py-2 text-xs", type === "Comp" && "text-blue-600")}>
-                      {type}
-                    </td>
+                  <tr key={i} className={reportRowClass(i)}>
+                    <ReportTd>{fmtDt(row.CreateDt)}</ReportTd>
+                    <ReportTd>{fmtDt(row.AdjustedDt)}</ReportTd>
+                    <ReportTd>{row.MovedBy ?? "—"}</ReportTd>
+                    <ReportTd>{row.CreatedBy ?? "—"}</ReportTd>
+                    <ReportTd>{row.ComicName ?? "—"}</ReportTd>
+                    <ReportTd className={cn(type === "Comp" && "text-blue-600")}>{type}</ReportTd>
                     {drillContext && row.ReservationID && (
-                      <td className="border border-border px-2 py-1 text-center">
+                      <ReportTd center>
                         <button
                           onClick={() => setSelectedId(row.ReservationID!)}
                           className="rounded px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors"
                         >
                           Details
                         </button>
-                      </td>
+                      </ReportTd>
                     )}
                   </tr>
                 )
               })}
             </tbody>
-          </table>
-        </div>
-      </div>
+          </ReportTable>
+        </ReportTableScroll>
+      </ReportCard>
 
-      <p className="text-right text-xs text-muted-foreground">
-        {rows.length} record{rows.length !== 1 ? "s" : ""}
-      </p>
+      <ReportRecordCount count={rows.length} />
 
       {selectedId && drillContext && (
         <ReportDrillDialog
@@ -127,6 +123,6 @@ export function AuditReportView({ rawData, subtitle, generatedAt, drillContext }
           onClose={() => setSelectedId(null)}
         />
       )}
-    </div>
+    </ReportViewShell>
   )
 }
