@@ -58,6 +58,8 @@ export type ApiReportComedian = {
 import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { ReservationCustomerSearchItem } from "@/types/api/reservation-customer-search"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
+import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
+import { mapReservationDetail } from "@/lib/map-reservation-detail"
 import type { DailyTransactionItem } from "@/types/api/daily-transaction"
 import type {
   GetShowDetailsByDateRequest,
@@ -590,6 +592,36 @@ export const clubmanApi = createApi({
       invalidatesTags: ["Reservation", "ShowDetails"],
     }),
 
+    getReservationDetailById: builder.query({
+      query: ({
+        connectionString,
+        reservationId,
+      }: {
+        connectionString: string
+        reservationId: string
+      }) => ({
+        url: reservationApiPath(
+          connectionString,
+          reservationId,
+          "GetReservationDetailById"
+        ),
+        headers: { Accept: "application/json" },
+      }),
+      transformResponse: (response: unknown) => mapReservationDetail(response),
+      providesTags: (_result, _error, arg) => [
+        { type: "Reservation", id: `detail:${arg.reservationId}` },
+      ],
+    }),
+
+    cancelReservation: builder.mutation({
+      query: (body: CancelReservationRequest) => ({
+        url: reservationApiPath("CancelReservation"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
     getCalendarData: builder.query({
       query: ({
         connectionString,
@@ -764,10 +796,12 @@ export const {
   useSearchPromotionsMutation,
   useGetReservationPromotionsMutation,
   useGetReservationDataQuery,
+  useGetReservationDetailByIdQuery,
   useGetShowDetailsByDateQuery,
   useGetShowSectionsQuery,
   useSaveReservationMutation,
   useUpdateReservationMutation,
+  useCancelReservationMutation,
   useGetDailyTransactionDataQuery,
   useGetRecentSalesReportQuery,
   useGetCalendarDataQuery,

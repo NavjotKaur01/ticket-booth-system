@@ -230,11 +230,20 @@ function PaymentTable({ show }: { show: ManagerCheckoutApiShow }) {
 
 // ─── Compact side-by-side tables (content width, aligned columns) ──────────────
 
-const COMPACT_TABLE = "w-auto max-w-none"
+const COMPACT_TABLE = "w-auto max-w-none border-collapse text-xs"
 
+function detailRowClass(index: number) {
+  return index % 2 === 0 ? "bg-background" : "bg-muted/20"
+}
+
+function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow }) {
 function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow }) {
   const promos = show.FillPromoList ?? []
   const sources = show.PromoSourceList ?? []
+  const sections = show.BookedShowSectionList ?? []
+  const origins = (show.OriginSourceList ?? []).filter(
+    (o) => o.Origin && (n(o.Party) !== 0 || n(o.Seated) !== 0 || n(o.Paid) !== 0)
+  )
   const sections = show.BookedShowSectionList ?? []
   const origins = (show.OriginSourceList ?? []).filter(
     (o) => o.Origin && (n(o.Party) !== 0 || n(o.Seated) !== 0 || n(o.Paid) !== 0)
@@ -249,6 +258,10 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
   const sumScanPaid = promos.reduce((s, p) => s + n(p.ScannerInPaid), 0)
   const sumScanComp = promos.reduce((s, p) => s + n(p.ScannerInComp), 0)
   const sumScanDisc = promos.reduce((s, p) => s + n(p.ScannerInDisc), 0)
+
+  const totalParty = origins.reduce((s, o) => s + n(o.Party), 0)
+  const totalSeated = origins.reduce((s, o) => s + n(o.Seated), 0)
+  const totalPaid = origins.reduce((s, o) => s + n(o.Paid), 0)
 
   const totalParty = origins.reduce((s, o) => s + n(o.Party), 0)
   const totalSeated = origins.reduce((s, o) => s + n(o.Seated), 0)
@@ -271,14 +284,14 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
   const totalWeb = promos.reduce((s, p) => s + getSources(p.Promo ?? "").web, 0)
 
   return (
-    <ReportTableScroll className="w-fit max-w-full">
+    <div className="w-fit max-w-full overflow-x-auto">
       <div className="inline-grid grid-cols-[auto_auto] items-start gap-x-0 gap-y-4">
         <p className="justify-self-center text-center text-xs font-semibold leading-4 text-muted-foreground">
           Checked-In
         </p>
         <div className="h-4" aria-hidden />
 
-        <ReportTable className={COMPACT_TABLE}>
+        <table className={COMPACT_TABLE}>
           <thead>
             <tr>
               <ReportTh>Promotion</ReportTh>
@@ -295,17 +308,17 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
           </thead>
           <tbody>
             {promos.map((p, i) => (
-              <tr key={i} className={reportRowClass(i)}>
-                <ReportTd>{p.Promo || "-"}</ReportTd>
-                <ReportTd right>{n(p.PartyNo)}</ReportTd>
-                <ReportTd right>{n(p.CheckedIn)}</ReportTd>
-                <ReportTd right>{n(p.CheckInPaid)}</ReportTd>
-                <ReportTd right>{n(p.CheckInComp)}</ReportTd>
-                <ReportTd right>{n(p.CheckInDisc)}</ReportTd>
-                <ReportTd right>{n(p.ScannerIn)}</ReportTd>
-                <ReportTd right>{n(p.ScannerInPaid)}</ReportTd>
-                <ReportTd right>{n(p.ScannerInComp)}</ReportTd>
-                <ReportTd right>{n(p.ScannerInDisc)}</ReportTd>
+              <tr key={i} className={detailRowClass(i)}>
+                <Td>{p.Promo || "-"}</Td>
+                <Td right>{n(p.PartyNo)}</Td>
+                <Td right>{n(p.CheckedIn)}</Td>
+                <Td right>{n(p.CheckInPaid)}</Td>
+                <Td right>{n(p.CheckInComp)}</Td>
+                <Td right>{n(p.CheckInDisc)}</Td>
+                <Td right>{n(p.ScannerIn)}</Td>
+                <Td right>{n(p.ScannerInPaid)}</Td>
+                <Td right>{n(p.ScannerInComp)}</Td>
+                <Td right>{n(p.ScannerInDisc)}</Td>
               </tr>
             ))}
             <tr className="bg-muted/40">
@@ -321,9 +334,9 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
               <ReportTd right bold>{sumScanDisc}</ReportTd>
             </tr>
           </tbody>
-        </ReportTable>
+        </table>
 
-        <ReportTable className={cn(COMPACT_TABLE, "-ml-px justify-self-end")}>
+        <table className={cn(COMPACT_TABLE, "-ml-px justify-self-end")}>
           <thead>
             <tr>
               <ReportTh right>Phone-In</ReportTh>
@@ -335,10 +348,10 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
             {promos.map((p, i) => {
               const { phone, walkup, web } = getSources(p.Promo ?? "")
               return (
-                <tr key={i} className={reportRowClass(i)}>
-                  <ReportTd right>{phone}</ReportTd>
-                  <ReportTd right>{walkup}</ReportTd>
-                  <ReportTd right>{web}</ReportTd>
+                <tr key={i} className={detailRowClass(i)}>
+                  <Td right>{phone}</Td>
+                  <Td right>{walkup}</Td>
+                  <Td right>{web}</Td>
                 </tr>
               )
             })}
@@ -348,59 +361,59 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
               <ReportTd right bold>{totalWeb}</ReportTd>
             </tr>
           </tbody>
-        </ReportTable>
+        </table>
 
-        <ReportTable className={COMPACT_TABLE}>
+        <table className={COMPACT_TABLE}>
           <thead>
             <tr>
-              <ReportTh>Origin</ReportTh>
-              <ReportTh right>Party</ReportTh>
-              <ReportTh right>(Pre)Seated</ReportTh>
-              <ReportTh right>Paid</ReportTh>
+              <Th>Origin</Th>
+              <Th right>Party</Th>
+              <Th right>(Pre)Seated</Th>
+              <Th right>Paid</Th>
             </tr>
           </thead>
           <tbody>
             {origins.map((o, i) => (
-              <tr key={i} className={reportRowClass(i)}>
-                <ReportTd>{o.Origin}</ReportTd>
-                <ReportTd right>{n(o.Party)}</ReportTd>
-                <ReportTd right>{n(o.Seated)}</ReportTd>
-                <ReportTd right>{fmt(n(o.Paid))}</ReportTd>
+              <tr key={i} className={detailRowClass(i)}>
+                <Td>{o.Origin}</Td>
+                <Td right>{n(o.Party)}</Td>
+                <Td right>{n(o.Seated)}</Td>
+                <Td right>{fmt(n(o.Paid))}</Td>
               </tr>
             ))}
             <tr className="bg-muted/40">
-              <ReportTd bold>Total</ReportTd>
-              <ReportTd right bold>{totalParty}</ReportTd>
-              <ReportTd right bold>{totalSeated}</ReportTd>
-              <ReportTd right bold>{fmt(totalPaid)}</ReportTd>
+              <Td bold>Total</Td>
+              <Td right bold>{totalParty}</Td>
+              <Td right bold>{totalSeated}</Td>
+              <Td right bold>{fmt(totalPaid)}</Td>
             </tr>
           </tbody>
-        </ReportTable>
+        </table>
 
         {sections.length > 0 ? (
-          <ReportTable className={cn(COMPACT_TABLE, "-ml-px justify-self-end")}>
+          <table className={cn(COMPACT_TABLE, "-ml-px justify-self-end")}>
             <thead>
               <tr>
-                <ReportTh>Show Section</ReportTh>
-                <ReportTh right>Party</ReportTh>
-                <ReportTh right>Total Amount</ReportTh>
+                <Th>Show Section</Th>
+                <Th right>Party</Th>
+                <Th right>Total Amount</Th>
               </tr>
             </thead>
             <tbody>
               {sections.map((s, i) => (
-                <tr key={i} className={reportRowClass(i)}>
-                  <ReportTd>{s.ShowSection || "-"}</ReportTd>
-                  <ReportTd right>{n(s.PartyNo)}</ReportTd>
-                  <ReportTd right>{fmt(n(s.TotalAmount))}</ReportTd>
+                <tr key={i} className={detailRowClass(i)}>
+                  <Td>{s.ShowSection || "-"}</Td>
+                  <Td right>{n(s.PartyNo)}</Td>
+                  <Td right>{fmt(n(s.TotalAmount))}</Td>
                 </tr>
               ))}
             </tbody>
-          </ReportTable>
+          </table>
         ) : (
           <div />
         )}
       </div>
-    </ReportTableScroll>
+    </div>
   )
 }
 
@@ -459,6 +472,7 @@ export function ManagerCheckoutView({ rawData, subtitle, generatedAt }: ManagerC
               {/* 1 — Payment breakdown */}
               <PaymentTable show={show} />
 
+              {/* 2–3 — Checked-In, sources, origin, and show sections */}
               <ManagerCheckoutDetailTables show={show} />
             </div>
           </ReportCard>

@@ -7,17 +7,19 @@ import type { Reservation } from "@/types/reservation"
 type ReservationDataTableProps = {
   data: Reservation[]
   loading?: boolean
+  onCancelReservation?: (reservation: Reservation) => void
   onPrintTickets?: (reservation: Reservation) => void
 }
 
 export function ReservationDataTable({
   data,
   loading = false,
+  onCancelReservation,
   onPrintTickets,
 }: ReservationDataTableProps) {
   const columns = useMemo(
-    () => createReservationColumns({ onPrintTickets }),
-    [onPrintTickets]
+    () => createReservationColumns({ onCancelReservation, onPrintTickets }),
+    [onCancelReservation, onPrintTickets]
   )
 
   return (
