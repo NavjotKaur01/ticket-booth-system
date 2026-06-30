@@ -651,6 +651,15 @@ export const clubmanApi = createApi({
       invalidatesTags: ["Reservation", "ShowDetails"],
     }),
 
+    revertCancelReservation: builder.mutation({
+      query: (body: CancelReservationRequest) => ({
+        url: reservationApiPath("RevertCancelReservation"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
     getCalendarData: builder.query({
       query: ({
         connectionString,
@@ -832,6 +841,7 @@ export const {
   useSaveReservationMutation,
   useUpdateReservationMutation,
   useCancelReservationMutation,
+  useRevertCancelReservationMutation,
   useGetDailyTransactionDataQuery,
   useGetRecentSalesReportQuery,
   useGetCalendarDataQuery,

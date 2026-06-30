@@ -1,4 +1,4 @@
-import { formatApiDateTime } from '@/lib/format-datetime'
+import { formatUsDateTime } from '@/lib/format-us-datetime'
 import type { CancelReservationRequest } from '@/types/api/cancel-reservation'
 import type { CancelReservationPaymentRow } from '@/types/cancel-reservation-payment'
 
@@ -24,7 +24,7 @@ export function buildCancelReservationRequest ({
     LocationId: locationId,
     ReservationId: reservationId,
     LastUpdateID: lastUpdateId,
-    LastUpdateDt: formatApiDateTime(new Date().toISOString()),
+    LastUpdateDt: formatUsDateTime(new Date()),
     ReservationNote: reservationNote.trim(),
     PaymentList: payments.map((payment) => ({
       ReservationID: payment.reservationId,

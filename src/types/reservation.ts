@@ -1,5 +1,7 @@
 export type Reservation = {
   id: string
+  resStatus: string
+  isCancelled: boolean
   lastName: string
   firstName: string
   businessName: string

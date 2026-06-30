@@ -26,4 +26,7 @@ export type ReservationDataItem = {
   AreaCode?: string | null
   Phone1?: string | null
   Phone2?: string | null
+  ResStatus?: string | null
+  ReservationStatus?: string | null
+  OldReservationID?: string | null
 }

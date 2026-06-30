@@ -118,6 +118,8 @@ export const reservationCounts: ReservationCounts = {
 export const reservations: Reservation[] = [
   {
     id: "1",
+    resStatus: "RSTATE01",
+    isCancelled: false,
     lastName: "Rider",
     firstName: "Max",
     businessName: "",
@@ -142,6 +144,8 @@ export const reservations: Reservation[] = [
   },
   {
     id: "2",
+    resStatus: "RSTATE01",
+    isCancelled: false,
     lastName: "Johnson",
     firstName: "Sarah",
     businessName: "Acme Corp",
@@ -166,6 +170,8 @@ export const reservations: Reservation[] = [
   },
   {
     id: "3",
+    resStatus: "RSTATE01",
+    isCancelled: false,
     lastName: "Martinez",
     firstName: "Carlos",
     businessName: "",
@@ -190,6 +196,8 @@ export const reservations: Reservation[] = [
   },
   {
     id: "4",
+    resStatus: "RSTATE11",
+    isCancelled: true,
     lastName: "Chen",
     firstName: "Emily",
     businessName: "",
@@ -214,6 +222,8 @@ export const reservations: Reservation[] = [
   },
   {
     id: "5",
+    resStatus: "RSTATE01",
+    isCancelled: false,
     lastName: "Williams",
     firstName: "James",
     businessName: "Standupmedia",
@@ -238,6 +248,8 @@ export const reservations: Reservation[] = [
   },
   {
     id: "6",
+    resStatus: "RSTATE01",
+    isCancelled: false,
     lastName: "Patel",
     firstName: "Priya",
     businessName: "",
@@ -262,6 +274,8 @@ export const reservations: Reservation[] = [
   },
   {
     id: "7",
+    resStatus: "RSTATE01",
+    isCancelled: false,
     lastName: "Brown",
     firstName: "Michael",
     businessName: "",
@@ -286,6 +300,8 @@ export const reservations: Reservation[] = [
   },
   {
     id: "8",
+    resStatus: "RSTATE01",
+    isCancelled: false,
     lastName: "Davis",
     firstName: "Laura",
     businessName: "Media Group LLC",

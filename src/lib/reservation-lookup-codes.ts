@@ -1,6 +1,11 @@
 import type { ReservationPaymentType } from '@/data/reservation-payment-options'
 
 export const RESERVATION_STATUS_ACTIVE = 'RSTATE01'
+export const RESERVATION_STATUS_CANCELLED = 'RSTATE11'
+
+export function isCancelledReservationStatus(resStatus: string | null | undefined) {
+  return resStatus?.trim().toUpperCase() === RESERVATION_STATUS_CANCELLED
+}
 export const PAYMENT_STATUS_PAYMENT = 'PSTAT01'
 export const ACTION_FORM_RESERVATION = 'fromReservation'
 export const ACTION_SAVE_RESERVATION = 'cmdSaveReservationWithPayment'

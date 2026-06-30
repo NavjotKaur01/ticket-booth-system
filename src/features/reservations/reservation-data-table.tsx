@@ -2,6 +2,7 @@ import { useMemo } from "react"
 
 import { DataTable } from "@/components/data-table/data-table"
 import { createReservationColumns } from "@/features/reservations/reservation-columns"
+import { getReservationRowClassName } from "@/lib/reservation-row-class"
 import type { Reservation } from "@/types/reservation"
 
 type ReservationDataTableProps = {
@@ -9,6 +10,7 @@ type ReservationDataTableProps = {
   loading?: boolean
   displayPhone?: boolean
   onCancelReservation?: (reservation: Reservation) => void
+  onUnCancelReservation?: (reservation: Reservation) => void
   onPrintTickets?: (reservation: Reservation) => void
   onReservationHistory?: (reservation: Reservation) => void
 }
@@ -18,6 +20,7 @@ export function ReservationDataTable({
   loading = false,
   displayPhone = false,
   onCancelReservation,
+  onUnCancelReservation,
   onPrintTickets,
   onReservationHistory,
 }: ReservationDataTableProps) {
@@ -26,10 +29,17 @@ export function ReservationDataTable({
       createReservationColumns({
         displayPhone,
         onCancelReservation,
+        onUnCancelReservation,
         onPrintTickets,
         onReservationHistory,
       }),
-    [displayPhone, onCancelReservation, onPrintTickets, onReservationHistory]
+    [
+      displayPhone,
+      onCancelReservation,
+      onUnCancelReservation,
+      onPrintTickets,
+      onReservationHistory,
+    ]
   )
 
   return (
@@ -39,6 +49,7 @@ export function ReservationDataTable({
       emptyMessage={loading ? "Loading reservations..." : "No reservations found."}
       entityLabel="reservations"
       pageSize={12}
+      getRowClassName={getReservationRowClassName}
     />
   )
 }

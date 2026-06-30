@@ -135,3 +135,10 @@ export function cancelReservation(request: CancelReservationRequest) {
     request
   )
 }
+
+export function revertCancelReservation(request: CancelReservationRequest) {
+  return dispatchEndpoint<unknown, CancelReservationRequest>(
+    clubmanApi.endpoints.revertCancelReservation,
+    request
+  )
+}
