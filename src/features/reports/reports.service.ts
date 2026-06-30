@@ -123,7 +123,7 @@ const PERM_DESC_TO_REPORT_ID: Record<string, string> = {
 
 const EXCLUDED_PERM_DESCS = new Set(["ZipCode Sales", "Today Sales"])
 
-/** Legacy alias — dashboard links may still use ?report=today-sales. */
+/** Legacy alias for old dashboard links — maps to quick-view-sales. */
 const REPORT_TYPE_ALIASES: Record<string, string> = {
   "today-sales": "quick-view-sales",
 }
