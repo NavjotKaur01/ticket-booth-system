@@ -821,77 +821,16 @@ function transformWebReservationsForDay(
   subtitle: string,
   generatedAt: string
 ): ReportViewerResult {
-  const columns: ReportViewerColumn[] = [
-    { key: "showDate", label: "Show Date" },
-    { key: "showTime", label: "Show Time" },
-    { key: "comicName", label: "Comic" },
-    { key: "customer", label: "Customer" },
-    { key: "promotion", label: "Promotion" },
-    { key: "inParty", label: "Party", align: "right" },
-    { key: "total", label: "Total", align: "right" },
-  ]
-
-  const rows: ReportViewerRow[] = []
-  const raw = toRows(data)
-
-  function mapReservationRow(row: ApiRow, showDate: string, showTime: string, comicName: string, isFooter: boolean) {
-    return {
-      showDate: isFooter ? "" : showDate,
-      showTime: isFooter ? "" : showTime,
-      comicName: isFooter ? "" : comicName,
-      customer: isFooter
-        ? "Total"
-        : safeStr(row.CustomerName ?? `${row.LastName ?? ""} ${row.FirstName ?? ""}`.trim()),
-      promotion: isFooter ? "" : safeStr(row.Promotion),
-      inParty: String(toNum(row.InParty)),
-      total: formatCurrency(toNum(row.Total)),
-    }
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns: [],
+    rows: [],
+    emptyMessage: toRows(data).length === 0 ? "No records found" : "",
+    generatedAt,
+    rawData: data,
   }
-
-  // Pre-grouped response (includes per-show footer rows)
-  if (raw.some((item) => Array.isArray(item.WebReservationChildList))) {
-    for (const item of raw) {
-      const showDate = formatQuickViewDate(item.ShowDate)
-      const showTime = formatShowTime(item.ShowTime ?? item.ShowTimeStr)
-      const comicName = safeStr(item.ComicName)
-      const children = (item.WebReservationChildList as ApiRow[]) ?? []
-      for (const child of children) {
-        rows.push(mapReservationRow(child, showDate, showTime, comicName, Boolean(child.FooterVisibilty)))
-      }
-    }
-    return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
-  }
-
-  // Flat API list — group by show date/time like WPF
-  const groups = new Map<string, ApiRow[]>()
-  for (const row of raw) {
-    const key = `${String(row.ShowDate ?? "")}|${String(row.ShowTime ?? row.ShowTimeStr ?? "")}`
-    if (!groups.has(key)) groups.set(key, [])
-    groups.get(key)!.push(row)
-  }
-
-  for (const group of groups.values()) {
-    const first = group[0]
-    const showDate = formatQuickViewDate(first.ShowDate)
-    const showTime = formatShowTime(first.ShowTime ?? first.ShowTimeStr)
-    const comicName = safeStr(first.ComicName)
-
-    for (const row of group) {
-      rows.push(mapReservationRow(row, showDate, showTime, comicName, false))
-    }
-
-    rows.push({
-      showDate: "",
-      showTime: "",
-      comicName: "",
-      customer: "Total",
-      promotion: "",
-      inParty: String(group.reduce((s, r) => s + toNum(r.InParty), 0)),
-      total: formatCurrency(group.reduce((s, r) => s + toNum(r.Total), 0)),
-    })
-  }
-
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
 }
 
 function transformWebGiftCertificates(
