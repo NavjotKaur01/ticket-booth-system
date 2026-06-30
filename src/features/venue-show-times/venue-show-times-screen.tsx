@@ -6,10 +6,10 @@
   Save,
   Trash2,
 } from "lucide-react"
-import { Fragment, useEffect, useMemo, useState } from "react"
+import { Fragment, useEffect, useState } from "react"
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
-import { ScrollSelectControl } from "@/components/common/scroll-select-control"
+import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -42,7 +42,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useAppSession } from "@/hooks/use-app-session"
-import { getVenueInfoLocationOptions } from "@/features/venue-info/venue-info.service"
 import {
   createVenueShowTime,
   deleteVenueShowTime,
@@ -139,18 +138,8 @@ function fromFlagValue(value: string) {
 }
 
 export function VenueShowTimesScreen() {
-  const { locations } = useAppSession()
+  const { locationId, locationName } = useAppSession()
 
-  const locationOptions = useMemo(
-    () =>
-      getVenueInfoLocationOptions(locations).map((option) => ({
-        value: option.id,
-        label: option.label,
-      })),
-    [locations]
-  )
-
-  const [selectedLocationId, setSelectedLocationId] = useState("")
   const [rows, setRows] = useState<VenueShowTimeRecord[]>([])
   const [editorMode, setEditorMode] = useState<"create" | "edit" | null>(null)
   const [editingShowTimeId, setEditingShowTimeId] = useState<string | null>(null)
@@ -169,20 +158,13 @@ export function VenueShowTimesScreen() {
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
-  const selectedLocationLabel = useMemo(
-    () =>
-      locationOptions.find((option) => option.value === selectedLocationId)?.label ||
-      "",
-    [locationOptions, selectedLocationId]
-  )
-
   const canSave =
     dayOfWeekInput.trim().length > 0 &&
     showTimeInput.trim().length > 0 &&
     arrivalTimeInput.trim().length > 0
 
   useEffect(() => {
-    if (!selectedLocationId) {
+    if (!locationId) {
       setRows([])
       setEditorMode(null)
       setEditingShowTimeId(null)
@@ -213,8 +195,8 @@ export function VenueShowTimesScreen() {
     setDeletingRow(null)
 
     getVenueShowTimesByLocation({
-      locationId: selectedLocationId,
-      locationLabel: selectedLocationLabel,
+      locationId,
+      locationLabel: locationName,
     })
       .then((result) => {
         if (isActive) {
@@ -239,7 +221,7 @@ export function VenueShowTimesScreen() {
     return () => {
       isActive = false
     }
-  }, [selectedLocationId, selectedLocationLabel])
+  }, [locationId, locationName])
 
   function openCreateEditor() {
     setEditorMode("create")
@@ -291,7 +273,7 @@ export function VenueShowTimesScreen() {
     const normalizedShowTime = showTimeInput.trim().toUpperCase()
     const normalizedArrivalTime = arrivalTimeInput.trim().toUpperCase()
 
-    if (!selectedLocationId || !canSave || saving) {
+    if (!locationId || !canSave || saving) {
       return
     }
 
@@ -313,8 +295,8 @@ export function VenueShowTimesScreen() {
     try {
       if (editorMode === "edit" && editingShowTimeId) {
         const updatedRow = await updateVenueShowTime({
-          locationId: selectedLocationId,
-          locationLabel: selectedLocationLabel,
+          locationId,
+          locationLabel: locationName,
           showTimeId: editingShowTimeId,
           dayOfWeek: dayOfWeekInput,
           showTime: normalizedShowTime,
@@ -331,11 +313,11 @@ export function VenueShowTimesScreen() {
             .map((row) => (row.id === updatedRow.id ? updatedRow : row))
             .sort((left, right) => left.dayOfWeek.localeCompare(right.dayOfWeek) || left.showTime.localeCompare(right.showTime))
         )
-        setStatusMessage(`Updated ${updatedRow.dayOfWeek} ${updatedRow.showTime} for ${selectedLocationLabel}.`)
+        setStatusMessage(`Updated ${updatedRow.dayOfWeek} ${updatedRow.showTime} for ${locationName}.`)
       } else {
         const createdRow = await createVenueShowTime({
-          locationId: selectedLocationId,
-          locationLabel: selectedLocationLabel,
+          locationId,
+          locationLabel: locationName,
           dayOfWeek: dayOfWeekInput,
           showTime: normalizedShowTime,
           arrivalTime: normalizedArrivalTime,
@@ -351,7 +333,7 @@ export function VenueShowTimesScreen() {
             (left, right) => left.dayOfWeek.localeCompare(right.dayOfWeek) || left.showTime.localeCompare(right.showTime)
           )
         )
-        setStatusMessage(`Added ${createdRow.dayOfWeek} ${createdRow.showTime} for ${selectedLocationLabel}.`)
+        setStatusMessage(`Added ${createdRow.dayOfWeek} ${createdRow.showTime} for ${locationName}.`)
       }
 
       closeEditor()
@@ -367,7 +349,7 @@ export function VenueShowTimesScreen() {
   }
 
   async function confirmDelete() {
-    if (!selectedLocationId || !deletingRow || deletingId) {
+    if (!locationId || !deletingRow || deletingId) {
       return
     }
 
@@ -377,8 +359,8 @@ export function VenueShowTimesScreen() {
 
     try {
       await deleteVenueShowTime({
-        locationId: selectedLocationId,
-        locationLabel: selectedLocationLabel,
+        locationId,
+        locationLabel: locationName,
         showTimeId: deletingRow.id,
       })
 
@@ -386,7 +368,7 @@ export function VenueShowTimesScreen() {
       if (editingShowTimeId === deletingRow.id) {
         closeEditor()
       }
-      setStatusMessage(`Deleted ${deletingRow.dayOfWeek} ${deletingRow.showTime} for ${selectedLocationLabel}.`)
+      setStatusMessage(`Deleted ${deletingRow.dayOfWeek} ${deletingRow.showTime} for ${locationName}.`)
       setDeletingRow(null)
     } catch (requestError) {
       setError(
@@ -546,22 +528,10 @@ export function VenueShowTimesScreen() {
           </div>
 
           <Card className="gap-0 py-0">
-            <CardContent className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,18rem)_1fr] md:items-end">
-              <div className="space-y-2">
-                <Label htmlFor="venue-show-times-location">Location</Label>
-                <ScrollSelectControl
-                  id="venue-show-times-location"
-                  value={selectedLocationId}
-                  onChange={setSelectedLocationId}
-                  options={locationOptions}
-                  placeholder="Select location"
-                  disabled={locationOptions.length === 0}
-                />
-              </div>
-
+            <CardContent className="px-4 py-4">
               <div className="rounded-sm border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-                Use the header action to add a show time, or edit a specific row inline
-                when a venue rule changes.
+                Use New Show Time to add a row, or edit a specific row inline when a venue
+                rule changes.
               </div>
             </CardContent>
           </Card>
@@ -577,7 +547,7 @@ export function VenueShowTimesScreen() {
                   variant="secondary"
                   size="sm"
                   className="gap-2"
-                  disabled={!selectedLocationId}
+                  disabled={!locationId}
                   onClick={openCreateEditor}
                 >
                   <Plus className="size-4" />
@@ -595,12 +565,9 @@ export function VenueShowTimesScreen() {
                 </div>
               ) : null}
 
-              {!selectedLocationId ? (
+              {!locationId ? (
                 <div className="p-4">
-                  <EmptyState
-                    title="Select a location to view show times."
-                    description="The table and inline editor will load after you choose a location."
-                  />
+                  <VenueNoLocationState featureLabel="Venue show times" />
                 </div>
               ) : loading ? (
                 <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
@@ -680,9 +647,9 @@ export function VenueShowTimesScreen() {
 
             <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 sm:flex-row sm:items-center">
               <div aria-live="polite" className="text-sm text-muted-foreground">
-                {selectedLocationId
-                  ? statusMessage || `${rows.length} mock show-time row${rows.length === 1 ? "" : "s"} loaded for ${selectedLocationLabel}.`
-                  : "Choose a location to begin reviewing venue show times."}
+                {locationId
+                  ? statusMessage || `${rows.length} mock show-time row${rows.length === 1 ? "" : "s"} loaded for ${locationName}.`
+                  : "Select a location from the header to begin reviewing venue show times."}
               </div>
               <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
                 <Clock3 className="size-3.5" />
@@ -702,7 +669,7 @@ export function VenueShowTimesScreen() {
           onConfirm={() => void confirmDelete()}
           title="Delete show time?"
           description={deletingRow
-            ? `This will remove ${deletingRow.dayOfWeek} ${deletingRow.showTime} from ${selectedLocationLabel}.`
+            ? `This will remove ${deletingRow.dayOfWeek} ${deletingRow.showTime} from ${locationName}.`
             : ""}
           confirmLabel="Delete show time"
           isPending={Boolean(deletingId)}

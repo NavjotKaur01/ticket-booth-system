@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { RichTextEditor } from "@/components/common/rich-text-editor"
+import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { ScrollSelectControl } from "@/components/common/scroll-select-control"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,7 +18,6 @@ import {
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { getVenueInfoLocationOptions } from "@/features/venue-info/venue-info.service"
 import {
   getWebpageTextByLocation,
   getWebpageTextPagesByLocation,
@@ -45,18 +45,8 @@ function EmptyState({
 }
 
 export function WebpagesTextScreen() {
-  const { locations } = useAppSession()
+  const { locationId, locationName } = useAppSession()
 
-  const locationOptions = useMemo(
-    () =>
-      getVenueInfoLocationOptions(locations).map((option) => ({
-        value: option.id,
-        label: option.label,
-      })),
-    [locations]
-  )
-
-  const [selectedLocationId, setSelectedLocationId] = useState("")
   const [pageDefinitions, setPageDefinitions] = useState<WebpageTextPageDefinition[]>([])
   const [selectedPageId, setSelectedPageId] = useState("")
   const [record, setRecord] = useState<WebpageTextRecord | null>(null)
@@ -65,11 +55,6 @@ export function WebpagesTextScreen() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
-
-  const selectedLocationLabel = useMemo(
-    () => locationOptions.find((option) => option.value === selectedLocationId)?.label || "",
-    [locationOptions, selectedLocationId]
-  )
 
   const pageOptions = useMemo(
     () => pageDefinitions.map((page) => ({ value: page.id, label: page.label })),
@@ -82,7 +67,7 @@ export function WebpagesTextScreen() {
   )
 
   useEffect(() => {
-    if (!selectedLocationId) {
+    if (!locationId) {
       setPageDefinitions([])
       setSelectedPageId("")
       setRecord(null)
@@ -103,8 +88,8 @@ export function WebpagesTextScreen() {
     setRecord(null)
 
     getWebpageTextPagesByLocation({
-      locationId: selectedLocationId,
-      locationLabel: selectedLocationLabel,
+      locationId: locationId,
+      locationLabel: locationName,
     })
       .then((result) => {
         if (isActive) {
@@ -129,10 +114,10 @@ export function WebpagesTextScreen() {
     return () => {
       isActive = false
     }
-  }, [selectedLocationId, selectedLocationLabel])
+  }, [locationId, locationName])
 
   useEffect(() => {
-    if (!selectedLocationId || !selectedPageId) {
+    if (!locationId || !selectedPageId) {
       setRecord(null)
       setLoadingRecord(false)
       return
@@ -145,9 +130,9 @@ export function WebpagesTextScreen() {
     setRecord(null)
 
     getWebpageTextByLocation({
-      locationId: selectedLocationId,
+      locationId: locationId,
       pageId: selectedPageId,
-      locationLabel: selectedLocationLabel,
+      locationLabel: locationName,
     })
       .then((result) => {
         if (isActive) {
@@ -172,7 +157,7 @@ export function WebpagesTextScreen() {
     return () => {
       isActive = false
     }
-  }, [selectedLocationId, selectedPageId, selectedLocationLabel])
+  }, [locationId, selectedPageId, locationName])
 
   function updateHtmlContent(htmlContent: string) {
     setRecord((current) => (current ? { ...current, htmlContent } : current))
@@ -221,19 +206,7 @@ export function WebpagesTextScreen() {
       </div>
 
       <Card className="gap-0 py-0">
-        <CardContent className="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,18rem)_minmax(0,18rem)_1fr] lg:items-end">
-          <div className="space-y-2">
-            <Label htmlFor="webpage-text-location">Location</Label>
-            <ScrollSelectControl
-              id="webpage-text-location"
-              value={selectedLocationId}
-              onChange={setSelectedLocationId}
-              options={locationOptions}
-              placeholder="Select location"
-              disabled={locationOptions.length === 0}
-            />
-          </div>
-
+        <CardContent className="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,18rem)_1fr] lg:items-end">
           <div className="space-y-2">
             <Label htmlFor="webpage-text-page">Page</Label>
             <ScrollSelectControl
@@ -242,11 +215,9 @@ export function WebpagesTextScreen() {
               onChange={setSelectedPageId}
               options={pageOptions}
               placeholder={loadingPages ? "Loading pages..." : "Select page"}
-              disabled={!selectedLocationId || loadingPages || pageOptions.length === 0}
+              disabled={!locationId || loadingPages || pageOptions.length === 0}
             />
           </div>
-
-
         </CardContent>
       </Card>
 
@@ -272,11 +243,8 @@ export function WebpagesTextScreen() {
             </p>
           ) : null}
 
-          {!selectedLocationId ? (
-            <EmptyState
-              title="Select a location to manage webpage text."
-              description="The page selector and rich-text content will load once you choose a venue location."
-            />
+          {!locationId ? (
+            <VenueNoLocationState featureLabel="Webpage text" />
           ) : loadingPages ? (
             <EmptyState
               title="Loading available webpage copy sections..."
@@ -298,7 +266,7 @@ export function WebpagesTextScreen() {
                 value={record.htmlContent}
                 onChange={updateHtmlContent}
                 onClear={clearContent}
-                previewLabel={selectedLocationLabel ? `${selectedLocationLabel} • ${record.pageLabel}` : record.pageLabel}
+                previewLabel={locationName ? `${locationName} • ${record.pageLabel}` : record.pageLabel}
                 minHeightClassName="min-h-[24rem]"
               />
 
@@ -314,9 +282,9 @@ export function WebpagesTextScreen() {
 
         <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 sm:flex-row sm:items-center">
           <div aria-live="polite" className="text-sm text-muted-foreground">
-            {selectedLocationId && selectedPageId
-              ? statusMessage || `Editing ${selectedPageLabel} for ${selectedLocationLabel}.`
-              : "Choose a location and page to begin updating webpage text."}
+            {locationId && selectedPageId
+              ? statusMessage || `Editing ${selectedPageLabel} for ${locationName}.`
+              : "Select a location from the header and choose a page to begin updating webpage text."}
           </div>
           <Button
             type="button"

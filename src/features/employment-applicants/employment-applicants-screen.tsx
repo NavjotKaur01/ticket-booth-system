@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from "react"
 
 import CalendarDatePickerControl from "@/components/calendar/controls/CalendarDatePickerControl"
-import { ScrollSelectControl } from "@/components/common/scroll-select-control"
+import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -45,7 +45,6 @@ import {
   updateEmploymentApplicant,
 } from "@/features/employment-applicants/employment-applicants.service"
 import { getEmploymentOpeningsByLocation } from "@/features/employment-openings/employment-openings.service"
-import { getVenueInfoLocationOptions } from "@/features/venue-info/venue-info.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import type {
   EmploymentApplicantFilterGroup,
@@ -80,9 +79,8 @@ function EmptyState({
 }
 
 
-function FilterChecklistCard({
+function FilterChecklistPanel({
   title,
-  description,
   options,
   selectedValues,
   onToggle,
@@ -91,7 +89,6 @@ function FilterChecklistCard({
   disabled,
 }: {
   title: string
-  description: string
   options: ChecklistOption[]
   selectedValues: string[]
   onToggle: (value: string) => void
@@ -99,18 +96,25 @@ function FilterChecklistCard({
   onClearAll: () => void
   disabled?: boolean
 }) {
+  const selectedCount = selectedValues.length
+
   return (
-    <div className="rounded-lg border border-border/80 bg-background shadow-sm">
-      <div className="flex flex-col gap-3 border-b border-border/70 px-4 py-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-          <p className="text-sm text-muted-foreground">{description}</p>
+    <section className="flex min-w-0 flex-col gap-2.5 px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <Label className="text-sm font-semibold text-foreground">{title}</Label>
+          {selectedCount > 0 ? (
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              {selectedCount}
+            </span>
+          ) : null}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
+            className="h-7 px-2 text-xs"
             disabled={disabled || options.length === 0}
             onClick={onSelectAll}
           >
@@ -120,7 +124,8 @@ function FilterChecklistCard({
             type="button"
             variant="ghost"
             size="sm"
-            disabled={disabled || selectedValues.length === 0}
+            className="h-7 px-2 text-xs"
+            disabled={disabled || selectedCount === 0}
             onClick={onClearAll}
           >
             Clear
@@ -128,40 +133,38 @@ function FilterChecklistCard({
         </div>
       </div>
 
-      <div className="space-y-3 px-4 py-4">
-        {options.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Options will appear after the selected location loads its employment data.
-          </p>
-        ) : (
-          options.map((option) => {
+      {options.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Options appear after the header location loads employment data.
+        </p>
+      ) : (
+        <ul className="flex min-w-0 flex-wrap items-center gap-2">
+          {options.map((option) => {
             const checked = selectedValues.includes(option.value)
 
             return (
-              <label
-                key={option.value}
-                className={disabled
-                  ? "flex cursor-not-allowed items-start gap-3 rounded-md border border-border/60 px-3 py-3 opacity-60"
-                  : checked
-                    ? "flex cursor-pointer items-start gap-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-3 transition-colors"
-                    : "flex cursor-pointer items-start gap-3 rounded-md border border-border/60 px-3 py-3 transition-colors hover:border-primary/40 hover:bg-muted/30"
-                }
-              >
-                <Checkbox
-                  checked={checked}
-                  disabled={disabled}
-                  onCheckedChange={() => onToggle(option.value)}
-                  className="mt-0.5"
-                />
-                <div className="min-w-0">
-                  <span className="block text-sm font-medium text-foreground">{option.label}</span>
-                </div>
-              </label>
+              <li key={option.value} className="shrink-0">
+                <label
+                  className={disabled
+                    ? "inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-border/60 px-2.5 py-1.5 opacity-60"
+                    : checked
+                      ? "inline-flex cursor-pointer items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2.5 py-1.5"
+                      : "inline-flex cursor-pointer items-center gap-2 rounded-md border border-border/60 px-2.5 py-1.5 transition-colors hover:border-primary/40 hover:bg-muted/30"
+                  }
+                >
+                  <Checkbox
+                    checked={checked}
+                    disabled={disabled}
+                    onCheckedChange={() => onToggle(option.value)}
+                  />
+                  <span className="whitespace-nowrap text-sm text-foreground">{option.label}</span>
+                </label>
+              </li>
             )
-          })
-        )}
-      </div>
-    </div>
+          })}
+        </ul>
+      )}
+    </section>
   )
 }
 
@@ -220,18 +223,8 @@ function buildOpportunityOptions(rows: EmploymentOpeningRecord[]): ChecklistOpti
 }
 
 export function EmploymentApplicantsScreen() {
-  const { locations } = useAppSession()
+  const { locationId, locationName } = useAppSession()
 
-  const locationOptions = useMemo(
-    () =>
-      getVenueInfoLocationOptions(locations).map((option) => ({
-        value: option.id,
-        label: option.label,
-      })),
-    [locations]
-  )
-
-  const [selectedLocationId, setSelectedLocationId] = useState("")
   const [positionGroups, setPositionGroups] = useState<EmploymentApplicantFilterGroup[]>([])
   const [openings, setOpenings] = useState<EmploymentOpeningRecord[]>([])
   const [rows, setRows] = useState<EmploymentApplicantRecord[]>([])
@@ -254,11 +247,6 @@ export function EmploymentApplicantsScreen() {
   const [hireDateInput, setHireDateInput] = useState("")
   const [dismissalDateInput, setDismissalDateInput] = useState("")
   const [notesInput, setNotesInput] = useState("")
-
-  const selectedLocationLabel = useMemo(
-    () => locationOptions.find((option) => option.value === selectedLocationId)?.label || "",
-    [locationOptions, selectedLocationId]
-  )
 
   const positionOptions = useMemo<ChecklistOption[]>(
     () =>
@@ -285,7 +273,7 @@ export function EmploymentApplicantsScreen() {
   )
 
   useEffect(() => {
-    if (!selectedLocationId) {
+    if (!locationId) {
       setPositionGroups([])
       setOpenings([])
       setRows([])
@@ -326,16 +314,16 @@ export function EmploymentApplicantsScreen() {
 
     Promise.all([
       getEmploymentApplicantFilterGroupsByLocation({
-        locationId: selectedLocationId,
-        locationLabel: selectedLocationLabel,
+        locationId: locationId,
+        locationLabel: locationName,
       }),
       getEmploymentOpeningsByLocation({
-        locationId: selectedLocationId,
-        locationLabel: selectedLocationLabel,
+        locationId: locationId,
+        locationLabel: locationName,
       }),
       getEmploymentApplicantsByLocation({
-        locationId: selectedLocationId,
-        locationLabel: selectedLocationLabel,
+        locationId: locationId,
+        locationLabel: locationName,
       }),
     ])
       .then(([nextGroups, nextOpenings, nextApplicants]) => {
@@ -365,7 +353,7 @@ export function EmploymentApplicantsScreen() {
     return () => {
       isActive = false
     }
-  }, [selectedLocationId, selectedLocationLabel])
+  }, [locationId, locationName])
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
@@ -381,6 +369,10 @@ export function EmploymentApplicantsScreen() {
     })
   }, [rows, appliedOpportunityIds, appliedPositionIds])
 
+  const appliedFilterCount = appliedPositionIds.length + appliedOpportunityIds.length
+  const hasDraftChanges =
+    draftPositionIds.join("|") !== appliedPositionIds.join("|") ||
+    draftOpportunityIds.join("|") !== appliedOpportunityIds.join("|")
 
   function toggleValue(current: string[], value: string) {
     return current.includes(value)
@@ -395,8 +387,8 @@ export function EmploymentApplicantsScreen() {
     const filterCount = draftPositionIds.length + draftOpportunityIds.length
     setStatusMessage(
       filterCount > 0
-        ? `Applied ${filterCount} filter${filterCount === 1 ? "" : "s"} for ${selectedLocationLabel}.`
-        : `Showing all applicants for ${selectedLocationLabel}.`
+        ? `Applied ${filterCount} filter${filterCount === 1 ? "" : "s"} for ${locationName}.`
+        : `Showing all applicants for ${locationName}.`
     )
   }
 
@@ -418,7 +410,7 @@ export function EmploymentApplicantsScreen() {
   }
 
   async function handleSaveApplicant() {
-    if (!selectedLocationId || !editingApplicant || saving) {
+    if (!locationId || !editingApplicant || saving) {
       return
     }
 
@@ -435,8 +427,8 @@ export function EmploymentApplicantsScreen() {
 
     try {
       const updatedRow = await updateEmploymentApplicant({
-        locationId: selectedLocationId,
-        locationLabel: selectedLocationLabel,
+        locationId: locationId,
+        locationLabel: locationName,
         applicantId: editingApplicant.id,
         input,
       })
@@ -471,28 +463,10 @@ export function EmploymentApplicantsScreen() {
           </p>
         </div>
 
-        <Card className="gap-0 py-0 shadow-sm">
-          <CardContent className="grid gap-4 px-4 py-4 xl:grid-cols-[18rem_1fr] xl:items-end">
-            <div className="space-y-2">
-              <Label htmlFor="employment-applicants-location">Location</Label>
-              <ScrollSelectControl
-                id="employment-applicants-location"
-                value={selectedLocationId}
-                onChange={setSelectedLocationId}
-                options={locationOptions}
-                placeholder="Select location"
-                disabled={locationOptions.length === 0}
-              />
-            </div>
-
-          </CardContent>
-        </Card>
-
-
-        <Card className="gap-0 py-0 shadow-sm">
+        <Card className="gap-0 py-0">
           <CardHeader className="border-b bg-muted/40 px-4 py-3">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
                   Optional Filters
                 </CardTitle>
@@ -500,43 +474,52 @@ export function EmploymentApplicantsScreen() {
                   Refine applicants by position family and by specific opening.
                 </p>
               </div>
-              <Button
-                type="button"
-                className="gap-2"
-                disabled={!selectedLocationId || loading}
-                onClick={applyFilters}
-              >
-                <Filter className="size-4" />
-                Apply Filter
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                {appliedFilterCount > 0 ? (
+                  <span className="inline-flex items-center rounded-full bg-background px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm ring-1 ring-border/70">
+                    {appliedFilterCount} active filter{appliedFilterCount === 1 ? "" : "s"}
+                  </span>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2"
+                  disabled={!locationId || loading || !hasDraftChanges}
+                  onClick={applyFilters}
+                >
+                  <Filter className="size-4" />
+                  Apply Filter
+                </Button>
+              </div>
             </div>
           </CardHeader>
 
-          <CardContent className="grid gap-4 px-4 py-4 lg:grid-cols-2">
-            <FilterChecklistCard
-              title="Positions"
-              description="Broad employment categories for this venue."
-              options={positionOptions}
-              selectedValues={draftPositionIds}
-              onToggle={(value) => setDraftPositionIds((current) => toggleValue(current, value))}
-              onSelectAll={() => setDraftPositionIds(positionOptions.map((option) => option.value))}
-              onClearAll={() => setDraftPositionIds([])}
-              disabled={!selectedLocationId || loading}
-            />
-            <FilterChecklistCard
-              title="Other Opportunities"
-              description="Openings pulled from the venue employment setup."
-              options={opportunityOptions}
-              selectedValues={draftOpportunityIds}
-              onToggle={(value) => setDraftOpportunityIds((current) => toggleValue(current, value))}
-              onSelectAll={() => setDraftOpportunityIds(opportunityOptions.map((option) => option.value))}
-              onClearAll={() => setDraftOpportunityIds([])}
-              disabled={!selectedLocationId || loading}
-            />
+          <CardContent className="p-0">
+            <div className="grid divide-y lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+              <FilterChecklistPanel
+                title="Positions"
+                options={positionOptions}
+                selectedValues={draftPositionIds}
+                onToggle={(value) => setDraftPositionIds((current) => toggleValue(current, value))}
+                onSelectAll={() => setDraftPositionIds(positionOptions.map((option) => option.value))}
+                onClearAll={() => setDraftPositionIds([])}
+                disabled={!locationId || loading}
+              />
+              <FilterChecklistPanel
+                title="Other Opportunities"
+                options={opportunityOptions}
+                selectedValues={draftOpportunityIds}
+                onToggle={(value) => setDraftOpportunityIds((current) => toggleValue(current, value))}
+                onSelectAll={() => setDraftOpportunityIds(opportunityOptions.map((option) => option.value))}
+                onClearAll={() => setDraftOpportunityIds([])}
+                disabled={!locationId || loading}
+              />
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="gap-0 py-0 shadow-sm">
+        <Card className="gap-0 py-0">
           <CardHeader className="border-b bg-muted/40 px-4 py-3">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
@@ -558,12 +541,9 @@ export function EmploymentApplicantsScreen() {
               </div>
             ) : null}
 
-            {!selectedLocationId ? (
+            {!locationId ? (
               <div className="p-4">
-                <EmptyState
-                  title="Select a location to review employment applicants."
-                  description="The filter panels and applicants table will load after you choose a location."
-                />
+                <VenueNoLocationState featureLabel="Employment applicants" />
               </div>
             ) : loading ? (
               <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
@@ -671,10 +651,10 @@ export function EmploymentApplicantsScreen() {
 
           <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 lg:flex-row lg:items-center">
             <div aria-live="polite" className="text-sm text-muted-foreground">
-              {selectedLocationId
+              {locationId
                 ? statusMessage ||
-                  `${filteredRows.length} applicant${filteredRows.length === 1 ? "" : "s"} visible for ${selectedLocationLabel}. Use Edit to maintain reviewed and hiring state.`
-                : "Choose a location to begin reviewing employment applicants."}
+                  `${filteredRows.length} applicant${filteredRows.length === 1 ? "" : "s"} visible for ${locationName}. Use Edit to maintain reviewed and hiring state.`
+                : "Select a location from the header to begin reviewing employment applicants."}
             </div>
             <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
               <span className="text-foreground">Mock mode:</span>
@@ -819,7 +799,7 @@ export function EmploymentApplicantsScreen() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
-                      {selectedLocationLabel || "Venue"}
+                      {locationName || "Venue"}
                     </p>
                     <h3 className="mt-2 text-xl font-semibold text-foreground">
                       {previewApplicant.firstName} {previewApplicant.lastName}

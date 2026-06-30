@@ -5,11 +5,11 @@ import {
   Plus,
   Trash2,
 } from "lucide-react"
-import { Fragment, useEffect, useMemo, useState } from "react"
+import { Fragment, useEffect, useState } from "react"
 
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
-import { ScrollSelectControl } from "@/components/common/scroll-select-control"
+import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -47,7 +47,6 @@ import {
   getEmploymentQuestionsByLocation,
   updateEmploymentQuestion,
 } from "@/features/employment-questions/employment-questions.service"
-import { getVenueInfoLocationOptions } from "@/features/venue-info/venue-info.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import type { EmploymentQuestionRecord } from "@/types/employment-question"
 
@@ -113,18 +112,8 @@ function ActionButton({
 }
 
 export function EmploymentQuestionsScreen() {
-  const { locations } = useAppSession()
+  const { locationId, locationName } = useAppSession()
 
-  const locationOptions = useMemo(
-    () =>
-      getVenueInfoLocationOptions(locations).map((option) => ({
-        value: option.id,
-        label: option.label,
-      })),
-    [locations]
-  )
-
-  const [selectedLocationId, setSelectedLocationId] = useState("")
   const [rows, setRows] = useState<EmploymentQuestionRecord[]>([])
   const [editorMode, setEditorMode] = useState<"create" | "edit" | null>(null)
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null)
@@ -137,17 +126,10 @@ export function EmploymentQuestionsScreen() {
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
-  const selectedLocationLabel = useMemo(
-    () =>
-      locationOptions.find((option) => option.value === selectedLocationId)?.label ||
-      "",
-    [locationOptions, selectedLocationId]
-  )
-
   const canSave = questionInput.trim().length > 0
 
   useEffect(() => {
-    if (!selectedLocationId) {
+    if (!locationId) {
       setRows([])
       setEditorMode(null)
       setEditingQuestionId(null)
@@ -170,8 +152,8 @@ export function EmploymentQuestionsScreen() {
     setActiveInput("Y")
 
     getEmploymentQuestionsByLocation({
-      locationId: selectedLocationId,
-      locationLabel: selectedLocationLabel,
+      locationId: locationId,
+      locationLabel: locationName,
     })
       .then((result) => {
         if (isActive) {
@@ -196,7 +178,7 @@ export function EmploymentQuestionsScreen() {
     return () => {
       isActive = false
     }
-  }, [selectedLocationId, selectedLocationLabel])
+  }, [locationId, locationName])
 
   function openCreateEditor() {
     setEditorMode("create")
@@ -225,7 +207,7 @@ export function EmploymentQuestionsScreen() {
   async function handleSave() {
     const normalizedQuestion = questionInput.trim()
 
-    if (!selectedLocationId || !canSave || saving) {
+    if (!locationId || !canSave || saving) {
       return
     }
 
@@ -245,8 +227,8 @@ export function EmploymentQuestionsScreen() {
     try {
       if (editorMode === "edit" && editingQuestionId) {
         const updatedRow = await updateEmploymentQuestion({
-          locationId: selectedLocationId,
-          locationLabel: selectedLocationLabel,
+          locationId: locationId,
+          locationLabel: locationName,
           questionId: editingQuestionId,
           question: normalizedQuestion,
           active: activeInput === "Y",
@@ -255,17 +237,17 @@ export function EmploymentQuestionsScreen() {
         setRows((current) =>
           current.map((row) => (row.id === updatedRow.id ? updatedRow : row))
         )
-        setStatusMessage(`Updated employment question for ${selectedLocationLabel}.`)
+        setStatusMessage(`Updated employment question for ${locationName}.`)
       } else {
         const createdRow = await createEmploymentQuestion({
-          locationId: selectedLocationId,
-          locationLabel: selectedLocationLabel,
+          locationId: locationId,
+          locationLabel: locationName,
           question: normalizedQuestion,
           active: activeInput === "Y",
         })
 
         setRows((current) => [createdRow, ...current])
-        setStatusMessage(`Added a new employment question for ${selectedLocationLabel}.`)
+        setStatusMessage(`Added a new employment question for ${locationName}.`)
       }
 
       closeEditor()
@@ -281,7 +263,7 @@ export function EmploymentQuestionsScreen() {
   }
 
   async function confirmDelete() {
-    if (!selectedLocationId || !deletingRow || deletingId) {
+    if (!locationId || !deletingRow || deletingId) {
       return
     }
 
@@ -290,8 +272,8 @@ export function EmploymentQuestionsScreen() {
 
     try {
       await deleteEmploymentQuestion({
-        locationId: selectedLocationId,
-        locationLabel: selectedLocationLabel,
+        locationId: locationId,
+        locationLabel: locationName,
         questionId: deletingRow.id,
       })
 
@@ -299,7 +281,7 @@ export function EmploymentQuestionsScreen() {
       if (editingQuestionId === deletingRow.id) {
         closeEditor()
       }
-      setStatusMessage(`Deleted employment question for ${selectedLocationLabel}.`)
+      setStatusMessage(`Deleted employment question for ${locationName}.`)
       setDeletingRow(null)
     } catch (requestError) {
       setError(
@@ -386,27 +368,6 @@ export function EmploymentQuestionsScreen() {
         </div>
 
         <Card className="gap-0 py-0">
-          <CardContent className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,18rem)_1fr] md:items-end">
-            <div className="space-y-2">
-              <Label htmlFor="employment-questions-location">Location</Label>
-              <ScrollSelectControl
-                id="employment-questions-location"
-                value={selectedLocationId}
-                onChange={setSelectedLocationId}
-                options={locationOptions}
-                placeholder="Select location"
-                disabled={locationOptions.length === 0}
-              />
-            </div>
-
-            <div className="rounded-sm border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-              Use the header action to add a new question, or edit a specific row inline
-              when you need to update just that question.
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="gap-0 py-0">
           <CardHeader className="border-b bg-muted/40 px-4 py-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
@@ -417,7 +378,7 @@ export function EmploymentQuestionsScreen() {
                 variant="secondary"
                 size="sm"
                 className="gap-2"
-                disabled={!selectedLocationId}
+                disabled={!locationId}
                 onClick={openCreateEditor}
               >
                 <Plus className="size-4" />
@@ -435,12 +396,9 @@ export function EmploymentQuestionsScreen() {
               </div>
             ) : null}
 
-            {!selectedLocationId ? (
+            {!locationId ? (
               <div className="p-4">
-                <EmptyState
-                  title="Select a location to manage employment questions."
-                  description="The questions table and inline editor will load after you choose a location."
-                />
+                <VenueNoLocationState featureLabel="Employment questions" />
               </div>
             ) : loading ? (
               <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
@@ -509,10 +467,10 @@ export function EmploymentQuestionsScreen() {
 
           <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 sm:flex-row sm:items-center">
             <div aria-live="polite" className="text-sm text-muted-foreground">
-              {selectedLocationId
+              {locationId
                 ? statusMessage ||
-                  `${rows.length} employment question${rows.length === 1 ? "" : "s"} loaded for ${selectedLocationLabel}.`
-                : "Choose a location to begin managing employment questions."}
+                  `${rows.length} employment question${rows.length === 1 ? "" : "s"} loaded for ${locationName}.`
+                : "Select a location from the header to begin managing employment questions."}
             </div>
             <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
               <HelpCircle className="size-3.5" />
@@ -531,7 +489,7 @@ export function EmploymentQuestionsScreen() {
           onConfirm={() => void confirmDelete()}
           title="Delete question?"
           description={deletingRow
-            ? `This will remove "${deletingRow.question}" from ${selectedLocationLabel}.`
+            ? `This will remove "${deletingRow.question}" from ${locationName}.`
             : ""}
           confirmLabel="Delete question"
           isPending={Boolean(deletingId)}

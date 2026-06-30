@@ -12,6 +12,7 @@ import { EmploymentQuestions } from "@/pages/employment-questions"
 import { FoodMenu } from "@/pages/food-menu"
 import { FormEmails } from "@/pages/form-emails"
 import { FreeForms } from "@/pages/free-forms"
+import { GiftOfLaughter } from "@/pages/gift-of-laughter"
 import { GiftCards } from "@/pages/gift-cards"
 import { GiftCertificate } from "@/pages/gift-certificate"
 import { Login } from "@/pages/login"
@@ -29,8 +30,11 @@ import { Transactions } from "@/pages/transactions"
 import { UserAccess } from "@/pages/user-access"
 import { Users } from "@/pages/users"
 import { VenueAds } from "@/pages/venue-ads"
+import { VenueRotatingAds } from "@/pages/venue-rotating-ads"
 import { VenueInfo } from "@/pages/venue-info"
+import { VenueSectionDescriptions } from "@/pages/venue-section-descriptions"
 import { VenueShowTimes } from "@/pages/venue-show-times"
+import { VenueSocials } from "@/pages/venue-socials"
 import { WebpagesText } from "@/pages/webpages-text"
 import EventCalendar from "./components/calendar/EventCalendar"
 
@@ -74,6 +78,13 @@ function App() {
             <Route path="venue-show-times" element={<VenueShowTimes />} />
             <Route path="food-menu" element={<FoodMenu />} />
             <Route path="venue-ads" element={<VenueAds />} />
+            <Route path="venue-rotating-ads" element={<VenueRotatingAds />} />
+            <Route path="gift-of-laughter" element={<GiftOfLaughter />} />
+            <Route path="venue-socials" element={<VenueSocials />} />
+            <Route
+              path="venue-section-descriptions"
+              element={<VenueSectionDescriptions />}
+            />
             <Route path="form-emails" element={<FormEmails />} />
             <Route path="employment/openings" element={<EmploymentOpenings />} />
             <Route path="employment/questions" element={<EmploymentQuestions />} />

@@ -8,6 +8,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react"
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
+import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { ScrollSelectControl } from "@/components/common/scroll-select-control"
 import { Button } from "@/components/ui/button"
 import {
@@ -40,7 +41,6 @@ import {
   getFormEmailsByLocation,
   updateFormEmail,
 } from "@/features/form-emails/form-emails.service"
-import { getVenueInfoLocationOptions } from "@/features/venue-info/venue-info.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import type { FormEmailDefinition, FormEmailRecord } from "@/types/form-email"
 
@@ -104,18 +104,8 @@ function isValidEmailAddress(value: string) {
 }
 
 export function FormEmailsScreen() {
-  const { locations } = useAppSession()
+  const { locationId, locationName } = useAppSession()
 
-  const locationOptions = useMemo(
-    () =>
-      getVenueInfoLocationOptions(locations).map((option) => ({
-        value: option.id,
-        label: option.label,
-      })),
-    [locations]
-  )
-
-  const [selectedLocationId, setSelectedLocationId] = useState("")
   const [formDefinitions, setFormDefinitions] = useState<FormEmailDefinition[]>([])
   const [selectedFormId, setSelectedFormId] = useState("")
   const [rows, setRows] = useState<FormEmailRecord[]>([])
@@ -129,13 +119,6 @@ export function FormEmailsScreen() {
   const [deletingRow, setDeletingRow] = useState<FormEmailRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
-
-  const selectedLocationLabel = useMemo(
-    () =>
-      locationOptions.find((option) => option.value === selectedLocationId)?.label ||
-      "",
-    [locationOptions, selectedLocationId]
-  )
 
   const formOptions = useMemo(
     () =>
@@ -157,7 +140,7 @@ export function FormEmailsScreen() {
   }, [emailAddressInput])
 
   useEffect(() => {
-    if (!selectedLocationId) {
+    if (!locationId) {
       setFormDefinitions([])
       setSelectedFormId("")
       setRows([])
@@ -183,8 +166,8 @@ export function FormEmailsScreen() {
     setEmailAddressInput("")
 
     getFormEmailFormsByLocation({
-      locationId: selectedLocationId,
-      locationLabel: selectedLocationLabel,
+      locationId: locationId,
+      locationLabel: locationName,
     })
       .then((result) => {
         if (isActive) {
@@ -209,10 +192,10 @@ export function FormEmailsScreen() {
     return () => {
       isActive = false
     }
-  }, [selectedLocationId, selectedLocationLabel])
+  }, [locationId, locationName])
 
   useEffect(() => {
-    if (!selectedLocationId || !selectedFormId) {
+    if (!locationId || !selectedFormId) {
       setRows([])
       setEditorMode(null)
       setEditingEmailId(null)
@@ -231,9 +214,9 @@ export function FormEmailsScreen() {
     setEmailAddressInput("")
 
     getFormEmailsByLocation({
-      locationId: selectedLocationId,
+      locationId: locationId,
       formId: selectedFormId,
-      locationLabel: selectedLocationLabel,
+      locationLabel: locationName,
     })
       .then((result) => {
         if (isActive) {
@@ -258,7 +241,7 @@ export function FormEmailsScreen() {
     return () => {
       isActive = false
     }
-  }, [selectedLocationId, selectedFormId, selectedLocationLabel])
+  }, [locationId, selectedFormId, locationName])
 
   function openCreateEditor() {
     setEditorMode("create")
@@ -284,7 +267,7 @@ export function FormEmailsScreen() {
   async function handleSave() {
     const normalized = normalizeEmailAddress(emailAddressInput)
 
-    if (!selectedLocationId || !selectedFormId || !canSave || saving) {
+    if (!locationId || !selectedFormId || !canSave || saving) {
       return
     }
 
@@ -302,9 +285,9 @@ export function FormEmailsScreen() {
     try {
       if (editorMode === "edit" && editingEmailId) {
         const updatedRow = await updateFormEmail({
-          locationId: selectedLocationId,
+          locationId: locationId,
           formId: selectedFormId,
-          locationLabel: selectedLocationLabel,
+          locationLabel: locationName,
           emailId: editingEmailId,
           emailAddress: normalized,
         })
@@ -312,17 +295,17 @@ export function FormEmailsScreen() {
         setRows((current) =>
           current.map((row) => (row.id === updatedRow.id ? updatedRow : row))
         )
-        setStatusMessage(`Updated ${selectedFormLabel} email address for ${selectedLocationLabel}.`)
+        setStatusMessage(`Updated ${selectedFormLabel} email address for ${locationName}.`)
       } else {
         const createdRow = await createFormEmail({
-          locationId: selectedLocationId,
+          locationId: locationId,
           formId: selectedFormId,
-          locationLabel: selectedLocationLabel,
+          locationLabel: locationName,
           emailAddress: normalized,
         })
 
         setRows((current) => [createdRow, ...current])
-        setStatusMessage(`Added a new ${selectedFormLabel} email address for ${selectedLocationLabel}.`)
+        setStatusMessage(`Added a new ${selectedFormLabel} email address for ${locationName}.`)
       }
 
       closeEditor()
@@ -338,7 +321,7 @@ export function FormEmailsScreen() {
   }
 
   async function confirmDelete() {
-    if (!selectedLocationId || !selectedFormId || !deletingRow || deletingId) {
+    if (!locationId || !selectedFormId || !deletingRow || deletingId) {
       return
     }
 
@@ -347,9 +330,9 @@ export function FormEmailsScreen() {
 
     try {
       await deleteFormEmail({
-        locationId: selectedLocationId,
+        locationId: locationId,
         formId: selectedFormId,
-        locationLabel: selectedLocationLabel,
+        locationLabel: locationName,
         emailId: deletingRow.id,
       })
 
@@ -430,19 +413,7 @@ export function FormEmailsScreen() {
         </div>
 
         <Card className="gap-0 py-0">
-          <CardContent className="grid gap-3 px-4 py-4 lg:grid-cols-[minmax(0,18rem)_minmax(0,18rem)_1fr] lg:items-end">
-            <div className="space-y-2">
-              <Label htmlFor="form-emails-location">Location</Label>
-              <ScrollSelectControl
-                id="form-emails-location"
-                value={selectedLocationId}
-                onChange={setSelectedLocationId}
-                options={locationOptions}
-                placeholder="Select location"
-                disabled={locationOptions.length === 0}
-              />
-            </div>
-
+          <CardContent className="grid gap-3 px-4 py-4 lg:grid-cols-[minmax(0,18rem)_1fr] lg:items-end">
             <div className="space-y-2">
               <Label htmlFor="form-emails-form">Form</Label>
               <ScrollSelectControl
@@ -451,14 +422,10 @@ export function FormEmailsScreen() {
                 onChange={setSelectedFormId}
                 options={formOptions}
                 placeholder={loadingForms ? "Loading forms..." : "Select form"}
-                disabled={!selectedLocationId || loadingForms || formOptions.length === 0}
+                disabled={!locationId || loadingForms || formOptions.length === 0}
               />
             </div>
 
-            <div className="rounded-sm border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-              Pick a location and form first. Then add, edit, or remove the email
-              recipients used for that submission workflow.
-            </div>
           </CardContent>
         </Card>
 
@@ -491,12 +458,9 @@ export function FormEmailsScreen() {
               </div>
             ) : null}
 
-            {!selectedLocationId ? (
+            {!locationId ? (
               <div className="p-4">
-                <EmptyState
-                  title="Select a location to manage form emails."
-                  description="The available forms and email addresses will load after you choose a location."
-                />
+                <VenueNoLocationState featureLabel="Form emails" />
               </div>
             ) : loadingForms ? (
               <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
@@ -579,10 +543,10 @@ export function FormEmailsScreen() {
 
           <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 sm:flex-row sm:items-center">
             <div aria-live="polite" className="text-sm text-muted-foreground">
-              {selectedLocationId && selectedFormId
+              {locationId && selectedFormId
                 ? statusMessage ||
-                  `${rows.length} email address${rows.length === 1 ? "" : "es"} loaded for ${selectedFormLabel} in ${selectedLocationLabel}.`
-                : "Choose a location and form to begin managing form emails."}
+                  `${rows.length} email address${rows.length === 1 ? "" : "es"} loaded for ${selectedFormLabel} in ${locationName}.`
+                : "Select a location from the header and choose a form to begin managing form emails."}
             </div>
             {selectedFormLabel ? (
               <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
@@ -603,7 +567,7 @@ export function FormEmailsScreen() {
           onConfirm={() => void confirmDelete()}
           title="Delete email recipient?"
           description={deletingRow
-            ? `This will remove ${deletingRow.emailAddress} from ${selectedFormLabel} for ${selectedLocationLabel}.`
+            ? `This will remove ${deletingRow.emailAddress} from ${selectedFormLabel} for ${locationName}.`
             : ""}
           confirmLabel="Delete email"
           isPending={Boolean(deletingId)}

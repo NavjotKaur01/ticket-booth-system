@@ -49,6 +49,14 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
       { id: "venue-show-times", label: "Venue Show Times", href: ROUTES.venueShowTimes },
       { id: "food-menu", label: "Food Menu", href: ROUTES.foodMenu },
       { id: "venue-ads", label: "Venue Ads", href: ROUTES.venueAds },
+      { id: "venue-rotating-ads", label: "Rotating Ads", href: ROUTES.venueRotatingAds },
+      { id: "gift-of-laughter", label: "Gift of Laughter", href: ROUTES.giftOfLaughter },
+      { id: "venue-socials", label: "Social", href: ROUTES.venueSocials },
+      {
+        id: "venue-section-descriptions",
+        label: "Section Description",
+        href: ROUTES.venueSectionDescriptions,
+      },
       { id: "form-emails", label: "Form Emails", href: ROUTES.formEmails },
       {
         id: "employment",

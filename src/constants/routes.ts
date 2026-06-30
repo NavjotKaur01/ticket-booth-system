@@ -8,6 +8,10 @@ export const ROUTES = {
   venueShowTimes: "/venue/venue-show-times",
   foodMenu: "/venue/food-menu",
   venueAds: "/venue/venue-ads",
+  venueRotatingAds: "/venue/venue-rotating-ads",
+  giftOfLaughter: "/venue/gift-of-laughter",
+  venueSocials: "/venue/venue-socials",
+  venueSectionDescriptions: "/venue/venue-section-descriptions",
   formEmails: "/venue/form-emails",
   employmentOpenings: "/venue/employment/openings",
   employmentQuestions: "/venue/employment/questions",
@@ -61,6 +65,10 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.venueShowTimes]: "Venue Show Times",
   [ROUTES.foodMenu]: "Food Menu",
   [ROUTES.venueAds]: "Venue Ads",
+  [ROUTES.venueRotatingAds]: "Rotating Ads",
+  [ROUTES.giftOfLaughter]: "Gift of Laughter",
+  [ROUTES.venueSocials]: "Social",
+  [ROUTES.venueSectionDescriptions]: "Section Description",
   [ROUTES.formEmails]: "Form Emails",
   [ROUTES.employmentOpenings]: "Employment Openings",
   [ROUTES.employmentQuestions]: "Employment Questions",
@@ -93,6 +101,10 @@ export function getActiveNavId(pathname: string) {
     pathname === ROUTES.venueShowTimes ||
     pathname === ROUTES.foodMenu ||
     pathname === ROUTES.venueAds ||
+    pathname === ROUTES.venueRotatingAds ||
+    pathname === ROUTES.giftOfLaughter ||
+    pathname === ROUTES.venueSocials ||
+    pathname === ROUTES.venueSectionDescriptions ||
     pathname === ROUTES.formEmails ||
     pathname === ROUTES.employmentOpenings ||
     pathname === ROUTES.employmentQuestions ||

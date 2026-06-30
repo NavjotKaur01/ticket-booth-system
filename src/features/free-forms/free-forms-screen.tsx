@@ -5,11 +5,11 @@
   Save,
   Trash2,
 } from "lucide-react"
-import { Fragment, type ReactNode, useEffect, useMemo, useState } from "react"
+import { Fragment, type ReactNode, useEffect, useState } from "react"
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
 import { RichTextEditor } from "@/components/common/rich-text-editor"
-import { ScrollSelectControl } from "@/components/common/scroll-select-control"
+import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -47,7 +47,6 @@ import {
   getFreeFormsByLocation,
   updateFreeForm,
 } from "@/features/free-forms/free-forms.service"
-import { getVenueInfoLocationOptions } from "@/features/venue-info/venue-info.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import type { FreeFormRecord } from "@/types/free-form"
 
@@ -128,18 +127,8 @@ function buildDefaultHtml(buttonText: string, locationLabel: string) {
 }
 
 export function FreeFormsScreen() {
-  const { locations } = useAppSession()
+  const { locationId, locationName } = useAppSession()
 
-  const locationOptions = useMemo(
-    () =>
-      getVenueInfoLocationOptions(locations).map((option) => ({
-        value: option.id,
-        label: option.label,
-      })),
-    [locations]
-  )
-
-  const [selectedLocationId, setSelectedLocationId] = useState("")
   const [rows, setRows] = useState<FreeFormRecord[]>([])
   const [editorMode, setEditorMode] = useState<"create" | "edit" | null>(null)
   const [editingFreeFormId, setEditingFreeFormId] = useState<string | null>(null)
@@ -154,19 +143,12 @@ export function FreeFormsScreen() {
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
-  const selectedLocationLabel = useMemo(
-    () =>
-      locationOptions.find((option) => option.value === selectedLocationId)?.label ||
-      "",
-    [locationOptions, selectedLocationId]
-  )
-
   const parsedDisplayOrder = Number.parseInt(displayOrderInput, 10)
   const hasValidDisplayOrder = Number.isFinite(parsedDisplayOrder) && parsedDisplayOrder >= 0
   const canSave = buttonTextInput.trim().length > 0 && hasValidDisplayOrder
 
   useEffect(() => {
-    if (!selectedLocationId) {
+    if (!locationId) {
       setRows([])
       setEditorMode(null)
       setEditingFreeFormId(null)
@@ -193,8 +175,8 @@ export function FreeFormsScreen() {
     setHtmlContentInput("<p></p>")
 
     getFreeFormsByLocation({
-      locationId: selectedLocationId,
-      locationLabel: selectedLocationLabel,
+      locationId: locationId,
+      locationLabel: locationName,
     })
       .then((result) => {
         if (isActive) {
@@ -219,7 +201,7 @@ export function FreeFormsScreen() {
     return () => {
       isActive = false
     }
-  }, [selectedLocationId, selectedLocationLabel])
+  }, [locationId, locationName])
 
   function openCreateEditor() {
     setEditorMode("create")
@@ -227,7 +209,7 @@ export function FreeFormsScreen() {
     setButtonTextInput("")
     setDisplayOrderInput(rows.length > 0 ? String(rows.length + 1) : "1")
     setActiveInput("Y")
-    setHtmlContentInput(buildDefaultHtml("", selectedLocationLabel))
+    setHtmlContentInput(buildDefaultHtml("", locationName))
     setError(null)
     setStatusMessage(null)
   }
@@ -257,7 +239,7 @@ export function FreeFormsScreen() {
     const normalizedButtonText = buttonTextInput.trim()
     const normalizedDisplayOrder = Number.parseInt(displayOrderInput, 10)
 
-    if (!selectedLocationId || !canSave || saving) {
+    if (!locationId || !canSave || saving) {
       return
     }
 
@@ -278,8 +260,8 @@ export function FreeFormsScreen() {
     try {
       if (editorMode === "edit" && editingFreeFormId) {
         const updatedRow = await updateFreeForm({
-          locationId: selectedLocationId,
-          locationLabel: selectedLocationLabel,
+          locationId: locationId,
+          locationLabel: locationName,
           freeFormId: editingFreeFormId,
           buttonText: normalizedButtonText,
           displayOrder: normalizedDisplayOrder,
@@ -292,11 +274,11 @@ export function FreeFormsScreen() {
             .map((row) => (row.id === updatedRow.id ? updatedRow : row))
             .sort((left, right) => left.displayOrder - right.displayOrder)
         )
-        setStatusMessage(`Updated free form for ${selectedLocationLabel}.`)
+        setStatusMessage(`Updated free form for ${locationName}.`)
       } else {
         const createdRow = await createFreeForm({
-          locationId: selectedLocationId,
-          locationLabel: selectedLocationLabel,
+          locationId: locationId,
+          locationLabel: locationName,
           buttonText: normalizedButtonText,
           displayOrder: normalizedDisplayOrder,
           active: activeInput === "Y",
@@ -308,7 +290,7 @@ export function FreeFormsScreen() {
             (left, right) => left.displayOrder - right.displayOrder
           )
         )
-        setStatusMessage(`Created a new free form for ${selectedLocationLabel}.`)
+        setStatusMessage(`Created a new free form for ${locationName}.`)
       }
 
       closeEditor()
@@ -324,7 +306,7 @@ export function FreeFormsScreen() {
   }
 
   async function confirmDelete() {
-    if (!selectedLocationId || !deletingRow || deletingId) {
+    if (!locationId || !deletingRow || deletingId) {
       return
     }
 
@@ -335,8 +317,8 @@ export function FreeFormsScreen() {
 
     try {
       await deleteFreeForm({
-        locationId: selectedLocationId,
-        locationLabel: selectedLocationLabel,
+        locationId: locationId,
+        locationLabel: locationName,
         freeFormId: deletingRow.id,
       })
 
@@ -344,7 +326,7 @@ export function FreeFormsScreen() {
       if (editingFreeFormId === deletingRow.id) {
         closeEditor()
       }
-      setStatusMessage(`Deleted free form for ${selectedLocationLabel}.`)
+      setStatusMessage(`Deleted free form for ${locationName}.`)
       setDeletingRow(null)
     } catch (requestError) {
       setError(
@@ -447,22 +429,6 @@ export function FreeFormsScreen() {
         </div>
 
         <Card className="gap-0 py-0">
-          <CardContent className="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,18rem)_1fr] lg:items-end">
-            <div className="space-y-2">
-              <Label htmlFor="free-forms-location">Location</Label>
-              <ScrollSelectControl
-                id="free-forms-location"
-                value={selectedLocationId}
-                onChange={setSelectedLocationId}
-                options={locationOptions}
-                placeholder="Select location"
-                disabled={locationOptions.length === 0}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="gap-0 py-0">
           <CardHeader className="border-b bg-muted/40 px-4 py-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
@@ -472,7 +438,7 @@ export function FreeFormsScreen() {
                 <Button
                   type="button"
                   onClick={openCreateEditor}
-                  disabled={!selectedLocationId || saving}
+                  disabled={!locationId || saving}
                 >
                   <Plus className="mr-2 size-4" />
                   New Form
@@ -482,11 +448,8 @@ export function FreeFormsScreen() {
           </CardHeader>
 
           <CardContent className="space-y-4 px-4 py-4">
-            {!selectedLocationId ? (
-              <EmptyState
-                title="Choose a location"
-                description="Select a venue first, then create and manage its free-form content blocks."
-              />
+            {!locationId ? (
+              <VenueNoLocationState featureLabel="Free forms" />
             ) : loading ? (
               <div className="flex items-center justify-center gap-2 rounded-sm border border-dashed border-border bg-muted/20 px-4 py-10 text-sm text-muted-foreground">
                 <LoaderCircle className="size-4 animate-spin" />
@@ -567,9 +530,9 @@ export function FreeFormsScreen() {
             <div className="flex items-center gap-2 text-muted-foreground">
               <Pencil className="size-4" />
               <span>
-                {selectedLocationLabel
-                  ? `${rows.length} free form${rows.length === 1 ? "" : "s"} loaded for ${selectedLocationLabel}.`
-                  : "Select a location to begin."}
+                {locationName
+                  ? `${rows.length} free form${rows.length === 1 ? "" : "s"} loaded for ${locationName}.`
+                  : "Select a location from the header to begin."}
               </span>
             </div>
             <div className="min-h-5 text-sm">
@@ -591,7 +554,7 @@ export function FreeFormsScreen() {
           onConfirm={() => void confirmDelete()}
           title="Delete free form?"
           description={deletingRow
-            ? `This will remove "${deletingRow.buttonText}" from ${selectedLocationLabel}.`
+            ? `This will remove "${deletingRow.buttonText}" from ${locationName}.`
             : ""}
           confirmLabel="Delete free form"
           isPending={Boolean(deletingId)}

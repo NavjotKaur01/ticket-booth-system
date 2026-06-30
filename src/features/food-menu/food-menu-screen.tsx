@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from "react"
 import type { SegmentedTab } from "@/components/common/segmented-tab-list"
 import { SegmentedTabList } from "@/components/common/segmented-tab-list"
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
+import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { ScrollSelectControl } from "@/components/common/scroll-select-control"
 import { Button } from "@/components/ui/button"
 import {
@@ -39,7 +40,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { getVenueInfoLocationOptions } from "@/features/venue-info/venue-info.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import {
   getFoodMenuCategoriesByLocation,
@@ -151,19 +151,9 @@ function PdfToolbarButton({
 }
 
 export function FoodMenuScreen() {
-  const { locations } = useAppSession()
-
-  const locationOptions = useMemo(
-    () =>
-      getVenueInfoLocationOptions(locations).map((option) => ({
-        value: option.id,
-        label: option.label,
-      })),
-    [locations]
-  )
+  const { locationId, locationName } = useAppSession()
 
   const [activeTab, setActiveTab] = useState<FoodMenuTab>("categories")
-  const [selectedLocationId, setSelectedLocationId] = useState("")
   const [categoryRows, setCategoryRows] = useState<FoodMenuCategory[]>([])
   const [pdfRows, setPdfRows] = useState<FoodMenuPdf[]>([])
   const [selectedPdfId, setSelectedPdfId] = useState("")
@@ -173,13 +163,6 @@ export function FoodMenuScreen() {
   const [error, setError] = useState<string | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
-
-  const selectedLocationLabel = useMemo(
-    () =>
-      locationOptions.find((option) => option.value === selectedLocationId)?.label ||
-      "",
-    [locationOptions, selectedLocationId]
-  )
 
   const pdfOptions = useMemo(
     () =>
@@ -196,7 +179,7 @@ export function FoodMenuScreen() {
   )
 
   useEffect(() => {
-    if (!selectedLocationId) {
+    if (!locationId) {
       setCategoryRows([])
       setPdfRows([])
       setSelectedPdfId("")
@@ -222,12 +205,12 @@ export function FoodMenuScreen() {
 
     Promise.all([
       getFoodMenuCategoriesByLocation({
-        locationId: selectedLocationId,
-        locationLabel: selectedLocationLabel,
+        locationId: locationId,
+        locationLabel: locationName,
       }),
       getFoodMenuPdfsByLocation({
-        locationId: selectedLocationId,
-        locationLabel: selectedLocationLabel,
+        locationId: locationId,
+        locationLabel: locationName,
       }),
     ])
       .then(([categories, pdfs]) => {
@@ -254,7 +237,7 @@ export function FoodMenuScreen() {
     return () => {
       isActive = false
     }
-  }, [selectedLocationId, selectedLocationLabel])
+  }, [locationId, locationName])
 
   useEffect(() => {
     if (!selectedPdf) {
@@ -266,11 +249,11 @@ export function FoodMenuScreen() {
   }, [selectedPdf])
 
   function handleCategoryNew(row: FoodMenuCategory) {
-    setActionMessage(`Mock action: create a new category near ${row.menuName} for ${selectedLocationLabel}.`)
+    setActionMessage(`Mock action: create a new category near ${row.menuName} for ${locationName}.`)
   }
 
   function handleCategoryEdit(row: FoodMenuCategory) {
-    setActionMessage(`Mock action: edit category ${row.menuName} for ${selectedLocationLabel}.`)
+    setActionMessage(`Mock action: edit category ${row.menuName} for ${locationName}.`)
   }
 
   function handleCategoryDelete(row: FoodMenuCategory) {
@@ -292,14 +275,14 @@ export function FoodMenuScreen() {
 
     if (pendingDelete.kind === "category") {
       setCategoryRows((current) => current.filter((row) => row.id !== pendingDelete.id))
-      setActionMessage(`Removed category ${pendingDelete.label} from ${selectedLocationLabel}.`)
+      setActionMessage(`Removed category ${pendingDelete.label} from ${locationName}.`)
     } else {
       const nextRows = pdfRows.filter((row) => row.id !== pendingDelete.id)
       setPdfRows(nextRows)
       if (selectedPdfId === pendingDelete.id) {
         setSelectedPdfId(nextRows[0]?.id ?? "")
       }
-      setActionMessage(`Removed PDF menu ${pendingDelete.label} from ${selectedLocationLabel}.`)
+      setActionMessage(`Removed PDF menu ${pendingDelete.label} from ${locationName}.`)
     }
 
     setPendingDelete(null)
@@ -321,27 +304,6 @@ export function FoodMenuScreen() {
             the backend integration is ready.
           </p>
         </div>
-
-        <Card className="gap-0 py-0">
-          <CardContent className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,18rem)_1fr] md:items-end">
-            <div className="space-y-2">
-              <Label htmlFor="food-menu-location">Location</Label>
-              <ScrollSelectControl
-                id="food-menu-location"
-                value={selectedLocationId}
-                onChange={setSelectedLocationId}
-                options={locationOptions}
-                placeholder="Select location"
-                disabled={locationOptions.length === 0}
-              />
-            </div>
-
-            <div className="rounded-sm border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-              Categories use a shadcn table with icon actions in the last column, while
-              PDF management stays in a tabbed card with clean light and dark theme support.
-            </div>
-          </CardContent>
-        </Card>
 
         <Card className="gap-0 py-0">
           <CardHeader className="border-b bg-muted/40 px-4 py-3">
@@ -366,11 +328,8 @@ export function FoodMenuScreen() {
               </p>
             ) : null}
 
-            {!selectedLocationId ? (
-              <EmptyState
-                title="Select a location to view food menu data."
-                description="The categories and PDF tools will load after you choose a location."
-              />
+            {!locationId ? (
+              <VenueNoLocationState featureLabel="Food menu data" />
             ) : loading ? (
               <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
                 <LoaderCircle className="size-4 animate-spin" />
@@ -450,7 +409,7 @@ export function FoodMenuScreen() {
                       label="Modify PDF menu"
                       icon={<Pencil className="size-4" />}
                       onClick={() =>
-                        handlePdfAction(`Mock action: modify PDF menu ${selectedPdf?.name ?? ""} for ${selectedLocationLabel}.`)
+                        handlePdfAction(`Mock action: modify PDF menu ${selectedPdf?.name ?? ""} for ${locationName}.`)
                       }
                       disabled={!selectedPdf}
                     />
@@ -459,7 +418,7 @@ export function FoodMenuScreen() {
                       label="Add PDF menu"
                       icon={<FilePlus2 className="size-4" />}
                       onClick={() =>
-                        handlePdfAction(`Mock action: add a PDF menu for ${selectedLocationLabel}.`)
+                        handlePdfAction(`Mock action: add a PDF menu for ${locationName}.`)
                       }
                     />
                     <span className="text-muted-foreground/60">|</span>
@@ -474,7 +433,7 @@ export function FoodMenuScreen() {
                       label="Add image for PDF"
                       icon={<FileImage className="size-4" />}
                       onClick={() =>
-                        handlePdfAction(`Mock action: manage image for PDF menu ${selectedPdf?.name ?? ""} in ${selectedLocationLabel}.`)
+                        handlePdfAction(`Mock action: manage image for PDF menu ${selectedPdf?.name ?? ""} in ${locationName}.`)
                       }
                       disabled={!selectedPdf}
                     />
@@ -542,7 +501,7 @@ export function FoodMenuScreen() {
                             className="gap-1.5"
                             disabled={!selectedPdf}
                             onClick={() =>
-                              handlePdfAction(`Mock action: preview ${selectedPdf?.name ?? ""} for ${selectedLocationLabel}.`)
+                              handlePdfAction(`Mock action: preview ${selectedPdf?.name ?? ""} for ${locationName}.`)
                             }
                           >
                             <Eye className="size-4" />
@@ -553,7 +512,7 @@ export function FoodMenuScreen() {
                             className="gap-1.5"
                             disabled={!selectedPdf}
                             onClick={() =>
-                              handlePdfAction(`Mock action: save PDF menu changes for ${selectedPdf?.name ?? ""} in ${selectedLocationLabel}.`)
+                              handlePdfAction(`Mock action: save PDF menu changes for ${selectedPdf?.name ?? ""} in ${locationName}.`)
                             }
                           >
                             <FileText className="size-4" />
@@ -570,9 +529,9 @@ export function FoodMenuScreen() {
 
           <CardFooter className="border-t px-4 py-3">
             <div aria-live="polite" className="text-sm text-muted-foreground">
-              {selectedLocationId
-                ? actionMessage || `Food menu mock data loaded for ${selectedLocationLabel}.`
-                : "Choose a location to begin managing the food menu."}
+              {locationId
+                ? actionMessage || `Food menu mock data loaded for ${locationName}.`
+                : "Select a location from the header to begin managing the food menu."}
             </div>
           </CardFooter>
         </Card>
@@ -587,8 +546,8 @@ export function FoodMenuScreen() {
           title={pendingDelete?.kind === "pdf" ? "Delete PDF menu?" : "Delete category?"}
           description={pendingDelete
             ? pendingDelete.kind === "pdf"
-              ? `This will remove ${pendingDelete.label} from ${selectedLocationLabel}.`
-              : `This will remove the ${pendingDelete.label} category from ${selectedLocationLabel}.`
+              ? `This will remove ${pendingDelete.label} from ${locationName}.`
+              : `This will remove the ${pendingDelete.label} category from ${locationName}.`
             : ""}
           confirmLabel={pendingDelete?.kind === "pdf" ? "Delete PDF menu" : "Delete category"}
         />

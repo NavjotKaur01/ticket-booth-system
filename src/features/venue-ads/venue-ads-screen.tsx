@@ -11,7 +11,7 @@ import {
 import { useEffect, useMemo, useState } from "react"
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
-import { ScrollSelectControl } from "@/components/common/scroll-select-control"
+import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -44,7 +44,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { getVenueInfoLocationOptions } from "@/features/venue-info/venue-info.service"
 import {
   createVenueAd,
   deleteVenueAd,
@@ -134,18 +133,8 @@ function buildEmptyAd() {
 }
 
 export function VenueAdsScreen() {
-  const { locations } = useAppSession()
+  const { locationId, locationName } = useAppSession()
 
-  const locationOptions = useMemo(
-    () =>
-      getVenueInfoLocationOptions(locations).map((option) => ({
-        value: option.id,
-        label: option.label,
-      })),
-    [locations]
-  )
-
-  const [selectedLocationId, setSelectedLocationId] = useState("")
   const [rows, setRows] = useState<VenueAdRecord[]>([])
   const [selectedAdId, setSelectedAdId] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -160,20 +149,13 @@ export function VenueAdsScreen() {
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
-  const selectedLocationLabel = useMemo(
-    () =>
-      locationOptions.find((option) => option.value === selectedLocationId)?.label ||
-      "",
-    [locationOptions, selectedLocationId]
-  )
-
   const selectedAd = useMemo(
     () => rows.find((row) => row.id === selectedAdId) ?? null,
     [rows, selectedAdId]
   )
 
   const isEditing = editingAdId != null
-  const canSubmit = selectedLocationId.length > 0 && form.navigateUrl.trim().length > 0
+  const canSubmit = locationId.length > 0 && form.navigateUrl.trim().length > 0
 
   useEffect(() => {
     if (!imageFile) {
@@ -190,7 +172,7 @@ export function VenueAdsScreen() {
   }, [imageFile])
 
   useEffect(() => {
-    if (!selectedLocationId) {
+    if (!locationId) {
       setRows([])
       setSelectedAdId("")
       setDialogOpen(false)
@@ -219,8 +201,8 @@ export function VenueAdsScreen() {
     setDeletingRow(null)
 
     getVenueAdsByLocation({
-      locationId: selectedLocationId,
-      locationLabel: selectedLocationLabel,
+      locationId: locationId,
+      locationLabel: locationName,
     })
       .then((result) => {
         if (!isActive) {
@@ -248,7 +230,7 @@ export function VenueAdsScreen() {
     return () => {
       isActive = false
     }
-  }, [selectedLocationId, selectedLocationLabel])
+  }, [locationId, locationName])
 
   function updateField<K extends keyof VenueAdDraft>(key: K, value: VenueAdDraft[K]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -319,8 +301,8 @@ export function VenueAdsScreen() {
     try {
       if (editingAdId) {
         const updatedRow = await updateVenueAd({
-          locationId: selectedLocationId,
-          locationLabel: selectedLocationLabel,
+          locationId: locationId,
+          locationLabel: locationName,
           adId: editingAdId,
           input: nextForm,
         })
@@ -329,17 +311,17 @@ export function VenueAdsScreen() {
           current.map((row) => (row.id === updatedRow.id ? updatedRow : row))
         )
         setSelectedAdId(updatedRow.id)
-        setStatusMessage(`Ad updated for ${selectedLocationLabel}.`)
+        setStatusMessage(`Ad updated for ${locationName}.`)
       } else {
         const createdRow = await createVenueAd({
-          locationId: selectedLocationId,
-          locationLabel: selectedLocationLabel,
+          locationId: locationId,
+          locationLabel: locationName,
           input: nextForm,
         })
 
         setRows((current) => [createdRow, ...current])
         setSelectedAdId(createdRow.id)
-        setStatusMessage(`New ad created for ${selectedLocationLabel}.`)
+        setStatusMessage(`New ad created for ${locationName}.`)
       }
 
       setDialogOpen(false)
@@ -358,7 +340,7 @@ export function VenueAdsScreen() {
   }
 
   async function handleDelete() {
-    if (!selectedLocationId || !deletingRow || deleting || saving) {
+    if (!locationId || !deletingRow || deleting || saving) {
       return
     }
 
@@ -367,8 +349,8 @@ export function VenueAdsScreen() {
 
     try {
       await deleteVenueAd({
-        locationId: selectedLocationId,
-        locationLabel: selectedLocationLabel,
+        locationId: locationId,
+        locationLabel: locationName,
         adId: deletingRow.id,
       })
 
@@ -377,7 +359,7 @@ export function VenueAdsScreen() {
       setSelectedAdId((current) =>
         current === deletingRow.id ? (nextRows[0]?.id ?? "") : current
       )
-      setStatusMessage(`Ad removed from ${selectedLocationLabel}.`)
+      setStatusMessage(`Ad removed from ${locationName}.`)
       setDeletingRow(null)
 
       if (editingAdId === deletingRow.id) {
@@ -435,42 +417,23 @@ export function VenueAdsScreen() {
         </div>
 
         <Card className="gap-0 py-0">
-          <CardContent className="grid gap-3 px-4 py-4 lg:grid-cols-[minmax(0,18rem)_auto_1fr] lg:items-end">
-            <div className="space-y-2">
-              <Label htmlFor="venue-ads-location">Location</Label>
-              <ScrollSelectControl
-                id="venue-ads-location"
-                value={selectedLocationId}
-                onChange={setSelectedLocationId}
-                options={locationOptions}
-                placeholder="Select location"
-                disabled={locationOptions.length === 0}
-              />
-            </div>
-
-            <Button
-              type="button"
-              variant="secondary"
-              className="gap-2 lg:self-end"
-              disabled={!selectedLocationId}
-              onClick={openCreateDialog}
-            >
-              <Plus className="size-4" />
-              New
-            </Button>
-
-            <div className="rounded-sm border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-              Click a row to open the editor dialog. The table stays clean, while the
-              form keeps the same data shape we can later swap to the real API.
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="gap-0 py-0">
           <CardHeader className="border-b bg-muted/40 px-4 py-3">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
-              Venue Ads Management
-            </CardTitle>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
+                Venue Ads Management
+              </CardTitle>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="gap-2"
+                disabled={!locationId}
+                onClick={openCreateDialog}
+              >
+                <Plus className="size-4" />
+                New
+              </Button>
+            </div>
           </CardHeader>
 
           <CardContent className="space-y-4 px-0 py-0">
@@ -482,12 +445,9 @@ export function VenueAdsScreen() {
               </div>
             ) : null}
 
-            {!selectedLocationId ? (
+            {!locationId ? (
               <div className="p-4">
-                <EmptyState
-                  title="Select a location to manage venue ads."
-                  description="The ad table and editor will load after you choose a location."
-                />
+                <VenueNoLocationState featureLabel="Venue ads" />
               </div>
             ) : loading ? (
               <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
@@ -587,10 +547,10 @@ export function VenueAdsScreen() {
 
           <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 sm:flex-row sm:items-center">
             <div aria-live="polite" className="text-sm text-muted-foreground">
-              {selectedLocationId
+              {locationId
                 ? statusMessage ||
-                  `${rows.length} mock ad${rows.length === 1 ? "" : "s"} loaded for ${selectedLocationLabel}. Click a row to edit it or use New to add another.`
-                : "Choose a location to begin managing venue ads."}
+                  `${rows.length} mock ad${rows.length === 1 ? "" : "s"} loaded for ${locationName}. Click a row to edit it or use New to add another.`
+                : "Select a location from the header to begin managing venue ads."}
             </div>
             {selectedAd ? (
               <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
@@ -610,8 +570,8 @@ export function VenueAdsScreen() {
             </DialogTitle>
             <DialogDescription>
               {isEditing
-                ? `Update the selected ad details for ${selectedLocationLabel}.`
-                : `Create a new ad entry for ${selectedLocationLabel}.`}
+                ? `Update the selected ad details for ${locationName}.`
+                : `Create a new ad entry for ${locationName}.`}
             </DialogDescription>
           </DialogHeader>
 
@@ -771,7 +731,7 @@ export function VenueAdsScreen() {
         onConfirm={() => void handleDelete()}
         title="Delete venue ad?"
         description={deletingRow
-          ? `This will remove ${deletingRow.displayText || deletingRow.navigateUrl} from ${selectedLocationLabel}.`
+          ? `This will remove ${deletingRow.displayText || deletingRow.navigateUrl} from ${locationName}.`
           : ""}
         confirmLabel="Delete ad"
         isPending={deleting}
