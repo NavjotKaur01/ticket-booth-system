@@ -27,6 +27,7 @@ type RowActionsMenuProps = {
   onPrintTickets?: () => void
   onPrintIndividualTickets?: () => void
   onReservationHistory?: () => void
+  onAddNote?: () => void
 }
 
 /** Three-dot row action menu shared by Reservations and Check-In tables. */
@@ -37,6 +38,7 @@ export function RowActionsMenu({
   onPrintTickets,
   onPrintIndividualTickets,
   onReservationHistory,
+  onAddNote,
 }: RowActionsMenuProps) {
   const cancelActionLabel = isCancelled
     ? "UnCancel Reservation"
@@ -67,6 +69,11 @@ export function RowActionsMenu({
 
     if (action === "Reservation History") {
       onReservationHistory?.()
+      return
+    }
+
+    if (action === "Add Note") {
+      onAddNote?.()
     }
   }
 

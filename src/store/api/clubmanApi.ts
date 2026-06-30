@@ -62,6 +62,7 @@ import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { ReservationCustomerSearchItem } from "@/types/api/reservation-customer-search"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
 import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
+import type { ReservationNoteRequest } from "@/types/api/reservation-note"
 import { mapReservationDetail } from "@/lib/map-reservation-detail"
 import type { ReservationHistoryItem } from "@/types/api/reservation-history"
 import type { DailyTransactionItem } from "@/types/api/daily-transaction"
@@ -666,6 +667,49 @@ export const clubmanApi = createApi({
       ],
     }),
 
+    getReservationNoteById: builder.query({
+      query: ({
+        connectionString,
+        reservationId,
+      }: {
+        connectionString: string
+        reservationId: string
+      }) => ({
+        url: reservationApiPath(
+          connectionString,
+          reservationId,
+          "GetReservationNotes"
+        ),
+        headers: { Accept: "application/json" },
+      }),
+      transformResponse: (response: unknown) => {
+        if (typeof response === "string") {
+          return response
+        }
+
+        if (response == null) {
+          return ""
+        }
+
+        return String(response)
+      },
+      providesTags: (_result, _error, arg) => [
+        { type: "Reservation", id: `note:${arg.reservationId}` },
+      ],
+    }),
+
+    saveReservationNote: builder.mutation({
+      query: (body: ReservationNoteRequest) => ({
+        url: reservationApiPath("SaveReservationNotes"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (_result, _error, arg) => [
+        "Reservation",
+        { type: "Reservation", id: `note:${arg.ReservationId}` },
+      ],
+    }),
+
     cancelReservation: builder.mutation({
       query: (body: CancelReservationRequest) => ({
         url: reservationApiPath("CancelReservation"),
@@ -860,6 +904,8 @@ export const {
   useGetReservationDataQuery,
   useGetReservationDetailByIdQuery,
   useGetReservationHistoryByIdQuery,
+  useGetReservationNoteByIdQuery,
+  useSaveReservationNoteMutation,
   useGetShowDetailsByDateQuery,
   useGetShowSectionsQuery,
   useGetSystemDefaultsQuery,

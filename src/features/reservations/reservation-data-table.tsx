@@ -13,6 +13,7 @@ type ReservationDataTableProps = {
   onUnCancelReservation?: (reservation: Reservation) => void
   onPrintTickets?: (reservation: Reservation) => void
   onReservationHistory?: (reservation: Reservation) => void
+  onAddNote?: (reservation: Reservation) => void
 }
 
 export function ReservationDataTable({
@@ -23,6 +24,7 @@ export function ReservationDataTable({
   onUnCancelReservation,
   onPrintTickets,
   onReservationHistory,
+  onAddNote,
 }: ReservationDataTableProps) {
   const columns = useMemo(
     () =>
@@ -32,6 +34,7 @@ export function ReservationDataTable({
         onUnCancelReservation,
         onPrintTickets,
         onReservationHistory,
+        onAddNote,
       }),
     [
       displayPhone,
@@ -39,6 +42,7 @@ export function ReservationDataTable({
       onUnCancelReservation,
       onPrintTickets,
       onReservationHistory,
+      onAddNote,
     ]
   )
 

@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { AddReservationDialog } from "@/features/reservations/add-reservation-dialog"
 import { CancelReservationDialog } from "@/features/reservations/cancel-reservation-dialog"
+import { ReservationNoteDialog } from "@/features/reservations/reservation-note-dialog"
 import { ReservationDataTable } from "@/features/reservations/reservation-data-table"
 import { ReservationHistoryDialog } from "@/features/reservations/reservation-history-dialog"
 import { ReservationFiltersCard } from "@/features/reservations/reservation-filters-card"
@@ -18,8 +19,9 @@ import { useShowDetailsByDate } from "@/hooks/use-show-details-by-date"
 import { calculateReservationShowStats } from "@/lib/calculate-reservation-show-stats"
 import { readBoothSeatDefault } from "@/lib/booth-seat-default"
 import { writeStoredBoothSeatCount } from "@/lib/booth-seat-storage"
-import { cancelReservation, revertCancelReservation } from "@/lib/api/reservations"
+import { cancelReservation, revertCancelReservation, saveReservationNote } from "@/lib/api/reservations"
 import { buildCancelReservationRequest } from "@/lib/build-cancel-reservation-request"
+import { buildReservationNoteRequest } from "@/lib/build-reservation-note-request"
 import {
   readReservationFilters,
   writeReservationFilters,
@@ -65,6 +67,7 @@ export function Reservations() {
   const [reprintOpen, setReprintOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [noteOpen, setNoteOpen] = useState(false)
   const [selectedReservation, setSelectedReservation] =
     useState<Reservation | null>(null)
   const [isCancellingReservation, setIsCancellingReservation] = useState(false)
@@ -76,6 +79,10 @@ export function Reservations() {
   >(null)
   const [isUncancellingReservation, setIsUncancellingReservation] =
     useState(false)
+  const [isSavingReservationNote, setIsSavingReservationNote] = useState(false)
+  const [saveReservationNoteError, setSaveReservationNoteError] = useState<
+    string | null
+  >(null)
   const [cancelledShow, setCancelledShow] = useState(
     storedFilters.cancelledShow ?? false
   )
@@ -210,6 +217,52 @@ export function Reservations() {
   function handleOpenReservationHistory(reservation: Reservation) {
     setSelectedReservation(reservation)
     setHistoryOpen(true)
+  }
+
+  function handleOpenAddNote(reservation: Reservation) {
+    setSelectedReservation(reservation)
+    setSaveReservationNoteError(null)
+    setNoteOpen(true)
+  }
+
+  function handleNoteDialogOpenChange(open: boolean) {
+    setNoteOpen(open)
+    if (!open) {
+      setSelectedReservation(null)
+      setSaveReservationNoteError(null)
+      setIsSavingReservationNote(false)
+    }
+  }
+
+  async function handleSaveReservationNote(note: string) {
+    if (!selectedReservation || !isReady) {
+      return
+    }
+
+    setIsSavingReservationNote(true)
+    setSaveReservationNoteError(null)
+
+    try {
+      await saveReservationNote(
+        buildReservationNoteRequest({
+          connectionName,
+          locationId,
+          reservationId: selectedReservation.id,
+          lastUpdateId: username,
+          reservationNote: note,
+        })
+      )
+      await refreshReservations()
+      handleNoteDialogOpenChange(false)
+    } catch (requestError) {
+      setSaveReservationNoteError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Failed to save reservation note"
+      )
+    } finally {
+      setIsSavingReservationNote(false)
+    }
   }
 
   function handleHistoryDialogOpenChange(open: boolean) {
@@ -423,6 +476,7 @@ export function Reservations() {
           onUnCancelReservation={handleUnCancelReservation}
           onPrintTickets={handleOpenReprintTicket}
           onReservationHistory={handleOpenReservationHistory}
+          onAddNote={handleOpenAddNote}
         />
       </PanelCard>
 
@@ -445,6 +499,15 @@ export function Reservations() {
         onOpenChange={handleHistoryDialogOpenChange}
         reservation={selectedReservation}
         connectionName={connectionName}
+      />
+      <ReservationNoteDialog
+        open={noteOpen}
+        onOpenChange={handleNoteDialogOpenChange}
+        reservation={selectedReservation}
+        connectionName={connectionName}
+        isSubmitting={isSavingReservationNote}
+        error={saveReservationNoteError}
+        onSave={handleSaveReservationNote}
       />
       <ReprintTicketDialog
         open={reprintOpen}
