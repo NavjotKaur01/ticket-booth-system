@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 const ROW_ACTIONS = [
-  "Cancel Reservation",
   "Check-In",
   "Move Reservation",
   "Print Ticket(s)",
@@ -22,7 +21,9 @@ const ROW_ACTIONS = [
 ] as const
 
 type RowActionsMenuProps = {
+  isCancelled?: boolean
   onCancelReservation?: () => void
+  onUnCancelReservation?: () => void
   onPrintTickets?: () => void
   onPrintIndividualTickets?: () => void
   onReservationHistory?: () => void
@@ -30,14 +31,27 @@ type RowActionsMenuProps = {
 
 /** Three-dot row action menu shared by Reservations and Check-In tables. */
 export function RowActionsMenu({
+  isCancelled = false,
   onCancelReservation,
+  onUnCancelReservation,
   onPrintTickets,
   onPrintIndividualTickets,
   onReservationHistory,
 }: RowActionsMenuProps) {
-  function handleActionSelect(action: (typeof ROW_ACTIONS)[number]) {
+  const cancelActionLabel = isCancelled
+    ? "UnCancel Reservation"
+    : "Cancel Reservation"
+
+  function handleActionSelect(
+    action: typeof cancelActionLabel | (typeof ROW_ACTIONS)[number]
+  ) {
     if (action === "Cancel Reservation") {
       onCancelReservation?.()
+      return
+    }
+
+    if (action === "UnCancel Reservation") {
+      onUnCancelReservation?.()
       return
     }
 
@@ -70,6 +84,9 @@ export function RowActionsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[12.5rem]">
+        <DropdownMenuItem onSelect={() => handleActionSelect(cancelActionLabel)}>
+          {cancelActionLabel}
+        </DropdownMenuItem>
         {ROW_ACTIONS.map((action) => (
           <DropdownMenuItem
             key={action}

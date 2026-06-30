@@ -1,4 +1,5 @@
 import { formatApiDateTime } from "@/lib/format-datetime"
+import { isCancelledReservationStatus } from "@/lib/reservation-lookup-codes"
 import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { Reservation } from "@/types/reservation"
 
@@ -57,6 +58,8 @@ export function mapReservationDataItem(item: ReservationDataItem): Reservation {
 
   return {
     id: item.ReservationID,
+    resStatus: normalizeText(item.ResStatus),
+    isCancelled: isCancelledReservationStatus(item.ResStatus),
     lastName,
     firstName,
     businessName: normalizeText(item.busName),

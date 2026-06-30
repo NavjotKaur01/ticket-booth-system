@@ -16,7 +16,7 @@ import { useAppSession } from "@/hooks/use-app-session"
 import { useReservationData } from "@/hooks/use-reservation-data"
 import { useShowDetailsByDate } from "@/hooks/use-show-details-by-date"
 import { calculateReservationShowStats } from "@/lib/calculate-reservation-show-stats"
-import { cancelReservation } from "@/lib/api/reservations"
+import { cancelReservation, revertCancelReservation } from "@/lib/api/reservations"
 import { buildCancelReservationRequest } from "@/lib/build-cancel-reservation-request"
 import type { CancelReservationPaymentRow } from "@/types/cancel-reservation-payment"
 import { filterReservations } from "@/lib/filter-reservations"
@@ -50,6 +50,11 @@ export function Reservations() {
   const [cancelReservationError, setCancelReservationError] = useState<
     string | null
   >(null)
+  const [uncancelReservationError, setUncancelReservationError] = useState<
+    string | null
+  >(null)
+  const [isUncancellingReservation, setIsUncancellingReservation] =
+    useState(false)
   const [cancelledShow, setCancelledShow] = useState(false)
   const [showCancelled, setShowCancelled] = useState(false)
   const [displayPhone, setDisplayPhone] = useState(false)
@@ -153,6 +158,34 @@ export function Reservations() {
       setSelectedReservation(null)
       setCancelReservationError(null)
       setIsCancellingReservation(false)
+    }
+  }
+
+  async function handleUnCancelReservation(reservation: Reservation) {
+    if (!isReady) {
+      return
+    }
+
+    setIsUncancellingReservation(true)
+    setUncancelReservationError(null)
+
+    try {
+      await revertCancelReservation(
+        buildCancelReservationRequest({
+          connectionName,
+          locationId,
+          reservationId: reservation.id,
+          lastUpdateId: username,
+        })
+      )
+    } catch (requestError) {
+      setUncancelReservationError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Failed to uncancel reservation"
+      )
+    } finally {
+      setIsUncancellingReservation(false)
     }
   }
 
@@ -301,12 +334,18 @@ export function Reservations() {
         {reservationsError ? (
           <p className="px-3 py-2 text-sm text-destructive">{reservationsError}</p>
         ) : null}
+        {uncancelReservationError ? (
+          <p className="px-3 py-2 text-sm text-destructive">
+            {uncancelReservationError}
+          </p>
+        ) : null}
 
         <ReservationDataTable
           data={filteredReservations}
-          loading={reservationsLoading}
+          loading={reservationsLoading || isUncancellingReservation}
           displayPhone={displayPhone}
           onCancelReservation={handleOpenCancelReservation}
+          onUnCancelReservation={handleUnCancelReservation}
           onPrintTickets={handleOpenReprintTicket}
           onReservationHistory={handleOpenReservationHistory}
         />

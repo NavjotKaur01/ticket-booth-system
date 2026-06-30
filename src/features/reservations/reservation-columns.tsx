@@ -8,6 +8,7 @@ import type { Reservation } from "@/types/reservation"
 type ReservationColumnsOptions = {
   displayPhone?: boolean
   onCancelReservation?: (reservation: Reservation) => void
+  onUnCancelReservation?: (reservation: Reservation) => void
   onPrintTickets?: (reservation: Reservation) => void
   onReservationHistory?: (reservation: Reservation) => void
 }
@@ -16,6 +17,7 @@ type ReservationColumnsOptions = {
 export function createReservationColumns({
   displayPhone = false,
   onCancelReservation,
+  onUnCancelReservation,
   onPrintTickets,
   onReservationHistory,
 }: ReservationColumnsOptions = {}): ColumnDef<Reservation>[] {
@@ -155,7 +157,9 @@ export function createReservationColumns({
       meta: { sticky: "right" },
       cell: ({ row }) => (
         <RowActionsMenu
+          isCancelled={row.original.isCancelled}
           onCancelReservation={() => onCancelReservation?.(row.original)}
+          onUnCancelReservation={() => onUnCancelReservation?.(row.original)}
           onPrintTickets={() => onPrintTickets?.(row.original)}
           onPrintIndividualTickets={() => onPrintTickets?.(row.original)}
           onReservationHistory={() => onReservationHistory?.(row.original)}
