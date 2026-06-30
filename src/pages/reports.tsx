@@ -165,9 +165,8 @@ export function Reports() {
 
   async function handleGenerate(nextFilters = draftFilters) {
     const config = getReportConfig(nextFilters.reportType)
-    const activeFilters = { ...nextFilters, locationId }
 
-    if (config.showComicPicker && !activeFilters.headlinerId) {
+    if (config.showComicPicker && !nextFilters.headlinerId) {
       setGenerateError("Please select a comedian before generating this report.")
       return
     }
@@ -176,10 +175,10 @@ export function Reports() {
     setGenerateError(null)
 
     try {
-      const requestBody = buildReportRequest(activeFilters, connectionName)
+      const requestBody = buildReportRequest(nextFilters, connectionName)
       let apiData: unknown
 
-      if (activeFilters.reportType === "door-checkout" && activeFilters.isSeparateByUsers) {
+      if (nextFilters.reportType === "door-checkout" && nextFilters.isSeparateByUsers) {
         // WPF always loads GetDoorCheckOutReport first, then appends per-user sections.
         const mainData = await generateReport({
           endpoint: "GetDoorCheckOutReport",
@@ -221,9 +220,9 @@ export function Reports() {
       }
 
       const result = transformReportApiResponse({
-        reportType: activeFilters.reportType,
+        reportType: nextFilters.reportType,
         data: apiData,
-        filters: activeFilters,
+        filters: nextFilters,
         locationOptions,
         connectionName,
       })
