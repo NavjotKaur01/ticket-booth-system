@@ -72,7 +72,7 @@ export function Reports() {
 
   const [draftFilters, setDraftFilters] = useState<ReportViewerFilters>(() =>
     createDefaultReportFilters({
-      locationId: locationOptions[0]?.id ?? locationId,
+      locationId,
       reportType: initialReportType,
     })
   )
@@ -98,23 +98,6 @@ export function Reports() {
       }),
     [rawComedianList]
   )
-
-  useEffect(() => {
-    if (!locationOptions.length) {
-      return
-    }
-
-    setDraftFilters((current) => {
-      if (current.locationId && locationOptions.some((option) => option.id === current.locationId)) {
-        return current
-      }
-
-      return {
-        ...current,
-        locationId: locationOptions[0].id,
-      }
-    })
-  }, [locationOptions])
 
   useEffect(() => {
     if (comedianOptions.length > 0 && !draftFilters.headlinerId) {
@@ -178,8 +161,9 @@ export function Reports() {
 
   async function handleGenerate(nextFilters = draftFilters) {
     const config = getReportConfig(nextFilters.reportType)
+    const activeFilters = { ...nextFilters, locationId }
 
-    if (config.showComicPicker && !nextFilters.headlinerId) {
+    if (config.showComicPicker && !activeFilters.headlinerId) {
       setGenerateError("Please select a comedian before generating this report.")
       return
     }
@@ -188,10 +172,10 @@ export function Reports() {
     setGenerateError(null)
 
     try {
-      const requestBody = buildReportRequest(nextFilters, connectionName)
+      const requestBody = buildReportRequest(activeFilters, connectionName)
       let apiData: unknown
 
-      if (nextFilters.reportType === "door-checkout" && nextFilters.isSeparateByUsers) {
+      if (activeFilters.reportType === "door-checkout" && activeFilters.isSeparateByUsers) {
         // WPF always loads GetDoorCheckOutReport first, then appends per-user sections.
         const mainData = await generateReport({
           endpoint: "GetDoorCheckOutReport",
@@ -233,9 +217,9 @@ export function Reports() {
       }
 
       const result = transformReportApiResponse({
-        reportType: nextFilters.reportType,
+        reportType: activeFilters.reportType,
         data: apiData,
-        filters: nextFilters,
+        filters: activeFilters,
         locationOptions,
         connectionName,
       })
@@ -310,7 +294,6 @@ export function Reports() {
           <ReportFiltersToolbar
             filters={draftFilters}
             reportOptions={reportOptions}
-            locationOptions={locationOptions}
             comedianOptions={comedianOptions}
             isGenerating={isGenerating}
             isLoadingReportOptions={isLoadingReportOptions}
