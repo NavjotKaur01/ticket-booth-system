@@ -1,8 +1,9 @@
 ﻿import dayjs from "dayjs"
 import { useEffect, useMemo, useState } from "react"
-import { useSearchParams } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 
 import { PanelCard } from "@/components/common/panel-card"
+import { ROUTES } from "@/constants/routes"
 import { useAppSession } from "@/hooks/use-app-session"
 import { ReportFiltersToolbar } from "@/features/reports/report-filters-toolbar"
 import { ReportViewerResults } from "@/features/reports/report-viewer-results"
@@ -37,6 +38,7 @@ function buildFilename(base: string, extension: string) {
 export function Reports() {
   const { locationId, locationName, locations, connectionName, userRight } = useAppSession()
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const [generateReport] = useGenerateReportMutation()
 
   const permissionRequest = useMemo(
@@ -68,12 +70,9 @@ export function Reports() {
     () => createReportViewerLocationOptions(locations, locationId, locationName),
     [locationId, locationName, locations]
   )
-  const initialReportType = resolveReportType(searchParams.get("report"), reportOptions)
-
   const [draftFilters, setDraftFilters] = useState<ReportViewerFilters>(() =>
     createDefaultReportFilters({
-      locationId,
-      reportType: initialReportType,
+      locationId: locationId ?? locationOptions[0]?.id ?? "",
     })
   )
   const [generatedResult, setGeneratedResult] = useState<ReportViewerResult | null>(null)
@@ -98,6 +97,20 @@ export function Reports() {
       }),
     [rawComedianList]
   )
+
+  useEffect(() => {
+    if (searchParams.has("report")) {
+      navigate(ROUTES.reports, { replace: true })
+    }
+  }, [searchParams, navigate])
+
+  useEffect(() => {
+    if (!locationId) return
+
+    setDraftFilters((current) =>
+      current.locationId === locationId ? current : { ...current, locationId }
+    )
+  }, [locationId])
 
   useEffect(() => {
     if (comedianOptions.length > 0 && !draftFilters.headlinerId) {
@@ -126,15 +139,6 @@ export function Reports() {
     })
   }, [reportOptions])
 
-  useEffect(() => {
-    const urlReportType = resolveReportType(searchParams.get("report"), reportOptions)
-    if (!urlReportType || !reportOptions.length) return
-
-    setDraftFilters((current) =>
-      current.reportType === urlReportType ? current : { ...current, reportType: urlReportType }
-    )
-  }, [searchParams, reportOptions])
-
   function updateDraftField<K extends keyof ReportViewerFilters>(
     key: K,
     value: ReportViewerFilters[K]
@@ -161,9 +165,8 @@ export function Reports() {
 
   async function handleGenerate(nextFilters = draftFilters) {
     const config = getReportConfig(nextFilters.reportType)
-    const activeFilters = { ...nextFilters, locationId }
 
-    if (config.showComicPicker && !activeFilters.headlinerId) {
+    if (config.showComicPicker && !nextFilters.headlinerId) {
       setGenerateError("Please select a comedian before generating this report.")
       return
     }
@@ -172,10 +175,10 @@ export function Reports() {
     setGenerateError(null)
 
     try {
-      const requestBody = buildReportRequest(activeFilters, connectionName)
+      const requestBody = buildReportRequest(nextFilters, connectionName)
       let apiData: unknown
 
-      if (activeFilters.reportType === "door-checkout" && activeFilters.isSeparateByUsers) {
+      if (nextFilters.reportType === "door-checkout" && nextFilters.isSeparateByUsers) {
         // WPF always loads GetDoorCheckOutReport first, then appends per-user sections.
         const mainData = await generateReport({
           endpoint: "GetDoorCheckOutReport",
@@ -217,9 +220,9 @@ export function Reports() {
       }
 
       const result = transformReportApiResponse({
-        reportType: activeFilters.reportType,
+        reportType: nextFilters.reportType,
         data: apiData,
-        filters: activeFilters,
+        filters: nextFilters,
         locationOptions,
         connectionName,
       })

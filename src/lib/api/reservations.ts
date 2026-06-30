@@ -1,6 +1,9 @@
 import { dispatchEndpoint } from "@/lib/api/dispatch-endpoint"
 import { clubmanApi } from "@/store/api/clubmanApi"
 import type { ReservationDataItem } from "@/types/api/reservation-data"
+import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
+import type { ReservationDetail } from "@/types/api/reservation-detail"
+import type { ReservationHistoryItem } from "@/types/api/reservation-history"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
 import type { ShowDetailsByDateItem } from "@/types/api/show-details"
 import type { ShowSectionItem } from "@/types/api/show-sections"
@@ -9,16 +12,26 @@ type FetchReservationDataParams = {
   connectionString: string
   showId: string
   includeCancelledReservations: boolean
+  displayPhone: boolean
+  includeCheckedInReservations: boolean
 }
 
 export function fetchReservationData({
   connectionString,
   showId,
   includeCancelledReservations,
+  displayPhone,
+  includeCheckedInReservations,
 }: FetchReservationDataParams) {
   return dispatchEndpoint<ReservationDataItem[], FetchReservationDataParams>(
     clubmanApi.endpoints.getReservationData,
-    { connectionString, showId, includeCancelledReservations }
+    {
+      connectionString,
+      showId,
+      includeCancelledReservations,
+      displayPhone,
+      includeCheckedInReservations,
+    }
   )
 }
 
@@ -89,4 +102,36 @@ export function updateReservation(request: SaveReservationRequest) {
     clubmanApi.endpoints.updateReservation,
     request
   ).then(normalizeReservationIds)
+}
+
+type FetchReservationDetailByIdParams = {
+  connectionString: string
+  reservationId: string
+}
+
+export function fetchReservationDetailById({
+  connectionString,
+  reservationId,
+}: FetchReservationDetailByIdParams) {
+  return dispatchEndpoint<ReservationDetail, FetchReservationDetailByIdParams>(
+    clubmanApi.endpoints.getReservationDetailById,
+    { connectionString, reservationId }
+  )
+}
+
+export function fetchReservationHistoryById({
+  connectionString,
+  reservationId,
+}: FetchReservationDetailByIdParams) {
+  return dispatchEndpoint<ReservationHistoryItem[], FetchReservationDetailByIdParams>(
+    clubmanApi.endpoints.getReservationHistoryById,
+    { connectionString, reservationId }
+  )
+}
+
+export function cancelReservation(request: CancelReservationRequest) {
+  return dispatchEndpoint<unknown, CancelReservationRequest>(
+    clubmanApi.endpoints.cancelReservation,
+    request
+  )
 }

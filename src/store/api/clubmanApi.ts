@@ -58,6 +58,9 @@ export type ApiReportComedian = {
 import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { ReservationCustomerSearchItem } from "@/types/api/reservation-customer-search"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
+import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
+import { mapReservationDetail } from "@/lib/map-reservation-detail"
+import type { ReservationHistoryItem } from "@/types/api/reservation-history"
 import type { DailyTransactionItem } from "@/types/api/daily-transaction"
 import type {
   GetShowDetailsByDateRequest,
@@ -501,24 +504,31 @@ export const clubmanApi = createApi({
         connectionString,
         showId,
         includeCancelledReservations,
+        displayPhone,
+        includeCheckedInReservations,
       }: {
         connectionString: string
         showId: string
         includeCancelledReservations: boolean
+        displayPhone: boolean
+        includeCheckedInReservations: boolean
       }) => ({
         url: reservationApiPath(
           connectionString,
           showId,
           String(includeCancelledReservations),
-          "false",
-          "false",
+          String(displayPhone),
+          String(includeCheckedInReservations),
           "GetReservationData"
         ),
         headers: { Accept: "application/json" },
       }),
       transformResponse: (response: ReservationDataItem[]) => response,
       providesTags: (_result, _error, arg) => [
-        { type: "Reservation", id: `${arg.showId}:${arg.includeCancelledReservations}` },
+        {
+          type: "Reservation",
+          id: `${arg.showId}:${arg.includeCancelledReservations}:${arg.displayPhone}:${arg.includeCheckedInReservations}`,
+        },
       ],
     }),
 
@@ -584,6 +594,57 @@ export const clubmanApi = createApi({
     updateReservation: builder.mutation({
       query: (body: SaveReservationRequest) => ({
         url: reservationApiPath("UpdateReservation"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    getReservationDetailById: builder.query({
+      query: ({
+        connectionString,
+        reservationId,
+      }: {
+        connectionString: string
+        reservationId: string
+      }) => ({
+        url: reservationApiPath(
+          connectionString,
+          reservationId,
+          "GetReservationDetailById"
+        ),
+        headers: { Accept: "application/json" },
+      }),
+      transformResponse: (response: unknown) => mapReservationDetail(response),
+      providesTags: (_result, _error, arg) => [
+        { type: "Reservation", id: `detail:${arg.reservationId}` },
+      ],
+    }),
+
+    getReservationHistoryById: builder.query({
+      query: ({
+        connectionString,
+        reservationId,
+      }: {
+        connectionString: string
+        reservationId: string
+      }) => ({
+        url: reservationApiPath(
+          connectionString,
+          reservationId,
+          "GetReservationHistoryById"
+        ),
+        headers: { Accept: "application/json" },
+      }),
+      transformResponse: (response: ReservationHistoryItem[]) => response,
+      providesTags: (_result, _error, arg) => [
+        { type: "Reservation", id: `history:${arg.reservationId}` },
+      ],
+    }),
+
+    cancelReservation: builder.mutation({
+      query: (body: CancelReservationRequest) => ({
+        url: reservationApiPath("CancelReservation"),
         method: "PUT",
         body,
       }),
@@ -764,10 +825,13 @@ export const {
   useSearchPromotionsMutation,
   useGetReservationPromotionsMutation,
   useGetReservationDataQuery,
+  useGetReservationDetailByIdQuery,
+  useGetReservationHistoryByIdQuery,
   useGetShowDetailsByDateQuery,
   useGetShowSectionsQuery,
   useSaveReservationMutation,
   useUpdateReservationMutation,
+  useCancelReservationMutation,
   useGetDailyTransactionDataQuery,
   useGetRecentSalesReportQuery,
   useGetCalendarDataQuery,

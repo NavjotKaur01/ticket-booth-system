@@ -7,13 +7,18 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { reservationCounts } from "@/data/reservation"
 import { AddReservationDialog } from "@/features/reservations/add-reservation-dialog"
+import { CancelReservationDialog } from "@/features/reservations/cancel-reservation-dialog"
 import { ReservationDataTable } from "@/features/reservations/reservation-data-table"
+import { ReservationHistoryDialog } from "@/features/reservations/reservation-history-dialog"
 import { ReservationFiltersCard } from "@/features/reservations/reservation-filters-card"
 import { printReservationTicket } from "@/services/ticket-print.service"
 import { ReprintTicketDialog } from "@/features/ticket-print/reprint-ticket-dialog"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useReservationData } from "@/hooks/use-reservation-data"
 import { useShowDetailsByDate } from "@/hooks/use-show-details-by-date"
+import { cancelReservation } from "@/lib/api/reservations"
+import { buildCancelReservationRequest } from "@/lib/build-cancel-reservation-request"
+import type { CancelReservationPaymentRow } from "@/types/cancel-reservation-payment"
 import { filterReservations } from "@/lib/filter-reservations"
 import type { Reservation } from "@/types/reservation"
 
@@ -27,7 +32,8 @@ function todayDateValue() {
 
 /** Reservations list with show filters and add-reservation workflow. */
 export function Reservations() {
-  const { connectionName, locationId, locationName, isReady } = useAppSession()
+  const { connectionName, locationId, locationName, username, userRight, isReady } =
+    useAppSession()
 
   const [showDate, setShowDate] = useState(todayDateValue)
   const [showTime, setShowTime] = useState("")
@@ -35,8 +41,14 @@ export function Reservations() {
   const [search, setSearch] = useState("")
   const [addOpen, setAddOpen] = useState(false)
   const [reprintOpen, setReprintOpen] = useState(false)
+  const [cancelOpen, setCancelOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [selectedReservation, setSelectedReservation] =
     useState<Reservation | null>(null)
+  const [isCancellingReservation, setIsCancellingReservation] = useState(false)
+  const [cancelReservationError, setCancelReservationError] = useState<
+    string | null
+  >(null)
   const [cancelledShow, setCancelledShow] = useState(false)
   const [showCancelled, setShowCancelled] = useState(false)
   const [displayNone, setDisplayNone] = useState(false)
@@ -58,6 +70,8 @@ export function Reservations() {
     connectionName,
     showTime,
     showCancelled,
+    displayNone,
+    true,
     Boolean(showTime)
   )
 
@@ -101,10 +115,12 @@ export function Reservations() {
     [reservations]
   )
 
-  const selectedShowLabel = useMemo(
-    () => shows.find((show) => show.id === showTime)?.label ?? "",
+  const selectedShow = useMemo(
+    () => shows.find((show) => show.id === showTime),
     [showTime, shows]
   )
+
+  const selectedShowLabel = selectedShow?.label ?? ""
 
   function handleTodayClick() {
     setShowDate(todayDateValue())
@@ -113,6 +129,70 @@ export function Reservations() {
   function handleOpenReprintTicket(reservation: Reservation) {
     setSelectedReservation(reservation)
     setReprintOpen(true)
+  }
+
+  function handleOpenReservationHistory(reservation: Reservation) {
+    setSelectedReservation(reservation)
+    setHistoryOpen(true)
+  }
+
+  function handleHistoryDialogOpenChange(open: boolean) {
+    setHistoryOpen(open)
+    if (!open) {
+      setSelectedReservation(null)
+    }
+  }
+
+  function handleOpenCancelReservation(reservation: Reservation) {
+    setSelectedReservation(reservation)
+    setCancelReservationError(null)
+    setCancelOpen(true)
+  }
+
+  function handleCancelDialogOpenChange(open: boolean) {
+    setCancelOpen(open)
+    if (!open) {
+      setSelectedReservation(null)
+      setCancelReservationError(null)
+      setIsCancellingReservation(false)
+    }
+  }
+
+  async function handleSaveCancelReservation({
+    reservationNote,
+    payments,
+  }: {
+    reservationNote: string
+    payments: CancelReservationPaymentRow[]
+  }) {
+    if (!selectedReservation || !isReady) {
+      return
+    }
+
+    setIsCancellingReservation(true)
+    setCancelReservationError(null)
+
+    try {
+      await cancelReservation(
+        buildCancelReservationRequest({
+          connectionName,
+          locationId,
+          reservationId: selectedReservation.id,
+          lastUpdateId: username,
+          reservationNote,
+          payments,
+        })
+      )
+      handleCancelDialogOpenChange(false)
+    } catch (requestError) {
+      setCancelReservationError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Failed to cancel reservation"
+      )
+    } finally {
+      setIsCancellingReservation(false)
+    }
   }
 
   function handleReprintOpenChange(open: boolean) {
@@ -227,11 +307,32 @@ export function Reservations() {
         <ReservationDataTable
           data={filteredReservations}
           loading={reservationsLoading}
+          onCancelReservation={handleOpenCancelReservation}
           onPrintTickets={handleOpenReprintTicket}
+          onReservationHistory={handleOpenReservationHistory}
         />
       </PanelCard>
 
       <AddReservationDialog open={addOpen} onOpenChange={setAddOpen} onSaved={handleReservationSaved} />
+      <CancelReservationDialog
+        open={cancelOpen}
+        onOpenChange={handleCancelDialogOpenChange}
+        reservation={selectedReservation}
+        connectionName={connectionName}
+        showDate={showDate}
+        showTime={selectedShow?.time}
+        showHeadliner={selectedShow?.headliner}
+        userRight={userRight}
+        isSubmitting={isCancellingReservation}
+        error={cancelReservationError}
+        onSave={handleSaveCancelReservation}
+      />
+      <ReservationHistoryDialog
+        open={historyOpen}
+        onOpenChange={handleHistoryDialogOpenChange}
+        reservation={selectedReservation}
+        connectionName={connectionName}
+      />
       <ReprintTicketDialog
         open={reprintOpen}
         onOpenChange={handleReprintOpenChange}
