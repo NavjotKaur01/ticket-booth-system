@@ -15,7 +15,6 @@ import { cn } from "@/lib/utils"
 import { getReportConfig } from "@/features/reports/reports.service"
 import type {
   ReportViewerFilters,
-  ReportViewerLocationOption,
   ReportViewerOption,
 } from "@/features/reports/reports.service"
 
@@ -27,7 +26,6 @@ type ComedianOption = {
 type ReportFiltersToolbarProps = {
   filters: ReportViewerFilters
   reportOptions: ReportViewerOption[]
-  locationOptions: ReportViewerLocationOption[]
   comedianOptions?: ComedianOption[]
   isGenerating?: boolean
   isLoadingReportOptions?: boolean
@@ -48,7 +46,6 @@ type ReportFiltersToolbarProps = {
 export function ReportFiltersToolbar({
   filters,
   reportOptions,
-  locationOptions,
   comedianOptions = [],
   isGenerating = false,
   isLoadingReportOptions = false,
@@ -231,29 +228,14 @@ export function ReportFiltersToolbar({
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="report-viewer-location">Location</Label>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
-            <div className="w-full max-w-[19rem]">
-              <Select
-                value={filters.locationId}
-                onValueChange={(value) => onFilterChange("locationId", value)}
-              >
-                <SelectTrigger id="report-viewer-location" className="h-9 w-full bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {locationOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
+        {(showComicPicker ||
+          showAllDatesOption ||
+          showSeparateByUsers ||
+          showWebReservationOnly ||
+          showCustomerFilters) && (
+          <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:gap-6">
             {showComicPicker && (
-              <div className="w-full max-w-[19rem] space-y-1.5 md:mt-0">
+              <div className="w-full max-w-[19rem] space-y-1.5">
                 <Label htmlFor="report-viewer-comic">Comic Name</Label>
                 <Select
                   value={filters.headlinerId}
@@ -274,7 +256,7 @@ export function ReportFiltersToolbar({
             )}
 
             {showAllDatesOption && (
-              <label className="flex items-center gap-2 text-sm text-foreground md:mt-5">
+              <label className="flex items-center gap-2 text-sm text-foreground">
                 <Checkbox
                   checked={filters.isAllDates}
                   onCheckedChange={(value) =>
@@ -333,7 +315,7 @@ export function ReportFiltersToolbar({
               </div>
             )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
