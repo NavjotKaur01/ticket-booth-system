@@ -198,25 +198,63 @@ function cloneRows(rows: VenueShowTimeRecord[]) {
   return rows.map((row) => ({ ...row }))
 }
 
-function findRowsByLocationLabel(locationLabel?: string) {
-  if (!locationLabel?.trim()) {
-    return null
+function resolveTemplateKey(locationLabel?: string) {
+  const normalized = normalizeLookupValue(locationLabel || "")
+
+  if (normalized === "standupmedia") {
+    return "standupmedia"
   }
 
-  const normalizedLabel = normalizeLookupValue(locationLabel)
-  if (normalizedLabel === "standupmedia") {
-    return MOCK_VENUE_SHOW_TIMES.get("standupmedia") ?? null
+  if (normalized === "venue b") {
+    return "venue-b"
   }
 
-  if (normalizedLabel === "venue b") {
-    return MOCK_VENUE_SHOW_TIMES.get("venue-b") ?? null
-  }
-
-  if (normalizedLabel === "venue c") {
-    return MOCK_VENUE_SHOW_TIMES.get("venue-c") ?? null
+  if (normalized === "venue c") {
+    return "venue-c"
   }
 
   return null
+}
+
+function getRowsForLocation(locationId: string, locationLabel?: string) {
+  const rowsById = MOCK_VENUE_SHOW_TIMES.get(locationId)
+  if (rowsById) {
+    return cloneRows(rowsById)
+  }
+
+  const templateKey = resolveTemplateKey(locationLabel)
+  if (!templateKey) {
+    return []
+  }
+
+  const templateRows = MOCK_VENUE_SHOW_TIMES.get(templateKey) ?? []
+  return templateRows.map((row) => ({
+    ...row,
+    id: `${locationId}-${row.id}`,
+    locationId,
+  }))
+}
+
+function persistRows(locationId: string, rows: VenueShowTimeRecord[]) {
+  MOCK_VENUE_SHOW_TIMES.set(locationId, cloneRows(rows))
+}
+
+function buildShowTimeId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID()
+  }
+
+  return `show-time-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function sortRows(rows: VenueShowTimeRecord[]) {
+  return rows.sort((left, right) => {
+    if (left.dayOfWeek === right.dayOfWeek) {
+      return left.showTime.localeCompare(right.showTime)
+    }
+
+    return left.dayOfWeek.localeCompare(right.dayOfWeek)
+  })
 }
 
 export async function getVenueShowTimesByLocation({
@@ -227,20 +265,109 @@ export async function getVenueShowTimesByLocation({
   locationLabel?: string
 }): Promise<VenueShowTimeRecord[]> {
   await wait(180)
+  return sortRows(getRowsForLocation(locationId, locationLabel))
+}
 
-  const rowsById = MOCK_VENUE_SHOW_TIMES.get(locationId)
-  if (rowsById) {
-    return cloneRows(rowsById)
+export async function createVenueShowTime({
+  locationId,
+  locationLabel,
+  dayOfWeek,
+  showTime,
+  arrivalTime,
+  dinner,
+  noPasses,
+  vip,
+  over21,
+  showSeatingChart,
+}: Omit<VenueShowTimeRecord, "id"> & { locationLabel?: string }): Promise<VenueShowTimeRecord> {
+  await wait(180)
+
+  const rows = getRowsForLocation(locationId, locationLabel)
+  const nextRow: VenueShowTimeRecord = {
+    id: buildShowTimeId(),
+    locationId,
+    dayOfWeek,
+    showTime,
+    arrivalTime,
+    dinner,
+    noPasses,
+    vip,
+    over21,
+    showSeatingChart,
   }
 
-  const rowsByLabel = findRowsByLocationLabel(locationLabel)
-  if (rowsByLabel) {
-    return rowsByLabel.map((row) => ({
-      ...row,
-      id: `${locationId}-${row.id}`,
-      locationId,
-    }))
+  rows.unshift(nextRow)
+  persistRows(locationId, rows)
+  return { ...nextRow }
+}
+
+export async function updateVenueShowTime({
+  locationId,
+  locationLabel,
+  showTimeId,
+  dayOfWeek,
+  showTime,
+  arrivalTime,
+  dinner,
+  noPasses,
+  vip,
+  over21,
+  showSeatingChart,
+}: {
+  locationId: string
+  locationLabel?: string
+  showTimeId: string
+  dayOfWeek: string
+  showTime: string
+  arrivalTime: string
+  dinner: boolean
+  noPasses: boolean
+  vip: boolean
+  over21: boolean
+  showSeatingChart: boolean
+}): Promise<VenueShowTimeRecord> {
+  await wait(180)
+
+  const rows = getRowsForLocation(locationId, locationLabel)
+  const rowIndex = rows.findIndex((row) => row.id === showTimeId)
+  if (rowIndex < 0) {
+    throw new Error("Unable to find the selected venue show time.")
   }
 
-  return []
+  const updatedRow: VenueShowTimeRecord = {
+    ...rows[rowIndex],
+    dayOfWeek,
+    showTime,
+    arrivalTime,
+    dinner,
+    noPasses,
+    vip,
+    over21,
+    showSeatingChart,
+  }
+
+  rows[rowIndex] = updatedRow
+  persistRows(locationId, rows)
+  return { ...updatedRow }
+}
+
+export async function deleteVenueShowTime({
+  locationId,
+  locationLabel,
+  showTimeId,
+}: {
+  locationId: string
+  locationLabel?: string
+  showTimeId: string
+}): Promise<void> {
+  await wait(160)
+
+  const rows = getRowsForLocation(locationId, locationLabel)
+  const nextRows = rows.filter((row) => row.id !== showTimeId)
+
+  if (nextRows.length === rows.length) {
+    throw new Error("Unable to find the selected venue show time.")
+  }
+
+  persistRows(locationId, nextRows)
 }

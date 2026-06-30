@@ -5,9 +5,9 @@
   Phone,
   Save,
 } from "lucide-react"
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 
-import { ScrollSelectControl } from "@/components/common/scroll-select-control"
+import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -30,7 +30,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useAppSession } from "@/hooks/use-app-session"
 import {
   getVenueInfoByLocation,
-  getVenueInfoLocationOptions,
   updateVenueInfo,
   VENUE_STATE_OPTIONS,
 } from "@/features/venue-info/venue-info.service"
@@ -89,45 +88,17 @@ function LoadingFields() {
   )
 }
 
-function EmptyState() {
-  return (
-    <div className="rounded-sm border border-dashed border-border bg-muted/20 px-4 py-10 text-center">
-      <p className="text-sm font-medium text-foreground">Select a location to view venue info.</p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        The page will load the mock venue details after you choose a location.
-      </p>
-    </div>
-  )
-}
-
 export function VenueInfoScreen() {
-  const { locations } = useAppSession()
+  const { locationId, locationName } = useAppSession()
 
-  const locationOptions = useMemo(
-    () =>
-      getVenueInfoLocationOptions(locations).map((option) => ({
-        value: option.id,
-        label: option.label,
-      })),
-    [locations]
-  )
-
-  const [selectedLocationId, setSelectedLocationId] = useState("")
   const [form, setForm] = useState<VenueInfoRecord | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
-  const selectedLocationLabel = useMemo(
-    () =>
-      locationOptions.find((option) => option.value === selectedLocationId)?.label ||
-      "",
-    [locationOptions, selectedLocationId]
-  )
-
   useEffect(() => {
-    if (!selectedLocationId) {
+    if (!locationId) {
       setForm(null)
       setLoading(false)
       setError(null)
@@ -142,8 +113,8 @@ export function VenueInfoScreen() {
     setForm(null)
 
     getVenueInfoByLocation({
-      locationId: selectedLocationId,
-      locationLabel: selectedLocationLabel,
+      locationId,
+      locationLabel: locationName,
     })
       .then((result) => {
         if (isActive) {
@@ -168,7 +139,7 @@ export function VenueInfoScreen() {
     return () => {
       isActive = false
     }
-  }, [selectedLocationId, selectedLocationLabel])
+  }, [locationId, locationName])
 
   function updateField<K extends keyof VenueInfoRecord>(
     key: K,
@@ -220,19 +191,7 @@ export function VenueInfoScreen() {
       </div>
 
       <Card className="gap-0 py-0">
-        <CardContent className="grid gap-3 px-4 py-4 md:grid-cols-[minmax(0,18rem)_1fr] md:items-end">
-          <FieldShell>
-            <Label htmlFor="venue-location">Location</Label>
-            <ScrollSelectControl
-              id="venue-location"
-              value={selectedLocationId}
-              onChange={setSelectedLocationId}
-              options={locationOptions}
-              placeholder="Select location"
-              disabled={locationOptions.length === 0}
-            />
-          </FieldShell>
-
+        <CardContent className="px-4 py-4">
           <div className="rounded-sm border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
             Required fields are marked with <RequiredMark /> and currently use
             mock service data so we can switch to the real API later without
@@ -242,8 +201,8 @@ export function VenueInfoScreen() {
       </Card>
 
       <Card className="gap-0 py-0">
-        <CardHeader className="border-b bg-primary px-4 py-3">
-          <CardTitle className="text-sm font-semibold uppercase tracking-wide text-primary-foreground">
+        <CardHeader className="border-b bg-muted/40 px-4 py-3">
+          <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
             Venue Info Data
           </CardTitle>
         </CardHeader>
@@ -255,8 +214,8 @@ export function VenueInfoScreen() {
             </p>
           ) : null}
 
-          {!selectedLocationId ? (
-            <EmptyState />
+          {!locationId ? (
+            <VenueNoLocationState featureLabel="Venue info" />
           ) : loading || !form ? (
             <>
               <LoadingFields />
@@ -436,14 +395,14 @@ export function VenueInfoScreen() {
 
         <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 sm:flex-row sm:items-center">
           <div aria-live="polite" className="text-sm text-muted-foreground">
-            {selectedLocationId
+            {locationId
               ? saveMessage || "Use Update to save the current venue info mock state."
-              : "Choose a location to begin editing venue info."}
+              : "Select a location from the header to begin editing venue info."}
           </div>
           <Button
             type="button"
             onClick={() => void handleUpdate()}
-            disabled={!canSave || !selectedLocationId || loading || saving || form == null}
+            disabled={!canSave || !locationId || loading || saving || form == null}
             className="gap-2"
           >
             {saving ? (
@@ -458,3 +417,4 @@ export function VenueInfoScreen() {
     </div>
   )
 }
+

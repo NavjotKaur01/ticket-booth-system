@@ -6,6 +6,18 @@ export const ROUTES = {
   administrator: "/administrator",
   venueInfo: "/venue/venue-info",
   venueShowTimes: "/venue/venue-show-times",
+  foodMenu: "/venue/food-menu",
+  venueAds: "/venue/venue-ads",
+  venueRotatingAds: "/venue/venue-rotating-ads",
+  giftOfLaughter: "/venue/gift-of-laughter",
+  venueSocials: "/venue/venue-socials",
+  venueSectionDescriptions: "/venue/venue-section-descriptions",
+  formEmails: "/venue/form-emails",
+  employmentOpenings: "/venue/employment/openings",
+  employmentQuestions: "/venue/employment/questions",
+  employmentApplicants: "/venue/employment/applicants",
+  webpagesText: "/venue/webpages-text",
+  freeForms: "/venue/free-forms",
   ticketbooth: "/ticketbooth",
   calendar: "/calendar",
   searchCustomer: "/administrator/customers",
@@ -51,6 +63,18 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.users]: "User",
   [ROUTES.venueInfo]: "Venue Info",
   [ROUTES.venueShowTimes]: "Venue Show Times",
+  [ROUTES.foodMenu]: "Food Menu",
+  [ROUTES.venueAds]: "Venue Ads",
+  [ROUTES.venueRotatingAds]: "Rotating Ads",
+  [ROUTES.giftOfLaughter]: "Gift of Laughter",
+  [ROUTES.venueSocials]: "Social",
+  [ROUTES.venueSectionDescriptions]: "Section Description",
+  [ROUTES.formEmails]: "Form Emails",
+  [ROUTES.employmentOpenings]: "Employment Openings",
+  [ROUTES.employmentQuestions]: "Employment Questions",
+  [ROUTES.employmentApplicants]: "Employment Applicants",
+  [ROUTES.webpagesText]: "Webpages Text",
+  [ROUTES.freeForms]: "Free Form",
   [ROUTES.businessContacts]: "Business Contacts",
   [ROUTES.commentCards]: "Comment Cards",
   [ROUTES.giftCards]: "Gift Cards",
@@ -72,7 +96,22 @@ export function getActiveNavId(pathname: string) {
   if (pathname === ROUTES.checkIn) return "check-in"
   if (pathname === ROUTES.reports) return "reports"
   if (pathname === ROUTES.transactions) return "transactions"
-  if (pathname === ROUTES.venueInfo || pathname === ROUTES.venueShowTimes) {
+  if (
+    pathname === ROUTES.venueInfo ||
+    pathname === ROUTES.venueShowTimes ||
+    pathname === ROUTES.foodMenu ||
+    pathname === ROUTES.venueAds ||
+    pathname === ROUTES.venueRotatingAds ||
+    pathname === ROUTES.giftOfLaughter ||
+    pathname === ROUTES.venueSocials ||
+    pathname === ROUTES.venueSectionDescriptions ||
+    pathname === ROUTES.formEmails ||
+    pathname === ROUTES.employmentOpenings ||
+    pathname === ROUTES.employmentQuestions ||
+    pathname === ROUTES.employmentApplicants ||
+    pathname === ROUTES.webpagesText ||
+    pathname === ROUTES.freeForms
+  ) {
     return "venue-manager"
   }
   if (pathname === ROUTES.dashboard) return "dashboard"
