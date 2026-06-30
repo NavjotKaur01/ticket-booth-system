@@ -504,24 +504,31 @@ export const clubmanApi = createApi({
         connectionString,
         showId,
         includeCancelledReservations,
+        displayPhone,
+        includeCheckedInReservations,
       }: {
         connectionString: string
         showId: string
         includeCancelledReservations: boolean
+        displayPhone: boolean
+        includeCheckedInReservations: boolean
       }) => ({
         url: reservationApiPath(
           connectionString,
           showId,
           String(includeCancelledReservations),
-          "false",
-          "false",
+          String(displayPhone),
+          String(includeCheckedInReservations),
           "GetReservationData"
         ),
         headers: { Accept: "application/json" },
       }),
       transformResponse: (response: ReservationDataItem[]) => response,
       providesTags: (_result, _error, arg) => [
-        { type: "Reservation", id: `${arg.showId}:${arg.includeCancelledReservations}` },
+        {
+          type: "Reservation",
+          id: `${arg.showId}:${arg.includeCancelledReservations}:${arg.displayPhone}:${arg.includeCheckedInReservations}`,
+        },
       ],
     }),
 
