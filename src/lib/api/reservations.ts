@@ -1,6 +1,8 @@
 import { dispatchEndpoint } from "@/lib/api/dispatch-endpoint"
 import { clubmanApi } from "@/store/api/clubmanApi"
 import type { ReservationDataItem } from "@/types/api/reservation-data"
+import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
+import type { ReservationDetail } from "@/types/api/reservation-detail"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
 import type { ShowDetailsByDateItem } from "@/types/api/show-details"
 import type { ShowSectionItem } from "@/types/api/show-sections"
@@ -89,4 +91,26 @@ export function updateReservation(request: SaveReservationRequest) {
     clubmanApi.endpoints.updateReservation,
     request
   ).then(normalizeReservationIds)
+}
+
+type FetchReservationDetailByIdParams = {
+  connectionString: string
+  reservationId: string
+}
+
+export function fetchReservationDetailById({
+  connectionString,
+  reservationId,
+}: FetchReservationDetailByIdParams) {
+  return dispatchEndpoint<ReservationDetail, FetchReservationDetailByIdParams>(
+    clubmanApi.endpoints.getReservationDetailById,
+    { connectionString, reservationId }
+  )
+}
+
+export function cancelReservation(request: CancelReservationRequest) {
+  return dispatchEndpoint<unknown, CancelReservationRequest>(
+    clubmanApi.endpoints.cancelReservation,
+    request
+  )
 }

@@ -22,16 +22,23 @@ const ROW_ACTIONS = [
 ] as const
 
 type RowActionsMenuProps = {
+  onCancelReservation?: () => void
   onPrintTickets?: () => void
   onPrintIndividualTickets?: () => void
 }
 
 /** Three-dot row action menu shared by Reservations and Check-In tables. */
 export function RowActionsMenu({
+  onCancelReservation,
   onPrintTickets,
   onPrintIndividualTickets,
 }: RowActionsMenuProps) {
   function handleActionSelect(action: (typeof ROW_ACTIONS)[number]) {
+    if (action === "Cancel Reservation") {
+      onCancelReservation?.()
+      return
+    }
+
     if (action === "Print Ticket(s)") {
       onPrintTickets?.()
       return

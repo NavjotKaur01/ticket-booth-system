@@ -262,11 +262,21 @@ function PaymentTable({ show }: { show: ManagerCheckoutApiShow }) {
   )
 }
 
-// ─── Checked-In + Source tables ────────────────────────────────────────────────
+// ─── Compact side-by-side tables (content width, aligned columns) ──────────────
 
-function CheckedInTable({ show }: { show: ManagerCheckoutApiShow }) {
+const COMPACT_TABLE = "w-auto max-w-none border-collapse text-xs"
+
+function detailRowClass(index: number) {
+  return index % 2 === 0 ? "bg-background" : "bg-muted/20"
+}
+
+function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow }) {
   const promos = show.FillPromoList ?? []
   const sources = show.PromoSourceList ?? []
+  const sections = show.BookedShowSectionList ?? []
+  const origins = (show.OriginSourceList ?? []).filter(
+    (o) => o.Origin && (n(o.Party) !== 0 || n(o.Seated) !== 0 || n(o.Paid) !== 0)
+  )
 
   const sumParty = promos.reduce((s, p) => s + n(p.PartyNo), 0)
   const sumCheckedIn = promos.reduce((s, p) => s + n(p.CheckedIn), 0)
@@ -277,6 +287,10 @@ function CheckedInTable({ show }: { show: ManagerCheckoutApiShow }) {
   const sumScanPaid = promos.reduce((s, p) => s + n(p.ScannerInPaid), 0)
   const sumScanComp = promos.reduce((s, p) => s + n(p.ScannerInComp), 0)
   const sumScanDisc = promos.reduce((s, p) => s + n(p.ScannerInDisc), 0)
+
+  const totalParty = origins.reduce((s, o) => s + n(o.Party), 0)
+  const totalSeated = origins.reduce((s, o) => s + n(o.Seated), 0)
+  const totalPaid = origins.reduce((s, o) => s + n(o.Paid), 0)
 
   function getSources(promo: string) {
     const filtered = sources.filter((s) => s.Promo?.trim() === promo.trim())
@@ -295,10 +309,14 @@ function CheckedInTable({ show }: { show: ManagerCheckoutApiShow }) {
   const totalWeb = promos.reduce((s, p) => s + getSources(p.Promo ?? "").web, 0)
 
   return (
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
-      <div className="overflow-x-auto">
-        <p className="mb-1 text-center text-xs font-semibold text-muted-foreground">Checked-In</p>
-        <table className="border-collapse text-xs">
+    <div className="w-fit max-w-full overflow-x-auto">
+      <div className="inline-grid grid-cols-[auto_auto] items-start gap-x-0 gap-y-4">
+        <p className="justify-self-center text-center text-xs font-semibold leading-4 text-muted-foreground">
+          Checked-In
+        </p>
+        <div className="h-4" aria-hidden />
+
+        <table className={COMPACT_TABLE}>
           <thead>
             <tr>
               <Th>Promotion</Th>
@@ -315,7 +333,7 @@ function CheckedInTable({ show }: { show: ManagerCheckoutApiShow }) {
           </thead>
           <tbody>
             {promos.map((p, i) => (
-              <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
+              <tr key={i} className={detailRowClass(i)}>
                 <Td>{p.Promo || "-"}</Td>
                 <Td right>{n(p.PartyNo)}</Td>
                 <Td right>{n(p.CheckedIn)}</Td>
@@ -342,11 +360,8 @@ function CheckedInTable({ show }: { show: ManagerCheckoutApiShow }) {
             </tr>
           </tbody>
         </table>
-      </div>
 
-      {/* Phone-In / Walkup / Web side table */}
-      <div className="overflow-x-auto">
-        <table className="border-collapse text-xs">
+        <table className={cn(COMPACT_TABLE, "-ml-px justify-self-end")}>
           <thead>
             <tr>
               <Th right>Phone-In</Th>
@@ -358,7 +373,7 @@ function CheckedInTable({ show }: { show: ManagerCheckoutApiShow }) {
             {promos.map((p, i) => {
               const { phone, walkup, web } = getSources(p.Promo ?? "")
               return (
-                <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
+                <tr key={i} className={detailRowClass(i)}>
                   <Td right>{phone}</Td>
                   <Td right>{walkup}</Td>
                   <Td right>{web}</Td>
@@ -372,75 +387,58 @@ function CheckedInTable({ show }: { show: ManagerCheckoutApiShow }) {
             </tr>
           </tbody>
         </table>
+
+        <table className={COMPACT_TABLE}>
+          <thead>
+            <tr>
+              <Th>Origin</Th>
+              <Th right>Party</Th>
+              <Th right>(Pre)Seated</Th>
+              <Th right>Paid</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {origins.map((o, i) => (
+              <tr key={i} className={detailRowClass(i)}>
+                <Td>{o.Origin}</Td>
+                <Td right>{n(o.Party)}</Td>
+                <Td right>{n(o.Seated)}</Td>
+                <Td right>{fmt(n(o.Paid))}</Td>
+              </tr>
+            ))}
+            <tr className="bg-muted/40">
+              <Td bold>Total</Td>
+              <Td right bold>{totalParty}</Td>
+              <Td right bold>{totalSeated}</Td>
+              <Td right bold>{fmt(totalPaid)}</Td>
+            </tr>
+          </tbody>
+        </table>
+
+        {sections.length > 0 ? (
+          <table className={cn(COMPACT_TABLE, "-ml-px justify-self-end")}>
+            <thead>
+              <tr>
+                <Th>Show Section</Th>
+                <Th right>Party</Th>
+                <Th right>Total Amount</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {sections.map((s, i) => (
+                <tr key={i} className={detailRowClass(i)}>
+                  <Td>{s.ShowSection || "-"}</Td>
+                  <Td right>{n(s.PartyNo)}</Td>
+                  <Td right>{fmt(n(s.TotalAmount))}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div />
+        )}
       </div>
     </div>
-  )
-}
-
-// ─── Origin + Show Sections tables ─────────────────────────────────────────────
-
-function OriginTable({ show }: { show: ManagerCheckoutApiShow }) {
-  const origins = (show.OriginSourceList ?? []).filter(
-    (o) => o.Origin && (n(o.Party) !== 0 || n(o.Seated) !== 0 || n(o.Paid) !== 0)
-  )
-
-  const totalParty = origins.reduce((s, o) => s + n(o.Party), 0)
-  const totalSeated = origins.reduce((s, o) => s + n(o.Seated), 0)
-  const totalPaid = origins.reduce((s, o) => s + n(o.Paid), 0)
-
-  return (
-    <table className="border-collapse text-xs">
-      <thead>
-        <tr>
-          <Th>Origin</Th>
-          <Th right>Party</Th>
-          <Th right>(Pre)Seated</Th>
-          <Th right>Paid</Th>
-        </tr>
-      </thead>
-      <tbody>
-        {origins.map((o, i) => (
-          <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-            <Td>{o.Origin}</Td>
-            <Td right>{n(o.Party)}</Td>
-            <Td right>{n(o.Seated)}</Td>
-            <Td right>{fmt(n(o.Paid))}</Td>
-          </tr>
-        ))}
-        <tr className="bg-muted/40">
-          <Td bold>Total</Td>
-          <Td right bold>{totalParty}</Td>
-          <Td right bold>{totalSeated}</Td>
-          <Td right bold>{fmt(totalPaid)}</Td>
-        </tr>
-      </tbody>
-    </table>
-  )
-}
-
-function ShowSectionsTable({ show }: { show: ManagerCheckoutApiShow }) {
-  const sections = show.BookedShowSectionList ?? []
-  if (!sections.length) return null
-
-  return (
-    <table className="border-collapse text-xs">
-      <thead>
-        <tr>
-          <Th>Show Section</Th>
-          <Th right>Party</Th>
-          <Th right>Total Amount</Th>
-        </tr>
-      </thead>
-      <tbody>
-        {sections.map((s, i) => (
-          <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-            <Td>{s.ShowSection || "-"}</Td>
-            <Td right>{n(s.PartyNo)}</Td>
-            <Td right>{fmt(n(s.TotalAmount))}</Td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
   )
 }
 
@@ -510,14 +508,8 @@ export function ManagerCheckoutView({ rawData, subtitle, generatedAt }: ManagerC
               {/* 1 — Payment breakdown */}
               <PaymentTable show={show} />
 
-              {/* 2 — Checked-In + Phone/Walkup/Web */}
-              <CheckedInTable show={show} />
-
-              {/* 3 — Origin + Show Sections */}
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-                <OriginTable show={show} />
-                <ShowSectionsTable show={show} />
-              </div>
+              {/* 2–3 — Checked-In, sources, origin, and show sections */}
+              <ManagerCheckoutDetailTables show={show} />
             </div>
           </div>
         )

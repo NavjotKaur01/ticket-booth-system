@@ -6,11 +6,13 @@ import { cn } from "@/lib/utils"
 import type { Reservation } from "@/types/reservation"
 
 type ReservationColumnsOptions = {
+  onCancelReservation?: (reservation: Reservation) => void
   onPrintTickets?: (reservation: Reservation) => void
 }
 
 /** Column definitions for the reservations table and row actions. */
 export function createReservationColumns({
+  onCancelReservation,
   onPrintTickets,
 }: ReservationColumnsOptions = {}): ColumnDef<Reservation>[] {
   return [
@@ -132,6 +134,7 @@ export function createReservationColumns({
       meta: { sticky: "right" },
       cell: ({ row }) => (
         <RowActionsMenu
+          onCancelReservation={() => onCancelReservation?.(row.original)}
           onPrintTickets={() => onPrintTickets?.(row.original)}
           onPrintIndividualTickets={() => onPrintTickets?.(row.original)}
         />
