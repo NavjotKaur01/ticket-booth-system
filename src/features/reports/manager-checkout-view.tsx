@@ -265,24 +265,14 @@ function PaymentTable({ show }: { show: ManagerCheckoutApiShow }) {
 // ─── Compact side-by-side tables (content width, aligned columns) ──────────────
 
 const COMPACT_TABLE = "w-auto max-w-none border-collapse text-xs"
-const COMPACT_TABLE = "w-auto max-w-none border-collapse text-xs"
 
 function detailRowClass(index: number) {
   return index % 2 === 0 ? "bg-background" : "bg-muted/20"
 }
 
-function detailRowClass(index: number) {
-  return index % 2 === 0 ? "bg-background" : "bg-muted/20"
-}
-
-function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow }) {
 function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow }) {
   const promos = show.FillPromoList ?? []
   const sources = show.PromoSourceList ?? []
-  const sections = show.BookedShowSectionList ?? []
-  const origins = (show.OriginSourceList ?? []).filter(
-    (o) => o.Origin && (n(o.Party) !== 0 || n(o.Seated) !== 0 || n(o.Paid) !== 0)
-  )
   const sections = show.BookedShowSectionList ?? []
   const origins = (show.OriginSourceList ?? []).filter(
     (o) => o.Origin && (n(o.Party) !== 0 || n(o.Seated) !== 0 || n(o.Paid) !== 0)
@@ -297,10 +287,6 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
   const sumScanPaid = promos.reduce((s, p) => s + n(p.ScannerInPaid), 0)
   const sumScanComp = promos.reduce((s, p) => s + n(p.ScannerInComp), 0)
   const sumScanDisc = promos.reduce((s, p) => s + n(p.ScannerInDisc), 0)
-
-  const totalParty = origins.reduce((s, o) => s + n(o.Party), 0)
-  const totalSeated = origins.reduce((s, o) => s + n(o.Seated), 0)
-  const totalPaid = origins.reduce((s, o) => s + n(o.Paid), 0)
 
   const totalParty = origins.reduce((s, o) => s + n(o.Party), 0)
   const totalSeated = origins.reduce((s, o) => s + n(o.Seated), 0)
@@ -324,14 +310,12 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
 
   return (
     <div className="w-fit max-w-full overflow-x-auto">
-    <div className="w-fit max-w-full overflow-x-auto">
       <div className="inline-grid grid-cols-[auto_auto] items-start gap-x-0 gap-y-4">
         <p className="justify-self-center text-center text-xs font-semibold leading-4 text-muted-foreground">
           Checked-In
         </p>
         <div className="h-4" aria-hidden />
 
-        <table className={COMPACT_TABLE}>
         <table className={COMPACT_TABLE}>
           <thead>
             <tr>
@@ -360,17 +344,6 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
                 <Td right>{n(p.ScannerInPaid)}</Td>
                 <Td right>{n(p.ScannerInComp)}</Td>
                 <Td right>{n(p.ScannerInDisc)}</Td>
-              <tr key={i} className={detailRowClass(i)}>
-                <Td>{p.Promo || "-"}</Td>
-                <Td right>{n(p.PartyNo)}</Td>
-                <Td right>{n(p.CheckedIn)}</Td>
-                <Td right>{n(p.CheckInPaid)}</Td>
-                <Td right>{n(p.CheckInComp)}</Td>
-                <Td right>{n(p.CheckInDisc)}</Td>
-                <Td right>{n(p.ScannerIn)}</Td>
-                <Td right>{n(p.ScannerInPaid)}</Td>
-                <Td right>{n(p.ScannerInComp)}</Td>
-                <Td right>{n(p.ScannerInDisc)}</Td>
               </tr>
             ))}
             <tr className="bg-muted/40">
@@ -387,9 +360,7 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
             </tr>
           </tbody>
         </table>
-        </table>
 
-        <table className={cn(COMPACT_TABLE, "-ml-px justify-self-end")}>
         <table className={cn(COMPACT_TABLE, "-ml-px justify-self-end")}>
           <thead>
             <tr>
@@ -406,10 +377,6 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
                   <Td right>{phone}</Td>
                   <Td right>{walkup}</Td>
                   <Td right>{web}</Td>
-                <tr key={i} className={detailRowClass(i)}>
-                  <Td right>{phone}</Td>
-                  <Td right>{walkup}</Td>
-                  <Td right>{web}</Td>
                 </tr>
               )
             })}
@@ -420,16 +387,10 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
             </tr>
           </tbody>
         </table>
-        </table>
 
-        <table className={COMPACT_TABLE}>
         <table className={COMPACT_TABLE}>
           <thead>
             <tr>
-              <Th>Origin</Th>
-              <Th right>Party</Th>
-              <Th right>(Pre)Seated</Th>
-              <Th right>Paid</Th>
               <Th>Origin</Th>
               <Th right>Party</Th>
               <Th right>(Pre)Seated</Th>
@@ -443,11 +404,6 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
                 <Td right>{n(o.Party)}</Td>
                 <Td right>{n(o.Seated)}</Td>
                 <Td right>{fmt(n(o.Paid))}</Td>
-              <tr key={i} className={detailRowClass(i)}>
-                <Td>{o.Origin}</Td>
-                <Td right>{n(o.Party)}</Td>
-                <Td right>{n(o.Seated)}</Td>
-                <Td right>{fmt(n(o.Paid))}</Td>
               </tr>
             ))}
             <tr className="bg-muted/40">
@@ -455,23 +411,14 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
               <Td right bold>{totalParty}</Td>
               <Td right bold>{totalSeated}</Td>
               <Td right bold>{fmt(totalPaid)}</Td>
-              <Td bold>Total</Td>
-              <Td right bold>{totalParty}</Td>
-              <Td right bold>{totalSeated}</Td>
-              <Td right bold>{fmt(totalPaid)}</Td>
             </tr>
           </tbody>
-        </table>
         </table>
 
         {sections.length > 0 ? (
           <table className={cn(COMPACT_TABLE, "-ml-px justify-self-end")}>
-          <table className={cn(COMPACT_TABLE, "-ml-px justify-self-end")}>
             <thead>
               <tr>
-                <Th>Show Section</Th>
-                <Th right>Party</Th>
-                <Th right>Total Amount</Th>
                 <Th>Show Section</Th>
                 <Th right>Party</Th>
                 <Th right>Total Amount</Th>
@@ -483,20 +430,14 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
                   <Td>{s.ShowSection || "-"}</Td>
                   <Td right>{n(s.PartyNo)}</Td>
                   <Td right>{fmt(n(s.TotalAmount))}</Td>
-                <tr key={i} className={detailRowClass(i)}>
-                  <Td>{s.ShowSection || "-"}</Td>
-                  <Td right>{n(s.PartyNo)}</Td>
-                  <Td right>{fmt(n(s.TotalAmount))}</Td>
                 </tr>
               ))}
             </tbody>
-          </table>
           </table>
         ) : (
           <div />
         )}
       </div>
-    </div>
     </div>
   )
 }
@@ -567,7 +508,6 @@ export function ManagerCheckoutView({ rawData, subtitle, generatedAt }: ManagerC
               {/* 1 — Payment breakdown */}
               <PaymentTable show={show} />
 
-              {/* 2–3 — Checked-In, sources, origin, and show sections */}
               {/* 2–3 — Checked-In, sources, origin, and show sections */}
               <ManagerCheckoutDetailTables show={show} />
             </div>
