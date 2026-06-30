@@ -44,6 +44,7 @@ import type { ApiLocation } from "@/types/api/locations"
 import type { ApiPromotionSearchItem } from "@/types/api/promotion-search"
 import type { ApiSystemLookupItem } from "@/types/api/system-lookup"
 import type { RecentSalesReportData } from "@/types/api/recent-sales"
+import type { ReportPermissionAccess } from "@/types/api/report-permission-access"
 import type { ReportRequestModel } from "@/types/api/report-request"
 
 export type ApiReportComedian = {
@@ -708,6 +709,28 @@ export const clubmanApi = createApi({
       }),
     }),
 
+    getReportPermissionAccesses: builder.query<ReportPermissionAccess[], ReportRequestModel>({
+      query: (body) => ({
+        url: "/clubman/api/Report/GetReportPremissionAccesses",
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => {
+        const rows = Array.isArray(response) ? response : []
+        return rows.map((row) => {
+          const r = row as Record<string, unknown>
+          return {
+            PermID: String(r.PermID ?? r.permID ?? ""),
+            LocationID: (r.LocationID ?? r.locationID ?? null) as string | null,
+            PermType: String(r.PermType ?? r.permType ?? "Report"),
+            PermDesc: String(r.PermDesc ?? r.permDesc ?? ""),
+            PermUserPos: String(r.PermUserPos ?? r.permUserPos ?? ""),
+            PermAccess1: String(r.PermAccess1 ?? r.permAccess1 ?? ""),
+          }
+        })
+      },
+    }),
+
     getComedianList: builder.query<ApiReportComedian[], string>({
       query: (connectionName) => ({
         url: reportApiPath(connectionName, "GetComedianList"),
@@ -752,5 +775,6 @@ export const {
   useGetDefaultShowSectionsMutation,
   useSaveShowMutation,
   useGenerateReportMutation,
+  useGetReportPermissionAccessesQuery,
   useGetComedianListQuery,
 } = clubmanApi

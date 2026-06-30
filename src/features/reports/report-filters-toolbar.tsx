@@ -30,6 +30,8 @@ type ReportFiltersToolbarProps = {
   locationOptions: ReportViewerLocationOption[]
   comedianOptions?: ComedianOption[]
   isGenerating?: boolean
+  isLoadingReportOptions?: boolean
+  reportOptionsError?: boolean
   activeQuickRange?: "today" | "yesterday" | null
   onFilterChange: <K extends keyof ReportViewerFilters>(
     key: K,
@@ -49,6 +51,8 @@ export function ReportFiltersToolbar({
   locationOptions,
   comedianOptions = [],
   isGenerating = false,
+  isLoadingReportOptions = false,
+  reportOptionsError = false,
   activeQuickRange = null,
   onFilterChange,
   onGenerate,
@@ -127,9 +131,18 @@ export function ReportFiltersToolbar({
             <Select
               value={filters.reportType}
               onValueChange={(value) => onFilterChange("reportType", value)}
+              disabled={isLoadingReportOptions || reportOptions.length === 0}
             >
               <SelectTrigger id="report-viewer-type" className="h-9 w-full bg-background">
-                <SelectValue />
+                <SelectValue
+                  placeholder={
+                    isLoadingReportOptions
+                      ? "Loading reports..."
+                      : reportOptionsError
+                        ? "Failed to load reports"
+                        : "Select report"
+                  }
+                />
               </SelectTrigger>
               <SelectContent position="popper" className="max-h-72">
                 {reportOptions.map((option) => (
@@ -211,7 +224,7 @@ export function ReportFiltersToolbar({
               type="button"
               className="h-9 px-4 lg:ml-2"
               onClick={onGenerate}
-              disabled={isGenerating}
+              disabled={isGenerating || isLoadingReportOptions || reportOptions.length === 0}
             >
               {isGenerating ? "Generating..." : "Generate Report"}
             </Button>

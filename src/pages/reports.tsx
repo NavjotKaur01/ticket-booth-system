@@ -7,7 +7,9 @@ import { useAppSession } from "@/hooks/use-app-session"
 import { ReportFiltersToolbar } from "@/features/reports/report-filters-toolbar"
 import { ReportViewerResults } from "@/features/reports/report-viewer-results"
 import {
+  buildReportPermissionRequest,
   buildReportRequest,
+  resolveReportViewerOptions,
   createDefaultReportFilters,
   createReportCsv,
   createReportPdfBlob,
@@ -15,13 +17,16 @@ import {
   downloadBlob,
   getReportConfig,
   openReportPrintWindow,
-  reportViewerOptions,
   resolveReportType,
   transformReportApiResponse,
   type ReportViewerFilters,
   type ReportViewerResult,
 } from "@/features/reports/reports.service"
-import { useGenerateReportMutation, useGetComedianListQuery } from "@/store/api/clubmanApi"
+import {
+  useGenerateReportMutation,
+  useGetComedianListQuery,
+  useGetReportPermissionAccessesQuery,
+} from "@/store/api/clubmanApi"
 
 function buildFilename(base: string, extension: string) {
   const safeBase = base.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
@@ -30,15 +35,40 @@ function buildFilename(base: string, extension: string) {
 }
 
 export function Reports() {
-  const { locationId, locationName, locations, connectionName } = useAppSession()
+  const { locationId, locationName, locations, connectionName, userRight } = useAppSession()
   const [searchParams] = useSearchParams()
   const [generateReport] = useGenerateReportMutation()
+
+  const permissionRequest = useMemo(
+    () =>
+      connectionName && locationId
+        ? buildReportPermissionRequest(connectionName, userRight, locationId)
+        : null,
+    [connectionName, locationId, userRight]
+  )
+
+  const {
+    data: reportPermissions = [],
+    isLoading: isLoadingReportOptions,
+    isError: isReportOptionsError,
+  } = useGetReportPermissionAccessesQuery(permissionRequest!, {
+    skip: !permissionRequest,
+    refetchOnMountOrArgChange: true,
+  })
+
+  const reportOptions = useMemo(
+    () =>
+      resolveReportViewerOptions(reportPermissions, userRight, {
+        isError: isReportOptionsError,
+      }),
+    [reportPermissions, userRight, isReportOptionsError]
+  )
 
   const locationOptions = useMemo(
     () => createReportViewerLocationOptions(locations, locationId, locationName),
     [locationId, locationName, locations]
   )
-  const initialReportType = resolveReportType(searchParams.get("report"))
+  const initialReportType = resolveReportType(searchParams.get("report"), reportOptions)
 
   const [draftFilters, setDraftFilters] = useState<ReportViewerFilters>(() =>
     createDefaultReportFilters({
@@ -94,6 +124,33 @@ export function Reports() {
       }))
     }
   }, [comedianOptions, draftFilters.headlinerId])
+
+  useEffect(() => {
+    if (!reportOptions.length) return
+
+    setDraftFilters((current) => {
+      const nextReportType = resolveReportType(current.reportType, reportOptions)
+      if (nextReportType === current.reportType) return current
+      const nextConfig = getReportConfig(nextReportType)
+      return {
+        ...current,
+        reportType: nextReportType,
+        headlinerId: nextConfig.showComicPicker ? current.headlinerId : "",
+        isAllDates: nextConfig.showAllDatesOption ? current.isAllDates : false,
+        isWebReservationOnly: nextConfig.showWebReservationOnly ? current.isWebReservationOnly : false,
+        isSeparateByUsers: nextConfig.showSeparateByUsers ? current.isSeparateByUsers : false,
+      }
+    })
+  }, [reportOptions])
+
+  useEffect(() => {
+    const urlReportType = resolveReportType(searchParams.get("report"), reportOptions)
+    if (!urlReportType || !reportOptions.length) return
+
+    setDraftFilters((current) =>
+      current.reportType === urlReportType ? current : { ...current, reportType: urlReportType }
+    )
+  }, [searchParams, reportOptions])
 
   function updateDraftField<K extends keyof ReportViewerFilters>(
     key: K,
@@ -241,10 +298,12 @@ export function Reports() {
       <PanelCard className="overflow-hidden rounded-2xl border-border/70 bg-card shadow-sm">
         <ReportFiltersToolbar
           filters={draftFilters}
-          reportOptions={reportViewerOptions}
+          reportOptions={reportOptions}
           locationOptions={locationOptions}
           comedianOptions={comedianOptions}
           isGenerating={isGenerating}
+          isLoadingReportOptions={isLoadingReportOptions}
+          reportOptionsError={isReportOptionsError}
           activeQuickRange={activeQuickRange}
           onFilterChange={updateDraftField}
           onGenerate={() => void handleGenerate()}

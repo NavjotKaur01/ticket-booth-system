@@ -88,27 +88,74 @@ export const REPORT_CONFIGS: Record<string, ReportConfig> = {
   "sales-by-day":              { ...BASE, endpoint: "GetSaleByDayReport",              title: "Sales By Day",               showDateRange: true },
   "sales-by-show":             { ...BASE, endpoint: "GetSaleByShowReport",             title: "Sales By Show",              showDateRange: true },
   "ticket-price-breakdown":    { ...BASE, endpoint: "GetTicketPriceBreakDownReport",    title: "Ticket Price Breakdown",     showDateRange: true },
-  "today-sales":               { ...BASE, endpoint: "GetQuickViewSaleReport",           title: "Today Sales",                showDateRange: true },
   "web-counts":                { ...BASE, endpoint: "GetWebCountReport",               title: "Web Counts",                 showDateRange: true },
   "web-gift-certificates":     { ...BASE, endpoint: "GetWebGiftCertificatesReport",    title: "Web Gift Certificates",      showDateRange: true },
   "web-reservations-for-day":  { ...BASE, endpoint: "GetWebReservationForDayReport",   title: "Web Reservations for Day",   showDateRange: true },
   "zipcode-breakdown":         { ...BASE, endpoint: "GetZipCodeBreakDownReport",        title: "ZipCode Breakdown",          showDateRange: false },
 }
 
-export function getReportConfig(reportType: string): ReportConfig {
-  return REPORT_CONFIGS[reportType] ?? {
-    endpoint: reportType,
-    title: reportType,
-    showCustomerFilters: false,
-    showDateRange: true,
-    showComicPicker: false,
-    showWebReservationOnly: false,
-    showSeparateByUsers: false,
-    showAllDatesOption: false,
-  }
+/** Maps WPF PermDesc values to internal report ids (desktop ReportVM switch). */
+const PERM_DESC_TO_REPORT_ID: Record<string, string> = {
+  "Audit Report": "audit-report",
+  "Banned\\Inactive Customers": "banned-inactive-customers",
+  "Comic Sales Breakdown": "comic-sales-breakdown",
+  "Comic Ticket Revenue": "comic-ticket-revenue",
+  "Door Checkout": "door-checkout",
+  "Export Shows Attendees": "export-shows-attendees",
+  "Manager Checkout": "manager-checkout",
+  "New Customers": "new-customers",
+  "Past Customers": "past-customers",
+  "Paid Customers": "past-customers",
+  "Projected Sales": "projected-sales",
+  "Promo Report": "promo-report",
+  "Quick View Sales": "quick-view-sales",
+  "Receipts": "receipts",
+  "Reconcile Report": "reconcile-report",
+  "Revenue": "revenue",
+  "Sales By Day": "sales-by-day",
+  "Sales By Show": "sales-by-show",
+  "Ticket Price Breakdown": "ticket-price-breakdown",
+  "Web Counts": "web-counts",
+  "Web Gift Certificates": "web-gift-certificates",
+  "Web Reservations for Day": "web-reservations-for-day",
+  "ZipCode Breakdown": "zipcode-breakdown",
 }
 
-export const reportViewerOptions: ReportViewerOption[] = [
+const EXCLUDED_PERM_DESCS = new Set(["ZipCode Sales", "Today Sales"])
+
+/** Legacy alias — dashboard links may still use ?report=today-sales. */
+const REPORT_TYPE_ALIASES: Record<string, string> = {
+  "today-sales": "quick-view-sales",
+}
+
+function normalizePermDesc(desc: string): string {
+  return desc.trim().replace(/\//g, "\\").replace(/\s+/g, " ").toLowerCase()
+}
+
+function permDescToReportId(permDesc: string): string | null {
+  const trimmed = permDesc.trim()
+  if (EXCLUDED_PERM_DESCS.has(trimmed)) return null
+
+  const direct = PERM_DESC_TO_REPORT_ID[trimmed]
+  if (direct) return direct
+
+  const slashNorm = trimmed.replace(/\//g, "\\")
+  if (PERM_DESC_TO_REPORT_ID[slashNorm]) return PERM_DESC_TO_REPORT_ID[slashNorm]
+
+  const normalized = normalizePermDesc(trimmed)
+  for (const [key, id] of Object.entries(PERM_DESC_TO_REPORT_ID)) {
+    if (normalizePermDesc(key) === normalized) return id
+  }
+
+  for (const [id, config] of Object.entries(REPORT_CONFIGS)) {
+    if (normalizePermDesc(config.title) === normalized) return id
+  }
+
+  return null
+}
+
+/** Desktop-ordered fallback when permission API is unavailable. */
+export const DEFAULT_REPORT_VIEWER_OPTIONS: ReportViewerOption[] = [
   { id: "manager-checkout", label: "Manager Checkout" },
   { id: "banned-inactive-customers", label: "Banned\\Inactive Customers" },
   { id: "comic-sales-breakdown", label: "Comic Sales Breakdown" },
@@ -131,8 +178,131 @@ export const reportViewerOptions: ReportViewerOption[] = [
   { id: "web-gift-certificates", label: "Web Gift Certificates" },
   { id: "web-reservations-for-day", label: "Web Reservations for Day" },
   { id: "zipcode-breakdown", label: "ZipCode Breakdown" },
-  { id: "today-sales", label: "Today Sales" },
 ]
+
+/** Mirrors WPF ReportVM.GetReportsByRole user role resolution. */
+export function resolveReportUserRole(userRight: string): { userRole: string; locationScoped: boolean } {
+  const rights = userRight.trim()
+  if (rights === "SEC09" || rights === "SEC01") {
+    return { userRole: "SEC01", locationScoped: false }
+  }
+  if (rights === "SEC05") {
+    return { userRole: "SEC05", locationScoped: true }
+  }
+  if (rights === "SEC02") {
+    return { userRole: "SEC02", locationScoped: true }
+  }
+  return { userRole: rights || "SEC01", locationScoped: false }
+}
+
+export function buildReportPermissionRequest(
+  connectionName: string,
+  userRight: string,
+  locationId: string
+): ReportRequestModel {
+  const { userRole, locationScoped } = resolveReportUserRole(userRight)
+  return {
+    Connection: connectionName,
+    UserRole: userRole,
+    LocaltionId: locationScoped ? locationId : "00000000-0000-0000-0000-000000000000",
+  }
+}
+
+/** Build dropdown options from GetReportPremissionAccesses (same as desktop ReportType list). */
+export function buildReportViewerOptionsFromPermissions(
+  permissions: Array<{ PermDesc?: string; PermType?: string }>,
+  userRight: string
+): ReportViewerOption[] {
+  const seen = new Set<string>()
+  const options: ReportViewerOption[] = []
+
+  for (const perm of permissions) {
+    const permDesc = String(perm.PermDesc ?? "").trim()
+    if (!permDesc || EXCLUDED_PERM_DESCS.has(permDesc)) continue
+
+    const reportId = permDescToReportId(permDesc)
+    if (!reportId || seen.has(reportId)) continue
+    seen.add(reportId)
+
+    options.push({ id: reportId, label: permDesc })
+  }
+
+  // WPF moves Manager Checkout to first for admin roles
+  const isAdmin = userRight.trim() === "SEC01" || userRight.trim() === "SEC09"
+  if (isAdmin) {
+    const idx = options.findIndex((o) => o.id === "manager-checkout")
+    if (idx > 0) {
+      const [item] = options.splice(idx, 1)
+      options.unshift(item)
+    }
+  }
+
+  return options
+}
+
+/** Minimum options we expect when permissions API is working (desktop has ~19+). */
+const MIN_API_REPORT_OPTIONS = 12
+
+export function resolveReportViewerOptions(
+  permissions: Array<{ PermDesc?: string }> | undefined,
+  userRight: string,
+  { isError = false }: { isError?: boolean } = {}
+): ReportViewerOption[] {
+  if (isError) return DEFAULT_REPORT_VIEWER_OPTIONS
+
+  const fromApi = buildReportViewerOptionsFromPermissions(permissions ?? [], userRight)
+
+  // API returned rows but none mapped — use full desktop list
+  if (!fromApi.length && (permissions?.length ?? 0) > 0) {
+    return DEFAULT_REPORT_VIEWER_OPTIONS
+  }
+
+  // API returned too few mapped reports vs raw rows — mapping miss
+  if (fromApi.length > 0 && (permissions?.length ?? 0) > fromApi.length + 2) {
+    return DEFAULT_REPORT_VIEWER_OPTIONS
+  }
+
+  // API returned a partial list (e.g. only 3 role-scoped rows) — use full desktop list.
+  // WPF shows all PermDesc entries from the API; when the web API returns too few,
+  // fall back so the dropdown matches the desktop Report Viewer.
+  if (fromApi.length > 0 && fromApi.length < MIN_API_REPORT_OPTIONS) {
+    return DEFAULT_REPORT_VIEWER_OPTIONS
+  }
+
+  if (fromApi.length > 0) return fromApi
+
+  return DEFAULT_REPORT_VIEWER_OPTIONS
+}
+
+export function getReportConfig(reportType: string): ReportConfig {
+  return REPORT_CONFIGS[reportType] ?? {
+    endpoint: reportType,
+    title: reportType,
+    showCustomerFilters: false,
+    showDateRange: true,
+    showComicPicker: false,
+    showWebReservationOnly: false,
+    showSeparateByUsers: false,
+    showAllDatesOption: false,
+  }
+}
+
+export function resolveReportType(
+  reportType?: string | null,
+  availableOptions: ReportViewerOption[] = []
+) {
+  const normalized = reportType
+    ? (REPORT_TYPE_ALIASES[reportType] ?? reportType)
+    : null
+
+  if (!normalized) {
+    return availableOptions[0]?.id ?? "manager-checkout"
+  }
+
+  return availableOptions.some((option) => option.id === normalized)
+    ? normalized
+    : (availableOptions[0]?.id ?? "manager-checkout")
+}
 
 function formatCurrency(value: string | number | null | undefined) {
   const num = typeof value === "number" ? value : parseFloat(String(value ?? "0"))
@@ -229,26 +399,19 @@ function buildEmptyResult(
   }
 }
 
-export function resolveReportType(reportType?: string | null) {
-  if (!reportType) {
-    return reportViewerOptions[0].id
-  }
-  return reportViewerOptions.some((option) => option.id === reportType)
-    ? reportType
-    : reportViewerOptions[0].id
-}
-
 export function createDefaultReportFilters({
   locationId,
   reportType,
   today = dayjs().format("YYYY-MM-DD"),
+  availableOptions = [],
 }: {
   locationId: string
   reportType?: string | null
   today?: string
+  availableOptions?: ReportViewerOption[]
 }): ReportViewerFilters {
   return {
-    reportType: resolveReportType(reportType),
+    reportType: resolveReportType(reportType, availableOptions),
     locationId,
     dateFrom: today,
     dateTo: today,
@@ -1201,7 +1364,6 @@ export function transformReportApiResponse({
     case "past-customers":
       return transformPastCustomers(data, reportType, config.title, subtitle, generatedAt)
     case "quick-view-sales":
-    case "today-sales":
       return transformQuickViewSales(data, reportType, config.title, subtitle, generatedAt)
     case "revenue":
       return transformRevenue(data, reportType, config.title, subtitle, generatedAt)

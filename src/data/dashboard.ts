@@ -17,7 +17,7 @@ export const statSummaries: StatSummary[] = [
     id: "today",
     label: "Today Sold",
     value: 1,
-    href: reportViewerUrl("today-sales"),
+    href: reportViewerUrl("quick-view-sales"),
   },
   {
     id: "week",
