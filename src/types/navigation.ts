@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react"
+﻿import type { LucideIcon } from "lucide-react"
 
 export type NavSubItemAction =
   | "adjust-fees"
@@ -10,6 +10,7 @@ export type NavSubItem = {
   label: string
   href?: string
   action?: NavSubItemAction
+  items?: NavSubItem[]
 }
 
 export type NavItem = {

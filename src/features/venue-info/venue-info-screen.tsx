@@ -242,8 +242,8 @@ export function VenueInfoScreen() {
       </Card>
 
       <Card className="gap-0 py-0">
-        <CardHeader className="border-b bg-primary px-4 py-3">
-          <CardTitle className="text-sm font-semibold uppercase tracking-wide text-primary-foreground">
+        <CardHeader className="border-b bg-muted/40 px-4 py-3">
+          <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
             Venue Info Data
           </CardTitle>
         </CardHeader>
@@ -458,3 +458,4 @@ export function VenueInfoScreen() {
     </div>
   )
 }
+

@@ -6,6 +6,12 @@ import { BusinessContacts } from "@/pages/business-contacts"
 import { ChangePassword } from "@/pages/change-password"
 import { CheckIn } from "@/pages/check-in"
 import { CommentCards } from "@/pages/comment-cards"
+import { EmploymentApplicants } from "@/pages/employment-applicants"
+import { EmploymentOpenings } from "@/pages/employment-openings"
+import { EmploymentQuestions } from "@/pages/employment-questions"
+import { FoodMenu } from "@/pages/food-menu"
+import { FormEmails } from "@/pages/form-emails"
+import { FreeForms } from "@/pages/free-forms"
 import { GiftCards } from "@/pages/gift-cards"
 import { GiftCertificate } from "@/pages/gift-certificate"
 import { Login } from "@/pages/login"
@@ -22,8 +28,10 @@ import { TicketDefault } from "@/pages/ticket-default"
 import { Transactions } from "@/pages/transactions"
 import { UserAccess } from "@/pages/user-access"
 import { Users } from "@/pages/users"
+import { VenueAds } from "@/pages/venue-ads"
 import { VenueInfo } from "@/pages/venue-info"
 import { VenueShowTimes } from "@/pages/venue-show-times"
+import { WebpagesText } from "@/pages/webpages-text"
 import EventCalendar from "./components/calendar/EventCalendar"
 
 /** Root router - login is public; app routes require auth. */
@@ -64,6 +72,14 @@ function App() {
           <Route path="venue">
             <Route path="venue-info" element={<VenueInfo />} />
             <Route path="venue-show-times" element={<VenueShowTimes />} />
+            <Route path="food-menu" element={<FoodMenu />} />
+            <Route path="venue-ads" element={<VenueAds />} />
+            <Route path="form-emails" element={<FormEmails />} />
+            <Route path="employment/openings" element={<EmploymentOpenings />} />
+            <Route path="employment/questions" element={<EmploymentQuestions />} />
+            <Route path="employment/applicants" element={<EmploymentApplicants />} />
+            <Route path="webpages-text" element={<WebpagesText />} />
+            <Route path="free-forms" element={<FreeForms />} />
           </Route>
 
           <Route path="ticketbooth">

@@ -1,0 +1,889 @@
+﻿import {
+  FileText,
+  Filter,
+  LoaderCircle,
+  Pencil,
+} from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+
+import CalendarDatePickerControl from "@/components/calendar/controls/CalendarDatePickerControl"
+import { ScrollSelectControl } from "@/components/common/scroll-select-control"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  getEmploymentApplicantFilterGroupsByLocation,
+  getEmploymentApplicantsByLocation,
+  updateEmploymentApplicant,
+} from "@/features/employment-applicants/employment-applicants.service"
+import { getEmploymentOpeningsByLocation } from "@/features/employment-openings/employment-openings.service"
+import { getVenueInfoLocationOptions } from "@/features/venue-info/venue-info.service"
+import { useAppSession } from "@/hooks/use-app-session"
+import type {
+  EmploymentApplicantFilterGroup,
+  EmploymentApplicantRecord,
+  EmploymentApplicantUpdateInput,
+} from "@/types/employment-applicant"
+import type { EmploymentOpeningRecord } from "@/types/employment-opening"
+
+type ChecklistOption = {
+  value: string
+  label: string
+}
+
+const REVIEW_OPTIONS = [
+  { value: "Y", label: "Reviewed" },
+  { value: "N", label: "Pending review" },
+] as const
+
+function EmptyState({
+  title,
+  description,
+}: {
+  title: string
+  description: string
+}) {
+  return (
+    <div className="rounded-sm border border-dashed border-border bg-muted/20 px-4 py-10 text-center">
+      <p className="text-sm font-medium text-foreground">{title}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+    </div>
+  )
+}
+
+
+function FilterChecklistCard({
+  title,
+  description,
+  options,
+  selectedValues,
+  onToggle,
+  onSelectAll,
+  onClearAll,
+  disabled,
+}: {
+  title: string
+  description: string
+  options: ChecklistOption[]
+  selectedValues: string[]
+  onToggle: (value: string) => void
+  onSelectAll: () => void
+  onClearAll: () => void
+  disabled?: boolean
+}) {
+  return (
+    <div className="rounded-lg border border-border/80 bg-background shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-border/70 px-4 py-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled || options.length === 0}
+            onClick={onSelectAll}
+          >
+            All
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={disabled || selectedValues.length === 0}
+            onClick={onClearAll}
+          >
+            Clear
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-3 px-4 py-4">
+        {options.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Options will appear after the selected location loads its employment data.
+          </p>
+        ) : (
+          options.map((option) => {
+            const checked = selectedValues.includes(option.value)
+
+            return (
+              <label
+                key={option.value}
+                className={disabled
+                  ? "flex cursor-not-allowed items-start gap-3 rounded-md border border-border/60 px-3 py-3 opacity-60"
+                  : checked
+                    ? "flex cursor-pointer items-start gap-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-3 transition-colors"
+                    : "flex cursor-pointer items-start gap-3 rounded-md border border-border/60 px-3 py-3 transition-colors hover:border-primary/40 hover:bg-muted/30"
+                }
+              >
+                <Checkbox
+                  checked={checked}
+                  disabled={disabled}
+                  onCheckedChange={() => onToggle(option.value)}
+                  className="mt-0.5"
+                />
+                <div className="min-w-0">
+                  <span className="block text-sm font-medium text-foreground">{option.label}</span>
+                </div>
+              </label>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ApplicantStatusPill({ reviewed }: { reviewed: boolean }) {
+  return reviewed ? (
+    <span className="inline-flex min-w-24 items-center justify-center rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+      Reviewed
+    </span>
+  ) : (
+    <span className="inline-flex min-w-24 items-center justify-center rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+      Pending
+    </span>
+  )
+}
+
+function formatShortDate(value: string | null) {
+  if (!value) {
+    return "-"
+  }
+
+  const parsed = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(parsed.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "numeric",
+    day: "numeric",
+    year: "numeric",
+  }).format(parsed)
+}
+
+function getInitials(firstName: string, lastName: string) {
+  return `${firstName.slice(0, 1)}${lastName.slice(0, 1)}`.toUpperCase()
+}
+
+function normalizeText(value: string) {
+  return value.trim().replace(/\s+/g, " ")
+}
+
+function buildOpportunityOptions(rows: EmploymentOpeningRecord[]): ChecklistOption[] {
+  const seen = new Set<string>()
+
+  return rows.reduce<ChecklistOption[]>((options, row) => {
+    if (seen.has(row.id)) {
+      return options
+    }
+
+    seen.add(row.id)
+    options.push({
+      value: row.id,
+      label: row.title,
+    })
+    return options
+  }, [])
+}
+
+export function EmploymentApplicantsScreen() {
+  const { locations } = useAppSession()
+
+  const locationOptions = useMemo(
+    () =>
+      getVenueInfoLocationOptions(locations).map((option) => ({
+        value: option.id,
+        label: option.label,
+      })),
+    [locations]
+  )
+
+  const [selectedLocationId, setSelectedLocationId] = useState("")
+  const [positionGroups, setPositionGroups] = useState<EmploymentApplicantFilterGroup[]>([])
+  const [openings, setOpenings] = useState<EmploymentOpeningRecord[]>([])
+  const [rows, setRows] = useState<EmploymentApplicantRecord[]>([])
+  const [draftPositionIds, setDraftPositionIds] = useState<string[]>([])
+  const [draftOpportunityIds, setDraftOpportunityIds] = useState<string[]>([])
+  const [appliedPositionIds, setAppliedPositionIds] = useState<string[]>([])
+  const [appliedOpportunityIds, setAppliedOpportunityIds] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [editingApplicantId, setEditingApplicantId] = useState<string | null>(null)
+  const [editDialogApplicant, setEditDialogApplicant] = useState<EmploymentApplicantRecord | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [previewApplicantId, setPreviewApplicantId] = useState<string | null>(null)
+  const [previewDialogApplicant, setPreviewDialogApplicant] = useState<EmploymentApplicantRecord | null>(null)
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false)
+  const [reviewedInput, setReviewedInput] = useState("N")
+  const [reviewedByInput, setReviewedByInput] = useState("")
+  const [hireDateInput, setHireDateInput] = useState("")
+  const [dismissalDateInput, setDismissalDateInput] = useState("")
+  const [notesInput, setNotesInput] = useState("")
+
+  const selectedLocationLabel = useMemo(
+    () => locationOptions.find((option) => option.value === selectedLocationId)?.label || "",
+    [locationOptions, selectedLocationId]
+  )
+
+  const positionOptions = useMemo<ChecklistOption[]>(
+    () =>
+      positionGroups.map((group) => ({
+        value: group.id,
+        label: group.label,
+      })),
+    [positionGroups]
+  )
+
+  const opportunityOptions = useMemo(
+    () => buildOpportunityOptions(openings),
+    [openings]
+  )
+
+  const editingApplicant = useMemo(
+    () => rows.find((row) => row.id === editingApplicantId) ?? editDialogApplicant,
+    [rows, editingApplicantId, editDialogApplicant]
+  )
+
+  const previewApplicant = useMemo(
+    () => rows.find((row) => row.id === previewApplicantId) ?? previewDialogApplicant,
+    [rows, previewApplicantId, previewDialogApplicant]
+  )
+
+  useEffect(() => {
+    if (!selectedLocationId) {
+      setPositionGroups([])
+      setOpenings([])
+      setRows([])
+      setDraftPositionIds([])
+      setDraftOpportunityIds([])
+      setAppliedPositionIds([])
+      setAppliedOpportunityIds([])
+      setLoading(false)
+      setSaving(false)
+      setError(null)
+      setStatusMessage(null)
+      setEditingApplicantId(null)
+      setEditDialogApplicant(null)
+      setIsEditDialogOpen(false)
+      setPreviewApplicantId(null)
+      setPreviewDialogApplicant(null)
+      setIsPreviewDialogOpen(false)
+      return
+    }
+
+    let isActive = true
+    setLoading(true)
+    setError(null)
+    setStatusMessage(null)
+    setPositionGroups([])
+    setOpenings([])
+    setRows([])
+    setDraftPositionIds([])
+    setDraftOpportunityIds([])
+    setAppliedPositionIds([])
+    setAppliedOpportunityIds([])
+    setEditingApplicantId(null)
+    setEditDialogApplicant(null)
+    setIsEditDialogOpen(false)
+    setPreviewApplicantId(null)
+    setPreviewDialogApplicant(null)
+    setIsPreviewDialogOpen(false)
+
+    Promise.all([
+      getEmploymentApplicantFilterGroupsByLocation({
+        locationId: selectedLocationId,
+        locationLabel: selectedLocationLabel,
+      }),
+      getEmploymentOpeningsByLocation({
+        locationId: selectedLocationId,
+        locationLabel: selectedLocationLabel,
+      }),
+      getEmploymentApplicantsByLocation({
+        locationId: selectedLocationId,
+        locationLabel: selectedLocationLabel,
+      }),
+    ])
+      .then(([nextGroups, nextOpenings, nextApplicants]) => {
+        if (!isActive) {
+          return
+        }
+
+        setPositionGroups(nextGroups)
+        setOpenings(nextOpenings)
+        setRows(nextApplicants)
+      })
+      .catch((requestError: unknown) => {
+        if (isActive) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to load employment applicants."
+          )
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [selectedLocationId, selectedLocationLabel])
+
+  const filteredRows = useMemo(() => {
+    return rows.filter((row) => {
+      if (appliedPositionIds.length > 0 && !appliedPositionIds.includes(row.positionGroupId)) {
+        return false
+      }
+
+      if (appliedOpportunityIds.length > 0 && !appliedOpportunityIds.includes(row.opportunityId)) {
+        return false
+      }
+
+      return true
+    })
+  }, [rows, appliedOpportunityIds, appliedPositionIds])
+
+
+  function toggleValue(current: string[], value: string) {
+    return current.includes(value)
+      ? current.filter((item) => item !== value)
+      : [...current, value]
+  }
+
+  function applyFilters() {
+    setAppliedPositionIds([...draftPositionIds])
+    setAppliedOpportunityIds([...draftOpportunityIds])
+
+    const filterCount = draftPositionIds.length + draftOpportunityIds.length
+    setStatusMessage(
+      filterCount > 0
+        ? `Applied ${filterCount} filter${filterCount === 1 ? "" : "s"} for ${selectedLocationLabel}.`
+        : `Showing all applicants for ${selectedLocationLabel}.`
+    )
+  }
+
+  function openEditDialog(row: EmploymentApplicantRecord) {
+    setEditingApplicantId(row.id)
+    setEditDialogApplicant(row)
+    setIsEditDialogOpen(true)
+    setReviewedInput(row.reviewed ? "Y" : "N")
+    setReviewedByInput(row.reviewedBy)
+    setHireDateInput(row.hireDate ?? "")
+    setDismissalDateInput(row.dismissalDate ?? "")
+    setNotesInput(row.notes)
+    setError(null)
+  }
+
+  function closeEditDialog() {
+    setIsEditDialogOpen(false)
+    setError(null)
+  }
+
+  async function handleSaveApplicant() {
+    if (!selectedLocationId || !editingApplicant || saving) {
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+
+    const input: EmploymentApplicantUpdateInput = {
+      reviewed: reviewedInput === "Y",
+      reviewedBy: normalizeText(reviewedByInput),
+      hireDate: hireDateInput || null,
+      dismissalDate: dismissalDateInput || null,
+      notes: normalizeText(notesInput),
+    }
+
+    try {
+      const updatedRow = await updateEmploymentApplicant({
+        locationId: selectedLocationId,
+        locationLabel: selectedLocationLabel,
+        applicantId: editingApplicant.id,
+        input,
+      })
+
+      setRows((current) =>
+        current.map((row) => (row.id === updatedRow.id ? updatedRow : row))
+      )
+      setEditDialogApplicant(updatedRow)
+      setStatusMessage(`Updated ${updatedRow.firstName} ${updatedRow.lastName}.`)
+      closeEditDialog()
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to update the employment applicant."
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            Employment Applicants
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Review applicant submissions, narrow them by employment category or opening,
+            and keep mock hiring data organized until the backend applicant endpoints are ready.
+          </p>
+        </div>
+
+        <Card className="gap-0 py-0 shadow-sm">
+          <CardContent className="grid gap-4 px-4 py-4 xl:grid-cols-[18rem_1fr] xl:items-end">
+            <div className="space-y-2">
+              <Label htmlFor="employment-applicants-location">Location</Label>
+              <ScrollSelectControl
+                id="employment-applicants-location"
+                value={selectedLocationId}
+                onChange={setSelectedLocationId}
+                options={locationOptions}
+                placeholder="Select location"
+                disabled={locationOptions.length === 0}
+              />
+            </div>
+
+          </CardContent>
+        </Card>
+
+
+        <Card className="gap-0 py-0 shadow-sm">
+          <CardHeader className="border-b bg-muted/40 px-4 py-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
+                  Optional Filters
+                </CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Refine applicants by position family and by specific opening.
+                </p>
+              </div>
+              <Button
+                type="button"
+                className="gap-2"
+                disabled={!selectedLocationId || loading}
+                onClick={applyFilters}
+              >
+                <Filter className="size-4" />
+                Apply Filter
+              </Button>
+            </div>
+          </CardHeader>
+
+          <CardContent className="grid gap-4 px-4 py-4 lg:grid-cols-2">
+            <FilterChecklistCard
+              title="Positions"
+              description="Broad employment categories for this venue."
+              options={positionOptions}
+              selectedValues={draftPositionIds}
+              onToggle={(value) => setDraftPositionIds((current) => toggleValue(current, value))}
+              onSelectAll={() => setDraftPositionIds(positionOptions.map((option) => option.value))}
+              onClearAll={() => setDraftPositionIds([])}
+              disabled={!selectedLocationId || loading}
+            />
+            <FilterChecklistCard
+              title="Other Opportunities"
+              description="Openings pulled from the venue employment setup."
+              options={opportunityOptions}
+              selectedValues={draftOpportunityIds}
+              onToggle={(value) => setDraftOpportunityIds((current) => toggleValue(current, value))}
+              onSelectAll={() => setDraftOpportunityIds(opportunityOptions.map((option) => option.value))}
+              onClearAll={() => setDraftOpportunityIds([])}
+              disabled={!selectedLocationId || loading}
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="gap-0 py-0 shadow-sm">
+          <CardHeader className="border-b bg-muted/40 px-4 py-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
+                Employment Applicants Data
+              </CardTitle>
+              <div className="inline-flex items-center gap-2 rounded-full bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm ring-1 ring-border/70">
+                <span className="text-foreground">Visible rows:</span>
+                <span>{filteredRows.length}</span>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-4 px-0 py-0">
+            {error ? (
+              <div className="px-4 pt-4">
+                <p className="rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                  {error}
+                </p>
+              </div>
+            ) : null}
+
+            {!selectedLocationId ? (
+              <div className="p-4">
+                <EmptyState
+                  title="Select a location to review employment applicants."
+                  description="The filter panels and applicants table will load after you choose a location."
+                />
+              </div>
+            ) : loading ? (
+              <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
+                <LoaderCircle className="size-4 animate-spin" />
+                Loading applicants and employment filters...
+              </div>
+            ) : filteredRows.length === 0 ? (
+              <div className="p-4">
+                <EmptyState
+                  title="No applicants match the current filter selection."
+                  description="Adjust the draft filters and apply them again, or clear the filters to view every applicant for this location."
+                />
+              </div>
+            ) : (
+              <div className="overflow-x-auto px-4 py-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40 hover:bg-muted/40">
+                      <TableHead className="w-16 px-4">#</TableHead>
+                      <TableHead className="min-w-64">Applicant</TableHead>
+                      <TableHead className="min-w-44">Opportunity</TableHead>
+                      <TableHead className="w-32">Submitted</TableHead>
+                      <TableHead className="w-32">Reviewed</TableHead>
+                      <TableHead className="min-w-40">Reviewed By</TableHead>
+                      <TableHead className="w-32">Hire Date</TableHead>
+                      <TableHead className="w-32">Dismissal Date</TableHead>
+                      <TableHead className="w-32 px-4 text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRows.map((row, index) => (
+                      <TableRow key={row.id}>
+                        <TableCell className="px-4 font-medium tabular-nums text-muted-foreground">
+                          {index + 1}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarFallback>{getInitials(row.firstName, row.lastName)}</AvatarFallback>
+                            </Avatar>
+                            <div className="space-y-0.5">
+                              <p className="font-medium text-foreground">
+                                {row.firstName} {row.lastName}
+                              </p>
+                              <p className="text-sm text-muted-foreground">{row.email}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-0.5">
+                            <p className="font-medium text-foreground">{row.opportunityTitle}</p>
+                            <p className="text-sm text-muted-foreground">{row.positionGroupLabel}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-foreground">
+                          {formatShortDate(row.submittedOn)}
+                        </TableCell>
+                        <TableCell>
+                          <ApplicantStatusPill reviewed={row.reviewed} />
+                        </TableCell>
+                        <TableCell className="text-sm text-foreground">
+                          {row.reviewedBy || "-"}
+                        </TableCell>
+                        <TableCell className="text-sm text-foreground">
+                          {formatShortDate(row.hireDate)}
+                        </TableCell>
+                        <TableCell className="text-sm text-foreground">
+                          {formatShortDate(row.dismissalDate)}
+                        </TableCell>
+                        <TableCell className="px-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              className="text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                              onClick={() => openEditDialog(row)}
+                              aria-label="Edit applicant"
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5"
+                              onClick={() => {
+                                setPreviewApplicantId(row.id)
+                                setPreviewDialogApplicant(row)
+                                setIsPreviewDialogOpen(true)
+                              }}
+                            >
+                              <FileText className="size-4" />
+                              PDF
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+
+          <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 lg:flex-row lg:items-center">
+            <div aria-live="polite" className="text-sm text-muted-foreground">
+              {selectedLocationId
+                ? statusMessage ||
+                  `${filteredRows.length} applicant${filteredRows.length === 1 ? "" : "s"} visible for ${selectedLocationLabel}. Use Edit to maintain reviewed and hiring state.`
+                : "Choose a location to begin reviewing employment applicants."}
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              <span className="text-foreground">Mock mode:</span>
+              <span>Applicants and PDF preview use local service data</span>
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => { if (!open) { closeEditDialog() } else { setIsEditDialogOpen(true) } }}>
+        <DialogContent className="max-w-3xl p-0 sm:max-w-3xl">
+          <DialogHeader className="border-b bg-muted/40 px-5 py-4">
+            <DialogTitle className="text-base font-semibold text-foreground">
+              Applicant Review
+            </DialogTitle>
+            <DialogDescription>
+              Update review and hiring notes for the selected applicant.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingApplicant ? (
+            <div className="space-y-5 px-5 py-5">
+              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                <div className="rounded-lg border border-border/80 bg-muted/20 px-4 py-4">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                    Applicant
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-foreground">
+                    {editingApplicant.firstName} {editingApplicant.lastName}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">{editingApplicant.email}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{editingApplicant.phone}</p>
+                </div>
+
+                <div className="rounded-lg border border-border/80 bg-muted/20 px-4 py-4">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                    Applied For
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-foreground">
+                    {editingApplicant.opportunityTitle}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {editingApplicant.positionGroupLabel}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Submitted {formatShortDate(editingApplicant.submittedOn)}
+                  </p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="employment-applicant-reviewed">Reviewed</Label>
+                  <Select value={reviewedInput} onValueChange={setReviewedInput}>
+                    <SelectTrigger id="employment-applicant-reviewed" className="w-full bg-background">
+                      <SelectValue placeholder="Select review state" />
+                    </SelectTrigger>
+                    <SelectContent position="popper">
+                      {REVIEW_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="employment-applicant-reviewed-by">Reviewed By</Label>
+                  <Input
+                    id="employment-applicant-reviewed-by"
+                    value={reviewedByInput}
+                    onChange={(event) => setReviewedByInput(event.target.value)}
+                    placeholder="Manager or reviewer name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="employment-applicant-hire-date">Hire Date</Label>
+                  <CalendarDatePickerControl
+                    id="employment-applicant-hire-date"
+                    value={hireDateInput}
+                    onChange={setHireDateInput}
+                    placeholder="Select hire date"
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="employment-applicant-dismissal-date">Dismissal Date</Label>
+                  <CalendarDatePickerControl
+                    id="employment-applicant-dismissal-date"
+                    value={dismissalDateInput}
+                    onChange={setDismissalDateInput}
+                    placeholder="Select dismissal date"
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="employment-applicant-notes">Internal Notes</Label>
+                  <Textarea
+                    id="employment-applicant-notes"
+                    value={notesInput}
+                    onChange={(event) => setNotesInput(event.target.value)}
+                    placeholder="Capture interview notes, availability, or next-step details"
+                    className="min-h-28"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter className="border-t px-5 py-4">
+            <Button type="button" variant="outline" onClick={closeEditDialog} disabled={saving}>
+              Cancel
+            </Button>
+            <Button type="button" className="gap-2" onClick={() => void handleSaveApplicant()} disabled={saving}>
+              {saving ? <LoaderCircle className="size-4 animate-spin" /> : <Pencil className="size-4" />}
+              Update Applicant
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPreviewDialogOpen} onOpenChange={(open) => { if (!open) { setIsPreviewDialogOpen(false) } else { setIsPreviewDialogOpen(true) } }}>
+        <DialogContent className="max-w-2xl p-0 sm:max-w-2xl">
+          <DialogHeader className="border-b bg-muted/40 px-5 py-4">
+            <DialogTitle className="text-base font-semibold text-foreground">
+              Applicant PDF Preview
+            </DialogTitle>
+            <DialogDescription>
+              Mock preview using the current applicant payload until the real document endpoint is connected.
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewApplicant ? (
+            <div className="space-y-5 px-5 py-5">
+              <div className="rounded-xl border border-border/80 bg-gradient-to-br from-background via-background to-muted/40 p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                      {selectedLocationLabel || "Venue"}
+                    </p>
+                    <h3 className="mt-2 text-xl font-semibold text-foreground">
+                      {previewApplicant.firstName} {previewApplicant.lastName}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Applicant for {previewApplicant.opportunityTitle}
+                    </p>
+                  </div>
+                  <ApplicantStatusPill reviewed={previewApplicant.reviewed} />
+                </div>
+
+                <Separator className="my-4" />
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Email</p>
+                    <p className="mt-1 text-sm text-foreground">{previewApplicant.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Phone</p>
+                    <p className="mt-1 text-sm text-foreground">{previewApplicant.phone}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Submitted</p>
+                    <p className="mt-1 text-sm text-foreground">{formatShortDate(previewApplicant.submittedOn)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Reviewed By</p>
+                    <p className="mt-1 text-sm text-foreground">{previewApplicant.reviewedBy || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Hire Date</p>
+                    <p className="mt-1 text-sm text-foreground">{formatShortDate(previewApplicant.hireDate)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Dismissal Date</p>
+                    <p className="mt-1 text-sm text-foreground">{formatShortDate(previewApplicant.dismissalDate)}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-lg border border-border/70 bg-muted/20 px-4 py-4">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Notes</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">
+                    {previewApplicant.notes || "No internal notes added yet."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter className="border-t px-5 py-4">
+            <Button type="button" variant="outline" onClick={() => setIsPreviewDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+
+
+
+
+
+

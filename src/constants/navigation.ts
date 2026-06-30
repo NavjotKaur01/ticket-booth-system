@@ -47,6 +47,32 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
     items: [
       { id: "venue-info", label: "Venue Info", href: ROUTES.venueInfo },
       { id: "venue-show-times", label: "Venue Show Times", href: ROUTES.venueShowTimes },
+      { id: "food-menu", label: "Food Menu", href: ROUTES.foodMenu },
+      { id: "venue-ads", label: "Venue Ads", href: ROUTES.venueAds },
+      { id: "form-emails", label: "Form Emails", href: ROUTES.formEmails },
+      {
+        id: "employment",
+        label: "Employment",
+        items: [
+          {
+            id: "employment-openings",
+            label: "Openings",
+            href: ROUTES.employmentOpenings,
+          },
+          {
+            id: "employment-questions",
+            label: "Questions",
+            href: ROUTES.employmentQuestions,
+          },
+          {
+            id: "employment-applicants",
+            label: "Applicants",
+            href: ROUTES.employmentApplicants,
+          },
+        ],
+      },
+      { id: "webpages-text", label: "Webpages Text", href: ROUTES.webpagesText },
+      { id: "free-forms", label: "Free Forms", href: ROUTES.freeForms },
     ],
   },
   {
