@@ -14,12 +14,20 @@ export function useReservationData(
   connectionString: string,
   showId: string,
   includeCancelledReservations: boolean,
+  displayPhone: boolean,
+  includeCheckedInReservations = true,
   enabled = true
 ): UseReservationDataResult {
   const shouldSkip = !enabled || !connectionString || !showId
 
   const { data, isLoading, isFetching, error } = useGetReservationDataQuery(
-    { connectionString, showId, includeCancelledReservations },
+    {
+      connectionString,
+      showId,
+      includeCancelledReservations,
+      displayPhone,
+      includeCheckedInReservations,
+    },
     { skip: shouldSkip }
   )
 

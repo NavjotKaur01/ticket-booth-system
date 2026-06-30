@@ -70,6 +70,8 @@ export function Reservations() {
     connectionName,
     showTime,
     showCancelled,
+    displayNone,
+    true,
     Boolean(showTime)
   )
 
