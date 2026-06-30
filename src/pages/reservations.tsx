@@ -5,7 +5,6 @@ import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { reservationCounts } from "@/data/reservation"
 import { AddReservationDialog } from "@/features/reservations/add-reservation-dialog"
 import { CancelReservationDialog } from "@/features/reservations/cancel-reservation-dialog"
 import { ReservationDataTable } from "@/features/reservations/reservation-data-table"
@@ -16,11 +15,13 @@ import { ReprintTicketDialog } from "@/features/ticket-print/reprint-ticket-dial
 import { useAppSession } from "@/hooks/use-app-session"
 import { useReservationData } from "@/hooks/use-reservation-data"
 import { useShowDetailsByDate } from "@/hooks/use-show-details-by-date"
+import { calculateReservationShowStats } from "@/lib/calculate-reservation-show-stats"
 import { cancelReservation } from "@/lib/api/reservations"
 import { buildCancelReservationRequest } from "@/lib/build-cancel-reservation-request"
 import type { CancelReservationPaymentRow } from "@/types/cancel-reservation-payment"
 import { filterReservations } from "@/lib/filter-reservations"
 import type { Reservation } from "@/types/reservation"
+import { useGetShowSectionsQuery } from "@/store/api/clubmanApi"
 
 /** ISO date string (yyyy-mm-dd) for the local calendar day. */
 function todayDateValue() {
@@ -51,7 +52,7 @@ export function Reservations() {
   >(null)
   const [cancelledShow, setCancelledShow] = useState(false)
   const [showCancelled, setShowCancelled] = useState(false)
-  const [displayNone, setDisplayNone] = useState(false)
+  const [displayPhone, setDisplayPhone] = useState(false)
 
   const { shows, loading: showsLoading, error: showsError } =
     useShowDetailsByDate(
@@ -70,9 +71,14 @@ export function Reservations() {
     connectionName,
     showTime,
     showCancelled,
-    displayNone,
+    displayPhone,
     true,
     Boolean(showTime)
+  )
+
+  const { data: showSections = [] } = useGetShowSectionsQuery(
+    { connectionString: connectionName, showId: showTime },
+    { skip: !connectionName || !showTime }
   )
 
   useEffect(() => {
@@ -95,25 +101,17 @@ export function Reservations() {
     [reservations, search]
   )
 
-  const statItems = useMemo(
-    () => [
-      { label: "Seats", value: reservationCounts.seats },
-      {
-        label: "Reserved",
-        value: reservations.reduce((total, row) => total + row.qty, 0),
-      },
-      { label: "Available", value: reservationCounts.available },
-      {
-        label: "Seated",
-        value: reservations.reduce((total, row) => total + row.seated, 0),
-      },
-      {
-        label: "Scanned",
-        value: reservations.reduce((total, row) => total + row.scanner, 0),
-      },
-    ],
-    [reservations]
-  )
+  const statItems = useMemo(() => {
+    const stats = calculateReservationShowStats(showSections, reservations)
+
+    return [
+      { label: "Seats", value: stats.seats },
+      { label: "Reserved", value: stats.reservation },
+      { label: "Available", value: stats.available },
+      { label: "Seated", value: stats.seated },
+      { label: "Scanned", value: stats.scanned },
+    ]
+  }, [showSections, reservations])
 
   const selectedShow = useMemo(
     () => shows.find((show) => show.id === showTime),
@@ -277,8 +275,8 @@ export function Reservations() {
             </label>
             <label className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground">
               <Checkbox
-                checked={displayNone}
-                onCheckedChange={(v) => setDisplayNone(v === true)}
+                checked={displayPhone}
+                onCheckedChange={(v) => setDisplayPhone(v === true)}
               />
               Display Phone
             </label>
@@ -307,6 +305,7 @@ export function Reservations() {
         <ReservationDataTable
           data={filteredReservations}
           loading={reservationsLoading}
+          displayPhone={displayPhone}
           onCancelReservation={handleOpenCancelReservation}
           onPrintTickets={handleOpenReprintTicket}
           onReservationHistory={handleOpenReservationHistory}
