@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useCallback, useMemo } from "react"
 
 import { mapShowDetailsToOptions } from "@/lib/map-show-details"
 import { getClubmanErrorMessage } from "@/store/api/baseQuery"
@@ -8,6 +8,7 @@ type UseShowDetailsByDateResult = {
   shows: ReturnType<typeof mapShowDetailsToOptions>
   loading: boolean
   error: string | null
+  refetch: () => Promise<void>
 }
 
 export function useShowDetailsByDate(
@@ -20,7 +21,7 @@ export function useShowDetailsByDate(
   const shouldSkip =
     !enabled || !connectionString || !locationId || !showDate
 
-  const { data, isLoading, isFetching, error } = useGetShowDetailsByDateQuery(
+  const { data, isLoading, isFetching, error, refetch } = useGetShowDetailsByDateQuery(
     { connectionString, locationId, showDate, isCancelledShow },
     { skip: shouldSkip }
   )
@@ -30,9 +31,18 @@ export function useShowDetailsByDate(
     [data, shouldSkip]
   )
 
+  const refresh = useCallback(async () => {
+    if (shouldSkip) {
+      return
+    }
+
+    await refetch().unwrap()
+  }, [refetch, shouldSkip])
+
   return {
     shows,
     loading: shouldSkip ? false : isLoading || isFetching,
     error: error ? getClubmanErrorMessage(error) : null,
+    refetch: refresh,
   }
 }

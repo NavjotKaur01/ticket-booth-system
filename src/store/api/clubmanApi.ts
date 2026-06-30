@@ -11,6 +11,8 @@ import { buildReservationDayRange } from "@/lib/reservation-date-range"
 import { buildGetReservationPromotionsRequest } from "@/lib/build-get-reservation-promotions-request"
 import { buildSearchPromotionRequest } from "@/lib/build-search-promotion-request"
 import { buildCalendarFetchRange } from "@/lib/build-calendar-fetch-range"
+import { coerceApiArray } from "@/lib/coerce-api-array"
+import { formatRouteBoolean } from "@/lib/format-route-boolean"
 import {
   administratorApiPath,
   calendarApiPath,
@@ -43,6 +45,7 @@ import type {
 import type { ApiLocation } from "@/types/api/locations"
 import type { ApiPromotionSearchItem } from "@/types/api/promotion-search"
 import type { ApiSystemLookupItem } from "@/types/api/system-lookup"
+import type { ApiSystemDefaultItem } from "@/types/api/system-defaults"
 import type { RecentSalesReportData } from "@/types/api/recent-sales"
 import type { ReportPermissionAccess } from "@/types/api/report-permission-access"
 import type { ReportRequestModel } from "@/types/api/report-request"
@@ -92,6 +95,7 @@ export const clubmanApi = createApi({
     "RecentSales",
     "Calendar",
     "DailyTransaction",
+    "SystemDefault",
   ],
   endpoints: (builder) => ({
     getLocations: builder.query({
@@ -504,30 +508,31 @@ export const clubmanApi = createApi({
         connectionString,
         showId,
         includeCancelledReservations,
-        displayPhone,
-        includeCheckedInReservations,
+        isCheckedIn,
+        isReservationForm,
       }: {
         connectionString: string
         showId: string
         includeCancelledReservations: boolean
-        displayPhone: boolean
-        includeCheckedInReservations: boolean
+        isCheckedIn: boolean
+        isReservationForm: boolean
       }) => ({
         url: reservationApiPath(
           connectionString,
           showId,
-          String(includeCancelledReservations),
-          String(displayPhone),
-          String(includeCheckedInReservations),
+          formatRouteBoolean(includeCancelledReservations),
+          formatRouteBoolean(isCheckedIn),
+          formatRouteBoolean(isReservationForm),
           "GetReservationData"
         ),
         headers: { Accept: "application/json" },
       }),
-      transformResponse: (response: ReservationDataItem[]) => response,
+      transformResponse: (response: unknown) =>
+        coerceApiArray<ReservationDataItem>(response),
       providesTags: (_result, _error, arg) => [
         {
           type: "Reservation",
-          id: `${arg.showId}:${arg.includeCancelledReservations}:${arg.displayPhone}:${arg.includeCheckedInReservations}`,
+          id: `${arg.showId}:${arg.includeCancelledReservations}:${arg.isCheckedIn}:${arg.isReservationForm}`,
         },
       ],
     }),
@@ -576,9 +581,28 @@ export const clubmanApi = createApi({
         url: reservationApiPath(connectionString, showId, "GetShowSections"),
         headers: { Accept: "application/json" },
       }),
-      transformResponse: (response: ShowSectionItem[]) => response,
+      transformResponse: (response: unknown) =>
+        coerceApiArray<ShowSectionItem>(response),
       providesTags: (_result, _error, arg) => [
         { type: "ShowDetails", id: `sections:${arg.showId}` },
+      ],
+    }),
+
+    getSystemDefaults: builder.query({
+      query: ({
+        connectionName,
+        locationId,
+      }: {
+        connectionName: string
+        locationId: string
+      }) => ({
+        url: systemApiPath(connectionName, locationId, "LoadSystemDefaults"),
+        method: "GET",
+      }),
+      transformResponse: (response: unknown) =>
+        coerceApiArray<ApiSystemDefaultItem>(response),
+      providesTags: (_result, _error, arg) => [
+        { type: "SystemDefault", id: `${arg.connectionName}:${arg.locationId}` },
       ],
     }),
 
@@ -838,6 +862,7 @@ export const {
   useGetReservationHistoryByIdQuery,
   useGetShowDetailsByDateQuery,
   useGetShowSectionsQuery,
+  useGetSystemDefaultsQuery,
   useSaveReservationMutation,
   useUpdateReservationMutation,
   useCancelReservationMutation,

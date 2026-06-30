@@ -12,16 +12,16 @@ type FetchReservationDataParams = {
   connectionString: string
   showId: string
   includeCancelledReservations: boolean
-  displayPhone: boolean
-  includeCheckedInReservations: boolean
+  isCheckedIn: boolean
+  isReservationForm: boolean
 }
 
 export function fetchReservationData({
   connectionString,
   showId,
   includeCancelledReservations,
-  displayPhone,
-  includeCheckedInReservations,
+  isCheckedIn,
+  isReservationForm,
 }: FetchReservationDataParams) {
   return dispatchEndpoint<ReservationDataItem[], FetchReservationDataParams>(
     clubmanApi.endpoints.getReservationData,
@@ -29,8 +29,8 @@ export function fetchReservationData({
       connectionString,
       showId,
       includeCancelledReservations,
-      displayPhone,
-      includeCheckedInReservations,
+      isCheckedIn,
+      isReservationForm,
     }
   )
 }

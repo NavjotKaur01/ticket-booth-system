@@ -1,45 +1,44 @@
-import type { ShowSectionItem } from "@/types/api/show-sections"
+import { RESERVATION_STATUS_ACTIVE } from "@/lib/reservation-lookup-codes"
 import type { Reservation, ReservationCounts } from "@/types/reservation"
 
-function sumSectionField(
-  sections: ShowSectionItem[],
-  field: keyof Pick<
-    ShowSectionItem,
-    "ShowSeats" | "ShowSectionAvialiableSeats" | "ShowSectionReservedSeats"
-  >
+function isActiveReservation(
+  reservation: Pick<Reservation, "resStatus" | "isCancelled">
 ) {
-  return sections.reduce((total, section) => total + (section[field] ?? 0), 0)
+  if (reservation.isCancelled) {
+    return false
+  }
+
+  const status = reservation.resStatus.trim().toUpperCase()
+  return !status || status === RESERVATION_STATUS_ACTIVE
 }
 
-function sumReservationField(
-  reservations: Pick<Reservation, "qty" | "seated" | "scanner">[],
-  field: "qty" | "seated" | "scanner"
-) {
-  return reservations.reduce((total, reservation) => total + reservation[field], 0)
-}
-
-/** Desktop booth counts: section totals from API, seated/scanned from reservation rows. */
+/** Desktop ReservationVM counts: active reservations only, seats from booth default. */
 export function calculateReservationShowStats(
-  sections: ShowSectionItem[],
-  reservations: Pick<Reservation, "qty" | "seated" | "scanner">[]
+  totalSeatsCount: number,
+  reservations: Pick<
+    Reservation,
+    "qty" | "seated" | "scanner" | "resStatus" | "isCancelled"
+  >[]
 ): ReservationCounts {
-  const seats = sumSectionField(sections, "ShowSeats")
-  const available = sumSectionField(sections, "ShowSectionAvialiableSeats")
-  const reservedFromSections = sumSectionField(
-    sections,
-    "ShowSectionReservedSeats"
+  const activeReservations = reservations.filter(isActiveReservation)
+  const reserved = activeReservations.reduce(
+    (total, reservation) => total + reservation.qty,
+    0
   )
-  const reserved =
-    sections.length > 0
-      ? reservedFromSections
-      : sumReservationField(reservations, "qty")
+  const seated = activeReservations.reduce(
+    (total, reservation) => total + reservation.seated,
+    0
+  )
+  const scanned = activeReservations.reduce(
+    (total, reservation) => total + reservation.scanner,
+    0
+  )
 
   return {
-    seats,
+    seats: totalSeatsCount,
     reservation: reserved,
-    available:
-      sections.length > 0 ? available : Math.max(0, seats - reserved),
-    seated: sumReservationField(reservations, "seated"),
-    scanned: sumReservationField(reservations, "scanner"),
+    available: totalSeatsCount - reserved,
+    seated,
+    scanned,
   }
 }

@@ -12,8 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { StatItem } from "@/components/common/stats-bar"
 import { reservationCounts } from "@/data/reservation"
+import type { StatItem } from "@/components/common/stats-bar"
+import { sanitizeRefreshSecondsInput } from "@/lib/parse-refresh-interval"
 import type { ShowOption } from "@/types/reservation"
 
 const defaultStatItems: StatItem[] = [
@@ -31,6 +32,8 @@ type ReservationFiltersCardProps = {
   onShowTimeChange: (value: string) => void
   refreshValue: string
   onRefreshValueChange: (value: string) => void
+  onRefresh?: () => void
+  isRefreshing?: boolean
   shows?: ShowOption[]
   showsLoading?: boolean
   showsError?: string | null
@@ -45,6 +48,8 @@ export function ReservationFiltersCard({
   onShowTimeChange,
   refreshValue,
   onRefreshValueChange,
+  onRefresh,
+  isRefreshing = false,
   shows = [],
   showsLoading = false,
   showsError = null,
@@ -114,7 +119,12 @@ export function ReservationFiltersCard({
               <Input
                 id="refresh-interval"
                 value={refreshValue}
-                onChange={(e) => onRefreshValueChange(e.target.value)}
+                onChange={(e) =>
+                  onRefreshValueChange(
+                    sanitizeRefreshSecondsInput(e.target.value)
+                  )
+                }
+                inputMode="numeric"
                 className="min-w-0 rounded-r-none border-r-0"
               />
               <Button
@@ -123,8 +133,12 @@ export function ReservationFiltersCard({
                 type="button"
                 className="shrink-0 rounded-l-none border-l-0 shadow-xs"
                 aria-label="Refresh now"
+                onClick={onRefresh}
+                disabled={!onRefresh || isRefreshing}
               >
-                <RefreshCw className="size-4" />
+                <RefreshCw
+                  className={isRefreshing ? "size-4 animate-spin" : "size-4"}
+                />
               </Button>
             </div>
           </div>
