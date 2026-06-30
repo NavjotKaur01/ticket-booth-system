@@ -227,7 +227,33 @@ function PaymentTable({ show }: { show: ManagerCheckoutApiShow }) {
   )
 }
 
-// ─── Checked-In + Source tables ────────────────────────────────────────────────
+// ─── Side-by-side layout (Origin + Show Sections share right column width) ─────
+
+const MANAGER_CHECKOUT_SIDE_COL = "minmax(11rem,16rem)"
+
+function ManagerCheckoutSplitRow({
+  left,
+  right,
+}: {
+  left: React.ReactNode
+  right: React.ReactNode | null
+}) {
+  if (!right) {
+    return <div className="min-w-0">{left}</div>
+  }
+
+  return (
+    <div
+      className="grid grid-cols-1 items-start gap-x-0 gap-y-3 lg:grid-cols-[minmax(0,1fr)_var(--mc-side-col)]"
+      style={{ ["--mc-side-col" as string]: MANAGER_CHECKOUT_SIDE_COL }}
+    >
+      <div className="min-w-0">{left}</div>
+      <div className="min-w-0 lg:justify-self-stretch">{right}</div>
+    </div>
+  )
+}
+
+// ─── Checked-In + Source tables (single table keeps row alignment) ─────────────
 
 function CheckedInTable({ show }: { show: ManagerCheckoutApiShow }) {
   const promos = show.FillPromoList ?? []
@@ -260,10 +286,25 @@ function CheckedInTable({ show }: { show: ManagerCheckoutApiShow }) {
   const totalWeb = promos.reduce((s, p) => s + getSources(p.Promo ?? "").web, 0)
 
   return (
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+    <div className="space-y-1">
+      <p className="text-center text-xs font-semibold text-muted-foreground">Checked-In</p>
       <ReportTableScroll>
-        <p className="mb-1 text-center text-xs font-semibold text-muted-foreground">Checked-In</p>
-        <ReportTable>
+        <ReportTable className="w-full">
+          <colgroup>
+            <col />
+            <col className="w-14" />
+            <col className="w-14" />
+            <col className="w-14" />
+            <col className="w-14" />
+            <col className="w-14" />
+            <col className="w-14" />
+            <col className="w-16" />
+            <col className="w-16" />
+            <col className="w-16" />
+            <col className="w-14" />
+            <col className="w-14" />
+            <col className="w-14" />
+          </colgroup>
           <thead>
             <tr>
               <ReportTh>Promotion</ReportTh>
@@ -276,23 +317,34 @@ function CheckedInTable({ show }: { show: ManagerCheckoutApiShow }) {
               <ReportTh right>ScanPaid</ReportTh>
               <ReportTh right>ScanComp</ReportTh>
               <ReportTh right>ScanDisc</ReportTh>
+              <ReportTh right className="border-l-2 border-border/80 bg-muted/60">
+                Phone-In
+              </ReportTh>
+              <ReportTh right className="bg-muted/60">Walkup</ReportTh>
+              <ReportTh right className="bg-muted/60">Web</ReportTh>
             </tr>
           </thead>
           <tbody>
-            {promos.map((p, i) => (
-              <tr key={i} className={reportRowClass(i)}>
-                <ReportTd>{p.Promo || "-"}</ReportTd>
-                <ReportTd right>{n(p.PartyNo)}</ReportTd>
-                <ReportTd right>{n(p.CheckedIn)}</ReportTd>
-                <ReportTd right>{n(p.CheckInPaid)}</ReportTd>
-                <ReportTd right>{n(p.CheckInComp)}</ReportTd>
-                <ReportTd right>{n(p.CheckInDisc)}</ReportTd>
-                <ReportTd right>{n(p.ScannerIn)}</ReportTd>
-                <ReportTd right>{n(p.ScannerInPaid)}</ReportTd>
-                <ReportTd right>{n(p.ScannerInComp)}</ReportTd>
-                <ReportTd right>{n(p.ScannerInDisc)}</ReportTd>
-              </tr>
-            ))}
+            {promos.map((p, i) => {
+              const { phone, walkup, web } = getSources(p.Promo ?? "")
+              return (
+                <tr key={i} className={reportRowClass(i)}>
+                  <ReportTd>{p.Promo || "-"}</ReportTd>
+                  <ReportTd right>{n(p.PartyNo)}</ReportTd>
+                  <ReportTd right>{n(p.CheckedIn)}</ReportTd>
+                  <ReportTd right>{n(p.CheckInPaid)}</ReportTd>
+                  <ReportTd right>{n(p.CheckInComp)}</ReportTd>
+                  <ReportTd right>{n(p.CheckInDisc)}</ReportTd>
+                  <ReportTd right>{n(p.ScannerIn)}</ReportTd>
+                  <ReportTd right>{n(p.ScannerInPaid)}</ReportTd>
+                  <ReportTd right>{n(p.ScannerInComp)}</ReportTd>
+                  <ReportTd right>{n(p.ScannerInDisc)}</ReportTd>
+                  <ReportTd right className="border-l-2 border-border/80">{phone}</ReportTd>
+                  <ReportTd right>{walkup}</ReportTd>
+                  <ReportTd right>{web}</ReportTd>
+                </tr>
+              )
+            })}
             <tr className="bg-muted/40">
               <ReportTd bold>Total</ReportTd>
               <ReportTd right bold>{sumParty}</ReportTd>
@@ -304,33 +356,7 @@ function CheckedInTable({ show }: { show: ManagerCheckoutApiShow }) {
               <ReportTd right bold>{sumScanPaid}</ReportTd>
               <ReportTd right bold>{sumScanComp}</ReportTd>
               <ReportTd right bold>{sumScanDisc}</ReportTd>
-            </tr>
-          </tbody>
-        </ReportTable>
-      </ReportTableScroll>
-
-      <ReportTableScroll>
-        <ReportTable>
-          <thead>
-            <tr>
-              <ReportTh right>Phone-In</ReportTh>
-              <ReportTh right>Walkup</ReportTh>
-              <ReportTh right>Web</ReportTh>
-            </tr>
-          </thead>
-          <tbody>
-            {promos.map((p, i) => {
-              const { phone, walkup, web } = getSources(p.Promo ?? "")
-              return (
-                <tr key={i} className={reportRowClass(i)}>
-                  <ReportTd right>{phone}</ReportTd>
-                  <ReportTd right>{walkup}</ReportTd>
-                  <ReportTd right>{web}</ReportTd>
-                </tr>
-              )
-            })}
-            <tr className="bg-muted/40">
-              <ReportTd right bold>{totalPhone}</ReportTd>
+              <ReportTd right bold className="border-l-2 border-border/80">{totalPhone}</ReportTd>
               <ReportTd right bold>{totalWalkup}</ReportTd>
               <ReportTd right bold>{totalWeb}</ReportTd>
             </tr>
@@ -353,7 +379,7 @@ function OriginTable({ show }: { show: ManagerCheckoutApiShow }) {
   const totalPaid = origins.reduce((s, o) => s + n(o.Paid), 0)
 
   return (
-    <ReportTable>
+    <ReportTable className="w-full">
       <thead>
         <tr>
           <ReportTh>Origin</ReportTh>
@@ -387,7 +413,7 @@ function ShowSectionsTable({ show }: { show: ManagerCheckoutApiShow }) {
   if (!sections.length) return null
 
   return (
-    <ReportTable>
+    <ReportTable className="w-full">
       <thead>
         <tr>
           <ReportTh>Show Section</ReportTh>
@@ -463,14 +489,24 @@ export function ManagerCheckoutView({ rawData, subtitle, generatedAt }: ManagerC
               {/* 1 — Payment breakdown */}
               <PaymentTable show={show} />
 
-              {/* 2 — Checked-In + Phone/Walkup/Web */}
+              {/* 2 — Checked-In + Phone/Walkup/Web (single table) */}
               <CheckedInTable show={show} />
 
-              {/* 3 — Origin + Show Sections */}
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-                <OriginTable show={show} />
-                <ShowSectionsTable show={show} />
-              </div>
+              {/* 3 — Origin + Show Sections (aligned side column) */}
+              <ManagerCheckoutSplitRow
+                left={
+                  <ReportTableScroll>
+                    <OriginTable show={show} />
+                  </ReportTableScroll>
+                }
+                right={
+                  show.BookedShowSectionList?.length ? (
+                    <ReportTableScroll>
+                      <ShowSectionsTable show={show} />
+                    </ReportTableScroll>
+                  ) : null
+                }
+              />
             </div>
           </ReportCard>
         )
