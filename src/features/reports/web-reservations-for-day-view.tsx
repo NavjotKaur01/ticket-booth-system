@@ -184,8 +184,7 @@ function Th({ children, className, center, right }: {
   return (
     <th className={cn(
       "border-b border-border px-2 py-1.5 text-[13px] font-bold text-foreground whitespace-nowrap",
-      center && "text-center",
-      right && "text-right",
+      center ? "text-center" : right ? "text-right" : "text-left",
       className
     )}>
       {children}
@@ -201,8 +200,7 @@ function Td({ children, className, center, right, colSpan }: {
       colSpan={colSpan}
       className={cn(
       "border-b border-border/60 px-2 py-2 text-[13px] whitespace-nowrap",
-      center && "text-center",
-      right && "text-right tabular-nums",
+      center ? "text-center" : right ? "text-right tabular-nums" : "text-left",
       className
     )}>
       {children}
@@ -223,16 +221,25 @@ function ShowSection({ group }: { group: WebReservationShowGroup }) {
       </p>
 
       <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[720px] border-collapse">
+        <table className="w-full min-w-[720px] table-fixed border-collapse">
+          <colgroup>
+            <col style={{ width: "28%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "14%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "12%" }} />
+          </colgroup>
           <thead>
             <tr>
-              <Th className="w-[28%]">Customer Name</Th>
-              <Th center className="w-[12%]">C\C Type</Th>
-              <Th center className="w-[12%]">Promotion</Th>
-              <Th center className="w-[14%]">Section</Th>
-              <Th center className="w-[10%]">Dinner</Th>
-              <Th center className="w-[12%]"># in Party</Th>
-              <Th right className="w-[12%]">Total</Th>
+              <Th>Customer Name</Th>
+              <Th center>C\C Type</Th>
+              <Th center>Promotion</Th>
+              <Th center>Section</Th>
+              <Th center>Dinner</Th>
+              <Th center># in Party</Th>
+              <Th right>Total</Th>
             </tr>
           </thead>
           <tbody>
