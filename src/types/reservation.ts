@@ -4,6 +4,7 @@ export type Reservation = {
   firstName: string
   businessName: string
   email: string
+  phoneNo: string
   source: "Web" | "Phone" | "Walkup"
   tables: string
   seatNo: string

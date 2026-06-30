@@ -29,6 +29,26 @@ function normalizeText(value: string | null | undefined) {
   return value?.trim() ?? ""
 }
 
+function formatPhoneNumber(
+  areaCode: string | null | undefined,
+  phone1: string | null | undefined,
+  phone2: string | null | undefined
+) {
+  const area = normalizeText(areaCode)
+  const part1 = normalizeText(phone1)
+  const part2 = normalizeText(phone2)
+
+  if (!area && !part1 && !part2) {
+    return ""
+  }
+
+  if (area && part1 && part2) {
+    return `(${area}) ${part1} - ${part2}`
+  }
+
+  return [area, part1, part2].filter(Boolean).join(" ")
+}
+
 export function mapReservationDataItem(item: ReservationDataItem): Reservation {
   const firstName =
     normalizeText(item.CustFirstName) || normalizeText(item.PaidForFirstName)
@@ -41,6 +61,7 @@ export function mapReservationDataItem(item: ReservationDataItem): Reservation {
     firstName,
     businessName: normalizeText(item.busName),
     email: normalizeText(item.EmailAddress),
+    phoneNo: formatPhoneNumber(item.AreaCode, item.Phone1, item.Phone2),
     source: mapSource(item.LookupSDescSource),
     tables: normalizeText(item.TableNums),
     seatNo: normalizeText(item.SeatNumbers),

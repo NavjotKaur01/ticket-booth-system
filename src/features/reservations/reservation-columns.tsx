@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import type { Reservation } from "@/types/reservation"
 
 type ReservationColumnsOptions = {
+  displayPhone?: boolean
   onCancelReservation?: (reservation: Reservation) => void
   onPrintTickets?: (reservation: Reservation) => void
   onReservationHistory?: (reservation: Reservation) => void
@@ -13,11 +14,12 @@ type ReservationColumnsOptions = {
 
 /** Column definitions for the reservations table and row actions. */
 export function createReservationColumns({
+  displayPhone = false,
   onCancelReservation,
   onPrintTickets,
   onReservationHistory,
 }: ReservationColumnsOptions = {}): ColumnDef<Reservation>[] {
-  return [
+  const columns: ColumnDef<Reservation>[] = [
     {
       id: "guest",
       accessorFn: (row) => `${row.firstName} ${row.lastName}`,
@@ -52,6 +54,23 @@ export function createReservationColumns({
         </a>
       ),
     },
+  ]
+
+  if (displayPhone) {
+    columns.push({
+      accessorKey: "phoneNo",
+      header: ({ column }) => (
+        <DataTableColumnHeader label="Phone" column={column} />
+      ),
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap tabular-nums text-muted-foreground">
+          {row.original.phoneNo || "—"}
+        </span>
+      ),
+    })
+  }
+
+  columns.push(
     {
       accessorKey: "source",
       header: ({ column }) => (
@@ -143,5 +162,7 @@ export function createReservationColumns({
         />
       ),
     },
-  ]
+  )
+
+  return columns
 }
