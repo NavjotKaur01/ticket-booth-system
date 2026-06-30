@@ -3,6 +3,7 @@ import { clubmanApi } from "@/store/api/clubmanApi"
 import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
 import type { ReservationDetail } from "@/types/api/reservation-detail"
+import type { ReservationHistoryItem } from "@/types/api/reservation-history"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
 import type { ShowDetailsByDateItem } from "@/types/api/show-details"
 import type { ShowSectionItem } from "@/types/api/show-sections"
@@ -104,6 +105,16 @@ export function fetchReservationDetailById({
 }: FetchReservationDetailByIdParams) {
   return dispatchEndpoint<ReservationDetail, FetchReservationDetailByIdParams>(
     clubmanApi.endpoints.getReservationDetailById,
+    { connectionString, reservationId }
+  )
+}
+
+export function fetchReservationHistoryById({
+  connectionString,
+  reservationId,
+}: FetchReservationDetailByIdParams) {
+  return dispatchEndpoint<ReservationHistoryItem[], FetchReservationDetailByIdParams>(
+    clubmanApi.endpoints.getReservationHistoryById,
     { connectionString, reservationId }
   )
 }

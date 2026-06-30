@@ -60,6 +60,7 @@ import type { ReservationCustomerSearchItem } from "@/types/api/reservation-cust
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
 import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
 import { mapReservationDetail } from "@/lib/map-reservation-detail"
+import type { ReservationHistoryItem } from "@/types/api/reservation-history"
 import type { DailyTransactionItem } from "@/types/api/daily-transaction"
 import type {
   GetShowDetailsByDateRequest,
@@ -613,6 +614,27 @@ export const clubmanApi = createApi({
       ],
     }),
 
+    getReservationHistoryById: builder.query({
+      query: ({
+        connectionString,
+        reservationId,
+      }: {
+        connectionString: string
+        reservationId: string
+      }) => ({
+        url: reservationApiPath(
+          connectionString,
+          reservationId,
+          "GetReservationHistoryById"
+        ),
+        headers: { Accept: "application/json" },
+      }),
+      transformResponse: (response: ReservationHistoryItem[]) => response,
+      providesTags: (_result, _error, arg) => [
+        { type: "Reservation", id: `history:${arg.reservationId}` },
+      ],
+    }),
+
     cancelReservation: builder.mutation({
       query: (body: CancelReservationRequest) => ({
         url: reservationApiPath("CancelReservation"),
@@ -797,6 +819,7 @@ export const {
   useGetReservationPromotionsMutation,
   useGetReservationDataQuery,
   useGetReservationDetailByIdQuery,
+  useGetReservationHistoryByIdQuery,
   useGetShowDetailsByDateQuery,
   useGetShowSectionsQuery,
   useSaveReservationMutation,
