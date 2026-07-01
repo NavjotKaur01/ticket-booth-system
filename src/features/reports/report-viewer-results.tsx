@@ -57,7 +57,7 @@ export function ReportViewerResults({
           Choose filters and click Generate Report
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Today and Yesterday only update the date range until you generate.
+          Today and Yesterday update the date range and generate immediately.
         </p>
       </div>
     )

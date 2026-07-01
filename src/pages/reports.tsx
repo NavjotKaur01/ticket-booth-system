@@ -283,12 +283,14 @@ export function Reports() {
   }
 
   function applyPreset(nextDate: string, range: "today" | "yesterday") {
-    setDraftFilters((current) => ({
-      ...current,
+    const nextFilters: ReportViewerFilters = {
+      ...draftFilters,
       dateFrom: nextDate,
       dateTo: nextDate,
-    }))
+    }
+    setDraftFilters(nextFilters)
     setActiveQuickRange(range)
+    void handleGenerate(nextFilters)
   }
 
   function handleToday() {

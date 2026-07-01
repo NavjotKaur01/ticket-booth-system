@@ -16,6 +16,16 @@ import {
   createPastCustomersPdfBlob,
 } from "@/features/reports/past-customers-export"
 import {
+  buildComicSalesBreakdownExportBlob,
+  buildComicSalesBreakdownPrintHtml,
+  createComicSalesBreakdownPdfBlob,
+} from "@/features/reports/comic-sales-breakdown-export"
+import {
+  buildComicTicketRevenueExportBlob,
+  buildComicTicketRevenuePrintHtml,
+  createComicTicketRevenuePdfBlob,
+} from "@/features/reports/comic-ticket-revenue-export"
+import {
   buildManagerCheckoutExportBlob,
   buildManagerCheckoutPrintHtml,
   createManagerCheckoutPdfBlob,
@@ -30,6 +40,8 @@ const CUSTOMER_EXCEL_REPORTS = new Set([
   "banned-inactive-customers",
   "new-customers",
   "past-customers",
+  "comic-sales-breakdown",
+  "comic-ticket-revenue",
 ])
 
 function isCustomerExcelReport(reportType: string) {
@@ -381,6 +393,27 @@ export function formatUsApiDate(value: string): string {
   return parsed.isValid() ? parsed.format("MM/DD/YYYY hh:mm:ss A") : value
 }
 
+const PAST_CUSTOMER_ALTER_LOCATION_IDS = {
+  primary: "446CA112-6F79-4C7B-8A52-1B0F45315537",
+  alternate: "598ADE70-E983-48DC-A984-8BD8C86291AB",
+} as const
+
+function normalizeGuid(value: string) {
+  return value.trim().toLowerCase()
+}
+
+/** Mirrors WPF ReportVM GetOldCustomerReport alter-location swap. */
+export function resolvePastCustomerAlterLocationId(locationId: string) {
+  const normalized = normalizeGuid(locationId)
+  if (normalized === normalizeGuid(PAST_CUSTOMER_ALTER_LOCATION_IDS.primary)) {
+    return PAST_CUSTOMER_ALTER_LOCATION_IDS.alternate
+  }
+  if (normalized === normalizeGuid(PAST_CUSTOMER_ALTER_LOCATION_IDS.alternate)) {
+    return PAST_CUSTOMER_ALTER_LOCATION_IDS.primary
+  }
+  return locationId
+}
+
 /** WPF Revenue report Time column uses StringFormat=t (short time, e.g. 7:45 PM). */
 function formatRevenueTime(value: unknown): string {
   if (!value) return "-"
@@ -525,6 +558,29 @@ export function buildReportRequest(
       EndDate: endDate,
       LocaltionId: filters.locationId,
       CreatedBy: "",
+    }
+  }
+
+  // Past Customers — WPF sends StartDate + AlterLocationId only (no EndDate)
+  if (filters.reportType === "past-customers") {
+    return {
+      Connection: connectionName,
+      StartDate: startDate,
+      LocaltionId: filters.locationId,
+      AlterLocationId: resolvePastCustomerAlterLocationId(filters.locationId),
+      IsAddress: filters.withAddress,
+      IsEmail: filters.withEmailAddress,
+    }
+  }
+
+  // New Customers — WPF sends StartDate only (no EndDate)
+  if (filters.reportType === "new-customers") {
+    return {
+      Connection: connectionName,
+      StartDate: startDate,
+      LocaltionId: filters.locationId,
+      IsAddress: filters.withAddress,
+      IsEmail: filters.withEmailAddress,
     }
   }
 
@@ -1004,7 +1060,16 @@ function transformComicTicketRevenue(
     totalTickets: safeStr(row.TotalTickets),
     revenue: formatCurrency(row.Revenue as number),
   }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    emptyMessage: "No records found",
+    generatedAt,
+    rawData: data,
+  }
 }
 
 function transformComicSalesBreakdown(
@@ -1026,7 +1091,27 @@ function transformComicSalesBreakdown(
     web: safeStr(row.WebReservations),
     total: safeStr(row.TotalReservationsCount),
   }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+
+  const inHouseTotal = rows.reduce((sum, row) => sum + toNum(row.inHouse), 0)
+  const webTotal = rows.reduce((sum, row) => sum + toNum(row.web), 0)
+  const footerRow: ReportViewerRow = {
+    comicName: "Total",
+    inHouse: String(inHouseTotal),
+    web: String(webTotal),
+    total: String(inHouseTotal + webTotal),
+  }
+
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    footerRow: rows.length ? footerRow : undefined,
+    emptyMessage: "No records found",
+    generatedAt,
+    rawData: data,
+  }
 }
 
 function transformZipCodeBreakdown(
@@ -1532,6 +1617,11 @@ export function createReportCsv(result: ReportViewerResult, clubName = "") {
     return `${result.title} exports use Excel (.xlsx). Click Export to download.`
   }
 
+  if (result.reportType === "comic-sales-breakdown" || result.reportType === "comic-ticket-revenue") {
+    void clubName
+    return `${result.title} exports use Excel (.xlsx). Click Export to download.`
+  }
+
   const headers = result.columns.map((column) => csvEscape(column.label)).join(",")
   const rows = result.rows.map((row) =>
     result.columns.map((column) => csvEscape(row[column.key] ?? "")).join(",")
@@ -1558,6 +1648,16 @@ export function createReportExportBlob(result: ReportViewerResult, clubName = ""
   if (result.reportType === "past-customers") {
     void clubName
     return buildPastCustomersExportBlob(result)
+  }
+
+  if (result.reportType === "comic-sales-breakdown") {
+    void clubName
+    return buildComicSalesBreakdownExportBlob(result)
+  }
+
+  if (result.reportType === "comic-ticket-revenue") {
+    void clubName
+    return buildComicTicketRevenueExportBlob(result)
   }
 
   const csv = createReportCsv(result, clubName)
@@ -1985,6 +2085,10 @@ export function createReportPdfBlob(result: ReportViewerResult, _clubName = "") 
     throw new Error("Use createReportPdfBlobAsync for customer list reports.")
   }
 
+  if (result.reportType === "comic-sales-breakdown" || result.reportType === "comic-ticket-revenue") {
+    throw new Error("Use createReportPdfBlobAsync for comic report exports.")
+  }
+
   const encoder = new TextEncoder()
   const pageStreams = buildPdfPages(result).map((page) => page.commands.join("\n"))
 
@@ -2066,6 +2170,16 @@ export async function createReportPdfBlobAsync(result: ReportViewerResult, clubN
     return createPastCustomersPdfBlob(result)
   }
 
+  if (result.reportType === "comic-sales-breakdown") {
+    void clubName
+    return createComicSalesBreakdownPdfBlob(result)
+  }
+
+  if (result.reportType === "comic-ticket-revenue") {
+    void clubName
+    return createComicTicketRevenuePdfBlob(result)
+  }
+
   return createReportPdfBlob(result, clubName)
 }
 
@@ -2087,6 +2201,16 @@ export function buildReportPrintHtml(result: ReportViewerResult, clubName = "") 
   if (result.reportType === "past-customers") {
     void clubName
     return buildPastCustomersPrintHtml(result)
+  }
+
+  if (result.reportType === "comic-sales-breakdown") {
+    void clubName
+    return buildComicSalesBreakdownPrintHtml(result)
+  }
+
+  if (result.reportType === "comic-ticket-revenue") {
+    void clubName
+    return buildComicTicketRevenuePrintHtml(result)
   }
 
   const headCells = result.columns
