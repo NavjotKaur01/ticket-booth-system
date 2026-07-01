@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef, type TouchEvent, type WheelEvent } from "react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -105,10 +105,21 @@ export function CalendarMonthYearPanel({
     requestAnimationFrame(() => scrollExpandedYearToTop(container))
   }, [alignExpandedYearToTop, expandedYear])
 
+  function handleWheel(event: WheelEvent<HTMLDivElement>) {
+    event.stopPropagation()
+    event.currentTarget.scrollTop += event.deltaY
+  }
+
+  function handleTouchMove(event: TouchEvent<HTMLDivElement>) {
+    event.stopPropagation()
+  }
+
   return (
     <div
       ref={listRef}
-      className="calendar-thin-scrollbar max-h-72 touch-pan-y overscroll-contain overflow-y-auto [-webkit-overflow-scrolling:touch]"
+      className="calendar-thin-scrollbar max-h-[min(18rem,calc(var(--radix-popover-content-available-height)-0.5rem))] touch-pan-y overscroll-contain overflow-y-auto pr-1 [-webkit-overflow-scrolling:touch]"
+      onWheel={handleWheel}
+      onTouchMove={handleTouchMove}
     >
       {years.map((year) => {
         const isExpanded = year === expandedYear

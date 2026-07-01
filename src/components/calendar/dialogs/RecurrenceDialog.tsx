@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react"
 
 import { cn } from "@/lib/utils"
 
-import { calendarDialogMaxWidth } from "./calendar-dialog-width"
 import CalendarSelectControl from "../controls/CalendarSelectControl"
 import { DatePickerCalendarPanel } from "../controls/date-picker-calendar-panel"
 import { Button } from "@/components/ui/button"
@@ -259,12 +258,15 @@ export default function RecurrenceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent disableOutsideDismiss className={cn(calendarDialogMaxWidth("5xl"), "max-h-[calc(100vh-2rem)] overflow-y-auto")}>
-        <DialogHeader className="border-b px-6 py-4">
+      <DialogContent
+        disableOutsideDismiss
+        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-5xl"
+      >
+        <DialogHeader className="shrink-0 border-b px-6 py-4">
           <DialogTitle className="text-lg">Recurrence</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 px-6 py-5">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
           {errorMessage ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {errorMessage}
@@ -452,7 +454,7 @@ export default function RecurrenceDialog({
           </fieldset>
         </div>
 
-        <DialogFooter className="border-t px-6 py-4 sm:justify-start">
+        <DialogFooter className="!flex-row flex-wrap justify-start border-t px-6 py-4">
           <Button type="button" onClick={handleSave}>
             Next
           </Button>

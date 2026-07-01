@@ -25,7 +25,6 @@ import {
 import { cn } from "@/lib/utils"
 import { fetchAddShowDialogData, saveShowRequest } from "@/lib/api/add-show"
 import SaveVerifyDialog from "./SaveVerifyDialog"
-import { calendarDialogMaxWidth } from "./calendar-dialog-width"
 import {
   buildSaveShowFilterList,
 } from "@/lib/map-default-show-sections"
@@ -516,8 +515,7 @@ export default function AddShowDialog({
       <DialogContent
         disableOutsideDismiss
         className={cn(
-          calendarDialogMaxWidth("6xl"),
-          "fixed top-[max(0.5rem,env(safe-area-inset-top))] right-auto bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[50%] flex max-h-none translate-x-[-50%] translate-y-0 flex-col overflow-hidden p-0 sm:top-[50%] sm:bottom-auto sm:max-h-[min(90dvh,48rem)] sm:w-full sm:translate-y-[-50%]"
+          "fixed top-[max(0.5rem,env(safe-area-inset-top))] right-auto bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[50%] flex max-h-none w-[calc(100%-2rem)] max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-0 flex-col overflow-hidden p-0 sm:top-[50%] sm:bottom-auto sm:max-h-[min(90dvh,48rem)] sm:w-[calc(100%-2.5rem)] sm:max-w-6xl sm:translate-y-[-50%] md:w-[calc(100%-3rem)]"
         )}
       >
         <DialogHeader className="shrink-0 border-b px-4 py-3 pr-12 sm:px-5 sm:py-4">
@@ -707,10 +705,10 @@ export default function AddShowDialog({
           </div>
         </div>
 
-        <DialogFooter className="shrink-0 gap-2 border-t bg-background px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:flex-row sm:justify-start sm:px-5 sm:py-4">
+        <DialogFooter className="!flex-row flex-wrap justify-start gap-2 border-t bg-background px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-4">
           <Button
             type="button"
-            className="w-full sm:w-auto"
+            className="flex-1 sm:flex-none"
             onClick={handleSave}
             disabled={isLoading || isSaving || !dialogData}
           >
@@ -719,7 +717,7 @@ export default function AddShowDialog({
           <Button
             type="button"
             variant="ghost"
-            className="w-full sm:w-auto"
+            className="flex-1 sm:flex-none"
             onClick={() => onOpenChange(false)}
           >
             Cancel

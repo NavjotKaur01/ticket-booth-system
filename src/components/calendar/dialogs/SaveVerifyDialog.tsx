@@ -17,9 +17,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { cn } from "@/lib/utils"
-
-import { calendarDialogMaxWidth } from "./calendar-dialog-width"
 import type { ApiDefaultShowSection } from "@/types/api/save-show"
 
 type SaveVerifyDialogProps = {
@@ -94,12 +91,15 @@ export default function SaveVerifyDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent disableOutsideDismiss className={cn(calendarDialogMaxWidth("3xl"), "max-h-[calc(100vh-2rem)] overflow-hidden")}>
-        <DialogHeader className="border-b px-5 py-4">
+      <DialogContent
+        disableOutsideDismiss
+        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-3xl"
+      >
+        <DialogHeader className="shrink-0 border-b px-5 py-4">
           <DialogTitle className="text-lg">Verify Prices</DialogTitle>
         </DialogHeader>
 
-        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           <div className="overflow-auto border">
             <Table className="min-w-[36rem] border-collapse">
               <TableHeader className="sticky top-0 z-10 bg-muted text-muted-foreground">
@@ -141,7 +141,7 @@ export default function SaveVerifyDialog({
           </div>
         </div>
 
-        <DialogFooter className="border-t px-5 py-4 sm:justify-start">
+        <DialogFooter className="!flex-row flex-wrap items-center justify-start border-t px-5 py-4">
           <Button type="button" onClick={onConfirm} disabled={isSaving || rows.length === 0}>
             {isSaving ? "Saving..." : "Save"}
           </Button>
