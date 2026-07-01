@@ -1,6 +1,11 @@
 ﻿import dayjs from "dayjs"
 
 import {
+  buildAuditReportExportBlob,
+  buildAuditReportPrintHtml,
+  createAuditReportPdfBlob,
+} from "@/features/reports/audit-report-export"
+import {
   buildBannedCustomersExportBlob,
   buildBannedCustomersPrintHtml,
   createBannedCustomersPdfBlob,
@@ -26,6 +31,16 @@ import {
   createComicTicketRevenuePdfBlob,
 } from "@/features/reports/comic-ticket-revenue-export"
 import {
+  buildDoorCheckoutExportBlob,
+  buildDoorCheckoutPrintHtml,
+  createDoorCheckoutPdfBlob,
+} from "@/features/reports/door-checkout-export"
+import {
+  buildExportShowsAttendeesExportBlob,
+  buildExportShowsAttendeesPrintHtml,
+  createExportShowsAttendeesPdfBlob,
+} from "@/features/reports/export-shows-attendees-export"
+import {
   buildManagerCheckoutExportBlob,
   buildManagerCheckoutPrintHtml,
   createManagerCheckoutPdfBlob,
@@ -42,6 +57,9 @@ const CUSTOMER_EXCEL_REPORTS = new Set([
   "past-customers",
   "comic-sales-breakdown",
   "comic-ticket-revenue",
+  "door-checkout",
+  "export-shows-attendees",
+  "audit-report",
 ])
 
 function isCustomerExcelReport(reportType: string) {
@@ -1264,7 +1282,7 @@ function transformExportShowsAttendees(
     email: safeStr(row.Email),
     source: safeStr(row.ReservationSource),
   }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt, rawData: data }
 }
 
 function transformReceipts(
@@ -1622,6 +1640,16 @@ export function createReportCsv(result: ReportViewerResult, clubName = "") {
     return `${result.title} exports use Excel (.xlsx). Click Export to download.`
   }
 
+  if (result.reportType === "door-checkout" || result.reportType === "export-shows-attendees") {
+    void clubName
+    return `${result.title} exports use Excel (.xlsx). Click Export to download.`
+  }
+
+  if (result.reportType === "audit-report") {
+    void clubName
+    return `${result.title} exports use Excel (.xlsx). Click Export to download.`
+  }
+
   const headers = result.columns.map((column) => csvEscape(column.label)).join(",")
   const rows = result.rows.map((row) =>
     result.columns.map((column) => csvEscape(row[column.key] ?? "")).join(",")
@@ -1658,6 +1686,21 @@ export function createReportExportBlob(result: ReportViewerResult, clubName = ""
   if (result.reportType === "comic-ticket-revenue") {
     void clubName
     return buildComicTicketRevenueExportBlob(result)
+  }
+
+  if (result.reportType === "door-checkout") {
+    void clubName
+    return buildDoorCheckoutExportBlob(result)
+  }
+
+  if (result.reportType === "export-shows-attendees") {
+    void clubName
+    return buildExportShowsAttendeesExportBlob(result)
+  }
+
+  if (result.reportType === "audit-report") {
+    void clubName
+    return buildAuditReportExportBlob(result)
   }
 
   const csv = createReportCsv(result, clubName)
@@ -2089,6 +2132,14 @@ export function createReportPdfBlob(result: ReportViewerResult, _clubName = "") 
     throw new Error("Use createReportPdfBlobAsync for comic report exports.")
   }
 
+  if (result.reportType === "door-checkout" || result.reportType === "export-shows-attendees") {
+    throw new Error("Use createReportPdfBlobAsync for structured report exports.")
+  }
+
+  if (result.reportType === "audit-report") {
+    throw new Error("Use createReportPdfBlobAsync for audit report exports.")
+  }
+
   const encoder = new TextEncoder()
   const pageStreams = buildPdfPages(result).map((page) => page.commands.join("\n"))
 
@@ -2180,6 +2231,21 @@ export async function createReportPdfBlobAsync(result: ReportViewerResult, clubN
     return createComicTicketRevenuePdfBlob(result)
   }
 
+  if (result.reportType === "door-checkout") {
+    void clubName
+    return createDoorCheckoutPdfBlob(result)
+  }
+
+  if (result.reportType === "export-shows-attendees") {
+    void clubName
+    return createExportShowsAttendeesPdfBlob(result)
+  }
+
+  if (result.reportType === "audit-report") {
+    void clubName
+    return createAuditReportPdfBlob(result)
+  }
+
   return createReportPdfBlob(result, clubName)
 }
 
@@ -2211,6 +2277,21 @@ export function buildReportPrintHtml(result: ReportViewerResult, clubName = "") 
   if (result.reportType === "comic-ticket-revenue") {
     void clubName
     return buildComicTicketRevenuePrintHtml(result)
+  }
+
+  if (result.reportType === "door-checkout") {
+    void clubName
+    return buildDoorCheckoutPrintHtml(result)
+  }
+
+  if (result.reportType === "export-shows-attendees") {
+    void clubName
+    return buildExportShowsAttendeesPrintHtml(result)
+  }
+
+  if (result.reportType === "audit-report") {
+    void clubName
+    return buildAuditReportPrintHtml(result)
   }
 
   const headCells = result.columns
