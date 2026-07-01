@@ -6,6 +6,16 @@ import {
   createBannedCustomersPdfBlob,
 } from "@/features/reports/banned-customers-export"
 import {
+  buildNewCustomersExportBlob,
+  buildNewCustomersPrintHtml,
+  createNewCustomersPdfBlob,
+} from "@/features/reports/new-customers-export"
+import {
+  buildPastCustomersExportBlob,
+  buildPastCustomersPrintHtml,
+  createPastCustomersPdfBlob,
+} from "@/features/reports/past-customers-export"
+import {
   buildManagerCheckoutExportBlob,
   buildManagerCheckoutPrintHtml,
   createManagerCheckoutPdfBlob,
@@ -14,6 +24,21 @@ import type { AppLocation } from "@/types/api/locations"
 import type { ReportRequestModel } from "@/types/api/report-request"
 
 import type { ManagerCheckoutGiftCertApiRow } from "@/features/reports/manager-checkout-data"
+
+const CUSTOMER_EXCEL_REPORTS = new Set([
+  "manager-checkout",
+  "banned-inactive-customers",
+  "new-customers",
+  "past-customers",
+])
+
+function isCustomerExcelReport(reportType: string) {
+  return CUSTOMER_EXCEL_REPORTS.has(reportType)
+}
+
+export function usesExcelExport(reportType: string) {
+  return isCustomerExcelReport(reportType)
+}
 
 export type ReportViewerOption = {
   id: string
@@ -599,7 +624,16 @@ function transformNewCustomers(
     zip:       safeStr(row.Zip ?? row.ZipCode),
     createdOn: formatDisplayDate(String(row.DateCreated ?? "")),
   }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    emptyMessage: "No records found",
+    generatedAt,
+    rawData: data,
+  }
 }
 
 function transformPastCustomers(
@@ -631,7 +665,16 @@ function transformPastCustomers(
     zip:       safeStr(row.Zip ?? row.ZipCode),
     createdOn: formatDisplayDate(String(row.DateCreated ?? "")),
   }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    emptyMessage: "No records found",
+    generatedAt,
+    rawData: data,
+  }
 }
 
 function transformQuickViewSales(
@@ -1484,6 +1527,11 @@ export function createReportCsv(result: ReportViewerResult, clubName = "") {
     return "Banned/Inactive Customers exports use Excel (.xlsx). Click Export to download."
   }
 
+  if (result.reportType === "new-customers" || result.reportType === "past-customers") {
+    void clubName
+    return `${result.title} exports use Excel (.xlsx). Click Export to download.`
+  }
+
   const headers = result.columns.map((column) => csvEscape(column.label)).join(",")
   const rows = result.rows.map((row) =>
     result.columns.map((column) => csvEscape(row[column.key] ?? "")).join(",")
@@ -1500,6 +1548,16 @@ export function createReportExportBlob(result: ReportViewerResult, clubName = ""
   if (result.reportType === "banned-inactive-customers") {
     void clubName
     return buildBannedCustomersExportBlob(result)
+  }
+
+  if (result.reportType === "new-customers") {
+    void clubName
+    return buildNewCustomersExportBlob(result)
+  }
+
+  if (result.reportType === "past-customers") {
+    void clubName
+    return buildPastCustomersExportBlob(result)
   }
 
   const csv = createReportCsv(result, clubName)
@@ -1923,6 +1981,10 @@ export function createReportPdfBlob(result: ReportViewerResult, _clubName = "") 
     throw new Error("Use createReportPdfBlobAsync for banned/inactive customer reports.")
   }
 
+  if (result.reportType === "new-customers" || result.reportType === "past-customers") {
+    throw new Error("Use createReportPdfBlobAsync for customer list reports.")
+  }
+
   const encoder = new TextEncoder()
   const pageStreams = buildPdfPages(result).map((page) => page.commands.join("\n"))
 
@@ -1994,6 +2056,16 @@ export async function createReportPdfBlobAsync(result: ReportViewerResult, clubN
     return createBannedCustomersPdfBlob(result)
   }
 
+  if (result.reportType === "new-customers") {
+    void clubName
+    return createNewCustomersPdfBlob(result)
+  }
+
+  if (result.reportType === "past-customers") {
+    void clubName
+    return createPastCustomersPdfBlob(result)
+  }
+
   return createReportPdfBlob(result, clubName)
 }
 
@@ -2005,6 +2077,16 @@ export function buildReportPrintHtml(result: ReportViewerResult, clubName = "") 
   if (result.reportType === "banned-inactive-customers") {
     void clubName
     return buildBannedCustomersPrintHtml(result)
+  }
+
+  if (result.reportType === "new-customers") {
+    void clubName
+    return buildNewCustomersPrintHtml(result)
+  }
+
+  if (result.reportType === "past-customers") {
+    void clubName
+    return buildPastCustomersPrintHtml(result)
   }
 
   const headCells = result.columns

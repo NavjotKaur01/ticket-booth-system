@@ -20,6 +20,7 @@ import {
   openReportPrintWindow,
   resolveReportType,
   transformReportApiResponse,
+  usesExcelExport,
   type ReportViewerFilters,
   type ReportViewerResult,
 } from "@/features/reports/reports.service"
@@ -314,11 +315,7 @@ export function Reports() {
 
     setExportError(null)
     const blob = createReportExportBlob(generatedResult, locationName)
-    const extension =
-      generatedResult.reportType === "manager-checkout" ||
-      generatedResult.reportType === "banned-inactive-customers"
-        ? "xlsx"
-        : "csv"
+    const extension = usesExcelExport(generatedResult.reportType) ? "xlsx" : "csv"
     downloadBlob(blob, buildFilename(generatedResult.title, extension))
   }
 
