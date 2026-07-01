@@ -70,9 +70,6 @@ export function AuditReportView({ rawData, subtitle, generatedAt, drillContext }
                 <th className="border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Created By</th>
                 <th className="border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Comic</th>
                 <th className="border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Type</th>
-                {drillContext && (
-                  <th className="border border-border bg-muted/50 px-3 py-2 text-[11px] font-semibold tracking-wide text-muted-foreground" />
-                )}
               </tr>
             </thead>
             <tbody>
@@ -80,8 +77,20 @@ export function AuditReportView({ rawData, subtitle, generatedAt, drillContext }
                 const type = row.IsComp === true || row.IsComp === 1 || row.IsComp === "true"
                   ? "Comp"
                   : "Move Reservation"
+                const canDrill = Boolean(drillContext && row.ReservationID)
                 return (
-                  <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
+                  <tr
+                    key={i}
+                    className={cn(
+                      i % 2 === 0 ? "bg-background" : "bg-muted/20",
+                      canDrill && "cursor-pointer hover:bg-muted/40"
+                    )}
+                    onDoubleClick={() => {
+                      if (canDrill) {
+                        setSelectedId(row.ReservationID!)
+                      }
+                    }}
+                  >
                     <td className="border border-border px-3 py-2 text-xs">{fmtDt(row.CreateDt)}</td>
                     <td className="border border-border px-3 py-2 text-xs">{fmtDt(row.AdjustedDt)}</td>
                     <td className="border border-border px-3 py-2 text-xs">{row.MovedBy ?? "—"}</td>
@@ -90,16 +99,6 @@ export function AuditReportView({ rawData, subtitle, generatedAt, drillContext }
                     <td className={cn("border border-border px-3 py-2 text-xs", type === "Comp" && "text-blue-600")}>
                       {type}
                     </td>
-                    {drillContext && row.ReservationID && (
-                      <td className="border border-border px-2 py-1 text-center">
-                        <button
-                          onClick={() => setSelectedId(row.ReservationID!)}
-                          className="rounded px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors"
-                        >
-                          Details
-                        </button>
-                      </td>
-                    )}
                   </tr>
                 )
               })}
