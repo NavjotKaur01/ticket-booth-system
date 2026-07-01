@@ -1,4 +1,3 @@
-import { ClientPrintJob, ClientPrintJobGroup, DefaultPrinter, JSPrintManager, WSStatus } from "jsprintmanager"
 import QRCode from "qrcode"
 
 import type {
@@ -80,202 +79,6 @@ function buildMiddleTextMarkup(value: string) {
     .filter(Boolean)
     .map((line) => `<div class="middle-line">${escapeHtml(line)}</div>`)
     .join("")
-}
-
-function getMiddleTextLines(value: string) {
-  const trimmed = value.trim()
-
-  if (!trimmed) {
-    return []
-  }
-
-  const normalized = trimmed.replace(/\s+/g, " ")
-  if (normalized === "All sales are final. No credits, refunds, or exchanges.") {
-    return [
-      "All sales are final.",
-      "No credits, refunds, or exchanges.",
-    ]
-  }
-
-  return trimmed
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-}
-
-function sanitizePrinterText(value: string) {
-  return value
-    .normalize("NFKD")
-    .replace(/[^\x20-\x7E\n]/g, "")
-}
-
-function appendTextLine(bytes: number[], value = "") {
-  const text = sanitizePrinterText(value)
-  for (let index = 0; index < text.length; index += 1) {
-    bytes.push(text.charCodeAt(index))
-  }
-  bytes.push(0x0a)
-}
-
-function appendCommand(bytes: number[], ...values: number[]) {
-  bytes.push(...values)
-}
-
-function appendQrCode(bytes: number[], value: string) {
-  const qrValue = sanitizePrinterText(value)
-  if (!qrValue) {
-    return
-  }
-
-  const data = Array.from(new TextEncoder().encode(qrValue))
-  const storeLength = data.length + 3
-  const pL = storeLength % 256
-  const pH = Math.floor(storeLength / 256)
-
-  appendCommand(bytes, 0x1d, 0x28, 0x6b, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00)
-  appendCommand(bytes, 0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, 0x06)
-  appendCommand(bytes, 0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x45, 0x31)
-  appendCommand(bytes, 0x1d, 0x28, 0x6b, pL, pH, 0x31, 0x50, 0x30, ...data)
-  appendCommand(bytes, 0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30)
-  bytes.push(0x0a)
-}
-
-function buildEscPosTicketCommands(
-  ticket: TicketPrintData,
-  isReprint: boolean,
-  includeQr: boolean
-) {
-  const footerText = isReprint ? ticket.text.reprintFooter : ticket.text.printFooter
-  const bytes: number[] = []
-
-  appendCommand(bytes, 0x1b, 0x40)
-  appendCommand(bytes, 0x1b, 0x61, 0x01)
-  appendCommand(bytes, 0x1d, 0x21, 0x11)
-  appendTextLine(bytes, ticket.venue.venueName)
-  appendCommand(bytes, 0x1d, 0x21, 0x00)
-
-  for (const line of ticket.venue.addressLines) {
-    appendTextLine(bytes, line)
-  }
-  appendTextLine(bytes, ticket.venue.website)
-  appendTextLine(bytes, "--------------------------------")
-
-  appendCommand(bytes, 0x1b, 0x45, 0x01)
-  appendTextLine(bytes, ticket.customer.fullName)
-  appendCommand(bytes, 0x1b, 0x45, 0x00)
-  appendTextLine(bytes, ticket.show.dateTimeLabel)
-  appendCommand(bytes, 0x1b, 0x45, 0x01)
-  appendTextLine(bytes, `${ticket.reservation.partySize} ticket(s) for \"${ticket.show.title}\"`)
-  appendTextLine(bytes, ticket.reservation.source)
-  appendCommand(bytes, 0x1b, 0x45, 0x00)
-  appendTextLine(bytes, `Payment Type: ${ticket.reservation.paymentType}`)
-  appendTextLine(bytes, "Back")
-  appendCommand(bytes, 0x1b, 0x45, 0x01)
-  appendTextLine(bytes, `Total :${formatCurrency(ticket.reservation.totalAmount)}`)
-  appendCommand(bytes, 0x1b, 0x45, 0x00)
-
-  for (const line of getMiddleTextLines(ticket.text.middleText)) {
-    appendTextLine(bytes, line)
-  }
-
-  appendCommand(bytes, 0x1b, 0x45, 0x01)
-  appendTextLine(bytes, "----------- DO NOT DISCARD -----------")
-  appendCommand(bytes, 0x1b, 0x45, 0x00)
-  appendTextLine(bytes, ticket.text.bottomText)
-
-  if (includeQr) {
-    appendQrCode(bytes, ticket.qrValue)
-  }
-
-  appendCommand(bytes, 0x1b, 0x45, 0x01)
-  appendTextLine(bytes, footerText)
-  appendCommand(bytes, 0x1b, 0x45, 0x00)
-  appendTextLine(bytes)
-  appendTextLine(bytes)
-  appendTextLine(bytes)
-  appendTextLine(bytes)
-  appendCommand(bytes, 0x1d, 0x56, 0x00)
-
-  return new Uint8Array(bytes)
-}
-
-let jspmStartPromise: Promise<boolean> | null = null
-
-async function ensureJsPrintManagerConnection() {
-  if (JSPrintManager.websocket_status === WSStatus.Open) {
-    return true
-  }
-
-  if (!jspmStartPromise) {
-    jspmStartPromise = (async () => {
-      try {
-        await JSPrintManager.start()
-      } catch {
-        try {
-          await JSPrintManager.start(false)
-        } catch {
-          return false
-        }
-      }
-
-      return JSPrintManager.websocket_status === WSStatus.Open
-    })().finally(() => {
-      jspmStartPromise = null
-    })
-  }
-
-  return await jspmStartPromise
-}
-
-async function tryPrintReservationTicketWithJsPrintManager({
-  ticket,
-  ticketCount,
-  isReprint,
-  includeQr,
-  layout,
-}: PrintReservationTicketRequest) {
-  const isConnected = await ensureJsPrintManagerConnection()
-  if (!isConnected) {
-    return false
-  }
-
-  const normalizedCount = Math.min(
-    Math.max(1, ticketCount),
-    Math.max(1, ticket.reservation.partySize)
-  )
-
-  if (layout === "individual") {
-    const jobGroup = new ClientPrintJobGroup()
-
-    for (let index = 0; index < normalizedCount; index += 1) {
-      const printedTicket = buildPrintedTicket(ticket, 1)
-      const printJob = new ClientPrintJob()
-      printJob.clientPrinter = new DefaultPrinter()
-      printJob.printerCommandsDocName = `${printedTicket.customer.fullName} Ticket ${index + 1}`
-      printJob.binaryPrinterCommands = buildEscPosTicketCommands(
-        printedTicket,
-        Boolean(isReprint),
-        includeQr ?? true
-      )
-      jobGroup.jobs.push(printJob)
-    }
-
-    await jobGroup.sendToClient()
-    return true
-  }
-
-  const printedTicket = buildPrintedTicket(ticket, normalizedCount)
-  const printJob = new ClientPrintJob()
-  printJob.clientPrinter = new DefaultPrinter()
-  printJob.printerCommandsDocName = `${printedTicket.customer.fullName} Ticket`
-  printJob.binaryPrinterCommands = buildEscPosTicketCommands(
-    printedTicket,
-    Boolean(isReprint),
-    includeQr ?? true
-  )
-
-  await printJob.sendToClient()
-  return true
 }
 
 function resolveVenue(locationName?: string): TicketPrintVenue {
@@ -789,22 +592,6 @@ export async function printReservationTicket({
     Math.max(1, ticket.reservation.partySize)
   )
 
-  try {
-    const didPrintWithJsPrintManager = await tryPrintReservationTicketWithJsPrintManager({
-      ticket,
-      ticketCount: normalizedCount,
-      isReprint,
-      includeQr,
-      layout,
-    })
-
-    if (didPrintWithJsPrintManager) {
-      return true
-    }
-  } catch {
-    // Fall back to browser printing when the JSPrintManager client is unavailable
-    // or the raw ticket command job cannot be completed.
-  }
 
   const html = await buildPrintDocument(
     ticket,
@@ -816,6 +603,7 @@ export async function printReservationTicket({
 
   return await startPrintDocument(html)
 }
+
 
 
 
