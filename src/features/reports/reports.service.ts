@@ -1,6 +1,11 @@
 ﻿import dayjs from "dayjs"
 
 import {
+  buildBannedCustomersExportBlob,
+  buildBannedCustomersPrintHtml,
+  createBannedCustomersPdfBlob,
+} from "@/features/reports/banned-customers-export"
+import {
   buildManagerCheckoutExportBlob,
   buildManagerCheckoutPrintHtml,
   createManagerCheckoutPdfBlob,
@@ -48,6 +53,11 @@ export type ReportDrillContext = {
   locationId: string
 }
 
+export type ReportExportMeta = {
+  dateFrom: string
+  dateTo: string
+}
+
 export type ReportViewerResult = {
   reportType: string
   title: string
@@ -59,6 +69,7 @@ export type ReportViewerResult = {
   generatedAt: string
   rawData?: unknown
   drillContext?: ReportDrillContext
+  exportMeta?: ReportExportMeta
   managerCheckoutExtras?: {
     giftCertificateList?: ManagerCheckoutGiftCertApiRow[]
     giftCertificatePayments?: ManagerCheckoutGiftCertApiRow[]
@@ -547,7 +558,16 @@ function transformBannedCustomers(
     status:    safeStr(row.Status),
     createdOn: formatDisplayDate(String(row.DateCreated ?? "")),
   }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    emptyMessage: "No records found",
+    generatedAt,
+    rawData: data,
+  }
 }
 
 function transformNewCustomers(
@@ -1459,6 +1479,11 @@ export function createReportCsv(result: ReportViewerResult, clubName = "") {
     return "Manager Checkout exports use Excel (.xlsx). Click Export to download."
   }
 
+  if (result.reportType === "banned-inactive-customers") {
+    void clubName
+    return "Banned/Inactive Customers exports use Excel (.xlsx). Click Export to download."
+  }
+
   const headers = result.columns.map((column) => csvEscape(column.label)).join(",")
   const rows = result.rows.map((row) =>
     result.columns.map((column) => csvEscape(row[column.key] ?? "")).join(",")
@@ -1470,6 +1495,11 @@ export function createReportCsv(result: ReportViewerResult, clubName = "") {
 export function createReportExportBlob(result: ReportViewerResult, clubName = "") {
   if (result.reportType === "manager-checkout") {
     return buildManagerCheckoutExportBlob({ result, clubName })
+  }
+
+  if (result.reportType === "banned-inactive-customers") {
+    void clubName
+    return buildBannedCustomersExportBlob(result)
   }
 
   const csv = createReportCsv(result, clubName)
@@ -1889,6 +1919,10 @@ export function createReportPdfBlob(result: ReportViewerResult, _clubName = "") 
     throw new Error("Use createReportPdfBlobAsync for manager checkout reports.")
   }
 
+  if (result.reportType === "banned-inactive-customers") {
+    throw new Error("Use createReportPdfBlobAsync for banned/inactive customer reports.")
+  }
+
   const encoder = new TextEncoder()
   const pageStreams = buildPdfPages(result).map((page) => page.commands.join("\n"))
 
@@ -1955,12 +1989,22 @@ export async function createReportPdfBlobAsync(result: ReportViewerResult, clubN
     return createManagerCheckoutPdfBlob({ result, clubName })
   }
 
+  if (result.reportType === "banned-inactive-customers") {
+    void clubName
+    return createBannedCustomersPdfBlob(result)
+  }
+
   return createReportPdfBlob(result, clubName)
 }
 
 export function buildReportPrintHtml(result: ReportViewerResult, clubName = "") {
   if (result.reportType === "manager-checkout") {
     return buildManagerCheckoutPrintHtml({ result, clubName })
+  }
+
+  if (result.reportType === "banned-inactive-customers") {
+    void clubName
+    return buildBannedCustomersPrintHtml(result)
   }
 
   const headCells = result.columns

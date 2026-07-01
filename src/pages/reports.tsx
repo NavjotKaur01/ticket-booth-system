@@ -261,6 +261,11 @@ export function Reports() {
         result.managerCheckoutExtras = managerCheckoutExtras
       }
 
+      result.exportMeta = {
+        dateFrom: nextFilters.dateFrom,
+        dateTo: nextFilters.dateTo,
+      }
+
       setGeneratedResult(result)
     } catch (error) {
       const message =
@@ -309,7 +314,11 @@ export function Reports() {
 
     setExportError(null)
     const blob = createReportExportBlob(generatedResult, locationName)
-    const extension = generatedResult.reportType === "manager-checkout" ? "xlsx" : "csv"
+    const extension =
+      generatedResult.reportType === "manager-checkout" ||
+      generatedResult.reportType === "banned-inactive-customers"
+        ? "xlsx"
+        : "csv"
     downloadBlob(blob, buildFilename(generatedResult.title, extension))
   }
 
