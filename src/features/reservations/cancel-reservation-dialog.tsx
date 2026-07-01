@@ -161,7 +161,7 @@ export function CancelReservationDialog ({
       <DialogContent
         disableOutsideDismiss
         showCloseButton={false}
-        className='flex max-h-[82vh] w-[min(96vw,72rem)] max-w-none flex-col overflow-hidden p-0 sm:max-w-none'
+        className='flex max-h-[82vh] max-w-6xl flex-col overflow-hidden p-0 sm:max-w-6xl'
       >
         <DialogHeader className='shrink-0 flex-row items-center justify-between gap-4 border-b px-4 py-3'>
           <DialogTitle className='text-base font-semibold text-foreground'>

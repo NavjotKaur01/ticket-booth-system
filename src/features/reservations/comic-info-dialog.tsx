@@ -521,7 +521,7 @@ export function ComicInfoDialog({
         nested={nested}
         disableOutsideDismiss={nested}
         showCloseButton
-        className="flex max-h-[90vh] w-[min(96vw,64rem)] max-w-none flex-col overflow-hidden p-0 sm:max-w-none"
+        className="flex max-h-[90vh] max-w-5xl flex-col overflow-hidden p-0 sm:max-w-5xl"
       >
         <DialogHeader className="shrink-0 gap-0 border-b px-5 py-4 pr-12">
           <DialogTitle className="text-lg font-semibold text-foreground">

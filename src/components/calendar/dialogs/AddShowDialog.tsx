@@ -515,7 +515,7 @@ export default function AddShowDialog({
       <DialogContent
         disableOutsideDismiss
         className={cn(
-          "fixed top-[max(0.5rem,env(safe-area-inset-top))] right-auto bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[50%] flex max-h-none w-[calc(100%-2rem)] max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-0 flex-col overflow-hidden p-0 sm:top-[50%] sm:bottom-auto sm:max-h-[min(90dvh,48rem)] sm:w-[calc(100%-2.5rem)] sm:max-w-6xl sm:translate-y-[-50%] md:w-[calc(100%-3rem)]"
+          "fixed top-[max(0.5rem,env(safe-area-inset-top))] right-auto bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[50%] flex max-h-none w-fit max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-0 flex-col overflow-hidden p-0 sm:top-[50%] sm:bottom-auto sm:max-h-[min(90dvh,48rem)] sm:max-w-6xl sm:translate-y-[-50%]"
         )}
       >
         <DialogHeader className="shrink-0 border-b px-4 py-3 pr-12 sm:px-5 sm:py-4">

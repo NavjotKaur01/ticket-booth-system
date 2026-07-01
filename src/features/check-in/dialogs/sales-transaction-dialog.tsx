@@ -64,7 +64,7 @@ export function SalesTransactionDialog({
       <DialogContent
         nested
         showCloseButton
-        className="w-[min(92vw,24rem)] max-w-none overflow-hidden p-0 sm:max-w-none"
+        className="max-w-sm overflow-hidden p-0 sm:max-w-sm"
       >
         <DialogHeader className="shrink-0 border-b bg-primary px-4 py-3 pr-12 text-primary-foreground">
           <DialogTitle className="text-base font-semibold">

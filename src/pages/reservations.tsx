@@ -1,4 +1,4 @@
-﻿import { FileDown, Plus, Search } from "lucide-react"
+import { FileDown, Plus, Search } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
@@ -11,8 +11,7 @@ import { ReservationNoteDialog } from "@/features/reservations/reservation-note-
 import { ReservationDataTable } from "@/features/reservations/reservation-data-table"
 import { ReservationHistoryDialog } from "@/features/reservations/reservation-history-dialog"
 import { ReservationFiltersCard } from "@/features/reservations/reservation-filters-card"
-import { printReservationTicket } from "@/services/ticket-print.service"
-import { ReprintTicketDialog } from "@/features/ticket-print/reprint-ticket-dialog"
+import { getMockTicketPrintData, printReservationTicket } from "@/services/ticket-print.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useReservationData } from "@/hooks/use-reservation-data"
 import { useShowDetailsByDate } from "@/hooks/use-show-details-by-date"
@@ -64,7 +63,6 @@ export function Reservations() {
   )
   const [search, setSearch] = useState("")
   const [addOpen, setAddOpen] = useState(false)
-  const [reprintOpen, setReprintOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [noteOpen, setNoteOpen] = useState(false)
@@ -90,6 +88,7 @@ export function Reservations() {
     storedFilters.showCancelled ?? false
   )
   const [displayPhone, setDisplayPhone] = useState(false)
+  const [reservationPrintError, setReservationPrintError] = useState<string | null>(null)
 
   const { shows, loading: showsLoading, error: showsError, refetch: refetchShows } =
     useShowDetailsByDate(
@@ -209,10 +208,6 @@ export function Reservations() {
     ])
   }
 
-  function handleOpenReprintTicket(reservation: Reservation) {
-    setSelectedReservation(reservation)
-    setReprintOpen(true)
-  }
 
   function handleOpenReservationHistory(reservation: Reservation) {
     setSelectedReservation(reservation)
@@ -352,10 +347,43 @@ export function Reservations() {
     }
   }
 
-  function handleReprintOpenChange(open: boolean) {
-    setReprintOpen(open)
-    if (!open) {
-      setSelectedReservation(null)
+
+  async function handlePrintReservation(
+    reservation: Reservation,
+    {
+      layout = "combined",
+      includeQr = true,
+    }: {
+      layout?: "combined" | "individual"
+      includeQr?: boolean
+    } = {}
+  ) {
+    setReservationPrintError(null)
+
+    try {
+      const ticketData = await getMockTicketPrintData({
+        reservation,
+        showDate,
+        showLabel: selectedShowLabel,
+        locationName,
+      })
+
+      const didStart = await printReservationTicket({
+        ticket: ticketData,
+        ticketCount: ticketData.reservation.partySize,
+        includeQr,
+        layout,
+      })
+
+      if (!didStart) {
+        throw new Error("Unable to start printing. Please allow popups and try again.")
+      }
+    } catch (error) {
+      setReservationPrintError(
+        error instanceof Error
+          ? error.message
+          : "Unable to start printing. Please try again."
+      )
     }
   }
 
@@ -370,6 +398,8 @@ export function Reservations() {
     const didStart = await printReservationTicket({
       ticket: ticketData,
       ticketCount: ticketData.reservation.partySize,
+      includeQr: true,
+      layout: "combined",
     })
 
     if (!didStart) {
@@ -467,6 +497,11 @@ export function Reservations() {
             {uncancelReservationError}
           </p>
         ) : null}
+        {reservationPrintError ? (
+          <p className="px-3 py-2 text-sm text-destructive">
+            {reservationPrintError}
+          </p>
+        ) : null}
 
         <ReservationDataTable
           data={filteredReservations}
@@ -474,7 +509,24 @@ export function Reservations() {
           displayPhone={displayPhone}
           onCancelReservation={handleOpenCancelReservation}
           onUnCancelReservation={handleUnCancelReservation}
-          onPrintTickets={handleOpenReprintTicket}
+          onPrintTickets={(reservation) => {
+            void handlePrintReservation(reservation, {
+              layout: "combined",
+              includeQr: true,
+            })
+          }}
+          onPrintIndividualTickets={(reservation) => {
+            void handlePrintReservation(reservation, {
+              layout: "individual",
+              includeQr: true,
+            })
+          }}
+          onPrintReceipt={(reservation) => {
+            void handlePrintReservation(reservation, {
+              layout: "combined",
+              includeQr: false,
+            })
+          }}
           onReservationHistory={handleOpenReservationHistory}
           onAddNote={handleOpenAddNote}
         />
@@ -509,14 +561,9 @@ export function Reservations() {
         error={saveReservationNoteError}
         onSave={handleSaveReservationNote}
       />
-      <ReprintTicketDialog
-        open={reprintOpen}
-        onOpenChange={handleReprintOpenChange}
-        reservation={selectedReservation}
-        showDate={showDate}
-        showLabel={selectedShowLabel}
-        locationName={locationName}
-      />
+
     </div>
   )
 }
+
+

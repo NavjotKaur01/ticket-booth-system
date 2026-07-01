@@ -45,7 +45,7 @@ export function ProcessPaymentDialog({
       <DialogContent
         nested
         showCloseButton
-        className="w-[min(94vw,27rem)] max-w-none overflow-hidden p-0 sm:max-w-none"
+        className="max-w-[27rem] overflow-hidden p-0 sm:max-w-[27rem]"
       >
         <DialogHeader className="shrink-0 border-b bg-primary px-4 py-3 pr-12 text-primary-foreground">
           <DialogTitle className="text-base font-semibold">

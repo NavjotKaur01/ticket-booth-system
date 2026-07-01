@@ -26,6 +26,7 @@ type RowActionsMenuProps = {
   onUnCancelReservation?: () => void
   onPrintTickets?: () => void
   onPrintIndividualTickets?: () => void
+  onPrintReceipt?: () => void
   onReservationHistory?: () => void
   onAddNote?: () => void
 }
@@ -37,6 +38,7 @@ export function RowActionsMenu({
   onUnCancelReservation,
   onPrintTickets,
   onPrintIndividualTickets,
+  onPrintReceipt,
   onReservationHistory,
   onAddNote,
 }: RowActionsMenuProps) {
@@ -64,6 +66,11 @@ export function RowActionsMenu({
 
     if (action === "Print Individual Tickets") {
       onPrintIndividualTickets?.()
+      return
+    }
+
+    if (action === "Print Receipt") {
+      onPrintReceipt?.()
       return
     }
 

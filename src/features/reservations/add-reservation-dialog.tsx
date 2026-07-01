@@ -136,19 +136,19 @@ const SECTION_SEAT_STYLES = {
 
 function SectionSeatDisplay ({ option }: { option: SectionOption }) {
   return (
-    <div className='flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm tabular-nums max-sm:col-start-2 max-sm:row-start-2 sm:ml-auto sm:shrink-0'>
+    <div className='flex min-w-max items-center justify-end gap-x-1.5 whitespace-nowrap text-sm tabular-nums'>
       <span className='shrink-0 tabular-nums text-foreground'>
         {formatSectionDesktopPrice(option.price)}
       </span>
 
-      <span className='inline-flex items-center gap-x-0.5 whitespace-nowrap sm:min-w-[4.25rem]'>
+      <span className='inline-flex items-center gap-x-0.5 whitespace-nowrap'>
         <span className={SECTION_SEAT_STYLES.seatsLabel}>Seats:</span>
         <span className={SECTION_SEAT_STYLES.seatsValue}>{option.seats}</span>
       </span>
 
       <span className='text-border'>|</span>
 
-      <span className='inline-flex items-center gap-x-0.5 whitespace-nowrap sm:min-w-[5.5rem]'>
+      <span className='inline-flex items-center gap-x-0.5 whitespace-nowrap'>
         <span className={SECTION_SEAT_STYLES.availableLabel}>Available:</span>
         <span className={SECTION_SEAT_STYLES.availableValue}>
           {option.available}
@@ -219,22 +219,22 @@ function SectionPicker ({
         onValueChange={onSectionChange}
         className='gap-0'
       >
-        <div className='overflow-hidden rounded-lg border border-border/60 divide-y divide-border/50'>
+        <div className='overflow-x-auto rounded-lg border border-border/60 divide-y divide-border/50'>
           {sections.map(option => (
             <div
               key={option.id}
-              className='flex items-start gap-2 px-2.5 py-1.5'
+              className='grid min-w-[36rem] grid-cols-[minmax(0,1fr)_3.5rem] items-center gap-2 px-2.5 py-1.5'
             >
               <label
                 htmlFor={`section-${option.id}`}
-                className='flex min-w-0 flex-1 cursor-pointer items-start gap-2 max-sm:grid max-sm:grid-cols-[auto_minmax(0,1fr)] max-sm:items-center max-sm:gap-x-2 max-sm:gap-y-1'
+                className='grid min-w-0 cursor-pointer grid-cols-[auto_minmax(7rem,11rem)_minmax(0,1fr)] items-center gap-x-2'
               >
                 <RadioGroupItem
                   value={option.id}
                   id={`section-${option.id}`}
-                  className='shrink-0 max-sm:row-span-2 max-sm:self-center'
+                  className='shrink-0'
                 />
-                <span className='min-w-0 text-sm font-semibold leading-tight text-foreground whitespace-normal max-sm:col-start-2 max-sm:row-start-1 sm:min-w-[10rem] sm:max-w-[11rem]'>
+                <span className='min-w-0 truncate text-sm font-semibold leading-tight text-foreground'>
                   {option.name}
                 </span>
                 <SectionSeatDisplay option={option} />
@@ -1456,7 +1456,7 @@ export function AddReservationDialog ({
           <DialogContent
             disableOutsideDismiss
             showCloseButton={false}
-            className='flex max-h-[82vh] w-[min(96vw,72rem)] max-w-none flex-col overflow-hidden sm:max-w-none'
+            className='flex max-h-[82vh] w-[min(calc(100vw-2rem),84rem)] max-w-[84rem] flex-col overflow-hidden sm:max-w-[84rem]'
           >
             <DialogHeader className='shrink-0 flex-row items-center justify-between gap-4 border-b px-4 py-3'>
               <DialogTitle className='text-base font-semibold text-foreground'>

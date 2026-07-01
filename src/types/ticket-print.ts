@@ -1,5 +1,3 @@
-﻿import type { Reservation } from "@/types/reservation"
-
 export type TicketPrintVenue = {
   venueName: string
   addressLines: string[]
@@ -47,6 +45,8 @@ export type TicketPrintData = {
   qrValue: string
 }
 
+export type TicketPrintLayout = "combined" | "individual"
+
 export type CreateTicketPrintDataParams = {
   reservationId: string
   firstName: string
@@ -65,7 +65,7 @@ export type CreateTicketPrintDataParams = {
 }
 
 export type GetMockTicketPrintDataParams = {
-  reservation: Reservation
+  reservation: import("@/types/reservation").Reservation
   showDate: string
   showLabel?: string
   locationName?: string
@@ -75,4 +75,6 @@ export type PrintReservationTicketRequest = {
   ticket: TicketPrintData
   ticketCount: number
   isReprint?: boolean
+  includeQr?: boolean
+  layout?: TicketPrintLayout
 }

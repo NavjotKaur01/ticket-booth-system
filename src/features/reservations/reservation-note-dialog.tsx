@@ -63,7 +63,7 @@ export function ReservationNoteDialog ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className='flex max-h-[82vh] w-[min(96vw,32rem)] max-w-none flex-col overflow-hidden p-0 sm:max-w-none'
+        className='flex max-h-[82vh] max-w-lg flex-col overflow-hidden p-0 sm:max-w-lg'
       >
         <DialogHeader className='shrink-0 flex-row items-center justify-between gap-4 border-b px-4 py-3'>
           <div className='min-w-0'>

@@ -10,6 +10,8 @@ type ReservationColumnsOptions = {
   onCancelReservation?: (reservation: Reservation) => void
   onUnCancelReservation?: (reservation: Reservation) => void
   onPrintTickets?: (reservation: Reservation) => void
+  onPrintIndividualTickets?: (reservation: Reservation) => void
+  onPrintReceipt?: (reservation: Reservation) => void
   onReservationHistory?: (reservation: Reservation) => void
   onAddNote?: (reservation: Reservation) => void
 }
@@ -28,6 +30,8 @@ export function createReservationColumns({
   onCancelReservation,
   onUnCancelReservation,
   onPrintTickets,
+  onPrintIndividualTickets,
+  onPrintReceipt,
   onReservationHistory,
   onAddNote,
 }: ReservationColumnsOptions = {}): ColumnDef<Reservation>[] {
@@ -308,7 +312,8 @@ export function createReservationColumns({
           onCancelReservation={() => onCancelReservation?.(row.original)}
           onUnCancelReservation={() => onUnCancelReservation?.(row.original)}
           onPrintTickets={() => onPrintTickets?.(row.original)}
-          onPrintIndividualTickets={() => onPrintTickets?.(row.original)}
+          onPrintIndividualTickets={() => onPrintIndividualTickets?.(row.original)}
+          onPrintReceipt={() => onPrintReceipt?.(row.original)}
           onReservationHistory={() => onReservationHistory?.(row.original)}
           onAddNote={() => onAddNote?.(row.original)}
         />
@@ -318,3 +323,4 @@ export function createReservationColumns({
 
   return columns
 }
+
