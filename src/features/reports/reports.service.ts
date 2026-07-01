@@ -16,6 +16,71 @@ import {
   createNewCustomersPdfBlob,
 } from "@/features/reports/new-customers-export"
 import {
+  buildPromoReportExportBlob,
+  buildPromoReportPrintHtml,
+  createPromoReportPdfBlob,
+} from "@/features/reports/promo-report-export"
+import {
+  buildProjectedSalesExportBlob,
+  buildProjectedSalesPrintHtml,
+  createProjectedSalesPdfBlob,
+} from "@/features/reports/projected-sales-export"
+import {
+  buildQuickViewSalesExportBlob,
+  buildQuickViewSalesPrintHtml,
+  createQuickViewSalesPdfBlob,
+} from "@/features/reports/quick-view-sales-export"
+import {
+  buildReceiptsExportBlob,
+  buildReceiptsPrintHtml,
+  createReceiptsPdfBlob,
+} from "@/features/reports/receipts-export"
+import {
+  buildReconcileReportExportBlob,
+  buildReconcileReportPrintHtml,
+  createReconcileReportPdfBlob,
+} from "@/features/reports/reconcile-report-export"
+import {
+  buildRevenueExportBlob,
+  buildRevenuePrintHtml,
+  createRevenuePdfBlob,
+} from "@/features/reports/revenue-export"
+import {
+  buildSalesByDayExportBlob,
+  buildSalesByDayPrintHtml,
+  createSalesByDayPdfBlob,
+} from "@/features/reports/sales-by-day-export"
+import {
+  buildSalesByShowExportBlob,
+  buildSalesByShowPrintHtml,
+  createSalesByShowPdfBlob,
+} from "@/features/reports/sales-by-show-export"
+import {
+  buildTicketPriceBreakdownExportBlob,
+  buildTicketPriceBreakdownPrintHtml,
+  createTicketPriceBreakdownPdfBlob,
+} from "@/features/reports/ticket-price-breakdown-export"
+import {
+  buildWebCountsExportBlob,
+  buildWebCountsPrintHtml,
+  createWebCountsPdfBlob,
+} from "@/features/reports/web-counts-export"
+import {
+  buildWebGiftCertificatesExportBlob,
+  buildWebGiftCertificatesPrintHtml,
+  createWebGiftCertificatesPdfBlob,
+} from "@/features/reports/web-gift-certificates-export"
+import {
+  buildWebReservationsForDayExportBlob,
+  buildWebReservationsForDayPrintHtml,
+  createWebReservationsForDayPdfBlob,
+} from "@/features/reports/web-reservations-for-day-export"
+import {
+  buildZipCodeBreakdownExportBlob,
+  buildZipCodeBreakdownPrintHtml,
+  createZipCodeBreakdownPdfBlob,
+} from "@/features/reports/zipcode-breakdown-export"
+import {
   buildPastCustomersExportBlob,
   buildPastCustomersPrintHtml,
   createPastCustomersPdfBlob,
@@ -60,6 +125,19 @@ const CUSTOMER_EXCEL_REPORTS = new Set([
   "door-checkout",
   "export-shows-attendees",
   "audit-report",
+  "projected-sales",
+  "promo-report",
+  "quick-view-sales",
+  "receipts",
+  "reconcile-report",
+  "revenue",
+  "sales-by-day",
+  "sales-by-show",
+  "ticket-price-breakdown",
+  "web-counts",
+  "web-gift-certificates",
+  "web-reservations-for-day",
+  "zipcode-breakdown",
 ])
 
 function isCustomerExcelReport(reportType: string) {
@@ -864,6 +942,7 @@ function transformQuickViewSales(
     footerRow,
     emptyMessage: "No records found",
     generatedAt,
+    rawData: data,
   }
 }
 
@@ -922,6 +1001,7 @@ function transformRevenue(
     footerRow,
     emptyMessage: "No records found",
     generatedAt,
+    rawData: data,
   }
 }
 
@@ -979,6 +1059,7 @@ function transformSalesByDay(
     footerRow,
     emptyMessage: "No records found",
     generatedAt,
+    rawData: data,
   }
 }
 
@@ -1052,7 +1133,7 @@ function transformProjectedSales(
     paid: safeStr(row.Paid),
     total: formatCurrency(row.Total as number),
   }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt }
+  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt, rawData: data }
 }
 
 function transformComicTicketRevenue(
@@ -1168,6 +1249,7 @@ function transformZipCodeBreakdown(
     footerRow,
     emptyMessage: "No records found",
     generatedAt,
+    rawData: data,
   }
 }
 
@@ -1254,6 +1336,7 @@ function transformWebGiftCertificates(
     footerRow,
     emptyMessage: "No records found",
     generatedAt,
+    rawData: data,
   }
 }
 
@@ -1392,6 +1475,7 @@ function transformReceipts(
     footerRow,
     emptyMessage: "No records found",
     generatedAt,
+    rawData: data,
   }
 }
 
@@ -1650,6 +1734,40 @@ export function createReportCsv(result: ReportViewerResult, clubName = "") {
     return `${result.title} exports use Excel (.xlsx). Click Export to download.`
   }
 
+  if (result.reportType === "projected-sales" || result.reportType === "promo-report") {
+    void clubName
+    return `${result.title} exports use Excel (.xlsx). Click Export to download.`
+  }
+
+  if (result.reportType === "quick-view-sales" || result.reportType === "receipts") {
+    void clubName
+    return `${result.title} exports use Excel (.xlsx). Click Export to download.`
+  }
+
+  if (result.reportType === "reconcile-report" || result.reportType === "revenue") {
+    void clubName
+    return `${result.title} exports use Excel (.xlsx). Click Export to download.`
+  }
+
+  if (result.reportType === "sales-by-day" || result.reportType === "sales-by-show") {
+    void clubName
+    return `${result.title} exports use Excel (.xlsx). Click Export to download.`
+  }
+
+  if (result.reportType === "ticket-price-breakdown" || result.reportType === "web-counts") {
+    void clubName
+    return `${result.title} exports use Excel (.xlsx). Click Export to download.`
+  }
+
+  if (
+    result.reportType === "web-gift-certificates" ||
+    result.reportType === "web-reservations-for-day" ||
+    result.reportType === "zipcode-breakdown"
+  ) {
+    void clubName
+    return `${result.title} exports use Excel (.xlsx). Click Export to download.`
+  }
+
   const headers = result.columns.map((column) => csvEscape(column.label)).join(",")
   const rows = result.rows.map((row) =>
     result.columns.map((column) => csvEscape(row[column.key] ?? "")).join(",")
@@ -1701,6 +1819,70 @@ export function createReportExportBlob(result: ReportViewerResult, clubName = ""
   if (result.reportType === "audit-report") {
     void clubName
     return buildAuditReportExportBlob(result)
+  }
+
+  if (result.reportType === "projected-sales") {
+    void clubName
+    return buildProjectedSalesExportBlob(result)
+  }
+
+  if (result.reportType === "promo-report") {
+    void clubName
+    return buildPromoReportExportBlob(result)
+  }
+
+  if (result.reportType === "quick-view-sales") {
+    void clubName
+    return buildQuickViewSalesExportBlob(result)
+  }
+
+  if (result.reportType === "receipts") {
+    void clubName
+    return buildReceiptsExportBlob(result)
+  }
+
+  if (result.reportType === "reconcile-report") {
+    void clubName
+    return buildReconcileReportExportBlob(result)
+  }
+
+  if (result.reportType === "revenue") {
+    void clubName
+    return buildRevenueExportBlob(result)
+  }
+
+  if (result.reportType === "sales-by-day") {
+    void clubName
+    return buildSalesByDayExportBlob(result)
+  }
+
+  if (result.reportType === "sales-by-show") {
+    void clubName
+    return buildSalesByShowExportBlob(result)
+  }
+
+  if (result.reportType === "ticket-price-breakdown") {
+    void clubName
+    return buildTicketPriceBreakdownExportBlob(result)
+  }
+
+  if (result.reportType === "web-counts") {
+    void clubName
+    return buildWebCountsExportBlob(result)
+  }
+
+  if (result.reportType === "web-gift-certificates") {
+    void clubName
+    return buildWebGiftCertificatesExportBlob(result)
+  }
+
+  if (result.reportType === "web-reservations-for-day") {
+    return buildWebReservationsForDayExportBlob(result, clubName)
+  }
+
+  if (result.reportType === "zipcode-breakdown") {
+    void clubName
+    return buildZipCodeBreakdownExportBlob(result)
   }
 
   const csv = createReportCsv(result, clubName)
@@ -2140,6 +2322,34 @@ export function createReportPdfBlob(result: ReportViewerResult, _clubName = "") 
     throw new Error("Use createReportPdfBlobAsync for audit report exports.")
   }
 
+  if (result.reportType === "projected-sales" || result.reportType === "promo-report") {
+    throw new Error("Use createReportPdfBlobAsync for structured report exports.")
+  }
+
+  if (result.reportType === "quick-view-sales" || result.reportType === "receipts") {
+    throw new Error("Use createReportPdfBlobAsync for structured report exports.")
+  }
+
+  if (result.reportType === "reconcile-report" || result.reportType === "revenue") {
+    throw new Error("Use createReportPdfBlobAsync for structured report exports.")
+  }
+
+  if (result.reportType === "sales-by-day" || result.reportType === "sales-by-show") {
+    throw new Error("Use createReportPdfBlobAsync for structured report exports.")
+  }
+
+  if (result.reportType === "ticket-price-breakdown" || result.reportType === "web-counts") {
+    throw new Error("Use createReportPdfBlobAsync for structured report exports.")
+  }
+
+  if (
+    result.reportType === "web-gift-certificates" ||
+    result.reportType === "web-reservations-for-day" ||
+    result.reportType === "zipcode-breakdown"
+  ) {
+    throw new Error("Use createReportPdfBlobAsync for structured report exports.")
+  }
+
   const encoder = new TextEncoder()
   const pageStreams = buildPdfPages(result).map((page) => page.commands.join("\n"))
 
@@ -2246,6 +2456,70 @@ export async function createReportPdfBlobAsync(result: ReportViewerResult, clubN
     return createAuditReportPdfBlob(result)
   }
 
+  if (result.reportType === "projected-sales") {
+    void clubName
+    return createProjectedSalesPdfBlob(result)
+  }
+
+  if (result.reportType === "promo-report") {
+    void clubName
+    return createPromoReportPdfBlob(result)
+  }
+
+  if (result.reportType === "quick-view-sales") {
+    void clubName
+    return createQuickViewSalesPdfBlob(result)
+  }
+
+  if (result.reportType === "receipts") {
+    void clubName
+    return createReceiptsPdfBlob(result)
+  }
+
+  if (result.reportType === "reconcile-report") {
+    void clubName
+    return createReconcileReportPdfBlob(result)
+  }
+
+  if (result.reportType === "revenue") {
+    void clubName
+    return createRevenuePdfBlob(result)
+  }
+
+  if (result.reportType === "sales-by-day") {
+    void clubName
+    return createSalesByDayPdfBlob(result)
+  }
+
+  if (result.reportType === "sales-by-show") {
+    void clubName
+    return createSalesByShowPdfBlob(result)
+  }
+
+  if (result.reportType === "ticket-price-breakdown") {
+    void clubName
+    return createTicketPriceBreakdownPdfBlob(result)
+  }
+
+  if (result.reportType === "web-counts") {
+    void clubName
+    return createWebCountsPdfBlob(result)
+  }
+
+  if (result.reportType === "web-gift-certificates") {
+    void clubName
+    return createWebGiftCertificatesPdfBlob(result)
+  }
+
+  if (result.reportType === "web-reservations-for-day") {
+    return createWebReservationsForDayPdfBlob(result, clubName)
+  }
+
+  if (result.reportType === "zipcode-breakdown") {
+    void clubName
+    return createZipCodeBreakdownPdfBlob(result)
+  }
+
   return createReportPdfBlob(result, clubName)
 }
 
@@ -2292,6 +2566,70 @@ export function buildReportPrintHtml(result: ReportViewerResult, clubName = "") 
   if (result.reportType === "audit-report") {
     void clubName
     return buildAuditReportPrintHtml(result)
+  }
+
+  if (result.reportType === "projected-sales") {
+    void clubName
+    return buildProjectedSalesPrintHtml(result)
+  }
+
+  if (result.reportType === "promo-report") {
+    void clubName
+    return buildPromoReportPrintHtml(result)
+  }
+
+  if (result.reportType === "quick-view-sales") {
+    void clubName
+    return buildQuickViewSalesPrintHtml(result)
+  }
+
+  if (result.reportType === "receipts") {
+    void clubName
+    return buildReceiptsPrintHtml(result)
+  }
+
+  if (result.reportType === "reconcile-report") {
+    void clubName
+    return buildReconcileReportPrintHtml(result)
+  }
+
+  if (result.reportType === "revenue") {
+    void clubName
+    return buildRevenuePrintHtml(result)
+  }
+
+  if (result.reportType === "sales-by-day") {
+    void clubName
+    return buildSalesByDayPrintHtml(result)
+  }
+
+  if (result.reportType === "sales-by-show") {
+    void clubName
+    return buildSalesByShowPrintHtml(result)
+  }
+
+  if (result.reportType === "ticket-price-breakdown") {
+    void clubName
+    return buildTicketPriceBreakdownPrintHtml(result)
+  }
+
+  if (result.reportType === "web-counts") {
+    void clubName
+    return buildWebCountsPrintHtml(result)
+  }
+
+  if (result.reportType === "web-gift-certificates") {
+    void clubName
+    return buildWebGiftCertificatesPrintHtml(result)
+  }
+
+  if (result.reportType === "web-reservations-for-day") {
+    return buildWebReservationsForDayPrintHtml(result, clubName)
+  }
+
+  if (result.reportType === "zipcode-breakdown") {
+    void clubName
+    return buildZipCodeBreakdownPrintHtml(result)
   }
 
   const headCells = result.columns
