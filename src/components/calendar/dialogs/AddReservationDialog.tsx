@@ -2,6 +2,9 @@ import dayjs from "dayjs"
 import { ChevronLeft, ChevronRight, ContactRound } from "lucide-react"
 import { useEffect, useState } from "react"
 
+import { cn } from "@/lib/utils"
+
+import { calendarDialogMaxWidth } from "./calendar-dialog-width"
 import CalendarDatePickerControl, {
   canNavigateToPreviousDate,
 } from "../controls/CalendarDatePickerControl"
@@ -25,7 +28,6 @@ import type { CalendarEvent } from "@/data/calendarEvents"
 import { AddCustomerDialog } from "@/features/customers/add-customer-dialog"
 import { ComicInfoDialog } from "@/features/reservations/comic-info-dialog"
 import { useAppSession } from "@/hooks/use-app-session"
-import { cn } from "@/lib/utils"
 import type { CustomerFormValues } from "@/types/customer-form"
 
 import {
@@ -239,7 +241,7 @@ export default function AddReservationDialog({
           onOpenChange(nextOpen)
         }}
       >
-      <DialogContent disableOutsideDismiss className="max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-6xl">
+      <DialogContent disableOutsideDismiss className={cn(calendarDialogMaxWidth("6xl"), "max-h-[calc(100vh-2rem)] overflow-hidden")}>
         <DialogHeader className="border-b px-5 py-4">
           <DialogTitle className="text-lg">{headerTitle}</DialogTitle>
         </DialogHeader>

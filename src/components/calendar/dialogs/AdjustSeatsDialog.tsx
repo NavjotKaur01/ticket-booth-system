@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react"
 
+import { cn } from "@/lib/utils"
+
+import { calendarDialogMaxWidth } from "./calendar-dialog-width"
 import CalendarSelectControl from "../controls/CalendarSelectControl"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -187,7 +190,7 @@ export default function AdjustSeatsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent disableOutsideDismiss className="max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-4xl">
+      <DialogContent disableOutsideDismiss className={cn(calendarDialogMaxWidth("4xl"), "max-h-[calc(100vh-2rem)] overflow-hidden")}>
         <DialogHeader className="border-b px-5 py-4">
           <DialogTitle className="text-lg">Adjust Seats</DialogTitle>
         </DialogHeader>

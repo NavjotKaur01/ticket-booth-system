@@ -1,9 +1,12 @@
 import { CalendarIcon } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
+import { cn } from "@/lib/utils"
+
+import { calendarDialogMaxWidth } from "./calendar-dialog-width"
 import CalendarSelectControl from "../controls/CalendarSelectControl"
+import { DatePickerCalendarPanel } from "../controls/date-picker-calendar-panel"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
@@ -16,7 +19,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { cn } from "@/lib/utils"
 
 import type { RecurrenceFormValue } from "@/types/recurrence"
 
@@ -95,8 +97,17 @@ function DatePickerField({
   onSelect: (date: Date) => void
   className?: string
 }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [visibleMonth, setVisibleMonth] = useState<Date>(() => date ?? new Date())
+
+  useEffect(() => {
+    if (date) {
+      setVisibleMonth(date)
+    }
+  }, [date])
+
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           id={id}
@@ -113,15 +124,18 @@ function DatePickerField({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={date ?? undefined}
-          onSelect={(selected) => {
-            if (selected) {
+        {isOpen ? (
+          <DatePickerCalendarPanel
+            key={`${id}-${date?.toISOString() ?? "empty"}`}
+            month={visibleMonth}
+            onMonthChange={setVisibleMonth}
+            selected={date ?? undefined}
+            onSelect={(selected) => {
               onSelect(getStartOfDay(selected))
-            }
-          }}
-        />
+              setIsOpen(false)
+            }}
+          />
+        ) : null}
       </PopoverContent>
     </Popover>
   )
@@ -245,7 +259,7 @@ export default function RecurrenceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent disableOutsideDismiss className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-5xl">
+      <DialogContent disableOutsideDismiss className={cn(calendarDialogMaxWidth("5xl"), "max-h-[calc(100vh-2rem)] overflow-y-auto")}>
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle className="text-lg">Recurrence</DialogTitle>
         </DialogHeader>

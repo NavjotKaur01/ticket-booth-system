@@ -22,8 +22,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { cn } from "@/lib/utils"
 import { fetchAddShowDialogData, saveShowRequest } from "@/lib/api/add-show"
 import SaveVerifyDialog from "./SaveVerifyDialog"
+import { calendarDialogMaxWidth } from "./calendar-dialog-width"
 import {
   buildSaveShowFilterList,
 } from "@/lib/map-default-show-sections"
@@ -145,8 +147,10 @@ function PerformerSelect({
   onValueChange: (value: string) => void
 }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-[7rem_minmax(0,1fr)_auto_auto] sm:items-center">
-      <Label htmlFor={id}>{label}</Label>
+    <div className="grid gap-1.5 sm:grid-cols-[7rem_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-2">
+      <Label htmlFor={id} className="text-sm">
+        {label}
+      </Label>
       <CalendarSelectControl
         id={id}
         value={value}
@@ -269,7 +273,7 @@ function ShowTimesTable({
   onToggleShowTime: (showTimeId: string) => void
 }) {
   return (
-    <div className="max-h-64 overflow-auto border">
+    <div className="max-h-[min(14rem,40vh)] overflow-auto border sm:max-h-64">
       <Table className="min-w-[52rem] border-collapse">
         <TableHeader className="sticky top-0 z-10 bg-muted text-muted-foreground">
           <TableRow>
@@ -509,8 +513,14 @@ export default function AddShowDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent disableOutsideDismiss className="max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-6xl">
-        <DialogHeader className="border-b px-5 py-4">
+      <DialogContent
+        disableOutsideDismiss
+        className={cn(
+          calendarDialogMaxWidth("6xl"),
+          "fixed top-[max(0.5rem,env(safe-area-inset-top))] right-auto bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[50%] flex max-h-none translate-x-[-50%] translate-y-0 flex-col overflow-hidden p-0 sm:top-[50%] sm:bottom-auto sm:max-h-[min(90dvh,48rem)] sm:w-full sm:translate-y-[-50%]"
+        )}
+      >
+        <DialogHeader className="shrink-0 border-b px-4 py-3 pr-12 sm:px-5 sm:py-4">
           <div className="flex items-center gap-2">
             {onBack ? (
               <Button
@@ -518,17 +528,18 @@ export default function AddShowDialog({
                 variant="ghost"
                 size="icon"
                 onClick={onBack}
-                className="size-8"
+                className="size-8 shrink-0"
                 aria-label="Back to recurrence"
               >
                 <ArrowLeft className="size-4" />
               </Button>
             ) : null}
-            <DialogTitle className="text-lg">{title}</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">{title}</DialogTitle>
           </div>
         </DialogHeader>
 
-        <div className="max-h-[calc(100vh-10rem)] space-y-6 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 sm:px-5 sm:py-4">
+          <div className="space-y-4 sm:space-y-6">
           {errorMessage ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {errorMessage}
@@ -538,7 +549,7 @@ export default function AddShowDialog({
             <AddShowDialogSkeleton />
           ) : (
             <>
-              <div className="grid gap-x-10 gap-y-3 lg:grid-cols-2">
+              <div className="grid gap-4 lg:grid-cols-2 lg:gap-x-10 lg:gap-y-3">
                 <div className="space-y-3">
                   <PerformerSelect
                     id="show-headliner"
@@ -597,9 +608,9 @@ export default function AddShowDialog({
                   </Button>
                 </div>
               ) : (
-                <fieldset className="rounded-md border p-4">
+                <fieldset className="rounded-md border p-3 sm:p-4">
                 <legend className="px-2 text-sm font-medium">Show Details</legend>
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-3">
                   {showDetailCheckboxes.map(({ field, label }) => (
                     <div key={field} className="flex items-center gap-2">
                       <Checkbox
@@ -611,7 +622,7 @@ export default function AddShowDialog({
                     </div>
                   ))}
 
-                  <div className="flex min-w-[16rem] items-center gap-2">
+                  <div className="flex w-full flex-col gap-2 sm:min-w-[16rem] sm:w-auto sm:flex-row sm:items-center">
                     <Label htmlFor="show-age-restriction" className="shrink-0">
                       Age Restrictions
                     </Label>
@@ -634,9 +645,9 @@ export default function AddShowDialog({
               </fieldset>
 
               )}
-              <fieldset className="rounded-md border p-4">
+              <fieldset className="rounded-md border p-3 sm:p-4">
                 <legend className="px-2 text-sm font-medium">Fees or Recurrence</legend>
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+                <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-3">
                   <FeeInput
                     id="day-of-show-fee"
                     label="Day Of Show:"
@@ -693,13 +704,24 @@ export default function AddShowDialog({
               />
             </>
           )}
+          </div>
         </div>
 
-        <DialogFooter className="border-t px-5 py-4 sm:justify-start">
-          <Button type="button" onClick={handleSave} disabled={isLoading || isSaving || !dialogData}>
+        <DialogFooter className="shrink-0 gap-2 border-t bg-background px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:flex-row sm:justify-start sm:px-5 sm:py-4">
+          <Button
+            type="button"
+            className="w-full sm:w-auto"
+            onClick={handleSave}
+            disabled={isLoading || isSaving || !dialogData}
+          >
             Save
           </Button>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full sm:w-auto"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
         </DialogFooter>

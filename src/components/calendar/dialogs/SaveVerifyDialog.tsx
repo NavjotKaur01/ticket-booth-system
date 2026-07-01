@@ -17,6 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { cn } from "@/lib/utils"
+
+import { calendarDialogMaxWidth } from "./calendar-dialog-width"
 import type { ApiDefaultShowSection } from "@/types/api/save-show"
 
 type SaveVerifyDialogProps = {
@@ -91,7 +94,7 @@ export default function SaveVerifyDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent disableOutsideDismiss className="max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-3xl">
+      <DialogContent disableOutsideDismiss className={cn(calendarDialogMaxWidth("3xl"), "max-h-[calc(100vh-2rem)] overflow-hidden")}>
         <DialogHeader className="border-b px-5 py-4">
           <DialogTitle className="text-lg">Verify Prices</DialogTitle>
         </DialogHeader>

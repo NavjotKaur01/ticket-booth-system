@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react"
 
+import { cn } from "@/lib/utils"
+
+import { calendarDialogMaxWidth } from "./calendar-dialog-width"
 import {
   Dialog,
   DialogContent,
@@ -144,7 +147,7 @@ export default function ShowDetailHistoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[min(90vh,48rem)] max-h-[calc(100vh-2rem)] flex-col overflow-hidden sm:max-w-6xl">
+      <DialogContent className={cn(calendarDialogMaxWidth("6xl"), "flex h-[min(90vh,48rem)] max-h-[calc(100vh-2rem)] flex-col overflow-hidden")}>
         <DialogHeader className="shrink-0 border-b px-5 py-4">
           <DialogTitle className="text-lg">Show Details History</DialogTitle>
         </DialogHeader>

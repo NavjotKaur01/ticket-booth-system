@@ -2,8 +2,8 @@
 import { Calendar as CalendarIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 
+import { DatePickerCalendarPanel } from "@/components/calendar/controls/date-picker-calendar-panel"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
 import {
   Popover,
   PopoverContent,
@@ -111,18 +111,18 @@ export function ShowDateField({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-0">
-        <Calendar
-          mode="single"
-          month={visibleMonth}
-          onMonthChange={setVisibleMonth}
-          selected={selectedDate ?? undefined}
-          onSelect={(nextDate) => {
-            if (nextDate) {
+        {isOpen ? (
+          <DatePickerCalendarPanel
+            key={`show-date-${showDate}`}
+            month={visibleMonth}
+            onMonthChange={setVisibleMonth}
+            selected={selectedDate ?? undefined}
+            onSelect={(nextDate) => {
               onShowDateChange(dayjs(getStartOfDay(nextDate)).format("YYYY-MM-DD"))
               setIsOpen(false)
-            }
-          }}
-        />
+            }}
+          />
+        ) : null}
       </PopoverContent>
     </Popover>
   )

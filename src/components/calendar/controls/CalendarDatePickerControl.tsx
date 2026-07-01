@@ -2,8 +2,9 @@ import dayjs from "dayjs"
 import { CalendarIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 
+import { DatePickerCalendarPanel } from "@/components/calendar/controls/date-picker-calendar-panel"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
+import { getDefaultCalendarEndMonth } from "@/components/ui/calendar"
 import {
   Popover,
   PopoverContent,
@@ -102,19 +103,22 @@ export default function CalendarDatePickerControl({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-0">
-        <Calendar
-          mode="single"
-          month={visibleMonth}
-          onMonthChange={setVisibleMonth}
-          selected={selectedDate ?? undefined}
-          disabled={minSelectableDate ? { before: minSelectableDate } : undefined}
-          onSelect={(nextDate) => {
-            if (nextDate) {
+        {isOpen ? (
+          <DatePickerCalendarPanel
+            key={`${id}-${value}-picker`}
+            month={visibleMonth}
+            onMonthChange={setVisibleMonth}
+            selected={selectedDate ?? undefined}
+            startMonth={minSelectableDate}
+            endMonth={getDefaultCalendarEndMonth()}
+            minDate={minSelectableDate}
+            disabled={minSelectableDate ? { before: minSelectableDate } : undefined}
+            onSelect={(nextDate) => {
               onChange(dayjs(getStartOfDay(nextDate)).format("YYYY-MM-DD"))
               setIsOpen(false)
-            }
-          }}
-        />
+            }}
+          />
+        ) : null}
       </PopoverContent>
     </Popover>
   )

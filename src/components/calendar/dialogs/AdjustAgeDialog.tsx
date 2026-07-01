@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { CalendarEvent } from "@/data/calendarEvents"
 import { cn } from "@/lib/utils"
 
+import { calendarDialogMaxWidth } from "./calendar-dialog-width"
 import CalendarSelectControl from "../controls/CalendarSelectControl"
 import {
   applyAdjustAgeModeChange,
@@ -119,7 +120,7 @@ export default function AdjustAgeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent disableOutsideDismiss className="max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-2xl">
+      <DialogContent disableOutsideDismiss className={cn(calendarDialogMaxWidth("2xl"), "max-h-[calc(100vh-2rem)] overflow-hidden")}>
         <DialogHeader className="border-b px-5 py-4">
           <DialogTitle className="text-lg">{headerTitle}</DialogTitle>
         </DialogHeader>

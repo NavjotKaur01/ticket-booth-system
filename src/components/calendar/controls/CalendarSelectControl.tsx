@@ -70,7 +70,7 @@ export default function CalendarSelectControl({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-[var(--radix-popover-trigger-width)] min-w-[8rem] p-1"
+        className="w-[var(--radix-popover-trigger-width)] min-w-[8rem] touch-pan-y p-1"
         sideOffset={4}
       >
         <CalendarScrollSelectList

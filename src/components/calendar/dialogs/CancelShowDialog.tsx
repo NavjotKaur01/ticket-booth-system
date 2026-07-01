@@ -13,6 +13,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import type { CalendarEvent } from "@/data/calendarEvents"
 
+import { calendarDialogMaxWidth } from "./calendar-dialog-width"
 import {
   cancelShow,
   getCancelShowDialogData,
@@ -130,7 +131,7 @@ export default function CancelShowDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg" disableOutsideDismiss showCloseButton={false}>
+      <DialogContent className={calendarDialogMaxWidth("lg")} disableOutsideDismiss showCloseButton={false}>
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle className="text-lg">Cancel Warning</DialogTitle>
         </DialogHeader>

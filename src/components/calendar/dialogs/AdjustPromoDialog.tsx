@@ -13,6 +13,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import type { CalendarEvent } from "@/types/calendar-event"
 
+import { calendarDialogMaxWidth } from "./calendar-dialog-width"
 import {
   ADJUST_PROMO_ACCESS_DENIED_MESSAGE,
   getAdjustPromoDialogData,
@@ -81,7 +82,7 @@ export default function AdjustPromoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg" disableOutsideDismiss showCloseButton={false}>
+      <DialogContent className={calendarDialogMaxWidth("lg")} disableOutsideDismiss showCloseButton={false}>
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle className="text-lg">Message</DialogTitle>
         </DialogHeader>

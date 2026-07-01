@@ -20,6 +20,9 @@ import {
 } from "@/components/ui/table"
 import type { CalendarEvent } from "@/data/calendarEvents"
 
+import { cn } from "@/lib/utils"
+
+import { calendarDialogMaxWidth } from "./calendar-dialog-width"
 import {
   applyHubToggle,
   createAdjustHubFormValues,
@@ -170,7 +173,7 @@ export default function AdjustHubDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent disableOutsideDismiss className="max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-3xl">
+      <DialogContent disableOutsideDismiss className={cn(calendarDialogMaxWidth("3xl"), "max-h-[calc(100vh-2rem)] overflow-hidden")}>
         <DialogHeader className="border-b px-5 py-4">
           <DialogTitle className="text-lg">Adjust Hub</DialogTitle>
         </DialogHeader>

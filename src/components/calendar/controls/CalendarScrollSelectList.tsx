@@ -1,5 +1,5 @@
 import { Check } from "lucide-react"
-import { useEffect, useRef, type WheelEvent } from "react"
+import { useEffect, useRef, type TouchEvent, type WheelEvent } from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -50,11 +50,16 @@ export function CalendarScrollSelectList({
     event.currentTarget.scrollTop += event.deltaY
   }
 
+  function handleTouchMove(event: TouchEvent<HTMLDivElement>) {
+    event.stopPropagation()
+  }
+
   return (
     <div
       ref={listRef}
-      className="calendar-thin-scrollbar max-h-44 overscroll-contain overflow-y-auto pr-1"
+      className="calendar-thin-scrollbar max-h-44 touch-pan-y overscroll-contain overflow-y-auto pr-1 [-webkit-overflow-scrolling:touch]"
       onWheel={handleWheel}
+      onTouchMove={handleTouchMove}
     >
       {displayOptions.map((option) => (
         <button

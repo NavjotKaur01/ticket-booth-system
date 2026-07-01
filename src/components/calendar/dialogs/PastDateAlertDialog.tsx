@@ -10,6 +10,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
+import { calendarDialogMaxWidth } from "./calendar-dialog-width"
+
 type PastDateAlertDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -21,7 +23,7 @@ export default function PastDateAlertDialog({
 }: PastDateAlertDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" showCloseButton={false}>
+      <DialogContent className={calendarDialogMaxWidth("md")} showCloseButton={false}>
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle className="text-lg">Alert</DialogTitle>
         </DialogHeader>
