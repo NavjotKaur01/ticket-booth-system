@@ -66,13 +66,12 @@ export function AuditReportView({ rawData, subtitle, generatedAt, drillContext }
           <ReportTable>
             <thead>
               <tr>
-                <ReportTh>Create Date</ReportTh>
-                <ReportTh>Adjusted Date</ReportTh>
-                <ReportTh>Moved By</ReportTh>
-                <ReportTh>Created By</ReportTh>
-                <ReportTh>Comic</ReportTh>
-                <ReportTh>Type</ReportTh>
-                {drillContext && <ReportTh />}
+                <th className="border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Create Date</th>
+                <th className="border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Adjusted Date</th>
+                <th className="border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Moved By</th>
+                <th className="border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Created By</th>
+                <th className="border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Comic</th>
+                <th className="border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Type</th>
               </tr>
             </thead>
             <tbody>
@@ -80,24 +79,28 @@ export function AuditReportView({ rawData, subtitle, generatedAt, drillContext }
                 const type = row.IsComp === true || row.IsComp === 1 || row.IsComp === "true"
                   ? "Comp"
                   : "Move Reservation"
+                const canDrill = Boolean(drillContext && row.ReservationID)
                 return (
-                  <tr key={i} className={reportRowClass(i)}>
-                    <ReportTd>{fmtDt(row.CreateDt)}</ReportTd>
-                    <ReportTd>{fmtDt(row.AdjustedDt)}</ReportTd>
-                    <ReportTd>{row.MovedBy ?? "—"}</ReportTd>
-                    <ReportTd>{row.CreatedBy ?? "—"}</ReportTd>
-                    <ReportTd>{row.ComicName ?? "—"}</ReportTd>
-                    <ReportTd className={cn(type === "Comp" && "text-blue-600")}>{type}</ReportTd>
-                    {drillContext && row.ReservationID && (
-                      <ReportTd center>
-                        <button
-                          onClick={() => setSelectedId(row.ReservationID!)}
-                          className="rounded px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors"
-                        >
-                          Details
-                        </button>
-                      </ReportTd>
+                  <tr
+                    key={i}
+                    className={cn(
+                      i % 2 === 0 ? "bg-background" : "bg-muted/20",
+                      canDrill && "cursor-pointer hover:bg-muted/40"
                     )}
+                    onDoubleClick={() => {
+                      if (canDrill) {
+                        setSelectedId(row.ReservationID!)
+                      }
+                    }}
+                  >
+                    <td className="border border-border px-3 py-2 text-xs">{fmtDt(row.CreateDt)}</td>
+                    <td className="border border-border px-3 py-2 text-xs">{fmtDt(row.AdjustedDt)}</td>
+                    <td className="border border-border px-3 py-2 text-xs">{row.MovedBy ?? "—"}</td>
+                    <td className="border border-border px-3 py-2 text-xs">{row.CreatedBy ?? "—"}</td>
+                    <td className="border border-border px-3 py-2 text-xs">{row.ComicName ?? "—"}</td>
+                    <td className={cn("border border-border px-3 py-2 text-xs", type === "Comp" && "text-blue-600")}>
+                      {type}
+                    </td>
                   </tr>
                 )
               })}

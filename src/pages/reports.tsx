@@ -12,17 +12,19 @@ import {
   buildReportRequest,
   resolveReportViewerOptions,
   createDefaultReportFilters,
-  createReportCsv,
-  createReportPdfBlob,
+  createReportExportBlob,
+  createReportPdfBlobAsync,
   createReportViewerLocationOptions,
   downloadBlob,
   getReportConfig,
   openReportPrintWindow,
   resolveReportType,
   transformReportApiResponse,
+  usesExcelExport,
   type ReportViewerFilters,
   type ReportViewerResult,
 } from "@/features/reports/reports.service"
+import type { ManagerCheckoutGiftCertApiRow } from "@/features/reports/manager-checkout-data"
 import {
   useGenerateReportMutation,
   useGetComedianListQuery,
@@ -79,6 +81,8 @@ export function Reports() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [activeQuickRange, setActiveQuickRange] = useState<"today" | "yesterday" | null>(null)
   const [generateError, setGenerateError] = useState<string | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
+  const [isExportingPdf, setIsExportingPdf] = useState(false)
 
   const isComicReport = draftFilters.reportType === "comic-ticket-revenue"
   const { data: rawComedianList = [] } = useGetComedianListQuery(connectionName, {
@@ -173,6 +177,7 @@ export function Reports() {
 
     setIsGenerating(true)
     setGenerateError(null)
+    setExportError(null)
 
     try {
       const requestBody = buildReportRequest(nextFilters, connectionName)
@@ -219,6 +224,32 @@ export function Reports() {
         }).unwrap()
       }
 
+      let managerCheckoutExtras: ReportViewerResult["managerCheckoutExtras"]
+
+      if (nextFilters.reportType === "manager-checkout") {
+        const giftListRaw = await generateReport({
+          endpoint: "GetManagerWebGiftCertificateDetail",
+          body: requestBody,
+        }).unwrap()
+
+        const giftCertificateList = Array.isArray(giftListRaw)
+          ? (giftListRaw as ManagerCheckoutGiftCertApiRow[])
+          : []
+
+        let giftCertificatePayments: ManagerCheckoutGiftCertApiRow[] = []
+        if (giftCertificateList.length > 0) {
+          const giftPayRaw = await generateReport({
+            endpoint: "GetManagerWebGiftCertificatePayment",
+            body: requestBody,
+          }).unwrap()
+          giftCertificatePayments = Array.isArray(giftPayRaw)
+            ? (giftPayRaw as ManagerCheckoutGiftCertApiRow[])
+            : []
+        }
+
+        managerCheckoutExtras = { giftCertificateList, giftCertificatePayments }
+      }
+
       const result = transformReportApiResponse({
         reportType: nextFilters.reportType,
         data: apiData,
@@ -226,6 +257,15 @@ export function Reports() {
         locationOptions,
         connectionName,
       })
+
+      if (managerCheckoutExtras) {
+        result.managerCheckoutExtras = managerCheckoutExtras
+      }
+
+      result.exportMeta = {
+        dateFrom: nextFilters.dateFrom,
+        dateTo: nextFilters.dateTo,
+      }
 
       setGeneratedResult(result)
     } catch (error) {
@@ -243,12 +283,14 @@ export function Reports() {
   }
 
   function applyPreset(nextDate: string, range: "today" | "yesterday") {
-    setDraftFilters((current) => ({
-      ...current,
+    const nextFilters: ReportViewerFilters = {
+      ...draftFilters,
       dateFrom: nextDate,
       dateTo: nextDate,
-    }))
+    }
+    setDraftFilters(nextFilters)
     setActiveQuickRange(range)
+    void handleGenerate(nextFilters)
   }
 
   function handleToday() {
@@ -264,7 +306,8 @@ export function Reports() {
       return
     }
 
-    openReportPrintWindow(generatedResult)
+    setExportError(null)
+    openReportPrintWindow(generatedResult, locationName)
   }
 
   function handleExport() {
@@ -272,22 +315,30 @@ export function Reports() {
       return
     }
 
-    const csv = createReportCsv(generatedResult)
-    downloadBlob(
-      new Blob([csv], { type: "text/csv;charset=utf-8" }),
-      buildFilename(generatedResult.title, "csv")
-    )
+    setExportError(null)
+    const blob = createReportExportBlob(generatedResult, locationName)
+    const extension = usesExcelExport(generatedResult.reportType) ? "xlsx" : "csv"
+    downloadBlob(blob, buildFilename(generatedResult.title, extension))
   }
 
-  function handlePdf() {
-    if (!generatedResult) {
+  async function handlePdf() {
+    if (!generatedResult || isExportingPdf) {
       return
     }
 
-    downloadBlob(
-      createReportPdfBlob(generatedResult),
-      buildFilename(generatedResult.title, "pdf")
-    )
+    setIsExportingPdf(true)
+    setExportError(null)
+
+    try {
+      const blob = await createReportPdfBlobAsync(generatedResult, locationName)
+      downloadBlob(blob, buildFilename(generatedResult.title, "pdf"))
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to export PDF. Please try again."
+      setExportError(message)
+    } finally {
+      setIsExportingPdf(false)
+    }
   }
 
   return (
@@ -308,7 +359,9 @@ export function Reports() {
             onYesterday={handleYesterday}
             onPrint={handlePrint}
             onExport={handleExport}
-            onPdf={handlePdf}
+            onPdf={() => void handlePdf()}
+            isExportingPdf={isExportingPdf}
+            exportError={exportError}
           />
         </div>
 
