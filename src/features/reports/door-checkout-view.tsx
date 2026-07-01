@@ -18,6 +18,22 @@ import {
   normalizeDoorCheckoutRows,
   type DoorCheckoutApiRow,
 } from "@/features/reports/door-checkout-data"
+import {
+  REPORT_DRILL_BODY_CLASS,
+  REPORT_DRILL_DIALOG_CLASS,
+  REPORT_DRILL_FOOTER_CLASS,
+  REPORT_DRILL_HEADER_CLASS,
+  ReportCard,
+  ReportEmpty,
+  ReportHeader,
+  ReportSectionBar,
+  ReportTable,
+  ReportTableScroll,
+  ReportTd,
+  ReportTh,
+  ReportViewShell,
+  reportRowClass,
+} from "@/features/reports/report-ui"
 
 export type { DoorCheckoutApiRow }
 export { normalizeDoorCheckoutRows }
@@ -74,41 +90,6 @@ function fmtDatetime(v: string | Date | undefined): string {
   if (!v) return "—"
   const d = dayjs(v)
   return d.isValid() ? d.format("M/D/YYYY h:mm A") : String(v)
-}
-
-// ─── Table primitives ──────────────────────────────────────────────────────────
-
-function Th({ children, right, className }: { children: React.ReactNode; right?: boolean; className?: string }) {
-  return (
-    <th
-      className={cn(
-        "border border-border bg-muted/50 px-2 py-1 text-[11px] font-semibold tracking-wide text-muted-foreground whitespace-nowrap",
-        right && "text-right",
-        className
-      )}
-    >
-      {children}
-    </th>
-  )
-}
-
-function Td({ children, right, bold, blue, className, rowSpan, colSpan }: {
-  children?: React.ReactNode; right?: boolean; bold?: boolean; blue?: boolean; className?: string; rowSpan?: number; colSpan?: number
-}) {
-  return (
-    <td
-      rowSpan={rowSpan}
-      colSpan={colSpan}
-      className={cn(
-      "border border-border px-2 py-1 text-xs whitespace-nowrap",
-      right && "text-right tabular-nums",
-      bold && "font-semibold",
-      blue && "text-blue-600",
-      className
-    )}>
-      {children}
-    </td>
-  )
 }
 
 // ─── Drill-down Dialog ─────────────────────────────────────────────────────────
