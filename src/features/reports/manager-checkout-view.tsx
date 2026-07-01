@@ -462,7 +462,7 @@ export function ManagerCheckoutView({ rawData, subtitle, generatedAt }: ManagerC
   }
 
   return (
-    <div className="space-y-3 p-4">
+    <div className="space-y-3 p-4" data-report-export-root>
       {/* Report header */}
       <div className="flex flex-wrap items-end justify-between gap-2 rounded-xl border border-border/70 bg-muted/10 px-4 py-3">
         <div>

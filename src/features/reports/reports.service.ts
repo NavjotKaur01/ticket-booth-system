@@ -1,7 +1,14 @@
 ﻿import dayjs from "dayjs"
 
+import {
+  buildManagerCheckoutExportBlob,
+  buildManagerCheckoutPrintHtml,
+  createManagerCheckoutPdfBlob,
+} from "@/features/reports/manager-checkout-export"
 import type { AppLocation } from "@/types/api/locations"
 import type { ReportRequestModel } from "@/types/api/report-request"
+
+import type { ManagerCheckoutGiftCertApiRow } from "@/features/reports/manager-checkout-data"
 
 export type ReportViewerOption = {
   id: string
@@ -52,6 +59,10 @@ export type ReportViewerResult = {
   generatedAt: string
   rawData?: unknown
   drillContext?: ReportDrillContext
+  managerCheckoutExtras?: {
+    giftCertificateList?: ManagerCheckoutGiftCertApiRow[]
+    giftCertificatePayments?: ManagerCheckoutGiftCertApiRow[]
+  }
 }
 
 export type ReportConfig = {
@@ -1442,13 +1453,27 @@ function csvEscape(value: string | number) {
   return text
 }
 
-export function createReportCsv(result: ReportViewerResult) {
+export function createReportCsv(result: ReportViewerResult, clubName = "") {
+  if (result.reportType === "manager-checkout") {
+    void clubName
+    return "Manager Checkout exports use Excel (.xlsx). Click Export to download."
+  }
+
   const headers = result.columns.map((column) => csvEscape(column.label)).join(",")
   const rows = result.rows.map((row) =>
     result.columns.map((column) => csvEscape(row[column.key] ?? "")).join(",")
   )
 
   return [headers, ...rows].join("\n")
+}
+
+export function createReportExportBlob(result: ReportViewerResult, clubName = "") {
+  if (result.reportType === "manager-checkout") {
+    return buildManagerCheckoutExportBlob({ result, clubName })
+  }
+
+  const csv = createReportCsv(result, clubName)
+  return new Blob([csv], { type: "text/csv;charset=utf-8" })
 }
 
 function pdfEscape(value: string) {
@@ -1859,7 +1884,11 @@ function buildPdfPages(result: ReportViewerResult) {
   return pages
 }
 
-export function createReportPdfBlob(result: ReportViewerResult) {
+export function createReportPdfBlob(result: ReportViewerResult, _clubName = "") {
+  if (result.reportType === "manager-checkout") {
+    throw new Error("Use createReportPdfBlobAsync for manager checkout reports.")
+  }
+
   const encoder = new TextEncoder()
   const pageStreams = buildPdfPages(result).map((page) => page.commands.join("\n"))
 
@@ -1920,7 +1949,20 @@ export function createReportPdfBlob(result: ReportViewerResult) {
 
   return new Blob([pdf], { type: "application/pdf" })
 }
-export function buildReportPrintHtml(result: ReportViewerResult) {
+
+export async function createReportPdfBlobAsync(result: ReportViewerResult, clubName = "") {
+  if (result.reportType === "manager-checkout") {
+    return createManagerCheckoutPdfBlob({ result, clubName })
+  }
+
+  return createReportPdfBlob(result, clubName)
+}
+
+export function buildReportPrintHtml(result: ReportViewerResult, clubName = "") {
+  if (result.reportType === "manager-checkout") {
+    return buildManagerCheckoutPrintHtml({ result, clubName })
+  }
+
   const headCells = result.columns
     .map(
       (column) =>
@@ -1976,14 +2018,14 @@ export function downloadBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
-export function openReportPrintWindow(result: ReportViewerResult) {
+export function openReportPrintWindow(result: ReportViewerResult, clubName = "") {
   const printWindow = window.open("", "_blank", "noopener,noreferrer,width=1080,height=780")
   if (!printWindow) {
     return
   }
 
   printWindow.document.open()
-  printWindow.document.write(buildReportPrintHtml(result))
+  printWindow.document.write(buildReportPrintHtml(result, clubName))
   printWindow.document.close()
   printWindow.focus()
   printWindow.print()

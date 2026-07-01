@@ -28,6 +28,8 @@ type ReportFiltersToolbarProps = {
   reportOptions: ReportViewerOption[]
   comedianOptions?: ComedianOption[]
   isGenerating?: boolean
+  isExportingPdf?: boolean
+  exportError?: string | null
   isLoadingReportOptions?: boolean
   reportOptionsError?: boolean
   activeQuickRange?: "today" | "yesterday" | null
@@ -48,6 +50,8 @@ export function ReportFiltersToolbar({
   reportOptions,
   comedianOptions = [],
   isGenerating = false,
+  isExportingPdf = false,
+  exportError = null,
   isLoadingReportOptions = false,
   reportOptionsError = false,
   activeQuickRange = null,
@@ -108,12 +112,22 @@ export function ReportFiltersToolbar({
               size="sm"
               className="h-8 gap-1.5 px-3"
               onClick={onPdf}
+              disabled={isExportingPdf}
             >
               <FileText className="size-3.5" />
-              PDF
+              {isExportingPdf ? "PDF..." : "PDF"}
             </Button>
           </div>
         </div>
+
+        {exportError && (
+          <div
+            role="alert"
+            className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+          >
+            PDF export failed: {exportError}
+          </div>
+        )}
 
         <div
           className={cn(
