@@ -16,7 +16,7 @@ export const reservationCustomerSearchColumns: ColumnDef<ReservationCustomerSear
       id: "name",
       accessorFn: row => formatPersonName(row.firstName, row.lastName),
       header: ({ column }) => (
-        <DataTableColumnHeader label="Name" column={column} />
+        <DataTableColumnHeader label="Name" column={column} tabIndex={-1} />
       ),
       cell: ({ row }) => (
         <span className="font-medium text-foreground">
@@ -27,7 +27,7 @@ export const reservationCustomerSearchColumns: ColumnDef<ReservationCustomerSear
     {
       accessorKey: "phoneNo",
       header: ({ column }) => (
-        <DataTableColumnHeader label="Phone No." column={column} />
+        <DataTableColumnHeader label="Phone No." column={column} tabIndex={-1} />
       ),
       cell: ({ row }) => (
         <span className="whitespace-nowrap tabular-nums">
@@ -38,11 +38,12 @@ export const reservationCustomerSearchColumns: ColumnDef<ReservationCustomerSear
     {
       accessorKey: "email",
       header: ({ column }) => (
-        <DataTableColumnHeader label="Email" column={column} />
+        <DataTableColumnHeader label="Email" column={column} tabIndex={-1} />
       ),
       cell: ({ row }) => (
         <a
           href={`mailto:${row.original.email}`}
+          tabIndex={-1}
           className="cursor-pointer font-medium text-primary hover:underline"
         >
           {row.original.email}
@@ -56,7 +57,7 @@ export const reservationBusinessSearchColumns: ColumnDef<ReservationBusinessSear
     {
       accessorKey: "businessName",
       header: ({ column }) => (
-        <DataTableColumnHeader label="Business Name" column={column} />
+        <DataTableColumnHeader label="Business Name" column={column} tabIndex={-1} />
       ),
       cell: ({ row }) => (
         <span className="font-medium text-foreground">
@@ -68,7 +69,7 @@ export const reservationBusinessSearchColumns: ColumnDef<ReservationBusinessSear
       id: "name",
       accessorFn: row => formatPersonName(row.firstName, row.lastName),
       header: ({ column }) => (
-        <DataTableColumnHeader label="Name" column={column} />
+        <DataTableColumnHeader label="Name" column={column} tabIndex={-1} />
       ),
       cell: ({ row }) => (
         <span className="font-medium text-foreground">
@@ -79,7 +80,7 @@ export const reservationBusinessSearchColumns: ColumnDef<ReservationBusinessSear
     {
       accessorKey: "phoneNo",
       header: ({ column }) => (
-        <DataTableColumnHeader label="Phone No." column={column} />
+        <DataTableColumnHeader label="Phone No." column={column} tabIndex={-1} />
       ),
       cell: ({ row }) => (
         <span className="whitespace-nowrap tabular-nums">

@@ -43,7 +43,7 @@ export function ShowTimePicker({
             onClick={() => onShowTimeChange(show.id)}
             onKeyDown={(event) => onShowTimeKeyDown?.(event, show)}
             className={cn(
-              "flex w-[5.75rem] shrink-0 flex-col rounded-lg px-2 py-1.5 text-left transition-colors sm:w-[6.75rem] sm:px-2.5 sm:py-2",
+              "flex w-[5.75rem] shrink-0 flex-col rounded-lg px-2 py-1.5 text-left transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none sm:w-[6.75rem] sm:px-2.5 sm:py-2",
               isSelected
                 ? "bg-primary text-primary-foreground"
                 : "border border-border/60 bg-background text-foreground hover:bg-muted/30"
