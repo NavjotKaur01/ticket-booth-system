@@ -40,7 +40,10 @@ import {
   formatSectionDesktopPrice,
 } from '@/data/reservation'
 import { ComicInfoDialog } from '@/features/reservations/comic-info-dialog'
-import type { ReservationCustomerSearchResult } from '@/data/reservation-search-results'
+import type {
+  ReservationBusinessSearchResult,
+  ReservationCustomerSearchResult
+} from '@/data/reservation-search-results'
 import { AddCustomerDialog } from '@/features/customers/add-customer-dialog'
 import {
   ReservationPaymentActions,
@@ -642,13 +645,13 @@ function CustomerSearchFields ({
   searchType,
   criteria,
   onCriteriaChange,
-  onFieldBlur,
+  onFieldEnter,
   lastNameInputRef
 }: {
   searchType: 'customer' | 'business'
   criteria: CustomerSearchCriteria
   onCriteriaChange: (criteria: CustomerSearchCriteria) => void
-  onFieldBlur: () => void
+  onFieldEnter: () => void
   lastNameInputRef?: RefObject<HTMLInputElement | null>
 }) {
   const inputClass = cn('w-full', COMPACT_INPUT)
@@ -658,7 +661,12 @@ function CustomerSearchFields ({
   }
 
   const fieldProps = {
-    onBlur: onFieldBlur,
+    onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        onFieldEnter()
+      }
+    },
     className: inputClass
   }
 
@@ -1740,6 +1748,18 @@ export function AddReservationDialog ({
     void searchReservationCustomers(searchType, searchCriteria)
   }
 
+  function handleSearchResultSelect (
+    result: ReservationCustomerSearchResult | ReservationBusinessSearchResult
+  ) {
+    setSearchCriteria({
+      businessName: 'businessName' in result ? result.businessName : '',
+      lastName: result.lastName,
+      firstName: result.firstName,
+      phoneNo: result.phoneNo,
+      email: 'email' in result ? result.email : ''
+    })
+  }
+
   useEffect(() => {
     if (!open) {
       setSpecialNotesOpen(true)
@@ -1787,12 +1807,6 @@ export function AddReservationDialog ({
   useEffect(() => {
     clearCustomerSearch()
   }, [searchType])
-
-  useEffect(() => {
-    if (specialNotesOpen) {
-      notesInputRef.current?.focus()
-    }
-  }, [specialNotesOpen])
 
   function openDatePicker () {
     const input = dateInputRef.current
@@ -1872,7 +1886,10 @@ export function AddReservationDialog ({
               <DialogTitle className='text-base font-semibold text-foreground'>
                 Add Reservation
               </DialogTitle>
-              <DialogClose className='flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none'>
+              <DialogClose
+                tabIndex={-1}
+                className='flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none'
+              >
                 <X className='size-4' />
                 <span className='sr-only'>Close</span>
               </DialogClose>
@@ -1971,7 +1988,7 @@ export function AddReservationDialog ({
                           searchType={searchType}
                           criteria={searchCriteria}
                           onCriteriaChange={setSearchCriteria}
-                          onFieldBlur={handleCustomerSearch}
+                          onFieldEnter={handleCustomerSearch}
                           lastNameInputRef={lastNameInputRef}
                         />
                       </div>
@@ -1996,6 +2013,7 @@ export function AddReservationDialog ({
                             onFillMoreDetails={handleFillMoreDetails}
                             rowSelection={searchRowSelection}
                             onRowSelectionChange={setSearchRowSelection}
+                            onResultSelect={handleSearchResultSelect}
                           />
                         </div>
                       ) : null}

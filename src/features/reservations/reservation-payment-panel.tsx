@@ -3,13 +3,6 @@ import { ScrollSelectControl } from '@/components/common/scroll-select-control'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
-import {
   EXPIRATION_MONTHS,
   getExpirationYears,
   getGiftAccountFieldLabel,
@@ -45,39 +38,27 @@ function ExpirationFields ({
 
   return (
     <div className='grid w-full grid-cols-2 gap-2'>
-      <Select value={expMonth} onValueChange={onExpMonthChange}>
-        <SelectTrigger
-          id='payment-exp-month'
-          className={COMPACT_INPUT}
-          aria-label='Expiration month'
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {EXPIRATION_MONTHS.map(month => (
-            <SelectItem key={month} value={month}>
-              {month.slice(0, 3)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <ScrollSelectControl
+        id='payment-exp-month'
+        value={expMonth}
+        onChange={onExpMonthChange}
+        className={COMPACT_INPUT}
+        options={EXPIRATION_MONTHS.map(month => ({
+          value: month,
+          label: month.slice(0, 3)
+        }))}
+      />
 
-      <Select value={expYear} onValueChange={onExpYearChange}>
-        <SelectTrigger
-          id='payment-exp-year'
-          className={COMPACT_INPUT}
-          aria-label='Expiration year'
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {years.map(year => (
-            <SelectItem key={year} value={year}>
-              {year}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <ScrollSelectControl
+        id='payment-exp-year'
+        value={expYear}
+        onChange={onExpYearChange}
+        className={COMPACT_INPUT}
+        options={years.map(year => ({
+          value: year,
+          label: year
+        }))}
+      />
     </div>
   )
 }
