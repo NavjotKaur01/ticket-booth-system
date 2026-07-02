@@ -22,6 +22,7 @@ function resolveDocuments(result: ReportViewerResult, clubName: string) {
   })
 }
 
+
 function buildDesktopHtml(result: ReportViewerResult, clubName: string) {
   const documents = resolveDocuments(result, clubName)
   return buildDesktopManagerCheckoutHtml({ documents, clubName })
