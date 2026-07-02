@@ -1231,10 +1231,9 @@ export function AddReservationDialog ({
     ? parseReservationMoney(paymentAmount) > 0
     : totals.total > 0
 
-  const amountDueValue = getReservationAmountDue(
-    isEditMode ? balanceDue : totals.total,
-    parseReservationMoney(paymentAmount)
-  )
+  const amountDueValue = isEditMode
+    ? balanceDue
+    : getReservationAmountDue(totals.total, parseReservationMoney(paymentAmount))
   const amountDue = formatReservationMoney(amountDueValue)
 
   const selectedCustomerId = useMemo(() => {
@@ -1452,6 +1451,11 @@ export function AddReservationDialog ({
             : 0
       )
     const editPaymentAmount = parseReservationMoney(savePaymentAmount)
+
+    if (!saveSection || !activeShowTime) {
+      return
+    }
+
     const reservationChanged =
       !isEditMode ||
       !reservation ||
@@ -1477,10 +1481,6 @@ export function AddReservationDialog ({
     const shouldApplyPayment = isEditMode
       ? reservationChanged
       : saveTotals.total > 0
-
-    if (!saveSection || !activeShowTime) {
-      return
-    }
 
     setShowPartyRequiredError(true)
     setSaveReservationError(null)
