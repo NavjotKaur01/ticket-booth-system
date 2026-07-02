@@ -1,3 +1,6 @@
+import html2canvas from "html2canvas"
+import { jsPDF } from "jspdf"
+
 async function waitForLayout() {
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
@@ -48,11 +51,6 @@ export async function buildPdfFromDesktopHtml(
 
     const width = Math.max(frame.body.scrollWidth, 1100)
     const height = Math.max(frame.body.scrollHeight, 200)
-    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-      import("html2canvas"),
-      import("jspdf"),
-    ])
-
     const canvas = await html2canvas(frame.body, {
       scale: 1.5,
       backgroundColor: "#ffffff",
