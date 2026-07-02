@@ -197,7 +197,8 @@ function SectionPicker ({
   promoOptions,
   promoLoading,
   passes,
-  onPassesChange
+  onPassesChange,
+  onPassesTabForward
 }: {
   sections: ReservationSectionOption[]
   sectionsLoading?: boolean
@@ -217,7 +218,12 @@ function SectionPicker ({
   promoLoading?: boolean
   passes: number
   onPassesChange: (value: number) => void
+  onPassesTabForward: () => void
 }) {
+  const passesInputRef = useRef<HTMLInputElement>(null)
+  const promoTriggerRef = useRef<HTMLButtonElement>(null)
+  const focusPassesAfterPromoCloseRef = useRef(false)
+
   if (sectionsLoading) {
     return (
       <div>
@@ -249,6 +255,44 @@ function SectionPicker ({
   function handleSectionValueChange (value: string) {
     onSectionChange(value)
     focusPartyInput(value)
+  }
+
+  function focusPassesInput () {
+    requestAnimationFrame(() => {
+      const input = passesInputRef.current
+      input?.focus({ preventScroll: true })
+      input?.select()
+    })
+  }
+
+  function handlePromoChange (value: string) {
+    onPromoChange(value)
+    focusPassesAfterPromoCloseRef.current = true
+  }
+
+  function handlePromoCloseAutoFocus (event: Event) {
+    if (!focusPassesAfterPromoCloseRef.current) {
+      return
+    }
+
+    focusPassesAfterPromoCloseRef.current = false
+    event.preventDefault()
+    focusPassesInput()
+  }
+
+  function handlePassesInputKeyDown (event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'Tab') {
+      return
+    }
+
+    event.preventDefault()
+
+    if (event.shiftKey) {
+      promoTriggerRef.current?.focus({ preventScroll: true })
+      return
+    }
+
+    onPassesTabForward()
   }
 
   return (
@@ -319,17 +363,20 @@ function SectionPicker ({
           <span className='sr-only'>Promo Code (Optional)</span>
           <Select
             value={promo}
-            onValueChange={onPromoChange}
+            onValueChange={handlePromoChange}
             disabled={promoLoading}
           >
-            <SelectTrigger className={cn(COMPACT_SELECT, COMPACT_FIELD_HOVER, 'w-full min-w-0 sm:w-44')}>
+            <SelectTrigger
+              ref={promoTriggerRef}
+              className={cn(COMPACT_SELECT, COMPACT_FIELD_HOVER, 'w-full min-w-0 sm:w-44')}
+            >
               <SelectValue
                 placeholder={
                   promoLoading ? 'Loading promo codes...' : 'Select promo code'
                 }
               />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent onCloseAutoFocus={handlePromoCloseAutoFocus}>
               {promoOptions.map(option => (
                 <SelectItem key={option.id} value={option.id}>
                   {option.label}
@@ -342,12 +389,15 @@ function SectionPicker ({
         <Tooltip>
           <TooltipTrigger asChild>
             <Input
+              ref={passesInputRef}
               type='number'
               min={0}
               value={passes}
               onChange={event =>
                 onPassesChange(Math.max(0, Number(event.target.value) || 0))
               }
+              onFocus={selectNumericInput}
+              onKeyDown={handlePassesInputKeyDown}
               className={COMPACT_NUMBER}
               aria-label='Passes'
             />
@@ -1963,6 +2013,7 @@ export function AddReservationDialog ({
                         handleReservationInputChange()
                         setPasses(value)
                       }}
+                      onPassesTabForward={focusLastNameInput}
                     />
 
                     <div className='rounded-lg border border-border/60 p-2.5'>
