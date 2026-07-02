@@ -36,6 +36,7 @@ type CalendarDatePickerControlProps = {
   placeholder?: string
   className?: string
   displayFormat?: string
+  tabIndex?: number
 }
 
 export function canNavigateToPreviousDate(value: string, disablePastDates: boolean) {
@@ -54,6 +55,7 @@ export default function CalendarDatePickerControl({
   placeholder = "Select date",
   className,
   displayFormat,
+  tabIndex,
 }: CalendarDatePickerControlProps) {
   const selectedDate = parseDateValue(value)
   const [isOpen, setIsOpen] = useState(false)
@@ -81,6 +83,7 @@ export default function CalendarDatePickerControl({
           id={id}
           type="button"
           variant="outline"
+          tabIndex={tabIndex}
           className={cn(
             "h-9 justify-start gap-2 px-3 text-left font-normal",
             !selectedDate && "text-muted-foreground",

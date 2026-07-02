@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useMemo, useState, type KeyboardEvent, type RefObject } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -24,6 +24,10 @@ type CalendarSelectControlProps = {
   placeholder?: string
   className?: string
   disabled?: boolean
+  triggerRef?: RefObject<HTMLButtonElement | null>
+  onTriggerKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void
+  allowClear?: boolean
+  tabIndex?: number
 }
 
 export default function CalendarSelectControl({
@@ -34,6 +38,10 @@ export default function CalendarSelectControl({
   placeholder = "Select",
   className,
   disabled = false,
+  triggerRef,
+  onTriggerKeyDown,
+  allowClear = false,
+  tabIndex,
 }: CalendarSelectControlProps) {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -54,10 +62,13 @@ export default function CalendarSelectControl({
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
+          ref={triggerRef}
           id={id}
           type="button"
           variant="outline"
           disabled={disabled}
+          tabIndex={tabIndex}
+          onKeyDown={onTriggerKeyDown}
           className={cn(
             "h-9 w-full justify-between px-3 font-normal",
             !value && "text-muted-foreground",
@@ -78,6 +89,7 @@ export default function CalendarSelectControl({
           value={value}
           options={options}
           onSelect={handleSelect}
+          clearOptionLabel={allowClear ? placeholder : undefined}
         />
       </PopoverContent>
     </Popover>

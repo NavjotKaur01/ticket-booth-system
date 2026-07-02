@@ -168,7 +168,6 @@ function getOriginOptions(): AddReservationOption[] {
 
 function getPromoOptions(): AddReservationOption[] {
   return [
-    { id: "none", label: "Select" },
     { id: "admit2", label: "Admit 2" },
     { id: "admit4", label: "Admit 4" },
     { id: "buy1get1", label: "Buy 1 Get 1" },
@@ -246,7 +245,7 @@ export async function getAddReservationDialogData(
     defaultShowTimeId: String(event.id),
     defaultSectionId: sectionOptions[0]?.id ?? "regular",
     defaultOriginId: "phone",
-    defaultPromoId: "none",
+    defaultPromoId: "",
     defaultParty: "0",
     defaultPasses: "1",
     dinner: false,

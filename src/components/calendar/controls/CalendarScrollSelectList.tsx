@@ -19,17 +19,23 @@ type CalendarScrollSelectListProps = {
   options: CalendarSelectOption[]
   onSelect: (value: string) => void
   isOpen: boolean
+  clearOptionLabel?: string
 }
 
 export function getCalendarSelectOptions(
   value: string,
-  options: CalendarSelectOption[]
+  options: CalendarSelectOption[],
+  clearOptionLabel?: string
 ) {
+  const displayOptions = clearOptionLabel
+    ? [{ value: "", label: clearOptionLabel }, ...options.filter((option) => option.value)]
+    : options
+
   if (!value || options.some((option) => option.value === value)) {
-    return options
+    return displayOptions
   }
 
-  return [{ value, label: value }, ...options]
+  return [{ value, label: value }, ...displayOptions]
 }
 
 export function CalendarScrollSelectList({
@@ -37,9 +43,10 @@ export function CalendarScrollSelectList({
   options,
   onSelect,
   isOpen,
+  clearOptionLabel,
 }: CalendarScrollSelectListProps) {
   const listRef = useRef<HTMLDivElement>(null)
-  const displayOptions = getCalendarSelectOptions(value, options)
+  const displayOptions = getCalendarSelectOptions(value, options, clearOptionLabel)
 
   useEffect(() => {
     if (!isOpen || !listRef.current) {
@@ -128,15 +135,16 @@ export function CalendarScrollSelectList({
           key={option.value}
           type="button"
           data-scroll-select-option="true"
-          data-selected={option.value === value ? "true" : undefined}
+          data-selected={option.value && option.value === value ? "true" : undefined}
           className={cn(
             "flex h-8 w-full items-center justify-between rounded-sm px-2 text-left text-sm outline-none hover:bg-primary/10 hover:text-primary focus:bg-primary/10 focus:text-primary",
-            option.value === value && "bg-primary/10 text-primary"
+            option.value && option.value === value && "bg-primary/10 text-primary",
+            !option.value && "text-muted-foreground"
           )}
           onClick={() => onSelect(option.value)}
         >
           <span className="truncate">{option.label}</span>
-          {option.value === value ? <Check className="size-3.5 shrink-0" /> : null}
+          {option.value && option.value === value ? <Check className="size-3.5 shrink-0" /> : null}
         </button>
       ))}
     </div>

@@ -1,6 +1,6 @@
 import dayjs from "dayjs"
 import { ChevronLeft, ChevronRight, ContactRound } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState, type KeyboardEvent } from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -88,7 +88,13 @@ function MoneyField({
       <Label htmlFor={id} className="shrink-0 text-sm">
         {label}
       </Label>
-      <Input id={id} value={value} readOnly className={cn(COMPACT_INPUT, "bg-muted/40")} />
+      <Input
+        id={id}
+        value={value}
+        readOnly
+        tabIndex={-1}
+        className={cn(COMPACT_INPUT, "bg-muted/40")}
+      />
     </div>
   )
 }
@@ -104,12 +110,19 @@ export default function AddReservationDialog({
   const [isLoading, setIsLoading] = useState(false)
   const [isComicInfoOpen, setIsComicInfoOpen] = useState(false)
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false)
+  const partyInputRef = useRef<HTMLInputElement>(null)
+  const promoTriggerRef = useRef<HTMLButtonElement>(null)
+  const passesInputRef = useRef<HTMLInputElement>(null)
+  const lastNameInputRef = useRef<HTMLInputElement>(null)
+  const emailInputRef = useRef<HTMLInputElement>(null)
+  const hasFocusedInitialInputRef = useRef(false)
   const { connectionName, locationId, username } = useAppSession()
 
   useEffect(() => {
     if (!open) {
       setIsComicInfoOpen(false)
       setIsAddCustomerOpen(false)
+      hasFocusedInitialInputRef.current = false
     }
   }, [open])
 
@@ -138,6 +151,15 @@ export default function AddReservationDialog({
       isCurrent = false
     }
   }, [event, open])
+
+  useEffect(() => {
+    if (!open || isLoading || !formValues || hasFocusedInitialInputRef.current) {
+      return
+    }
+
+    hasFocusedInitialInputRef.current = true
+    focusInitialPartyInput()
+  }, [formValues, isLoading, open])
 
   function updateField<K extends keyof AddReservationFormValues>(
     field: K,
@@ -228,6 +250,62 @@ export default function AddReservationDialog({
     onOpenChange(false)
   }
 
+  function focusInput(input: HTMLInputElement | null, fallbackId?: string) {
+    const target =
+      input ??
+      (fallbackId
+        ? (document.getElementById(fallbackId) as HTMLInputElement | null)
+        : null)
+
+    target?.focus({ preventScroll: true })
+    target?.select()
+  }
+
+  function focusInitialPartyInput() {
+    window.setTimeout(() => focusInput(partyInputRef.current, "reservation-party"), 0)
+    window.setTimeout(() => {
+      const partyInput =
+        partyInputRef.current ??
+        (document.getElementById("reservation-party") as HTMLInputElement | null)
+
+      if (document.activeElement !== partyInput) {
+        focusInput(partyInput, "reservation-party")
+      }
+    }, 100)
+  }
+
+  function focusPassesInput() {
+    window.setTimeout(() => focusInput(passesInputRef.current, "reservation-passes"), 0)
+  }
+
+  function handlePartyKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Tab" && event.shiftKey) {
+      event.preventDefault()
+      focusInput(emailInputRef.current, "reservation-email")
+    }
+  }
+
+  function handlePromoKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    if (event.key === "Tab" && !event.shiftKey) {
+      event.preventDefault()
+      focusInput(passesInputRef.current, "reservation-passes")
+    }
+  }
+
+  function handlePassesKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Tab" && !event.shiftKey) {
+      event.preventDefault()
+      focusInput(lastNameInputRef.current, "reservation-last-name")
+    }
+  }
+
+  function handleEmailKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Tab" && !event.shiftKey) {
+      event.preventDefault()
+      focusInput(partyInputRef.current, "reservation-party")
+    }
+  }
+
   const headerTitle = dialogData
     ? `Add Reservation :- ${dialogData.performer}    ${dialogData.headerDateLabel}`
     : "Add Reservation"
@@ -255,6 +333,10 @@ export default function AddReservationDialog({
       <DialogContent
         disableOutsideDismiss
         className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-6xl"
+        onOpenAutoFocus={(autoFocusEvent) => {
+          autoFocusEvent.preventDefault()
+          focusInitialPartyInput()
+        }}
       >
         <DialogHeader className="shrink-0 border-b px-5 py-4">
           <DialogTitle className="text-lg">{headerTitle}</DialogTitle>
@@ -267,8 +349,8 @@ export default function AddReservationDialog({
             <div className="space-y-5 px-5 py-5">
               <fieldset className="rounded-md border p-4">
                 <legend className="px-2 text-sm font-medium">Show Details</legend>
-                <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-                  <div className="flex min-w-[14rem] flex-1 items-end gap-2">
+                <div className="grid items-end gap-x-3 gap-y-3 md:grid-cols-2 lg:grid-cols-[minmax(13rem,14rem)_minmax(13rem,1fr)_minmax(18rem,1.25fr)_auto]">
+                  <div className="min-w-0">
                     <div className="grid flex-1 gap-2">
                       <Label htmlFor="reservation-show-date">Show Date</Label>
                       <div className="flex items-center gap-2">
@@ -277,6 +359,7 @@ export default function AddReservationDialog({
                           value={formValues.showDate}
                           onChange={(value) => updateField("showDate", value)}
                           disablePastDates
+                          tabIndex={-1}
                           className="min-w-0 flex-1"
                         />
                         <div className="flex shrink-0 items-center gap-1.5">
@@ -284,6 +367,7 @@ export default function AddReservationDialog({
                             type="button"
                             variant="outline"
                             size="icon-sm"
+                            tabIndex={-1}
                             aria-label="Previous show date"
                             disabled={!canNavigateToPreviousDate(formValues.showDate, true)}
                             onClick={() => shiftShowDate(-1)}
@@ -294,6 +378,7 @@ export default function AddReservationDialog({
                             type="button"
                             variant="outline"
                             size="icon-sm"
+                            tabIndex={-1}
                             aria-label="Next show date"
                             onClick={() => shiftShowDate(1)}
                           >
@@ -304,13 +389,14 @@ export default function AddReservationDialog({
                     </div>
                   </div>
 
-                  <div className="grid min-w-[12rem] flex-1 gap-2">
+                  <div className="grid min-w-0 gap-2">
                     <Label htmlFor="reservation-show-time">Show Time</Label>
                     <CalendarSelectControl
                       id="reservation-show-time"
                       value={formValues.showTimeId}
                       onChange={(value) => updateField("showTimeId", value)}
                       placeholder="Select show time"
+                      tabIndex={-1}
                       options={dialogData.showTimeOptions.map((option) => ({
                         value: option.id,
                         label: option.label,
@@ -318,13 +404,14 @@ export default function AddReservationDialog({
                     />
                   </div>
 
-                  <div className="grid min-w-[16rem] flex-[1.5] gap-2">
+                  <div className="grid min-w-0 gap-2 md:col-span-2 lg:col-span-1">
                     <Label htmlFor="reservation-section">Section</Label>
                     <CalendarSelectControl
                       id="reservation-section"
                       value={formValues.sectionId}
                       onChange={(value) => updateField("sectionId", value)}
                       placeholder="Select section"
+                      tabIndex={-1}
                       options={dialogData.sectionOptions.map((option) => ({
                         value: option.id,
                         label: option.label,
@@ -334,7 +421,8 @@ export default function AddReservationDialog({
 
                   <Button
                     type="button"
-                    className={cn(COMPACT_INPUT, SUCCESS_BUTTON_CLASS)}
+                    tabIndex={-1}
+                    className={cn(COMPACT_INPUT, "w-full md:w-auto lg:justify-self-end", SUCCESS_BUTTON_CLASS)}
                     onClick={() => setIsComicInfoOpen(true)}
                   >
                     Comic Info
@@ -353,6 +441,7 @@ export default function AddReservationDialog({
                         value={formValues.originId}
                         onChange={(value) => updateField("originId", value)}
                         placeholder="Select origin"
+                        tabIndex={-1}
                         options={dialogData.originOptions.map((option) => ({
                           value: option.id,
                           label: option.label,
@@ -363,11 +452,15 @@ export default function AddReservationDialog({
                     <div className="grid min-w-[6rem] gap-2">
                       <Label htmlFor="reservation-party">Party</Label>
                       <Input
+                        ref={partyInputRef}
                         id="reservation-party"
                         type="number"
+                        autoFocus
                         min={0}
                         value={formValues.party}
                         onChange={(changeEvent) => updateField("party", changeEvent.target.value)}
+                        onFocus={(focusEvent) => focusEvent.currentTarget.select()}
+                        onKeyDown={handlePartyKeyDown}
                         className={cn(COMPACT_INPUT, "w-20")}
                       />
                     </div>
@@ -377,8 +470,14 @@ export default function AddReservationDialog({
                       <CalendarSelectControl
                         id="reservation-promo"
                         value={formValues.promoId}
-                        onChange={(value) => updateField("promoId", value)}
+                        onChange={(value) => {
+                          updateField("promoId", value)
+                          focusPassesInput()
+                        }}
                         placeholder="Select promo"
+                        allowClear
+                        triggerRef={promoTriggerRef}
+                        onTriggerKeyDown={handlePromoKeyDown}
                         options={dialogData.promoOptions.map((option) => ({
                           value: option.id,
                           label: option.label,
@@ -389,11 +488,13 @@ export default function AddReservationDialog({
                     <div className="grid min-w-[6rem] gap-2">
                       <Label htmlFor="reservation-passes">Passes</Label>
                       <Input
+                        ref={passesInputRef}
                         id="reservation-passes"
                         type="number"
                         min={0}
                         value={formValues.passes}
                         onChange={(changeEvent) => updateField("passes", changeEvent.target.value)}
+                        onKeyDown={handlePassesKeyDown}
                         className={cn(COMPACT_INPUT, "w-20")}
                       />
                     </div>
@@ -415,6 +516,7 @@ export default function AddReservationDialog({
                     <div className="flex items-center gap-2">
                       <Checkbox
                         id="reservation-dinner"
+                        tabIndex={-1}
                         checked={formValues.dinner}
                         onCheckedChange={(checked) => updateField("dinner", Boolean(checked))}
                       />
@@ -422,6 +524,7 @@ export default function AddReservationDialog({
                     </div>
                     <Button
                       type="button"
+                      tabIndex={-1}
                       className={SUCCESS_BUTTON_CLASS}
                       onClick={handleCalculateTotal}
                     >
@@ -437,6 +540,7 @@ export default function AddReservationDialog({
                   <div className={FIELD_ROW_CLASS}>
                     <Label htmlFor="reservation-last-name">Last Name</Label>
                     <Input
+                      ref={lastNameInputRef}
                       id="reservation-last-name"
                       value={formValues.customer.lastName}
                       onChange={(changeEvent) => updateCustomerField("lastName", changeEvent.target.value)}
@@ -468,15 +572,18 @@ export default function AddReservationDialog({
                     <Label htmlFor="reservation-email">Email</Label>
                     <div className="flex min-w-0 items-center gap-2">
                       <Input
+                        ref={emailInputRef}
                         id="reservation-email"
                         type="email"
                         value={formValues.customer.email}
                         onChange={(changeEvent) => updateCustomerField("email", changeEvent.target.value)}
+                        onKeyDown={handleEmailKeyDown}
                         className={cn(COMPACT_INPUT, "min-w-0 flex-1")}
                       />
                       <Button
                         type="button"
                         size="icon-sm"
+                        tabIndex={-1}
                         className="size-8 shrink-0 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
                         aria-label="Customer profile"
                         onClick={() => setIsAddCustomerOpen(true)}
@@ -499,30 +606,31 @@ export default function AddReservationDialog({
                     className="flex flex-wrap items-center gap-x-6 gap-y-2"
                   >
                     <div className="flex items-center gap-2">
-                      <RadioGroupItem value="customer" id="reservation-search-customer" />
+                      <RadioGroupItem value="customer" id="reservation-search-customer" tabIndex={-1} />
                       <Label htmlFor="reservation-search-customer">Customer</Label>
                     </div>
                     <div className="flex items-center gap-2">
-                      <RadioGroupItem value="business" id="reservation-search-business" />
+                      <RadioGroupItem value="business" id="reservation-search-business" tabIndex={-1} />
                       <Label htmlFor="reservation-search-business">Business</Label>
                     </div>
                   </RadioGroup>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <Button type="button" className={SUCCESS_BUTTON_CLASS}>
+                    <Button type="button" tabIndex={-1} className={SUCCESS_BUTTON_CLASS}>
                       Search
                     </Button>
                     <Button
                       type="button"
+                      tabIndex={-1}
                       className={SUCCESS_BUTTON_CLASS}
                       onClick={() => setIsAddCustomerOpen(true)}
                     >
                       Add Customer
                     </Button>
-                    <Button type="button" className={ACCENT_BUTTON_CLASS}>
+                    <Button type="button" tabIndex={-1} className={ACCENT_BUTTON_CLASS}>
                       Swipe
                     </Button>
-                    <Button type="button" onClick={handleClearSearchCriteria}>
+                    <Button type="button" tabIndex={-1} onClick={handleClearSearchCriteria}>
                       Clear
                     </Button>
                   </div>
@@ -533,6 +641,7 @@ export default function AddReservationDialog({
                 <legend className="px-2 text-sm font-medium">Notes / Request</legend>
                 <Textarea
                   id="reservation-notes"
+                  tabIndex={-1}
                   value={formValues.notes}
                   onChange={(changeEvent) => updateField("notes", changeEvent.target.value)}
                   className="min-h-28 resize-y"
@@ -543,10 +652,10 @@ export default function AddReservationDialog({
         </div>
 
         <DialogFooter className="!flex-row flex-wrap justify-start border-t px-5 py-4">
-          <Button type="button" onClick={handleContinue} disabled={!formValues || isLoading}>
+          <Button type="button" tabIndex={-1} onClick={handleContinue} disabled={!formValues || isLoading}>
             Continue
           </Button>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button type="button" tabIndex={-1} variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
         </DialogFooter>
