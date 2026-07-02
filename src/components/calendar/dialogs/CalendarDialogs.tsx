@@ -1,8 +1,9 @@
+import dayjs from "dayjs"
 import type { CalendarEvent } from "@/types/calendar-event"
 import type { RecurrenceState } from "@/types/recurrence"
+import { AddReservationDialog as ReservationPageAddReservationDialog } from "@/features/reservations/add-reservation-dialog"
 
 import AddEditPackageDialog from "./AddEditPackageDialog"
-import AddReservationDialog from "./AddReservationDialog"
 import AddShowDialog from "./AddShowDialog"
 import AdjustAgeDialog from "./AdjustAgeDialog"
 import AdjustHubDialog from "./AdjustHubDialog"
@@ -24,6 +25,7 @@ type CalendarDialogsProps = {
   isAddReservationOpen: boolean
   setIsAddReservationOpen: (open: boolean) => void
   reservationEvent: CalendarEvent | null
+  onAddReservationSaved?: () => void
   isAdjustAgeOpen: boolean
   setIsAdjustAgeOpen: (open: boolean) => void
   adjustAgeEvent: CalendarEvent | null
@@ -83,6 +85,7 @@ export default function CalendarDialogs({
   isAddReservationOpen,
   setIsAddReservationOpen,
   reservationEvent,
+  onAddReservationSaved,
   isAdjustAgeOpen,
   setIsAdjustAgeOpen,
   adjustAgeEvent,
@@ -141,10 +144,14 @@ export default function CalendarDialogs({
         event={packageEvent}
         onOpenChange={setIsAddEditPackageOpen}
       />
-      <AddReservationDialog
+      <ReservationPageAddReservationDialog
         open={isAddReservationOpen}
-        event={reservationEvent}
         onOpenChange={setIsAddReservationOpen}
+        showDate={
+          reservationEvent ? dayjs(reservationEvent.start).format("YYYY-MM-DD") : undefined
+        }
+        showTime={reservationEvent?.showId}
+        onSaved={onAddReservationSaved}
       />
       <AdjustAgeDialog
         open={isAdjustAgeOpen}
