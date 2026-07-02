@@ -438,6 +438,7 @@ export default function EventCalendar() {
         isAddReservationOpen={isAddReservationOpen}
         setIsAddReservationOpen={setIsAddReservationOpen}
         reservationEvent={reservationEvent}
+        onAddReservationSaved={refetch}
         isAdjustAgeOpen={isAdjustAgeOpen}
         setIsAdjustAgeOpen={setIsAdjustAgeOpen}
         adjustAgeEvent={adjustAgeEvent}

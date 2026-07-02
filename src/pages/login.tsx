@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label"
 import { ROUTES } from "@/constants/routes"
 import { useAuth } from "@/contexts/auth-context"
 
+const REQUIRED_FIELD_MESSAGE = "This field is required"
+const INVALID_CREDENTIALS_MESSAGE = "Invalid user name or password"
+
 export function Login() {
   const navigate = useNavigate()
   const { login, isLoading, isAuthenticated } = useAuth()
@@ -16,6 +19,10 @@ export function Login() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<{
+    username?: string
+    password?: string
+  }>({})
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -27,14 +34,30 @@ export function Login() {
     event.preventDefault()
     setError(null)
 
+    const nextFieldErrors = {
+      username: username.trim() ? undefined : REQUIRED_FIELD_MESSAGE,
+      password: password ? undefined : REQUIRED_FIELD_MESSAGE,
+    }
+
+    setFieldErrors(nextFieldErrors)
+
+    if (nextFieldErrors.username || nextFieldErrors.password) {
+      return
+    }
+
     try {
       await login(username, password)
       navigate(ROUTES.dashboard, { replace: true })
-    } catch (loginError) {
-      setError(
-        loginError instanceof Error ? loginError.message : "Login failed"
-      )
+    } catch {
+      setError(INVALID_CREDENTIALS_MESSAGE)
     }
+  }
+
+  function validateRequiredField(field: "username" | "password", value: string) {
+    setFieldErrors((current) => ({
+      ...current,
+      [field]: value.trim() ? undefined : REQUIRED_FIELD_MESSAGE,
+    }))
   }
 
   return (
@@ -46,34 +69,65 @@ export function Login() {
           </h1>
 
           <form className="mt-7 space-y-4" onSubmit={handleLogin}>
+            {error ? (
+              <div className="flex justify-center">
+                <p className="text-center text-sm text-destructive">{error}</p>
+              </div>
+            ) : null}
+
             <div className="grid gap-2">
               <Label htmlFor="login-username" className="text-sm font-medium">
                 Username
+                <span className="ml-0.5 text-destructive">*</span>
               </Label>
               <Input
                 id="login-username"
                 value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                placeholder="Enter username *"
+                onChange={(event) => {
+                  setUsername(event.target.value)
+                  setError(null)
+                  setFieldErrors((current) => ({ ...current, username: undefined }))
+                }}
+                onBlur={(event) => validateRequiredField("username", event.target.value)}
+                placeholder="Enter username"
                 autoComplete="username"
                 disabled={isLoading}
+                aria-invalid={Boolean(fieldErrors.username)}
+                aria-describedby={
+                  fieldErrors.username ? "login-username-error" : undefined
+                }
                 className="h-10 bg-background"
               />
+              {fieldErrors.username ? (
+                <p id="login-username-error" className="text-sm text-destructive">
+                  {fieldErrors.username}
+                </p>
+              ) : null}
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="login-password" className="text-sm font-medium">
                 Password
+                <span className="ml-0.5 text-destructive">*</span>
               </Label>
               <div className="relative">
                 <Input
                   id="login-password"
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Enter password *"
+                  onChange={(event) => {
+                    setPassword(event.target.value)
+                    setError(null)
+                    setFieldErrors((current) => ({ ...current, password: undefined }))
+                  }}
+                  onBlur={(event) => validateRequiredField("password", event.target.value)}
+                  placeholder="Enter password"
                   autoComplete="current-password"
                   disabled={isLoading}
+                  aria-invalid={Boolean(fieldErrors.password)}
+                  aria-describedby={
+                    fieldErrors.password ? "login-password-error" : undefined
+                  }
                   className="h-10 bg-background pr-10"
                 />
                 <button
@@ -83,17 +137,18 @@ export function Login() {
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
-                    <EyeOff className="size-4" aria-hidden="true" />
-                  ) : (
                     <Eye className="size-4" aria-hidden="true" />
+                  ) : (
+                    <EyeOff className="size-4" aria-hidden="true" />
                   )}
                 </button>
               </div>
+              {fieldErrors.password ? (
+                <p id="login-password-error" className="text-sm text-destructive">
+                  {fieldErrors.password}
+                </p>
+              ) : null}
             </div>
-
-            {error ? (
-              <p className="text-sm text-destructive">{error}</p>
-            ) : null}
 
             <Button
               type="submit"

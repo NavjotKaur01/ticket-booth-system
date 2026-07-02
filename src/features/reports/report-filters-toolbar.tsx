@@ -1,16 +1,10 @@
 ﻿import { FileDown, FileText, Printer } from "lucide-react"
 
 import CalendarDatePickerControl from "@/components/calendar/controls/CalendarDatePickerControl"
+import CalendarSelectControl from "@/components/calendar/controls/CalendarSelectControl"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { getReportConfig } from "@/features/reports/reports.service"
 import type {
@@ -145,30 +139,24 @@ export function ReportFiltersToolbar({
         >
           <div className="space-y-1.5">
             <Label htmlFor="report-viewer-type">Report</Label>
-            <Select
+            <CalendarSelectControl
+              id="report-viewer-type"
               value={filters.reportType}
-              onValueChange={(value) => onFilterChange("reportType", value)}
+              onChange={(value) => onFilterChange("reportType", value)}
               disabled={isLoadingReportOptions || reportOptions.length === 0}
-            >
-              <SelectTrigger id="report-viewer-type" className="h-9 w-full bg-background">
-                <SelectValue
-                  placeholder={
-                    isLoadingReportOptions
-                      ? "Loading reports..."
-                      : reportOptionsError
-                        ? "Failed to load reports"
-                        : "Select report"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent position="popper" className="max-h-72">
-                {reportOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder={
+                isLoadingReportOptions
+                  ? "Loading reports..."
+                  : reportOptionsError
+                    ? "Failed to load reports"
+                    : "Select report"
+              }
+              className="h-9 w-full bg-background"
+              options={reportOptions.map((option) => ({
+                value: option.id,
+                label: option.label,
+              }))}
+            />
           </div>
 
           {effectiveDateRange && (
@@ -253,21 +241,17 @@ export function ReportFiltersToolbar({
             {showComicPicker && (
               <div className="w-full max-w-[19rem] space-y-1.5">
                 <Label htmlFor="report-viewer-comic">Comic Name</Label>
-                <Select
+                <CalendarSelectControl
+                  id="report-viewer-comic"
                   value={filters.headlinerId}
-                  onValueChange={(value) => onFilterChange("headlinerId", value)}
-                >
-                  <SelectTrigger id="report-viewer-comic" className="h-9 w-full bg-background">
-                    <SelectValue placeholder="Select a comedian…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {comedianOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(value) => onFilterChange("headlinerId", value)}
+                  placeholder="Select a comedian..."
+                  className="h-9 w-full bg-background"
+                  options={comedianOptions.map((option) => ({
+                    value: option.id,
+                    label: option.label,
+                  }))}
+                />
               </div>
             )}
 

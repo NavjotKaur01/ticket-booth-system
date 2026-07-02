@@ -260,13 +260,13 @@ export default function RecurrenceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         disableOutsideDismiss
-        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-5xl"
+        className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col overflow-hidden sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:max-w-5xl"
       >
-        <DialogHeader className="shrink-0 border-b px-6 py-4">
+        <DialogHeader className="shrink-0 border-b px-4 py-3 sm:px-6 sm:py-4">
           <DialogTitle className="text-lg">Recurrence</DialogTitle>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-5">
           {errorMessage ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {errorMessage}
@@ -454,11 +454,16 @@ export default function RecurrenceDialog({
           </fieldset>
         </div>
 
-        <DialogFooter className="!flex-row flex-wrap justify-start border-t px-6 py-4">
-          <Button type="button" onClick={handleSave}>
+        <DialogFooter className="!flex-row flex-wrap justify-start gap-2 border-t px-4 py-3 sm:px-6 sm:py-4">
+          <Button type="button" className="flex-1 sm:flex-none" onClick={handleSave}>
             Next
           </Button>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            className="flex-1 sm:flex-none"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
         </DialogFooter>
