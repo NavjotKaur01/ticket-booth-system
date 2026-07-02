@@ -3,7 +3,6 @@
 import { PanelCard } from "@/components/common/panel-card"
 import {
   FILTER_AREA_CLASS,
-  FILTER_EMAIL_CLASS,
   FILTER_INPUT_CLASS,
   FILTER_ROW_INNER_CLASS,
   FILTER_SELECT_CLASS,
@@ -21,9 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { performers } from "@/data/performers"
-import { dobMonthOptions } from "@/data/customer-form-options"
-import type { MarketingFilterForm } from "@/types/marketing-filter"
+import type { MarketingFilterComedian, MarketingFilterForm } from "@/types/marketing-filter"
+import { MARKETING_FILTER_MONTH_OPTIONS } from "@/types/marketing-filter"
 
 type MarketingFilterFiltersCardProps = {
   filters: MarketingFilterForm
@@ -35,6 +33,7 @@ type MarketingFilterFiltersCardProps = {
   onSearch: () => void
   onClear: () => void
   onClearComics: () => void
+  onRemoveComic: (comedianId: string) => void
   onAddComic: () => void
 }
 
@@ -76,12 +75,9 @@ export function MarketingFilterFiltersCard({
   onSearch,
   onClear,
   onClearComics,
+  onRemoveComic,
   onAddComic,
 }: MarketingFilterFiltersCardProps) {
-  const selectedComics = filters.comedianIds
-    .map((id) => performers.find((performer) => performer.id === id))
-    .filter((performer) => performer != null)
-
   return (
     <PanelCard>
       <div className="space-y-3 p-3">
@@ -102,23 +98,17 @@ export function MarketingFilterFiltersCard({
             }
             className={FILTER_INPUT_CLASS}
           />
-          <Input
-            placeholder="Email"
-            value={filters.email}
-            onChange={(event) => onFilterChange("email", event.target.value)}
-            className={FILTER_EMAIL_CLASS}
-          />
           <Select
-            value={filters.birthMonth || undefined}
+            value={filters.birthMonth}
             onValueChange={(value) => onFilterChange("birthMonth", value)}
           >
             <SelectTrigger className={FILTER_SELECT_CLASS}>
               <SelectValue placeholder="Select a month" />
             </SelectTrigger>
             <SelectContent>
-              {dobMonthOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
+              {MARKETING_FILTER_MONTH_OPTIONS.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -137,6 +127,7 @@ export function MarketingFilterFiltersCard({
                 key={index}
                 placeholder="Zip Code"
                 value={zipCode}
+                maxLength={index === 0 ? undefined : 5}
                 onChange={(event) => onZipCodeChange(index, event.target.value)}
                 className="w-24 shrink-0"
               />
@@ -191,29 +182,10 @@ export function MarketingFilterFiltersCard({
         </div>
 
         <div className="space-y-2 border-t pt-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-semibold text-foreground">
               Comedian Attended
             </p>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="min-h-24 flex-1 rounded-md border bg-muted/20 p-2">
-              {selectedComics.length === 0 ? (
-                <p className="px-1 py-2 text-xs text-muted-foreground">
-                  No comics selected
-                </p>
-              ) : (
-                <ul className="space-y-1">
-                  {selectedComics.map((performer) => (
-                    <li
-                      key={performer.id}
-                      className="truncate text-sm text-foreground"
-                    >
-                      {performer.stageName}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
             <div className="flex shrink-0 items-center gap-1.5">
               <Button
                 type="button"
@@ -231,6 +203,24 @@ export function MarketingFilterFiltersCard({
                 onClick={onClearComics}
               />
             </div>
+          </div>
+
+          <div className="min-h-10 rounded-md border bg-muted/20 p-2">
+            {filters.selectedComedians.length === 0 ? (
+              <p className="px-1 py-2 text-xs text-muted-foreground">
+                No comics selected
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {filters.selectedComedians.map((comedian) => (
+                  <ComedianTag
+                    key={comedian.id}
+                    comedian={comedian}
+                    onRemove={onRemoveComic}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -250,5 +240,27 @@ export function MarketingFilterFiltersCard({
         </div>
       </div>
     </PanelCard>
+  )
+}
+
+function ComedianTag({
+  comedian,
+  onRemove,
+}: {
+  comedian: MarketingFilterComedian
+  onRemove: (comedianId: string) => void
+}) {
+  return (
+    <span className="group inline-flex items-center gap-1 rounded bg-primary px-2 py-1 text-xs text-primary-foreground">
+      <span className="max-w-48 truncate">{comedian.comicName}</span>
+      <button
+        type="button"
+        className="rounded-sm opacity-80 transition-opacity hover:opacity-100"
+        aria-label={`Remove ${comedian.comicName}`}
+        onClick={() => onRemove(comedian.id)}
+      >
+        <X className="size-3" />
+      </button>
+    </span>
   )
 }

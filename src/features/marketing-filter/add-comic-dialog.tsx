@@ -1,5 +1,5 @@
 import { Search, X } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import type { RowSelectionState } from "@tanstack/react-table"
 
 import { DataTable } from "@/components/data-table/data-table"
@@ -13,15 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { performers } from "@/data/performers"
 import { selectComedianColumns } from "@/features/marketing-filter/select-comedian-columns"
-import { filterPerformers } from "@/lib/filter-performers"
-import type { PerformerFilters } from "@/types/performer"
+import { getClubmanErrorMessage } from "@/store/api/baseQuery"
+import { useSearchMarketingComediansMutation } from "@/store/api/clubmanApi"
+import type { MarketingFilterComedian } from "@/types/marketing-filter"
 
-type ComedianSearchFilters = Pick<
-  PerformerFilters,
-  "firstName" | "lastName" | "stageName"
->
+type ComedianSearchFilters = {
+  firstName: string
+  lastName: string
+  stageName: string
+}
 
 const EMPTY_SEARCH: ComedianSearchFilters = {
   firstName: "",
@@ -32,41 +33,92 @@ const EMPTY_SEARCH: ComedianSearchFilters = {
 type AddComicDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  selectedIds: string[]
-  onConfirm: (ids: string[]) => void
+  connectionName: string
+  locationId: string
+  selectedComedians: MarketingFilterComedian[]
+  onConfirm: (comedians: MarketingFilterComedian[]) => void
+}
+
+function mapComedianResults(
+  items: Array<{
+    ComicID: string
+    ComicName?: string | null
+    LastName?: string | null
+    FirstName?: string | null
+    StageName?: string | null
+  }>
+): MarketingFilterComedian[] {
+  return (items ?? []).map((item) => ({
+    id: item.ComicID,
+    comicName: item.ComicName?.trim() ?? "",
+    lastName: item.LastName?.trim() ?? "",
+    firstName: item.FirstName?.trim() ?? "",
+    stageName: item.StageName?.trim() ?? "",
+  }))
 }
 
 export function AddComicDialog({
   open,
   onOpenChange,
-  selectedIds,
+  connectionName,
+  locationId,
+  selectedComedians,
   onConfirm,
 }: AddComicDialogProps) {
   const [draftFilters, setDraftFilters] =
     useState<ComedianSearchFilters>(EMPTY_SEARCH)
-  const [appliedFilters, setAppliedFilters] =
-    useState<ComedianSearchFilters>(EMPTY_SEARCH)
+  const [comedians, setComedians] = useState<MarketingFilterComedian[]>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [error, setError] = useState<string | null>(null)
+  const [searchMarketingComedians, { isLoading }] =
+    useSearchMarketingComediansMutation()
+
+  const runSearch = useCallback(
+    async (filters: ComedianSearchFilters) => {
+      if (!connectionName || !locationId) {
+        setComedians([])
+        setError("Location is required before searching comedians.")
+        return
+      }
+
+      setError(null)
+
+      try {
+        const data = await searchMarketingComedians({
+          ConnectionString: connectionName,
+          LocationId: locationId,
+          LastName: filters.lastName.trim(),
+          FirstName: filters.firstName.trim(),
+          StageName: filters.stageName.trim(),
+          IsActiveComedian: false,
+          IsMarketFilterSearch: true,
+        }).unwrap()
+
+        setComedians(mapComedianResults(data))
+      } catch (requestError) {
+        setComedians([])
+        setError(getClubmanErrorMessage(requestError))
+      }
+    },
+    [connectionName, locationId, searchMarketingComedians]
+  )
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      return
+    }
 
     setDraftFilters(EMPTY_SEARCH)
-    setAppliedFilters(EMPTY_SEARCH)
+    setComedians([])
+    setError(null)
     setRowSelection(
-      Object.fromEntries(selectedIds.map((id) => [id, true] as const))
+      Object.fromEntries(
+        selectedComedians.map((comedian) => [comedian.id, true] as const)
+      )
     )
-  }, [open, selectedIds])
 
-  const filteredPerformers = useMemo(
-    () =>
-      filterPerformers(performers, {
-        ...appliedFilters,
-        locationId: "",
-        showInactive: true,
-      }),
-    [appliedFilters]
-  )
+    void runSearch(EMPTY_SEARCH)
+  }, [open, runSearch, selectedComedians])
 
   function updateDraftField(
     field: keyof ComedianSearchFilters,
@@ -76,17 +128,32 @@ export function AddComicDialog({
   }
 
   function handleSearch() {
-    setAppliedFilters(draftFilters)
+    void runSearch(draftFilters)
   }
 
   function handleClearSearch() {
     setDraftFilters(EMPTY_SEARCH)
-    setAppliedFilters(EMPTY_SEARCH)
+    void runSearch(EMPTY_SEARCH)
   }
 
   function handleCreate() {
-    const ids = Object.keys(rowSelection).filter((id) => rowSelection[id])
-    onConfirm(ids)
+    const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id])
+    const selected = comedians.filter((comedian) =>
+      selectedIds.includes(comedian.id)
+    )
+
+    const preserved = selectedComedians.filter((comedian) =>
+      selectedIds.includes(comedian.id)
+    )
+
+    const merged = [...preserved]
+    for (const comedian of selected) {
+      if (!merged.some((item) => item.id === comedian.id)) {
+        merged.push(comedian)
+      }
+    }
+
+    onConfirm(merged)
     onOpenChange(false)
   }
 
@@ -146,12 +213,16 @@ export function AddComicDialog({
             </div>
           </div>
 
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
           <div className="min-h-0 flex-1 overflow-hidden rounded-md border">
             <div className="max-h-[min(24rem,50vh)] overflow-auto">
               <DataTable
                 columns={selectComedianColumns}
-                data={filteredPerformers}
-                emptyMessage="No comedian found"
+                data={comedians}
+                emptyMessage={
+                  isLoading ? "Searching comedians..." : "No comedian found"
+                }
                 entityLabel="comedians"
                 enablePagination={false}
                 enableRowSelection

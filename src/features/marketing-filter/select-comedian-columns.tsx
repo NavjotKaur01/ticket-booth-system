@@ -2,20 +2,18 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import { createSelectColumn } from "@/components/data-table/data-table-select-column"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { getComicName } from "@/lib/filter-performers"
-import type { Performer } from "@/types/performer"
+import type { MarketingFilterComedian } from "@/types/marketing-filter"
 
-export const selectComedianColumns: ColumnDef<Performer>[] = [
-  createSelectColumn<Performer>(),
+export const selectComedianColumns: ColumnDef<MarketingFilterComedian>[] = [
+  createSelectColumn<MarketingFilterComedian>(),
   {
-    id: "comicName",
-    accessorFn: (row) => getComicName(row),
+    accessorKey: "comicName",
     header: ({ column }) => (
       <DataTableColumnHeader label="Comic Name" column={column} />
     ),
     cell: ({ row }) => (
       <span className="font-medium text-foreground">
-        {getComicName(row.original)}
+        {row.original.comicName || "\u00A0"}
       </span>
     ),
   },

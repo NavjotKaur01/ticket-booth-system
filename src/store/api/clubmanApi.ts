@@ -37,6 +37,13 @@ import type {
   SaveShowRequestModel,
 } from "@/types/api/save-show"
 import type { ApiCustomerSearchItem } from "@/types/api/customer-search"
+import type {
+  ApiMarketingComedianSearchItem,
+  ApiMarketingFilterCustomer,
+  MarketingComedianSearchRequest,
+} from "@/types/api/marketing-filter-search"
+import { buildMarketingFilterSearchRequest } from "@/lib/build-marketing-filter-search-request"
+import type { MarketingFilterForm } from "@/types/marketing-filter"
 import type { ApiCustomerDetail, CustomerRequest } from "@/types/api/customer"
 import type {
   ApiBusinessContactItem,
@@ -127,6 +134,39 @@ export const clubmanApi = createApi({
           }
         }
       },
+    }),
+
+    marketingFilterSearch: builder.mutation({
+      query: ({
+        connectionName,
+        locationId,
+        filters,
+        pageNo,
+      }: {
+        connectionName: string
+        locationId: string
+        filters: MarketingFilterForm
+        pageNo: number
+      }) => ({
+        url: administratorApiPath("MarketingFilterSearch"),
+        method: "PUT",
+        body: buildMarketingFilterSearchRequest({
+          connectionName,
+          locationId,
+          filters,
+          pageNo,
+        }),
+      }),
+      transformResponse: (response: ApiMarketingFilterCustomer[]) => response,
+    }),
+
+    searchMarketingComedians: builder.mutation({
+      query: (body: MarketingComedianSearchRequest) => ({
+        url: reservationApiPath("ComicSearch"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: ApiMarketingComedianSearchItem[]) => response,
     }),
 
     searchCustomers: builder.mutation({
@@ -883,6 +923,8 @@ export const {
   useGetLocationsQuery,
   useAccountLoginMutation,
   useSearchCustomersMutation,
+  useMarketingFilterSearchMutation,
+  useSearchMarketingComediansMutation,
   useSearchReservationCustomersMutation,
   useSearchReservationBusinessCustomersMutation,
   useSaveCustomerMutation,

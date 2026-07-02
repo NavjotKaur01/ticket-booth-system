@@ -1,7 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { MarketingFilterRowActionsMenu } from "@/features/marketing-filter/marketing-filter-row-actions-menu"
 import { formatMarketingFilterName } from "@/lib/filter-marketing-records"
 import type { MarketingFilterRecord } from "@/types/marketing-filter"
 
@@ -23,39 +22,58 @@ export const marketingFilterColumns: ColumnDef<MarketingFilterRecord>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader label="Email" column={column} />
     ),
-    cell: ({ row }) => (
-      <a
-        href={`mailto:${row.original.email}`}
-        className="cursor-pointer font-medium text-primary hover:underline"
-      >
-        {row.original.email}
-      </a>
-    ),
+    cell: ({ row }) => {
+      const email = row.original.email
+      if (!email) {
+        return "\u00A0"
+      }
+
+      return (
+        <a
+          href={`mailto:${email}`}
+          className="cursor-pointer font-medium text-primary hover:underline"
+        >
+          {email}
+        </a>
+      )
+    },
   },
   {
     accessorKey: "address",
     header: ({ column }) => (
       <DataTableColumnHeader label="Address" column={column} />
     ),
+    cell: ({ row }) => row.original.address || "\u00A0",
   },
   {
     accessorKey: "address2",
     header: ({ column }) => (
       <DataTableColumnHeader label="Address2" column={column} />
     ),
+    cell: ({ row }) => row.original.address2 || "\u00A0",
   },
   {
-    accessorKey: "phoneNumbers",
+    id: "phoneNumbers",
     header: ({ column }) => (
       <DataTableColumnHeader label="Phone No." column={column} />
     ),
-    cell: ({ row }) => (
-      <div className="space-y-0.5 tabular-nums">
-        {row.original.phoneNumbers.map((phone) => (
-          <div key={phone}>{phone}</div>
-        ))}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const numbers = [row.original.phone, row.original.phone1, row.original.phone2]
+        .map((value) => value.trim())
+        .filter(Boolean)
+
+      if (numbers.length === 0) {
+        return "\u00A0"
+      }
+
+      return (
+        <div className="space-y-0.5 tabular-nums">
+          {numbers.map((phone, index) => (
+            <div key={`${phone}-${index}`}>{phone}</div>
+          ))}
+        </div>
+      )
+    },
     enableSorting: false,
   },
   {
@@ -63,6 +81,7 @@ export const marketingFilterColumns: ColumnDef<MarketingFilterRecord>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader label="Zip Code" column={column} />
     ),
+    cell: ({ row }) => row.original.zipCode || "\u00A0",
   },
   {
     accessorKey: "createdOn",
@@ -76,6 +95,7 @@ export const marketingFilterColumns: ColumnDef<MarketingFilterRecord>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader label="City" column={column} />
     ),
+    cell: ({ row }) => row.original.city || "\u00A0",
   },
   {
     accessorKey: "status",
@@ -83,12 +103,5 @@ export const marketingFilterColumns: ColumnDef<MarketingFilterRecord>[] = [
       <DataTableColumnHeader label="Status" column={column} />
     ),
     cell: ({ row }) => row.original.status || "\u00A0",
-  },
-  {
-    id: "action",
-    header: "Action",
-    enableSorting: false,
-    meta: { sticky: "right" },
-    cell: () => <MarketingFilterRowActionsMenu />,
   },
 ]
