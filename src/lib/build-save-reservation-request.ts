@@ -32,11 +32,14 @@ type BuildReservationRequestParams = {
   selectedSection: ReservationSectionOption
   origin: 'phone' | 'walkup'
   party: number
+  origParty?: number
   passes: number
   promo: ReservationPromo | null
   totals: ReservationTotals
   notes: string
   dinner: boolean
+  isReservationCheckedIn?: boolean
+  includeCustomerModel?: boolean
 }
 
 type BuildUpdateReservationPaymentParams = BuildReservationRequestParams & {
@@ -44,6 +47,8 @@ type BuildUpdateReservationPaymentParams = BuildReservationRequestParams & {
   paymentAmount: number
   paymentType: ReservationPaymentType
   paymentFields: ReservationPaymentFields
+  isPaymentLoad?: boolean
+  resSelectedPromotionId?: string
 }
 
 function roundMoney (value: number) {
@@ -173,11 +178,14 @@ function buildReservationCore ({
   selectedSection,
   origin,
   party,
+  origParty,
   passes,
   promo,
   totals,
   notes,
-  dinner
+  dinner,
+  isReservationCheckedIn,
+  includeCustomerModel = true
 }: BuildReservationRequestParams): SaveReservationRequest {
   const originCode = getReservationOriginLookupCode(origin)
   const phone = parsePhoneSearchParts(searchCriteria.phoneNo)
@@ -198,7 +206,7 @@ function buildReservationCore ({
     WebFee: selectedSection.webFee,
     LookUpCode: originCode,
     ReservationSource: originCode,
-    OrigParty: party,
+    OrigParty: origParty ?? party,
     Party: party,
     PromotionID: promo?.id ?? EMPTY_GUID,
     PromotionCode: promo?.promotionCode ?? '',
@@ -216,32 +224,34 @@ function buildReservationCore ({
     ReservationNote: notes.trim(),
     Action: ACTION_SAVE_RESERVATION,
     ActionForm: ACTION_FORM_RESERVATION,
-    IsReservationCheckedIn: false,
+    IsReservationCheckedIn: isReservationCheckedIn ?? false,
     TixPaid: ticketCounts.tixPaid,
     TixComp: ticketCounts.tixComp,
     TixDisc: ticketCounts.tixDisc,
     IsSaveReservationOnly: true
   }
 
-  if (searchType === 'customer') {
-    request.CustomerModel = {
-      CustomerId: customerId,
-      CustLastName: searchCriteria.lastName.trim(),
-      CustFirstName: searchCriteria.firstName.trim(),
-      Email1: searchCriteria.email.trim(),
-      AreaCode: phone.areaCode,
-      Phone1: phone.phone1,
-      Phone2: phone.phone2
-    }
-  } else {
-    request.BusinessCustomerModel = {
-      BusinessId: customerId,
-      BusinessName: searchCriteria.businessName.trim(),
-      BusLastName: searchCriteria.lastName.trim(),
-      BusFirstName: searchCriteria.firstName.trim(),
-      AreaCode: phone.areaCode,
-      Phone1: phone.phone1,
-      Phone2: phone.phone2
+  if (includeCustomerModel) {
+    if (searchType === 'customer') {
+      request.CustomerModel = {
+        CustomerId: customerId,
+        CustLastName: searchCriteria.lastName.trim(),
+        CustFirstName: searchCriteria.firstName.trim(),
+        Email1: searchCriteria.email.trim(),
+        AreaCode: phone.areaCode,
+        Phone1: phone.phone1,
+        Phone2: phone.phone2
+      }
+    } else {
+      request.BusinessCustomerModel = {
+        BusinessId: customerId,
+        BusinessName: searchCriteria.businessName.trim(),
+        BusLastName: searchCriteria.lastName.trim(),
+        BusFirstName: searchCriteria.firstName.trim(),
+        AreaCode: phone.areaCode,
+        Phone1: phone.phone1,
+        Phone2: phone.phone2
+      }
     }
   }
 
@@ -255,7 +265,7 @@ export function buildSaveReservationOnlyRequest (
   return buildReservationCore(params)
 }
 
-/** Step 2 — apply payment to an existing reservation (desktop payment screen). */
+/** Desktop payment screen — always sends payment payload (amount may be 0). */
 export function buildUpdateReservationPaymentRequest (
   params: BuildUpdateReservationPaymentParams
 ): SaveReservationRequest {
@@ -265,10 +275,14 @@ export function buildUpdateReservationPaymentRequest (
     paymentType,
     paymentFields,
     searchType,
-    totals
+    totals,
+    isPaymentLoad,
+    resSelectedPromotionId
   } = params
-  const paymentLookupCode = getReservationPaymentLookupCode(paymentType)
   const roundedPaymentAmount = roundMoney(paymentAmount)
+  const effectivePaymentType =
+    roundedPaymentAmount <= 0 ? 'cash' : paymentType
+  const paymentLookupCode = getReservationPaymentLookupCode(effectivePaymentType)
 
   return {
     ...buildReservationCore(params),
@@ -277,15 +291,26 @@ export function buildUpdateReservationPaymentRequest (
     PaymentTypeLookupCode: paymentLookupCode,
     PaymentAmount: roundedPaymentAmount,
     IsTicketPartyUpdate:
-      paymentType !== 'hold-cc' ||
+      effectivePaymentType !== 'hold-cc' ||
       totals.total === 0 ||
       roundedPaymentAmount <= 0,
+    ...(isPaymentLoad ? { IsPaymentLoad: true } : {}),
+    ...(resSelectedPromotionId
+      ? { ResSelectedPromotionID: resSelectedPromotionId }
+      : {}),
     PaymentModel: buildPaymentModel({
-      paymentType,
+      paymentType: effectivePaymentType,
       paymentFields,
       paymentAmount: roundedPaymentAmount,
       totals,
       searchType
     })
   }
+}
+
+/** Update an existing reservation (desktop payment screen save). */
+export function buildUpdateReservationRequest (
+  params: BuildUpdateReservationPaymentParams
+): SaveReservationRequest {
+  return buildUpdateReservationPaymentRequest(params)
 }

@@ -80,6 +80,8 @@ export type SaveReservationRequest = {
   IsSaveReservationOnly: boolean
   ReservationId?: string
   IsTicketPartyUpdate?: boolean
+  IsPaymentLoad?: boolean
+  ResSelectedPromotionID?: string
   CustomerModel?: SaveReservationCustomerRequest
   BusinessCustomerModel?: SaveReservationBusinessCustomerRequest
   PaymentModel?: SaveReservationPaymentRequest

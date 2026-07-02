@@ -19,6 +19,7 @@ export type ReservationDetailPaymentItem = {
 
 export type ReservationDetail = {
   ReservationID?: string
+  CustomerID?: string | null
   PartyNo?: number | null
   ResPayments?: number | null
   CustFirstName?: string | null

@@ -129,6 +129,7 @@ export function mapReservationDetail(response: unknown): ReservationDetail {
 
   return {
     ReservationID: readString(record, ['ReservationID', 'reservationID', 'reservationId']) || undefined,
+    CustomerID: readString(record, ['CustomerID', 'customerID', 'customerId']) || null,
     PartyNo: readNumber(record, ['PartyNo', 'partyNo']),
     ResPayments: readNumber(record, ['ResPayments', 'resPayments', 'ResPymts', 'resPymts']),
     CustFirstName: readString(record, ['CustFirstName', 'custFirstName']) || null,

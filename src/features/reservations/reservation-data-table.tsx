@@ -16,6 +16,7 @@ type ReservationDataTableProps = {
   onPrintReceipt?: (reservation: Reservation) => void
   onReservationHistory?: (reservation: Reservation) => void
   onAddNote?: (reservation: Reservation) => void
+  onEditReservation?: (reservation: Reservation) => void
 }
 
 export function ReservationDataTable({
@@ -29,6 +30,7 @@ export function ReservationDataTable({
   onPrintReceipt,
   onReservationHistory,
   onAddNote,
+  onEditReservation,
 }: ReservationDataTableProps) {
   const columns = useMemo(
     () =>
@@ -62,6 +64,8 @@ export function ReservationDataTable({
       entityLabel="reservations"
       pageSize={12}
       getRowClassName={getReservationRowClassName}
+      getRowId={(row) => row.id}
+      onRowDoubleClick={(row) => onEditReservation?.(row.original)}
     />
   )
 }

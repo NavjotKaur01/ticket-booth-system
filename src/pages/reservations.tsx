@@ -63,6 +63,7 @@ export function Reservations() {
   )
   const [search, setSearch] = useState("")
   const [addOpen, setAddOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [noteOpen, setNoteOpen] = useState(false)
@@ -208,6 +209,36 @@ export function Reservations() {
     ])
   }
 
+
+  function handleOpenEditReservation(reservation: Reservation) {
+    if (reservation.isCancelled) {
+      return
+    }
+
+    setSelectedReservation(reservation)
+    setEditOpen(true)
+  }
+
+  function handleReservationDialogOpenChange(open: boolean) {
+    if (!open) {
+      setAddOpen(false)
+      setEditOpen(false)
+      setSelectedReservation(null)
+    }
+  }
+
+  async function handleReservationDialogSaved(
+    _reservationIds: string[],
+    ticketData?: import("@/types/ticket-print").TicketPrintData
+  ) {
+    await refreshReservations()
+
+    if (editOpen || !ticketData) {
+      return
+    }
+
+    await handleReservationSaved(_reservationIds, ticketData)
+  }
 
   function handleOpenReservationHistory(reservation: Reservation) {
     setSelectedReservation(reservation)
@@ -529,10 +560,18 @@ export function Reservations() {
           }}
           onReservationHistory={handleOpenReservationHistory}
           onAddNote={handleOpenAddNote}
+          onEditReservation={handleOpenEditReservation}
         />
       </PanelCard>
 
-      <AddReservationDialog open={addOpen} onOpenChange={setAddOpen} onSaved={handleReservationSaved} />
+      <AddReservationDialog
+        open={addOpen || editOpen}
+        onOpenChange={handleReservationDialogOpenChange}
+        onSaved={handleReservationDialogSaved}
+        reservation={editOpen ? selectedReservation : null}
+        showDate={showDate}
+        showTime={showTime}
+      />
       <CancelReservationDialog
         open={cancelOpen}
         onOpenChange={handleCancelDialogOpenChange}
