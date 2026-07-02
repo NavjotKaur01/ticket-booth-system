@@ -27,7 +27,7 @@ export function ShowTimePicker({
   return (
     <div
       className={cn(
-        "-mx-0.5 flex min-w-0 items-stretch gap-1.5 overflow-x-auto px-0.5 pb-0.5",
+        "-mx-0.5 flex min-w-0 items-stretch gap-1.5 overflow-x-auto p-0.5",
         className
       )}
     >
