@@ -13,10 +13,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { SIDEBAR_NAV_ITEMS } from "@/constants/navigation"
 import { ROUTES } from "@/constants/routes"
 import { quickLinks } from "@/data/dashboard"
 import { useAppSession } from "@/hooks/use-app-session"
+import { useFilteredSidebarNav } from "@/hooks/use-filtered-sidebar-nav"
 import { cn } from "@/lib/utils"
 import type { NavItem, NavSubItem, NavSubItemAction } from "@/types/navigation"
 import type { UserSession } from "@/types/dashboard"
@@ -43,8 +43,11 @@ function hasActiveSubItem(pathname: string, item: NavSubItem): boolean {
   return item.items?.some((childItem) => hasActiveSubItem(pathname, childItem)) ?? false
 }
 
-function getParentMenuIdForPath(pathname: string): string | null {
-  for (const item of SIDEBAR_NAV_ITEMS) {
+function getParentMenuIdForPath(
+  pathname: string,
+  navItems: NavItem[]
+): string | null {
+  for (const item of navItems) {
     if (item.items?.some((subItem) => hasActiveSubItem(pathname, subItem))) {
       return item.id
     }
@@ -283,16 +286,17 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const { pathname } = useLocation()
   const { locSName } = useAppSession()
+  const { navItems } = useFilteredSidebarNav()
   const [openMenuId, setOpenMenuId] = useState<string | null>(() =>
-    getParentMenuIdForPath(pathname)
+    getParentMenuIdForPath(pathname, navItems)
   )
 
   useEffect(() => {
-    const parentMenuId = getParentMenuIdForPath(pathname)
+    const parentMenuId = getParentMenuIdForPath(pathname, navItems)
     if (parentMenuId) {
       setOpenMenuId(parentMenuId)
     }
-  }, [pathname])
+  }, [pathname, navItems])
 
   return (
     <aside
@@ -335,7 +339,7 @@ export function AppSidebar({
 
       <div className="min-h-0 flex-1 overflow-y-auto py-4">
         <nav className="space-y-0.5 px-3" aria-label="Main navigation">
-          {SIDEBAR_NAV_ITEMS.map((item) =>
+          {navItems.map((item) =>
             item.items?.length ? (
               <NavCollapsibleItem
                 key={item.id}

@@ -1,5 +1,6 @@
 ﻿import { BrowserRouter, Route, Routes } from "react-router-dom"
 
+import { GiftFeatureGuard } from "@/components/auth/gift-feature-guard"
 import { ProtectedLayout } from "@/components/auth/protected-layout"
 import { Dashboard } from "@/components/dashboard/dashboard"
 import { BusinessContacts } from "@/pages/business-contacts"
@@ -96,8 +97,22 @@ function App() {
           <Route path="ticketbooth">
             <Route path="business-contacts" element={<BusinessContacts />} />
             <Route path="comment-cards" element={<CommentCards />} />
-            <Route path="gift-cards" element={<GiftCards />} />
-            <Route path="gift-certificate" element={<GiftCertificate />} />
+            <Route
+              path="gift-cards"
+              element={
+                <GiftFeatureGuard feature="gift-cards">
+                  <GiftCards />
+                </GiftFeatureGuard>
+              }
+            />
+            <Route
+              path="gift-certificate"
+              element={
+                <GiftFeatureGuard feature="gift-certificate">
+                  <GiftCertificate />
+                </GiftFeatureGuard>
+              }
+            />
           </Route>
         </Route>
       </Routes>
