@@ -282,9 +282,9 @@ export function AddCustomerDialog({
         nested={nested}
         disableOutsideDismiss={nested}
         showCloseButton
-        className="flex max-h-[88vh] max-w-4xl flex-col overflow-hidden sm:max-w-4xl"
+        className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col overflow-hidden sm:max-h-[88vh] sm:w-[calc(100vw-2rem)] sm:max-w-4xl"
       >
-        <DialogHeader className="shrink-0 gap-0 border-b px-4 py-2.5 pr-12">
+        <DialogHeader className="shrink-0 gap-0 border-b px-3 py-2.5 pr-12 sm:px-4">
           <div className="flex items-center gap-2">
             {onBack ? (
               <Button
@@ -304,7 +304,7 @@ export function AddCustomerDialog({
           </div>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-2.5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2.5 sm:px-4">
           {error ? (
             <p className="mb-2 text-sm text-destructive">{error}</p>
           ) : null}
@@ -518,7 +518,7 @@ export function AddCustomerDialog({
 
         <DialogFooter
           className={cn(
-            "shrink-0 border-t px-4 py-2",
+            "!flex-row flex-wrap gap-2 shrink-0 border-t px-3 py-3 sm:px-4 sm:py-2.5",
             isEditMode && !onBuyCertificate
               ? "sm:justify-end"
               : "sm:justify-between"
@@ -528,6 +528,7 @@ export function AddCustomerDialog({
             <Button
               type="button"
               variant="outline"
+              className="order-2 w-full sm:order-1 sm:w-auto"
               disabled={saving}
               onClick={handleClear}
             >
@@ -537,27 +538,30 @@ export function AddCustomerDialog({
             <Button
               type="button"
               variant="outline"
+              className="order-2 w-full sm:order-1 sm:w-auto"
               disabled={saving || loadingDetails}
               onClick={() => onBuyCertificate(customer)}
             >
               Buy Certificate
             </Button>
           ) : null}
-          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+          <div className="order-1 grid w-full grid-cols-2 gap-2 sm:order-2 sm:flex sm:w-auto sm:flex-row">
             <Button
               type="button"
-              variant="outline"
-              disabled={saving}
-              onClick={handleClose}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
+              className="w-full sm:w-auto"
               disabled={saving || loadingDetails}
               onClick={() => void handleSave()}
             >
               {saving ? "Saving..." : "Save"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              disabled={saving}
+              onClick={handleClose}
+            >
+              Cancel
             </Button>
           </div>
         </DialogFooter>

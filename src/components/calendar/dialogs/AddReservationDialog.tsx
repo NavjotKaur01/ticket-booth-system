@@ -309,6 +309,9 @@ export default function AddReservationDialog({
   const headerTitle = dialogData
     ? `Add Reservation :- ${dialogData.performer}    ${dialogData.headerDateLabel}`
     : "Add Reservation"
+  const headerSubtitle = dialogData
+    ? `${dialogData.performer} ${dialogData.headerDateLabel}`
+    : ""
   const addCustomerInitialValues: CustomerFormValues | null = formValues
     ? {
         ...EMPTY_CUSTOMER_FORM,
@@ -332,22 +335,30 @@ export default function AddReservationDialog({
       >
       <DialogContent
         disableOutsideDismiss
-        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-6xl"
+        className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col overflow-hidden sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:max-w-6xl"
         onOpenAutoFocus={(autoFocusEvent) => {
           autoFocusEvent.preventDefault()
           focusInitialPartyInput()
         }}
       >
-        <DialogHeader className="shrink-0 border-b px-5 py-4">
-          <DialogTitle className="text-lg">{headerTitle}</DialogTitle>
+        <DialogHeader className="shrink-0 border-b px-3 py-3 pr-12 sm:px-5 sm:py-4 lg:pr-12">
+          <DialogTitle className="text-lg">
+            <span className="hidden lg:inline">{headerTitle}</span>
+            <span className="block lg:hidden">Add Reservation</span>
+            {headerSubtitle ? (
+              <span className="mt-1 block text-base font-semibold leading-snug lg:hidden">
+                {headerSubtitle}
+              </span>
+            ) : null}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {isLoading || !formValues || !dialogData ? (
             <AddReservationSkeleton />
           ) : (
-            <div className="space-y-5 px-5 py-5">
-              <fieldset className="rounded-md border p-4">
+            <div className="space-y-4 px-3 py-3 sm:space-y-5 sm:px-5 sm:py-5">
+              <fieldset className="rounded-md border p-3 sm:p-4">
                 <legend className="px-2 text-sm font-medium">Show Details</legend>
                 <div className="grid items-end gap-x-3 gap-y-3 md:grid-cols-2 lg:grid-cols-[minmax(13rem,14rem)_minmax(13rem,1fr)_minmax(18rem,1.25fr)_auto]">
                   <div className="min-w-0">
@@ -430,7 +441,7 @@ export default function AddReservationDialog({
                 </div>
               </fieldset>
 
-              <fieldset className="rounded-md border p-4">
+              <fieldset className="rounded-md border p-3 sm:p-4">
                 <legend className="px-2 text-sm font-medium">Reservation Details</legend>
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
@@ -534,7 +545,7 @@ export default function AddReservationDialog({
                 </div>
               </fieldset>
 
-              <fieldset className="rounded-md border p-4">
+              <fieldset className="rounded-md border p-3 sm:p-4">
                 <legend className="px-2 text-sm font-medium">Customer Details</legend>
                 <div className="grid gap-x-6 gap-y-3 md:grid-cols-2">
                   <div className={FIELD_ROW_CLASS}>
@@ -595,7 +606,7 @@ export default function AddReservationDialog({
                 </div>
               </fieldset>
 
-              <fieldset className="rounded-md border p-4">
+              <fieldset className="rounded-md border p-3 sm:p-4">
                 <legend className="px-2 text-sm font-medium">Search Criteria</legend>
                 <div className="space-y-4">
                   <RadioGroup
@@ -637,7 +648,7 @@ export default function AddReservationDialog({
                 </div>
               </fieldset>
 
-              <fieldset className="rounded-md border p-4">
+              <fieldset className="rounded-md border p-3 sm:p-4">
                 <legend className="px-2 text-sm font-medium">Notes / Request</legend>
                 <Textarea
                   id="reservation-notes"
@@ -651,11 +662,23 @@ export default function AddReservationDialog({
           )}
         </div>
 
-        <DialogFooter className="!flex-row flex-wrap justify-start border-t px-5 py-4">
-          <Button type="button" tabIndex={-1} onClick={handleContinue} disabled={!formValues || isLoading}>
+        <DialogFooter className="!flex-row flex-wrap justify-start gap-2 border-t px-3 py-3 sm:px-5 sm:py-4">
+          <Button
+            type="button"
+            tabIndex={-1}
+            className="flex-1 sm:flex-none"
+            onClick={handleContinue}
+            disabled={!formValues || isLoading}
+          >
             Continue
           </Button>
-          <Button type="button" tabIndex={-1} variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            tabIndex={-1}
+            variant="ghost"
+            className="flex-1 sm:flex-none"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
         </DialogFooter>
