@@ -4,6 +4,14 @@ import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+type DialogLayer = "base" | "nested"
+
+const DialogLayerContext = React.createContext<DialogLayer>("base")
+
+export function useDialogLayer() {
+  return React.useContext(DialogLayerContext)
+}
+
 function Dialog({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -112,7 +120,8 @@ function DialogContent({
   disableOutsideDismiss?: boolean
   nested?: boolean
 }) {
-  const stackClass = nested ? "z-[60]" : "z-50"
+  const dialogLayer: DialogLayer = nested ? "nested" : "base"
+  const stackClass = nested ? "z-[90]" : "z-50"
 
   const handleOutsideEvent = <T extends OutsideDismissEvent>(
     event: T,
@@ -151,16 +160,18 @@ function DialogContent({
         }}
         {...props}
       >
-        {children}
-        {showCloseButton && (
-          <DialogPrimitive.Close
-            data-slot="dialog-close"
-            className="absolute top-2 right-5 flex size-8 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none disabled:pointer-events-none"
-          >
-            <XIcon className="size-4" />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
-        )}
+        <DialogLayerContext.Provider value={dialogLayer}>
+          {children}
+          {showCloseButton && (
+            <DialogPrimitive.Close
+              data-slot="dialog-close"
+              className="absolute top-2 right-5 flex size-8 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none disabled:pointer-events-none"
+            >
+              <XIcon className="size-4" />
+              <span className="sr-only">Close</span>
+            </DialogPrimitive.Close>
+          )}
+        </DialogLayerContext.Provider>
       </DialogPrimitive.Content>
     </DialogPortal>
   )

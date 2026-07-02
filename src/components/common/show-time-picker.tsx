@@ -1,3 +1,5 @@
+import type { KeyboardEvent, Ref } from "react"
+
 import { cn } from "@/lib/utils"
 import type { ShowOption } from "@/types/reservation"
 
@@ -6,6 +8,11 @@ type ShowTimePickerProps = {
   showTime: string
   onShowTimeChange: (value: string) => void
   className?: string
+  selectedButtonRef?: Ref<HTMLButtonElement>
+  onShowTimeKeyDown?: (
+    event: KeyboardEvent<HTMLButtonElement>,
+    show: ShowOption
+  ) => void
 }
 
 /** Selectable show-time cards — time on top, venue subtitle below. */
@@ -14,6 +21,8 @@ export function ShowTimePicker({
   showTime,
   onShowTimeChange,
   className,
+  selectedButtonRef,
+  onShowTimeKeyDown,
 }: ShowTimePickerProps) {
   return (
     <div
@@ -29,8 +38,10 @@ export function ShowTimePicker({
           <button
             key={show.id}
             type="button"
+            ref={isSelected ? selectedButtonRef : undefined}
             title={show.label}
             onClick={() => onShowTimeChange(show.id)}
+            onKeyDown={(event) => onShowTimeKeyDown?.(event, show)}
             className={cn(
               "flex w-[5.75rem] shrink-0 flex-col rounded-lg px-2 py-1.5 text-left transition-colors sm:w-[6.75rem] sm:px-2.5 sm:py-2",
               isSelected

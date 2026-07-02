@@ -36,6 +36,33 @@ import {
 const FIELD_GRID_2 = "grid gap-2 sm:grid-cols-2"
 const FIELD_GRID_3 = "grid gap-2 sm:grid-cols-3"
 
+function getMaxDobDay(month: string, year?: string) {
+  const parsedMonth = Number(month)
+  if (!parsedMonth || parsedMonth < 1 || parsedMonth > 12) {
+    return 31
+  }
+
+  const parsedYear = year && year.length === 4 ? Number(year) : 2000
+  return new Date(parsedYear, parsedMonth, 0).getDate()
+}
+
+function formatDobDayYear(value: string, month: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 6)
+  const rawDay = digits.slice(0, 2)
+  const year = digits.slice(2)
+
+  if (rawDay.length < 2) {
+    return rawDay
+  }
+
+  const maxDay = getMaxDobDay(month, year)
+  const day = Math.min(Math.max(Number(rawDay) || 1, 1), maxDay)
+    .toString()
+    .padStart(2, "0")
+
+  return year ? `${day}/${year}` : `${day}/`
+}
+
 type AddCustomerDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -155,6 +182,21 @@ export function AddCustomerDialog({
     value: PhoneParts
   ) {
     setForm((current) => ({ ...current, [field]: value }))
+  }
+
+  function updateDobMonth(value: string) {
+    setForm((current) => ({
+      ...current,
+      dobMonth: value,
+      dobDayYear: formatDobDayYear(current.dobDayYear, value),
+    }))
+  }
+
+  function updateDobDayYear(value: string) {
+    setForm((current) => ({
+      ...current,
+      dobDayYear: formatDobDayYear(value, current.dobMonth),
+    }))
   }
 
   function handleClear() {
@@ -394,7 +436,7 @@ export function AddCustomerDialog({
                   <CalendarSelectControl
                     id="add-customer-dob-month"
                     value={form.dobMonth}
-                    onChange={(value) => updateField("dobMonth", value)}
+                    onChange={updateDobMonth}
                     placeholder="Month"
                     className="min-w-0 flex-1"
                     options={dobMonthOptions.map((option) => ({
@@ -405,10 +447,10 @@ export function AddCustomerDialog({
                   <Input
                     id="add-customer-dob-day-year"
                     value={form.dobDayYear}
-                    onChange={(event) =>
-                      updateField("dobDayYear", event.target.value)
-                    }
+                    onChange={(event) => updateDobDayYear(event.target.value)}
                     placeholder="DD/YYYY"
+                    inputMode="numeric"
+                    maxLength={7}
                     className="h-9 w-28 shrink-0"
                   />
                 </div>

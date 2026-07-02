@@ -10,6 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { formatDateForDisplay } from "@/lib/date-display-format"
 import { cn } from "@/lib/utils"
 
 function getStartOfDay(date: Date) {
@@ -27,18 +28,6 @@ function parseDateValue(value: string) {
   return parsed.isValid() ? parsed.toDate() : null
 }
 
-function formatDisplayDate(date: Date | null, placeholder: string) {
-  if (!date) {
-    return placeholder
-  }
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date)
-}
-
 type CalendarDatePickerControlProps = {
   id: string
   value: string
@@ -46,6 +35,7 @@ type CalendarDatePickerControlProps = {
   disablePastDates?: boolean
   placeholder?: string
   className?: string
+  displayFormat?: string
 }
 
 export function canNavigateToPreviousDate(value: string, disablePastDates: boolean) {
@@ -63,6 +53,7 @@ export default function CalendarDatePickerControl({
   disablePastDates = false,
   placeholder = "Select date",
   className,
+  displayFormat,
 }: CalendarDatePickerControlProps) {
   const selectedDate = parseDateValue(value)
   const [isOpen, setIsOpen] = useState(false)
@@ -98,7 +89,7 @@ export default function CalendarDatePickerControl({
         >
           <CalendarIcon className="size-4 shrink-0 text-muted-foreground" />
           <span className="truncate">
-            {formatDisplayDate(selectedDate, placeholder)}
+            {formatDateForDisplay(selectedDate, placeholder, displayFormat)}
           </span>
         </Button>
       </PopoverTrigger>

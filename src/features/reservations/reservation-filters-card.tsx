@@ -1,17 +1,12 @@
 import { RefreshCw } from "lucide-react"
 
 import { PanelCard } from "@/components/common/panel-card"
+import { ScrollSelectControl } from "@/components/common/scroll-select-control"
+import { ShowDateField } from "@/components/common/show-date-field"
 import { StatsBar } from "@/components/common/stats-bar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { reservationCounts } from "@/data/reservation"
 import type { StatItem } from "@/components/common/stats-bar"
 import { sanitizeRefreshSecondsInput } from "@/lib/parse-refresh-interval"
@@ -63,12 +58,10 @@ export function ReservationFiltersCard({
             <Label htmlFor="show-date" className="text-xs font-medium">
               Show Date
             </Label>
-            <Input
-              id="show-date"
-              type="date"
-              value={showDate}
-              onChange={(e) => onShowDateChange(e.target.value)}
-              className="w-full min-w-0"
+            <ShowDateField
+              showDate={showDate}
+              onShowDateChange={onShowDateChange}
+              className="h-9 w-full justify-between rounded-md border border-input bg-background px-3 py-2 hover:bg-background"
             />
           </div>
 
@@ -76,33 +69,24 @@ export function ReservationFiltersCard({
             <Label htmlFor="show-time" className="text-xs font-medium">
               Show Time
             </Label>
-            <Select
-              value={showTime || undefined}
-              onValueChange={onShowTimeChange}
+            <ScrollSelectControl
+              id="show-time"
+              value={showTime}
+              onChange={onShowTimeChange}
               disabled={showsLoading || shows.length === 0}
-            >
-              <SelectTrigger
-                id="show-time"
-                className="w-full min-w-0 max-w-full"
-              >
-                <SelectValue
-                  placeholder={
-                    showsLoading
-                      ? "Loading shows..."
-                      : shows.length === 0
-                        ? "No shows found"
-                        : "Select show"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {shows.map((show) => (
-                  <SelectItem key={show.id} value={show.id}>
-                    {show.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder={
+                showsLoading
+                  ? "Loading shows..."
+                  : shows.length === 0
+                    ? "No shows found"
+                    : "Select show"
+              }
+              className="min-w-0 max-w-full bg-background"
+              options={shows.map((show) => ({
+                value: show.id,
+                label: show.label,
+              }))}
+            />
             {showsError ? (
               <p className="text-xs text-destructive">{showsError}</p>
             ) : null}

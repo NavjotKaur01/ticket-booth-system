@@ -9,6 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { formatDateForDisplay } from "@/lib/date-display-format"
 import { cn } from "@/lib/utils"
 
 function getStartOfDay(date: Date) {
@@ -26,25 +27,12 @@ function parseDateValue(value: string) {
   return parsed.isValid() ? parsed.toDate() : null
 }
 
-function formatShowDate(dateValue: string) {
-  const date = parseDateValue(dateValue)
-  if (!date) {
-    return dateValue
-  }
-
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  })
-}
-
 type ShowDateFieldProps = {
   showDate: string
   onShowDateChange: (value: string) => void
   className?: string
   disabled?: boolean
+  displayFormat?: string
 }
 
 export function ShowDateField({
@@ -52,6 +40,7 @@ export function ShowDateField({
   onShowDateChange,
   className,
   disabled = false,
+  displayFormat,
 }: ShowDateFieldProps) {
   const selectedDate = parseDateValue(showDate)
   const [isOpen, setIsOpen] = useState(false)
@@ -86,7 +75,7 @@ export function ShowDateField({
         )}
       >
         <span className="text-sm leading-none text-muted-foreground">
-          {formatShowDate(showDate)}
+          {formatDateForDisplay(showDate, showDate, displayFormat)}
         </span>
         <CalendarIcon className="size-4 shrink-0 text-muted-foreground/80" />
       </div>
@@ -105,7 +94,7 @@ export function ShowDateField({
           )}
         >
           <span className="text-sm leading-none text-foreground">
-            {formatShowDate(showDate)}
+            {formatDateForDisplay(showDate, showDate, displayFormat)}
           </span>
           <CalendarIcon className="size-4 shrink-0 text-muted-foreground" />
         </Button>

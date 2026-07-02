@@ -163,12 +163,14 @@ export function IconActionButton({
   icon: Icon,
   variant = "outline",
   type = "button",
+  tabIndex,
   onClick,
 }: {
   label: string
   icon: LucideIcon
   variant?: "outline" | "default" | "secondary" | "ghost"
   type?: "button" | "submit"
+  tabIndex?: number
   onClick?: () => void
 }) {
   return (
@@ -179,6 +181,7 @@ export function IconActionButton({
           variant={variant}
           size="icon-sm"
           aria-label={label}
+          tabIndex={tabIndex}
           onClick={onClick}
         >
           <Icon className="size-4" />

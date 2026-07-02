@@ -27,7 +27,10 @@ import type { CalendarEvent } from "@/data/calendarEvents"
 import { AddCustomerDialog } from "@/features/customers/add-customer-dialog"
 import { ComicInfoDialog } from "@/features/reservations/comic-info-dialog"
 import { useAppSession } from "@/hooks/use-app-session"
-import type { CustomerFormValues } from "@/types/customer-form"
+import {
+  EMPTY_CUSTOMER_FORM,
+  type CustomerFormValues,
+} from "@/types/customer-form"
 
 import {
   calculateAddReservationTotals,
@@ -228,6 +231,15 @@ export default function AddReservationDialog({
   const headerTitle = dialogData
     ? `Add Reservation :- ${dialogData.performer}    ${dialogData.headerDateLabel}`
     : "Add Reservation"
+  const addCustomerInitialValues: CustomerFormValues | null = formValues
+    ? {
+        ...EMPTY_CUSTOMER_FORM,
+        lastName: formValues.customer.lastName,
+        firstName: formValues.customer.firstName,
+        email: formValues.customer.email,
+        phone: { ...EMPTY_CUSTOMER_FORM.phone, ...formValues.customer.phone },
+      }
+    : null
 
   return (
     <>
@@ -467,6 +479,7 @@ export default function AddReservationDialog({
                         size="icon-sm"
                         className="size-8 shrink-0 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
                         aria-label="Customer profile"
+                        onClick={() => setIsAddCustomerOpen(true)}
                       >
                         <ContactRound className="size-4" />
                       </Button>
@@ -555,6 +568,7 @@ export default function AddReservationDialog({
         connectionName={connectionName}
         locationId={locationId}
         lastUpdateId={username}
+        initialValues={addCustomerInitialValues}
         onSaved={applySavedCustomer}
       />
     </>

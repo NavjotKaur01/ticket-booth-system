@@ -1,4 +1,5 @@
 import { FormField } from '@/components/forms/form-fields'
+import { ScrollSelectControl } from '@/components/common/scroll-select-control'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -90,23 +91,18 @@ function PaymentTypeField ({
 }) {
   return (
     <FormField label='Payment Type' htmlFor='payment-type' className='min-w-0'>
-      <Select
+      <ScrollSelectControl
+        id='payment-type'
         value={paymentType}
-        onValueChange={value =>
+        onChange={value =>
           onPaymentTypeChange(value as ReservationPaymentType)
         }
-      >
-        <SelectTrigger id='payment-type' className={COMPACT_INPUT}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {RESERVATION_PAYMENT_TYPES.map(option => (
-            <SelectItem key={option.id} value={option.id}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        className={COMPACT_INPUT}
+        options={RESERVATION_PAYMENT_TYPES.map(option => ({
+          value: option.id,
+          label: option.label,
+        }))}
+      />
     </FormField>
   )
 }

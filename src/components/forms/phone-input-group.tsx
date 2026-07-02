@@ -90,7 +90,6 @@ export function PhoneInputGroup({
         id={`${idPrefix}-area`}
         inputMode="numeric"
         maxLength={PHONE_SEGMENT_LENGTHS.area}
-        placeholder="918"
         value={value.area}
         onChange={(event) => handleSegmentChange("area", event.target.value)}
         onKeyDown={(event) => handleKeyDown("area", event)}

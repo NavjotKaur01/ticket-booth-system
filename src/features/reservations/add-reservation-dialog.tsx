@@ -6,7 +6,7 @@
   X,
   type LucideIcon
 } from 'lucide-react'
-import type { FocusEvent, RefObject } from 'react'
+import type { FocusEvent, KeyboardEvent, MutableRefObject, RefObject } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RowSelectionState } from '@tanstack/react-table'
 
@@ -169,6 +169,8 @@ function SectionPicker ({
   onSectionChange,
   partyBySection,
   onPartyChange,
+  partyInputRefs,
+  onPartyInputKeyDown,
   partyError,
   promo,
   onPromoChange,
@@ -183,6 +185,11 @@ function SectionPicker ({
   onSectionChange: (value: string) => void
   partyBySection: Record<string, number>
   onPartyChange: (sectionId: string, value: number) => void
+  partyInputRefs: MutableRefObject<Record<string, HTMLInputElement | null>>
+  onPartyInputKeyDown: (
+    event: KeyboardEvent<HTMLInputElement>,
+    sectionId: string
+  ) => void
   partyError?: string | null
   promo: string
   onPromoChange: (value: string) => void
@@ -211,14 +218,23 @@ function SectionPicker ({
     )
   }
 
+  function focusPartyInput (sectionId: string) {
+    requestAnimationFrame(() => {
+      const input = partyInputRefs.current[sectionId]
+      input?.focus({ preventScroll: true })
+      input?.select()
+    })
+  }
+
+  function handleSectionValueChange (value: string) {
+    onSectionChange(value)
+    focusPartyInput(value)
+  }
+
   return (
     <div>
       <span className={INLINE_LABEL}>Section</span>
-      <RadioGroup
-        value={section}
-        onValueChange={onSectionChange}
-        className='gap-0'
-      >
+      <RadioGroup value={section} onValueChange={handleSectionValueChange} className='gap-0'>
         <div className='overflow-x-auto rounded-lg border border-border/60 divide-y divide-border/50'>
           {sections.map(option => (
             <div
@@ -242,13 +258,20 @@ function SectionPicker ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Input
+                    ref={element => {
+                      partyInputRefs.current[option.id] = element
+                    }}
                     type='number'
                     min={0}
                     value={partyBySection[option.id] ?? 0}
                     onChange={event =>
                       onPartyChange(option.id, Number(event.target.value) || 0)
                     }
-                    onFocus={selectNumericInput}
+                    onFocus={event => {
+                      onSectionChange(option.id)
+                      selectNumericInput(event)
+                    }}
+                    onKeyDown={event => onPartyInputKeyDown(event, option.id)}
                     onClick={event => {
                       event.stopPropagation()
                       event.currentTarget.select()
@@ -442,7 +465,11 @@ function InlineRadioGroup ({
           title={option.title}
           className='flex cursor-pointer items-center gap-2.5 text-sm whitespace-nowrap'
         >
-          <RadioGroupItem value={option.id} id={`${name}-${option.id}`} />
+          <RadioGroupItem
+            value={option.id}
+            id={`${name}-${option.id}`}
+            tabIndex={-1}
+          />
           <span className='text-foreground'>{option.label}</span>
         </label>
       ))}
@@ -463,6 +490,7 @@ function OriginSegmentedControl ({
         <button
           key={option.id}
           type='button'
+          tabIndex={-1}
           onClick={() => onChange(option.id)}
           className={cn(
             'px-3 py-1 transition-colors',
@@ -483,6 +511,8 @@ function BookingOptionsBar ({
   shows,
   showTime,
   onShowTimeChange,
+  showTimeButtonRef,
+  onShowTimeKeyDown,
   dinner,
   onDinnerChange,
   showsLoading
@@ -490,6 +520,11 @@ function BookingOptionsBar ({
   shows: typeof showOptions
   showTime: string
   onShowTimeChange: (value: string) => void
+  showTimeButtonRef: RefObject<HTMLButtonElement | null>
+  onShowTimeKeyDown: (
+    event: KeyboardEvent<HTMLButtonElement>,
+    show: (typeof showOptions)[number]
+  ) => void
   dinner: boolean
   onDinnerChange: (value: boolean) => void
   showsLoading: boolean
@@ -505,6 +540,8 @@ function BookingOptionsBar ({
             shows={shows}
             showTime={showTime}
             onShowTimeChange={onShowTimeChange}
+            selectedButtonRef={showTimeButtonRef}
+            onShowTimeKeyDown={onShowTimeKeyDown}
           />
         ) : (
           <span className='text-xs text-muted-foreground'>
@@ -515,6 +552,7 @@ function BookingOptionsBar ({
         <label className='flex shrink-0 cursor-pointer items-center gap-2 text-sm whitespace-nowrap'>
           <Checkbox
             id='dinner'
+            tabIndex={-1}
             checked={dinner}
             onCheckedChange={checked => onDinnerChange(Boolean(checked))}
           />
@@ -562,14 +600,22 @@ function CustomerSearchHeader ({
           label='Search'
           icon={Search}
           variant='default'
+          tabIndex={-1}
           onClick={onSearch}
         />
         <IconActionButton
           label={isBusiness ? 'Add Business' : 'Add Customer'}
           icon={UserPlus}
+          tabIndex={-1}
           onClick={isBusiness ? undefined : onAddCustomer}
         />
-        <IconActionButton label='Clear' icon={X} variant='outline' onClick={onClear} />
+        <IconActionButton
+          label='Clear'
+          icon={X}
+          variant='outline'
+          tabIndex={-1}
+          onClick={onClear}
+        />
       </div>
     </div>
   )
@@ -579,12 +625,14 @@ function CustomerSearchFields ({
   searchType,
   criteria,
   onCriteriaChange,
-  onFieldBlur
+  onFieldBlur,
+  lastNameInputRef
 }: {
   searchType: 'customer' | 'business'
   criteria: CustomerSearchCriteria
   onCriteriaChange: (criteria: CustomerSearchCriteria) => void
   onFieldBlur: () => void
+  lastNameInputRef?: RefObject<HTMLInputElement | null>
 }) {
   const inputClass = cn('w-full', COMPACT_INPUT)
 
@@ -610,6 +658,7 @@ function CustomerSearchFields ({
           placeholder='Last Name'
           value={criteria.lastName}
           onChange={event => updateField('lastName', event.target.value)}
+          ref={lastNameInputRef}
           {...fieldProps}
         />
         <Input
@@ -635,6 +684,7 @@ function CustomerSearchFields ({
         placeholder='Last Name'
         value={criteria.lastName}
         onChange={event => updateField('lastName', event.target.value)}
+        ref={lastNameInputRef}
         {...fieldProps}
       />
       <Input
@@ -677,6 +727,7 @@ function MetaIconButton ({
           type='button'
           size='icon-sm'
           variant='ghost'
+          tabIndex={-1}
           className='size-8 shrink-0 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary'
           aria-label={label}
           onClick={onClick}
@@ -696,6 +747,8 @@ function ShowMetaRow ({
   shows,
   showTime,
   onShowTimeChange,
+  showTimeButtonRef,
+  onShowTimeKeyDown,
   origin,
   onOriginChange,
   onOpenComicInfo,
@@ -711,6 +764,11 @@ function ShowMetaRow ({
   shows: typeof showOptions
   showTime: string
   onShowTimeChange: (value: string) => void
+  showTimeButtonRef: RefObject<HTMLButtonElement | null>
+  onShowTimeKeyDown: (
+    event: KeyboardEvent<HTMLButtonElement>,
+    show: (typeof showOptions)[number]
+  ) => void
   origin: string
   onOriginChange: (value: string) => void
   onOpenComicInfo: () => void
@@ -765,6 +823,8 @@ function ShowMetaRow ({
         shows={shows}
         showTime={showTime}
         onShowTimeChange={onShowTimeChange}
+        showTimeButtonRef={showTimeButtonRef}
+        onShowTimeKeyDown={onShowTimeKeyDown}
         dinner={dinner}
         onDinnerChange={onDinnerChange}
         showsLoading={showsLoading}
@@ -782,6 +842,10 @@ export function AddReservationDialog ({
     useAppSession()
   const dateInputRef = useRef<HTMLInputElement>(null)
   const notesInputRef = useRef<HTMLTextAreaElement>(null)
+  const selectedShowTimeButtonRef = useRef<HTMLButtonElement>(null)
+  const partyInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const lastNameInputRef = useRef<HTMLInputElement>(null)
+  const pendingPartyFocusRef = useRef(false)
   const sectionsInitializedForShowRef = useRef('')
   const bookingFormCacheRef = useRef<
     Map<
@@ -924,6 +988,15 @@ export function AddReservationDialog ({
   }, [open, activeShowTime, availableSections, sectionsLoading])
 
   useEffect(() => {
+    if (!pendingPartyFocusRef.current || sectionsLoading || !section) {
+      return
+    }
+
+    pendingPartyFocusRef.current = false
+    focusSelectedPartyInput(section)
+  }, [section, sectionsLoading])
+
+  useEffect(() => {
     if (!open || showsLoading) {
       return
     }
@@ -1015,6 +1088,64 @@ export function AddReservationDialog ({
   const canAddNewCustomer =
     searchType === 'customer' &&
     hasCompleteNewCustomerCriteria(searchCriteria)
+
+  function focusSelectedPartyInput (sectionId = section) {
+    const targetSectionId =
+      sectionId || availableSections[0]?.id || selectedSection?.id || ''
+
+    if (!targetSectionId) {
+      return
+    }
+
+    requestAnimationFrame(() => {
+      const input = partyInputRefs.current[targetSectionId]
+      input?.focus({ preventScroll: true })
+      input?.select()
+    })
+  }
+
+  function focusLastNameInput () {
+    requestAnimationFrame(() => {
+      lastNameInputRef.current?.focus({ preventScroll: true })
+      lastNameInputRef.current?.select()
+    })
+  }
+
+  function handleShowTimeKeyDown (
+    event: KeyboardEvent<HTMLButtonElement>,
+    show: (typeof showOptions)[number]
+  ) {
+    if (event.key !== 'Tab' || event.shiftKey) {
+      return
+    }
+
+    const lastShowId = availableShows[availableShows.length - 1]?.id
+    if (show.id !== lastShowId) {
+      return
+    }
+
+    event.preventDefault()
+    focusSelectedPartyInput()
+  }
+
+  function handlePartyInputKeyDown (
+    event: KeyboardEvent<HTMLInputElement>,
+    sectionId: string
+  ) {
+    if (event.key !== 'Tab') {
+      return
+    }
+
+    event.preventDefault()
+
+    if (event.shiftKey) {
+      selectedShowTimeButtonRef.current?.focus({ preventScroll: true })
+      return
+    }
+
+    setSection(sectionId)
+    focusLastNameInput()
+  }
 
   function openAddCustomerDialog (initialValues: CustomerFormValues | null = null) {
     setAddCustomerInitialValues(initialValues)
@@ -1316,11 +1447,13 @@ export function AddReservationDialog ({
 
   function handleShowTimeChange (value: string) {
     if (value === activeShowTime) {
+      focusSelectedPartyInput()
       return
     }
 
     persistCurrentBookingForm(activeShowTime)
     handleReservationInputChange()
+    pendingPartyFocusRef.current = true
     setShowTime(value)
   }
 
@@ -1457,6 +1590,12 @@ export function AddReservationDialog ({
             disableOutsideDismiss
             showCloseButton={false}
             className='flex max-h-[82vh] w-[min(calc(100vw-2rem),84rem)] max-w-[84rem] flex-col overflow-hidden sm:max-w-[84rem]'
+            onOpenAutoFocus={event => {
+              event.preventDefault()
+              requestAnimationFrame(() => {
+                selectedShowTimeButtonRef.current?.focus({ preventScroll: true })
+              })
+            }}
           >
             <DialogHeader className='shrink-0 flex-row items-center justify-between gap-4 border-b px-4 py-3'>
               <DialogTitle className='text-base font-semibold text-foreground'>
@@ -1481,6 +1620,8 @@ export function AddReservationDialog ({
                       shows={availableShows}
                       showTime={activeShowTime}
                       onShowTimeChange={handleShowTimeChange}
+                      showTimeButtonRef={selectedShowTimeButtonRef}
+                      onShowTimeKeyDown={handleShowTimeKeyDown}
                       origin={origin}
                       onOriginChange={id => {
                         handleReservationInputChange()
@@ -1504,6 +1645,8 @@ export function AddReservationDialog ({
                       }}
                       partyBySection={partyBySection}
                       onPartyChange={setSectionParty}
+                      partyInputRefs={partyInputRefs}
+                      onPartyInputKeyDown={handlePartyInputKeyDown}
                       partyError={partyValidationError}
                       promo={effectivePromo}
                       onPromoChange={value => {
@@ -1544,7 +1687,11 @@ export function AddReservationDialog ({
                           }
                           onSearch={handleCustomerSearch}
                           onClear={clearCustomerSearch}
-                          onAddCustomer={() => openAddCustomerDialog()}
+                          onAddCustomer={() =>
+                            openAddCustomerDialog(
+                              mapReservationSearchCriteriaToCustomerForm(searchCriteria)
+                            )
+                          }
                         />
                       </div>
 
@@ -1554,6 +1701,7 @@ export function AddReservationDialog ({
                           criteria={searchCriteria}
                           onCriteriaChange={setSearchCriteria}
                           onFieldBlur={handleCustomerSearch}
+                          lastNameInputRef={lastNameInputRef}
                         />
                       </div>
 
@@ -1587,6 +1735,7 @@ export function AddReservationDialog ({
                             type='button'
                             variant='link'
                             size='sm'
+                            tabIndex={-1}
                             className='h-auto px-0 pt-0 text-sm font-normal underline'
                             onClick={() => setSpecialNotesOpen(current => !current)}
                             aria-expanded={specialNotesOpen}
