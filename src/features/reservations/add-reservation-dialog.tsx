@@ -1161,13 +1161,19 @@ export function AddReservationDialog ({
   ])
 
   useEffect(() => {
-    if (!pendingPartyFocusRef.current || sectionsLoading || !section) {
+    if (
+      !open ||
+      !pendingPartyFocusRef.current ||
+      sectionsLoading ||
+      !section ||
+      availableSections.length === 0
+    ) {
       return
     }
 
     pendingPartyFocusRef.current = false
     focusSelectedPartyInput(section)
-  }, [section, sectionsLoading])
+  }, [open, section, sectionsLoading, availableSections.length])
 
   useEffect(() => {
     if (!open || showsLoading) {
@@ -1188,24 +1194,6 @@ export function AddReservationDialog ({
       setShowTime(availableShows[0].id)
     }
   }, [availableShows, initialShowTime, isEditMode, open, showTime, showsLoading])
-
-  useEffect(() => {
-    if (!open || showsLoading || !activeShowTime) {
-      return
-    }
-
-    const frame = requestAnimationFrame(() => {
-      const content = dialogContentRef.current
-
-      // Show buttons mount after the API request. Focus the selected one only
-      // when the user has not already started interacting with the dialog.
-      if (content && !content.contains(document.activeElement)) {
-        selectedShowTimeButtonRef.current?.focus({ preventScroll: true })
-      }
-    })
-
-    return () => cancelAnimationFrame(frame)
-  }, [activeShowTime, open, showsLoading])
 
   const { selectedSection, partySize } =
     useMemo(
@@ -1823,6 +1811,8 @@ export function AddReservationDialog ({
       return
     }
 
+    pendingPartyFocusRef.current = true
+
     if (!reservation) {
       setShowDate(todayDateValue())
     }
@@ -1902,9 +1892,6 @@ export function AddReservationDialog ({
             className='flex max-h-[82vh] w-[min(calc(100vw-2rem),84rem)] max-w-[84rem] flex-col overflow-hidden sm:max-w-[84rem]'
             onOpenAutoFocus={event => {
               event.preventDefault()
-              requestAnimationFrame(() => {
-                selectedShowTimeButtonRef.current?.focus({ preventScroll: true })
-              })
             }}
           >
             <DialogHeader className='shrink-0 flex-row items-center justify-between gap-4 border-b px-4 py-3'>
