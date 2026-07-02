@@ -8,8 +8,8 @@ import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import "react-day-picker/style.css"
 
-const DEFAULT_CALENDAR_YEAR_SPAN_PAST = 20
-const DEFAULT_CALENDAR_YEAR_SPAN_FUTURE = 15
+const DEFAULT_CALENDAR_YEAR_SPAN_PAST = 125
+const DEFAULT_CALENDAR_YEAR_SPAN_FUTURE = 25
 
 export function getDefaultCalendarStartMonth() {
   const currentYear = new Date().getFullYear()

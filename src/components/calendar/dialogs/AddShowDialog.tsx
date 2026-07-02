@@ -64,6 +64,15 @@ const emptyFormValues: AddShowFormValues = {
   preSalePrivateShow: false,
   selectedShowTimeIds: [],
 }
+
+type AddShowValidationErrors = Partial<
+  Record<
+    | "headlinerId"
+    | "selectedShowTimeIds",
+    string
+  >
+>
+
 type ShowDetailCheckboxField =
   | "dinner"
   | "noPasses"
@@ -114,6 +123,37 @@ function resolveInitialHeadlinerId(
   return nameMatch?.id ?? ""
 }
 
+function getAddShowValidationErrors(
+  formValues: AddShowFormValues
+): AddShowValidationErrors {
+  const errors: AddShowValidationErrors = {}
+
+  if (!formValues.headlinerId) {
+    errors.headlinerId = "Headliner is required."
+  }
+
+  if (formValues.selectedShowTimeIds.length === 0) {
+    errors.selectedShowTimeIds = "Select at least one show time."
+  }
+
+  return errors
+}
+
+function normalizeMinimumNumberValue(value: string, minimum: number) {
+  const parsed = Number.parseFloat(value)
+  return Number.isFinite(parsed) && parsed >= minimum ? String(parsed) : String(minimum)
+}
+
+function normalizeFeeValues(formValues: AddShowFormValues): AddShowFormValues {
+  return {
+    ...formValues,
+    dayOfShowFee: normalizeMinimumNumberValue(formValues.dayOfShowFee, 1),
+    phoneFee: normalizeMinimumNumberValue(formValues.phoneFee, 0),
+    walkupFee: normalizeMinimumNumberValue(formValues.walkupFee, 0),
+    webFee: normalizeMinimumNumberValue(formValues.webFee, 0),
+  }
+}
+
 type AddShowDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -138,28 +178,41 @@ function PerformerSelect({
   value,
   performers,
   onValueChange,
+  error,
 }: {
   id: string
   label: string
   value: string
   performers: PerformerOption[]
   onValueChange: (value: string) => void
+  error?: string
 }) {
   return (
-    <div className="grid gap-1.5 sm:grid-cols-[7rem_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-2">
+    <div className="grid gap-1.5 sm:grid-cols-[7rem_minmax(0,1fr)_auto_auto] sm:items-start sm:gap-2">
       <Label htmlFor={id} className="text-sm">
         {label}
       </Label>
-      <CalendarSelectControl
-        id={id}
-        value={value}
-        onChange={onValueChange}
-        placeholder="Select"
-        options={performers.map((performer) => ({
-          value: performer.id,
-          label: performer.name,
-        }))}
-      />
+      <div className="min-w-0">
+        <CalendarSelectControl
+          id={id}
+          value={value}
+          onChange={onValueChange}
+          placeholder="Select"
+          className={cn(error && "border-destructive ring-2 ring-destructive/20")}
+          options={performers.map((performer) => ({
+            value: performer.id,
+            label: performer.name,
+          }))}
+        />
+        <p
+          className={cn(
+            "mt-0.5 min-h-4 text-xs leading-tight",
+            error ? "text-destructive" : "text-transparent"
+          )}
+        >
+          {error ?? "No error"}
+        </p>
+      </div>
       <Button type="button" size="icon" className="hidden sm:inline-flex" aria-label={`Add ${label}`}>
         <PlusCircle className="size-4" />
       </Button>
@@ -175,23 +228,32 @@ function FeeInput({
   label,
   value,
   onChange,
+  minimum,
 }: {
   id: string
   label: string
   value: string
   onChange: (value: string) => void
+  minimum: number
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <Label htmlFor={id} className="shrink-0">
+    <div className="grid gap-1.5 sm:grid-cols-[auto_6rem] sm:items-start sm:gap-2">
+      <Label htmlFor={id} className="shrink-0 pt-2">
         {label}
       </Label>
-      <Input
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-9 w-24"
-      />
+      <div className="relative pb-4 sm:pb-0">
+        <Input
+          id={id}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={(event) =>
+            onChange(normalizeMinimumNumberValue(event.target.value, minimum))
+          }
+          onFocus={(event) => event.currentTarget.select()}
+          onClick={(event) => event.currentTarget.select()}
+          className="h-9 w-full sm:w-24"
+        />
+      </div>
     </div>
   )
 }
@@ -266,13 +328,20 @@ function ShowTimesTable({
   showTimes,
   selectedShowTimeIds,
   onToggleShowTime,
+  error,
 }: {
   showTimes: ShowTimeOption[]
   selectedShowTimeIds: string[]
   onToggleShowTime: (showTimeId: string) => void
+  error?: string
 }) {
   return (
-    <div className="max-h-[min(14rem,40vh)] overflow-auto border sm:max-h-64">
+    <div
+      className={cn(
+        "max-h-[min(14rem,40vh)] overflow-auto border sm:max-h-64",
+        error && "border-destructive ring-2 ring-destructive/20"
+      )}
+    >
       <Table className="min-w-[52rem] border-collapse">
         <TableHeader className="sticky top-0 z-10 bg-muted text-muted-foreground">
           <TableRow>
@@ -344,6 +413,7 @@ export default function AddShowDialog({
   const [isShowDetailsVisible, setIsShowDetailsVisible] = useState(false)
   const [isVerifyOpen, setIsVerifyOpen] = useState(false)
   const [verifyRows, setVerifyRows] = useState<ApiDefaultShowSection[]>([])
+  const [hasSubmitted, setHasSubmitted] = useState(false)
 
   useEffect(() => {
     if (!open || !recurrence || !connectionString || !locationId) {
@@ -356,6 +426,7 @@ export default function AddShowDialog({
     setErrorMessage(null)
     setIsVerifyOpen(false)
     setVerifyRows([])
+    setHasSubmitted(false)
 
     fetchAddShowDialogData({
       connectionString,
@@ -402,14 +473,23 @@ export default function AddShowDialog({
     [formValues.selectedShowTimeIds.length]
   )
 
+  const validationErrors = useMemo(
+    () => getAddShowValidationErrors(formValues),
+    [formValues]
+  )
+
+  const visibleValidationErrors = hasSubmitted ? validationErrors : {}
+
   function updateField<K extends keyof AddShowFormValues>(
     field: K,
     value: AddShowFormValues[K]
   ) {
+    setErrorMessage(null)
     setFormValues((current) => ({ ...current, [field]: value }))
   }
 
   function toggleShowTime(showTimeId: string) {
+    setErrorMessage(null)
     setFormValues((current) => ({
       ...current,
       selectedShowTimeIds: current.selectedShowTimeIds.includes(showTimeId)
@@ -424,11 +504,24 @@ export default function AddShowDialog({
       return
     }
 
+    setHasSubmitted(true)
+    const normalizedFormValues = normalizeFeeValues(formValues)
+    if (normalizedFormValues !== formValues) {
+      setFormValues(normalizedFormValues)
+    }
+
     const filteredRows = buildSaveShowFilterList(
       dialogData.sectionRows,
-      formValues.selectedShowTimeIds
+      normalizedFormValues.selectedShowTimeIds
     )
-    const validationError = validateAddShowForm(formValues, filteredRows)
+    const currentValidationErrors = getAddShowValidationErrors(normalizedFormValues)
+    const firstFieldError = Object.values(currentValidationErrors).find(Boolean)
+    if (firstFieldError) {
+      setErrorMessage(null)
+      return
+    }
+
+    const validationError = validateAddShowForm(normalizedFormValues, filteredRows)
 
     if (validationError) {
       setErrorMessage(validationError)
@@ -437,6 +530,7 @@ export default function AddShowDialog({
 
     setErrorMessage(null)
     setVerifyRows(filteredRows.map((row) => ({ ...row })))
+    setFormValues(normalizedFormValues)
     setIsVerifyOpen(true)
   }
 
@@ -515,7 +609,7 @@ export default function AddShowDialog({
       <DialogContent
         disableOutsideDismiss
         className={cn(
-          "fixed top-[max(0.5rem,env(safe-area-inset-top))] right-auto bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[50%] flex max-h-none w-fit max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-0 flex-col overflow-hidden p-0 sm:top-[50%] sm:bottom-auto sm:max-h-[min(90dvh,48rem)] sm:max-w-6xl sm:translate-y-[-50%]"
+          "fixed top-[max(0.5rem,env(safe-area-inset-top))] right-auto bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[50%] flex max-h-none w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] translate-x-[-50%] translate-y-0 flex-col overflow-hidden p-0 sm:top-[50%] sm:bottom-auto sm:max-h-[min(90dvh,48rem)] sm:w-[calc(100vw-2rem)] sm:max-w-6xl sm:translate-y-[-50%]"
         )}
       >
         <DialogHeader className="shrink-0 border-b px-4 py-3 pr-12 sm:px-5 sm:py-4">
@@ -547,14 +641,15 @@ export default function AddShowDialog({
             <AddShowDialogSkeleton />
           ) : (
             <>
-              <div className="grid gap-4 lg:grid-cols-2 lg:gap-x-10 lg:gap-y-3">
-                <div className="space-y-3">
+              <div className="grid gap-2 pt-3 lg:grid-cols-2 lg:gap-x-10 lg:gap-y-2">
+                <div className="space-y-1">
                   <PerformerSelect
                     id="show-headliner"
                     label="Headliner"
                     value={formValues.headlinerId}
                     performers={performers}
                     onValueChange={(value) => updateField("headlinerId", value)}
+                    error={visibleValidationErrors.headlinerId}
                   />
                   <PerformerSelect
                     id="show-feature"
@@ -572,7 +667,7 @@ export default function AddShowDialog({
                   />
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-1">
                   <PerformerSelect
                     id="show-headliner-2"
                     label="Headliner2"
@@ -602,7 +697,7 @@ export default function AddShowDialog({
               {!isShowDetailsVisible ? (
                 <div>
                   <Button type="button" onClick={() => setIsShowDetailsVisible(true)}>
-                    Show Details
+                    Show Default
                   </Button>
                 </div>
               ) : (
@@ -645,60 +740,81 @@ export default function AddShowDialog({
               )}
               <fieldset className="rounded-md border p-3 sm:p-4">
                 <legend className="px-2 text-sm font-medium">Fees or Recurrence</legend>
-                <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-3">
-                  <FeeInput
-                    id="day-of-show-fee"
-                    label="Day Of Show:"
-                    value={formValues.dayOfShowFee}
-                    onChange={(value) => updateField("dayOfShowFee", value)}
-                  />
-                  <FeeInput
-                    id="phone-fee"
-                    label="Phone:"
-                    value={formValues.phoneFee}
-                    onChange={(value) => updateField("phoneFee", value)}
-                  />
-                  <FeeInput
-                    id="walkup-fee"
-                    label="Walkup:"
-                    value={formValues.walkupFee}
-                    onChange={(value) => updateField("walkupFee", value)}
-                  />
-                  <FeeInput
-                    id="web-fee"
-                    label="Web:"
-                    value={formValues.webFee}
-                    onChange={(value) => updateField("webFee", value)}
-                  />
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="use-section-fee"
-                      checked={formValues.useSectionFee}
-                      onCheckedChange={(checked) => updateField("useSectionFee", Boolean(checked))}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:flex sm:flex-wrap sm:items-start sm:gap-x-5">
+                    <FeeInput
+                      id="day-of-show-fee"
+                      label="Day Of Show:"
+                      value={formValues.dayOfShowFee}
+                      onChange={(value) => updateField("dayOfShowFee", value)}
+                      minimum={1}
                     />
-                    <Label htmlFor="use-section-fee">Use Section Fee</Label>
+                    <FeeInput
+                      id="phone-fee"
+                      label="Phone:"
+                      value={formValues.phoneFee}
+                      onChange={(value) => updateField("phoneFee", value)}
+                      minimum={0}
+                    />
+                    <FeeInput
+                      id="walkup-fee"
+                      label="Walkup:"
+                      value={formValues.walkupFee}
+                      onChange={(value) => updateField("walkupFee", value)}
+                      minimum={0}
+                    />
+                    <FeeInput
+                      id="web-fee"
+                      label="Web:"
+                      value={formValues.webFee}
+                      onChange={(value) => updateField("webFee", value)}
+                      minimum={0}
+                    />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="pre-sale-private-show"
-                      checked={formValues.preSalePrivateShow}
-                      onCheckedChange={(checked) => updateField("preSalePrivateShow", Boolean(checked))}
-                    />
-                    <Label htmlFor="pre-sale-private-show">Pre-sale Private Show</Label>
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="use-section-fee"
+                        checked={formValues.useSectionFee}
+                        onCheckedChange={(checked) => updateField("useSectionFee", Boolean(checked))}
+                      />
+                      <Label htmlFor="use-section-fee">Use Section Fee</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="pre-sale-private-show"
+                        checked={formValues.preSalePrivateShow}
+                        onCheckedChange={(checked) => updateField("preSalePrivateShow", Boolean(checked))}
+                      />
+                      <Label htmlFor="pre-sale-private-show">Pre-sale Private Show</Label>
+                    </div>
                   </div>
                 </div>
               </fieldset>
 
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm text-muted-foreground">
+                <p
+                  className={cn(
+                    "text-sm",
+                    visibleValidationErrors.selectedShowTimeIds
+                      ? "text-destructive"
+                      : "text-muted-foreground"
+                  )}
+                >
                   {selectedCount} show time{selectedCount === 1 ? "" : "s"} selected
                 </p>
               </div>
+              {visibleValidationErrors.selectedShowTimeIds ? (
+                <p className="text-sm text-destructive">
+                  {visibleValidationErrors.selectedShowTimeIds}
+                </p>
+              ) : null}
 
               <ShowTimesTable
                 showTimes={showTimes}
                 selectedShowTimeIds={formValues.selectedShowTimeIds}
                 onToggleShowTime={toggleShowTime}
+                error={visibleValidationErrors.selectedShowTimeIds}
               />
             </>
           )}
