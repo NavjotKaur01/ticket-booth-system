@@ -645,12 +645,14 @@ function CustomerSearchFields ({
   searchType,
   criteria,
   onCriteriaChange,
+  onFieldBlur,
   onFieldEnter,
   lastNameInputRef
 }: {
   searchType: 'customer' | 'business'
   criteria: CustomerSearchCriteria
   onCriteriaChange: (criteria: CustomerSearchCriteria) => void
+  onFieldBlur: () => void
   onFieldEnter: () => void
   lastNameInputRef?: RefObject<HTMLInputElement | null>
 }) {
@@ -661,6 +663,7 @@ function CustomerSearchFields ({
   }
 
   const fieldProps = {
+    onBlur: onFieldBlur,
     onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => {
       if (event.key === 'Enter') {
         event.preventDefault()
@@ -2000,6 +2003,7 @@ export function AddReservationDialog ({
                           searchType={searchType}
                           criteria={searchCriteria}
                           onCriteriaChange={setSearchCriteria}
+                          onFieldBlur={handleCustomerSearch}
                           onFieldEnter={handleCustomerSearch}
                           lastNameInputRef={lastNameInputRef}
                         />
