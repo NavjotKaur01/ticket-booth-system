@@ -553,9 +553,7 @@ function BookingOptionsBar ({
     <div className='min-w-0'>
       <span className={INLINE_LABEL}>Show / Time</span>
       <div className='flex min-w-0 items-center gap-2 overflow-hidden'>
-        {showsLoading ? (
-          <span className='text-xs text-muted-foreground'>Loading shows...</span>
-        ) : shows.length > 0 ? (
+        {shows.length > 0 ? (
           <ShowTimePicker
             shows={shows}
             showTime={showTime}
@@ -563,6 +561,8 @@ function BookingOptionsBar ({
             selectedButtonRef={showTimeButtonRef}
             onShowTimeKeyDown={onShowTimeKeyDown}
           />
+        ) : showsLoading ? (
+          <span className='text-xs text-muted-foreground'>Loading shows...</span>
         ) : (
           <span className='text-xs text-muted-foreground'>
             No shows for this date
@@ -869,6 +869,7 @@ export function AddReservationDialog ({
   const isEditMode = Boolean(reservation)
   const { connectionName, locationId, locationName, username, userRight, isReady } =
     useAppSession()
+  const dialogContentRef = useRef<HTMLDivElement>(null)
   const dateInputRef = useRef<HTMLInputElement>(null)
   const notesInputRef = useRef<HTMLTextAreaElement>(null)
   const selectedShowTimeButtonRef = useRef<HTMLButtonElement>(null)
@@ -901,7 +902,7 @@ export function AddReservationDialog ({
   const [notes, setNotes] = useState('')
   const [dinner, setDinner] = useState(false)
   const [showDate, setShowDate] = useState(todayDateValue)
-  const [showTime, setShowTime] = useState(showOptions[0]?.id ?? '')
+  const [showTime, setShowTime] = useState(initialShowTime ?? '')
   const [section, setSection] = useState('')
   const [partyBySection, setPartyBySection] = useState<Record<string, number>>(
     {}
@@ -967,7 +968,7 @@ export function AddReservationDialog ({
     open && isReady
   )
 
-  const availableShows = apiShows.length > 0 ? apiShows : showOptions
+  const availableShows = apiShows
 
   const activeShowTime =
     availableShows.find(show => show.id === showTime)?.id ??
@@ -1187,6 +1188,24 @@ export function AddReservationDialog ({
       setShowTime(availableShows[0].id)
     }
   }, [availableShows, initialShowTime, isEditMode, open, showTime, showsLoading])
+
+  useEffect(() => {
+    if (!open || showsLoading || !activeShowTime) {
+      return
+    }
+
+    const frame = requestAnimationFrame(() => {
+      const content = dialogContentRef.current
+
+      // Show buttons mount after the API request. Focus the selected one only
+      // when the user has not already started interacting with the dialog.
+      if (content && !content.contains(document.activeElement)) {
+        selectedShowTimeButtonRef.current?.focus({ preventScroll: true })
+      }
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [activeShowTime, open, showsLoading])
 
   const { selectedSection, partySize } =
     useMemo(
@@ -1715,6 +1734,11 @@ export function AddReservationDialog ({
 
   function handleShowTimeChange (value: string) {
     if (value === activeShowTime) {
+      // activeShowTime can resolve to the first API result one render before
+      // showTime state is synchronized.
+      if (value !== showTime) {
+        setShowTime(value)
+      }
       focusSelectedPartyInput()
       return
     }
@@ -1771,7 +1795,7 @@ export function AddReservationDialog ({
       setNotes('')
       setDinner(false)
       setShowDate(todayDateValue())
-      setShowTime(showOptions[0]?.id ?? '')
+      setShowTime('')
       setSection('')
       setPartyBySection({})
       setPasses(1)
@@ -1872,6 +1896,7 @@ export function AddReservationDialog ({
       >
         <TooltipProvider delayDuration={200}>
           <DialogContent
+            ref={dialogContentRef}
             disableOutsideDismiss
             showCloseButton={false}
             className='flex max-h-[82vh] w-[min(calc(100vw-2rem),84rem)] max-w-[84rem] flex-col overflow-hidden sm:max-w-[84rem]'
