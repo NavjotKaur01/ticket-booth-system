@@ -1,15 +1,27 @@
+import { useMemo } from "react"
+
+import type { StandardRowAction } from "@/components/common/standard-row-actions-menu"
 import { DataTable } from "@/components/data-table/data-table"
-import { systemDefaultColumns } from "@/features/system-defaults/system-defaults-columns"
+import { createSystemDefaultColumns } from "@/features/system-defaults/system-defaults-columns"
 import type { SystemDefault } from "@/types/system-default"
 
 type SystemDefaultsDataTableProps = {
   data: SystemDefault[]
+  hiddenActions?: readonly StandardRowAction[]
 }
 
-export function SystemDefaultsDataTable({ data }: SystemDefaultsDataTableProps) {
+export function SystemDefaultsDataTable({
+  data,
+  hiddenActions,
+}: SystemDefaultsDataTableProps) {
+  const columns = useMemo(
+    () => createSystemDefaultColumns({ hiddenActions }),
+    [hiddenActions]
+  )
+
   return (
     <DataTable
-      columns={systemDefaultColumns}
+      columns={columns}
       data={data}
       emptyMessage="No record found"
       entityLabel="records"

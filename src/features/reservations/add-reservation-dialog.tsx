@@ -707,7 +707,7 @@ function CustomerSearchFields ({
   searchType: 'customer' | 'business'
   criteria: CustomerSearchCriteria
   onCriteriaChange: (criteria: CustomerSearchCriteria) => void
-  onFieldBlur: () => void
+  onFieldBlur?: () => void
   onFieldEnter: () => void
   lastNameInputRef?: RefObject<HTMLInputElement | null>
 }) {
@@ -2054,7 +2054,7 @@ export function AddReservationDialog ({
                           searchType={searchType}
                           criteria={searchCriteria}
                           onCriteriaChange={setSearchCriteria}
-                          onFieldBlur={handleCustomerSearch}
+                          // onFieldBlur={handleCustomerSearch}
                           onFieldEnter={handleCustomerSearch}
                           lastNameInputRef={lastNameInputRef}
                         />

@@ -1,10 +1,18 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
+import type { StandardRowAction } from "@/components/common/standard-row-actions-menu"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { dataTableActionsColumn } from "@/components/data-table/data-table-actions-column"
 import type { SystemDefault } from "@/types/system-default"
 
-export const systemDefaultColumns: ColumnDef<SystemDefault>[] = [
+type SystemDefaultColumnsOptions = {
+  hiddenActions?: readonly StandardRowAction[]
+}
+
+export function createSystemDefaultColumns({
+  hiddenActions,
+}: SystemDefaultColumnsOptions = {}): ColumnDef<SystemDefault>[] {
+  return [
   {
     accessorKey: "screen",
     header: ({ column }) => (
@@ -48,7 +56,9 @@ export const systemDefaultColumns: ColumnDef<SystemDefault>[] = [
       </span>
     ),
   },
-  dataTableActionsColumn<SystemDefault>({
-    ariaLabel: "System default actions",
-  }),
-]
+    dataTableActionsColumn<SystemDefault>({
+      ariaLabel: "System default actions",
+      hiddenActions,
+    }),
+  ]
+}

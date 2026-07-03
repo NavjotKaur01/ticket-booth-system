@@ -41,13 +41,12 @@ export const reservationCustomerSearchColumns: ColumnDef<ReservationCustomerSear
         <DataTableColumnHeader label="Email" column={column} tabIndex={-1} />
       ),
       cell: ({ row }) => (
-        <a
-          href={`mailto:${row.original.email}`}
+        <span
           tabIndex={-1}
-          className="cursor-pointer font-medium text-primary hover:underline"
+          className="cursor-pointer font-medium text-primary "
         >
           {row.original.email}
-        </a>
+        </span>
       ),
     },
   ]
