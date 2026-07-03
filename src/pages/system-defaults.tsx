@@ -7,6 +7,8 @@ import { SystemDefaultsScreenFilter } from "@/features/system-defaults/system-de
 import { filterSystemDefaults } from "@/lib/filter-system-defaults"
 import { EMPTY_SYSTEM_DEFAULT_FILTERS } from "@/types/system-default"
 
+const SYSTEM_DEFAULT_HIDDEN_ACTIONS = ["Delete"] as const
+
 export function SystemDefaults() {
   const [filters, setFilters] = useState(EMPTY_SYSTEM_DEFAULT_FILTERS)
 
@@ -33,7 +35,10 @@ export function SystemDefaults() {
           </p>
         </div>
 
-        <SystemDefaultsDataTable data={filteredRecords} />
+        <SystemDefaultsDataTable
+          data={filteredRecords}
+          hiddenActions={SYSTEM_DEFAULT_HIDDEN_ACTIONS}
+        />
       </PanelCard>
     </div>
   )

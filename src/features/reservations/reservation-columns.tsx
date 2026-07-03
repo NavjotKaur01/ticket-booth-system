@@ -24,6 +24,15 @@ function emptyCell(value: string | number | null | undefined) {
   return value
 }
 
+function formatSeatNumbers(value: string) {
+  const seatNumbers = Array.from(
+    value.matchAll(/#\d+\$(\d+)/g),
+    match => match[1]
+  )
+
+  return seatNumbers.length > 0 ? seatNumbers.join(" | ") : value
+}
+
 /** Column definitions aligned with desktop ClubMan reservation grid. */
 export function createReservationColumns({
   displayPhone = false,
@@ -146,7 +155,7 @@ export function createReservationColumns({
       ),
       cell: ({ row }) => (
         <span className="whitespace-nowrap text-muted-foreground">
-          {emptyCell(row.original.seatNo)}
+          {emptyCell(formatSeatNumbers(row.original.seatNo))}
         </span>
       ),
     },

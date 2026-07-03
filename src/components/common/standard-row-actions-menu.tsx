@@ -9,15 +9,26 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 const STANDARD_ROW_ACTIONS = ["Add", "Edit", "Delete"] as const
+export type StandardRowAction = "Add" | "Edit" | "Delete"
 
 type StandardRowActionsMenuProps = {
   ariaLabel?: string
+  hiddenActions?: readonly StandardRowAction[]
 }
 
 /** Standard three-dot row menu used across admin and main page tables. */
 export function StandardRowActionsMenu({
   ariaLabel = "Row actions",
+  hiddenActions = [],
 }: StandardRowActionsMenuProps) {
+  const visibleActions = STANDARD_ROW_ACTIONS.filter(
+    (action) => !hiddenActions.includes(action)
+  )
+
+  if (visibleActions.length === 0) {
+    return null
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -32,7 +43,7 @@ export function StandardRowActionsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[8rem]">
-        {STANDARD_ROW_ACTIONS.map((action) => (
+        {visibleActions.map((action) => (
           <DropdownMenuItem key={action}>{action}</DropdownMenuItem>
         ))}
       </DropdownMenuContent>
