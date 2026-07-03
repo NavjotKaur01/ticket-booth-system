@@ -10,6 +10,7 @@ import type { FocusEvent, KeyboardEvent, MutableRefObject, RefObject } from 'rea
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RowSelectionState } from '@tanstack/react-table'
 
+import { DatePickerCalendarPanel } from '@/components/calendar/controls/date-picker-calendar-panel'
 import {
   IconActionButton
 } from '@/components/forms/form-fields'
@@ -24,6 +25,11 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from '@/components/ui/popover'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
@@ -430,6 +436,24 @@ function formatShowDate (dateValue: string) {
   })
 }
 
+function parseShowDateValue (dateValue: string) {
+  const parsed = new Date(`${dateValue}T00:00:00`)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function getStartOfDay (date: Date) {
+  const value = new Date(date)
+  value.setHours(0, 0, 0, 0)
+  return value
+}
+
+function formatDateInputValue (date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function TotalsBreakdown ({
   selectedSection,
   partySize,
@@ -828,6 +852,74 @@ function MetaIconButton ({
   )
 }
 
+function ReservationShowDatePicker ({
+  showDate,
+  onShowDateChange
+}: {
+  showDate: string
+  onShowDateChange: (value: string) => void
+}) {
+  const selectedDate = parseShowDateValue(showDate)
+  const [isOpen, setIsOpen] = useState(false)
+  const [visibleMonth, setVisibleMonth] = useState<Date>(
+    () => selectedDate ?? new Date()
+  )
+
+  useEffect(() => {
+    if (selectedDate) {
+      setVisibleMonth(selectedDate)
+    }
+  }, [showDate])
+
+  function handleOpenChange (nextOpen: boolean) {
+    setIsOpen(nextOpen)
+
+    if (nextOpen && selectedDate) {
+      setVisibleMonth(selectedDate)
+    }
+  }
+
+  return (
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              type='button'
+              variant='ghost'
+              tabIndex={-1}
+              className='h-auto gap-1 rounded-lg px-0 py-0 text-left font-normal hover:bg-transparent'
+              aria-label='Change show date'
+            >
+              <span className='text-sm text-muted-foreground'>
+                {formatShowDate(showDate)}
+              </span>
+              <span className='grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary transition-colors group-hover/button:bg-primary/20'>
+                <Calendar className='size-4' />
+              </span>
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side='top'>Change show date</TooltipContent>
+      </Tooltip>
+        <PopoverContent align='start' className='w-auto p-0'>
+          {isOpen ? (
+            <DatePickerCalendarPanel
+              key={`reservation-show-date-${showDate}`}
+              month={visibleMonth}
+              onMonthChange={setVisibleMonth}
+              selected={selectedDate ?? undefined}
+              onSelect={nextDate => {
+                onShowDateChange(formatDateInputValue(getStartOfDay(nextDate)))
+                setIsOpen(false)
+              }}
+            />
+          ) : null}
+        </PopoverContent>
+    </Popover>
+  )
+}
+
 function ShowMetaRow ({
   comicName,
   showDate,
@@ -841,8 +933,6 @@ function ShowMetaRow ({
   origin,
   onOriginChange,
   onOpenComicInfo,
-  dateInputRef,
-  onOpenDatePicker,
   dinner,
   onDinnerChange,
   showsLoading
@@ -862,8 +952,6 @@ function ShowMetaRow ({
   origin: string
   onOriginChange: (value: string) => void
   onOpenComicInfo: () => void
-  dateInputRef: RefObject<HTMLInputElement | null>
-  onOpenDatePicker: () => void
   dinner: boolean
   onDinnerChange: (value: boolean) => void
   showsLoading: boolean
@@ -883,25 +971,10 @@ function ShowMetaRow ({
           />
         </div>
 
-        <div className='inline-flex items-center gap-1'>
-          <span className='text-sm text-muted-foreground'>
-            {formatShowDate(showDate)}
-          </span>
-          <MetaIconButton
-            label='Change show date'
-            icon={Calendar}
-            onClick={onOpenDatePicker}
-          />
-          <input
-            ref={dateInputRef}
-            type='date'
-            value={showDate}
-            onChange={event => onShowDateChange(event.target.value)}
-            className='sr-only'
-            tabIndex={-1}
-            aria-hidden
-          />
-        </div>
+        <ReservationShowDatePicker
+          showDate={showDate}
+          onShowDateChange={onShowDateChange}
+        />
 
         <OriginSegmentedControl
           value={origin}
@@ -937,7 +1010,6 @@ export function AddReservationDialog ({
     useAppSession()
   const dialogContentRef = useRef<HTMLDivElement>(null)
   const dialogScrollRef = useRef<HTMLDivElement>(null)
-  const dateInputRef = useRef<HTMLInputElement>(null)
   const notesInputRef = useRef<HTMLTextAreaElement>(null)
   const selectedShowTimeButtonRef = useRef<HTMLButtonElement>(null)
   const partyInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
@@ -1888,22 +1960,6 @@ export function AddReservationDialog ({
     clearCustomerSearch()
   }, [searchType])
 
-  function openDatePicker () {
-    const input = dateInputRef.current
-    if (!input) return
-
-    if (typeof input.showPicker === 'function') {
-      try {
-        input.showPicker()
-        return
-      } catch {
-        // Fall through to click() if showPicker is blocked.
-      }
-    }
-
-    input.click()
-  }
-
   function setSectionParty (sectionId: string, value: number) {
     handleReservationInputChange()
     setShowPartyRequiredError(false)
@@ -1998,8 +2054,6 @@ export function AddReservationDialog ({
                         setOrigin(id as (typeof ORIGIN_OPTIONS)[number]['id'])
                       }}
                       onOpenComicInfo={() => setComicInfoOpen(true)}
-                      dateInputRef={dateInputRef}
-                      onOpenDatePicker={openDatePicker}
                       dinner={dinner}
                       onDinnerChange={setDinner}
                       showsLoading={showsLoading}
