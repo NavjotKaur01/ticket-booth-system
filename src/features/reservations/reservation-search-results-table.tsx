@@ -18,6 +18,7 @@ const RESERVATION_SEARCH_TABLE_COMPACT_CLASS = cn(
   "[&_[data-slot=table-cell]]:px-2.5 [&_[data-slot=table-cell]]:py-1.5 [&_[data-slot=table-cell]]:text-xs",
   "[&_[data-slot=table-cell]_a]:text-xs",
   "[&_[data-slot=table-row][data-state=selected]]:bg-primary/20 [&_[data-slot=table-row][data-state=selected]:hover]:bg-primary/20",
+  "[&_[data-slot=table-row]:focus-visible]:relative [&_[data-slot=table-row]:focus-visible]:z-10 [&_[data-slot=table-row]:focus-visible]:outline-2 [&_[data-slot=table-row]:focus-visible]:outline-offset-[-2px] [&_[data-slot=table-row]:focus-visible]:outline-primary",
   "[&_button]:h-6 [&_button]:px-1.5 [&_button]:text-[9px]"
 )
 
@@ -126,6 +127,7 @@ export function ReservationSearchResultsTable ({
   }
 
   const emptyMessage = loading ? "Searching..." : "No record found"
+  const hasSelectedResult = Object.values(rowSelection).some(Boolean)
 
   function selectResultRow<T extends ReservationSearchResult>(row: Row<T>) {
     onRowSelectionChange({ [row.id]: true })
@@ -142,6 +144,7 @@ export function ReservationSearchResultsTable ({
     rowSelection,
     onRowSelectionChange,
     getRowId: (row: { id: string }) => row.id,
+    getRowTabIndex: () => (hasSelectedResult ? -1 : 0),
   }
 
   return (
@@ -152,6 +155,7 @@ export function ReservationSearchResultsTable ({
           data={businessResults}
           {...tableProps}
           onRowClick={(row) => selectResultRow(row)}
+          onRowActivate={(row) => selectResultRow(row)}
         />
       ) : (
         <DataTable
@@ -159,6 +163,7 @@ export function ReservationSearchResultsTable ({
           data={customerResults}
           {...tableProps}
           onRowClick={(row) => selectResultRow(row)}
+          onRowActivate={(row) => selectResultRow(row)}
         />
       )}
     </div>

@@ -588,6 +588,7 @@ function BookingOptionsBar ({
   onShowTimeChange,
   showTimeButtonRef,
   onShowTimeKeyDown,
+  onShowTimeFocus,
   dinner,
   onDinnerChange,
   showsLoading
@@ -600,6 +601,7 @@ function BookingOptionsBar ({
     event: KeyboardEvent<HTMLButtonElement>,
     show: (typeof showOptions)[number]
   ) => void
+  onShowTimeFocus: () => void
   dinner: boolean
   onDinnerChange: (value: boolean) => void
   showsLoading: boolean
@@ -607,7 +609,10 @@ function BookingOptionsBar ({
   return (
     <div className='min-w-0'>
       <span className={INLINE_LABEL}>Show / Time</span>
-      <div className='flex min-w-0 items-center gap-2 overflow-hidden'>
+      <div
+        className='flex min-w-0 items-center gap-2 overflow-hidden'
+        onFocusCapture={onShowTimeFocus}
+      >
         {shows.length > 0 ? (
           <ShowTimePicker
             shows={shows}
@@ -832,6 +837,7 @@ function ShowMetaRow ({
   onShowTimeChange,
   showTimeButtonRef,
   onShowTimeKeyDown,
+  onShowTimeFocus,
   origin,
   onOriginChange,
   onOpenComicInfo,
@@ -852,6 +858,7 @@ function ShowMetaRow ({
     event: KeyboardEvent<HTMLButtonElement>,
     show: (typeof showOptions)[number]
   ) => void
+  onShowTimeFocus: () => void
   origin: string
   onOriginChange: (value: string) => void
   onOpenComicInfo: () => void
@@ -908,6 +915,7 @@ function ShowMetaRow ({
         onShowTimeChange={onShowTimeChange}
         showTimeButtonRef={showTimeButtonRef}
         onShowTimeKeyDown={onShowTimeKeyDown}
+        onShowTimeFocus={onShowTimeFocus}
         dinner={dinner}
         onDinnerChange={onDinnerChange}
         showsLoading={showsLoading}
@@ -928,6 +936,7 @@ export function AddReservationDialog ({
   const { connectionName, locationId, locationName, username, userRight, isReady } =
     useAppSession()
   const dialogContentRef = useRef<HTMLDivElement>(null)
+  const dialogScrollRef = useRef<HTMLDivElement>(null)
   const dateInputRef = useRef<HTMLInputElement>(null)
   const notesInputRef = useRef<HTMLTextAreaElement>(null)
   const selectedShowTimeButtonRef = useRef<HTMLButtonElement>(null)
@@ -1384,6 +1393,10 @@ export function AddReservationDialog ({
 
     event.preventDefault()
     focusSelectedPartyInput()
+  }
+
+  function handleShowTimeFocus () {
+    dialogScrollRef.current?.scrollTo({ top: 0 })
   }
 
   function handlePartyInputKeyDown (
@@ -1960,7 +1973,10 @@ export function AddReservationDialog ({
               </DialogClose>
             </DialogHeader>
 
-            <div className='min-h-0 flex-1 overflow-y-auto px-4 py-2 pb-3'>
+            <div
+              ref={dialogScrollRef}
+              className='min-h-0 flex-1 overflow-y-auto px-4 py-2 pb-3'
+            >
               <div className='grid gap-3 lg:grid-cols-2 lg:gap-4'>
                   <div className='min-w-0 space-y-2.5 lg:pr-1'>
                     <ShowMetaRow
@@ -1975,6 +1991,7 @@ export function AddReservationDialog ({
                       onShowTimeChange={handleShowTimeChange}
                       showTimeButtonRef={selectedShowTimeButtonRef}
                       onShowTimeKeyDown={handleShowTimeKeyDown}
+                      onShowTimeFocus={handleShowTimeFocus}
                       origin={origin}
                       onOriginChange={id => {
                         handleReservationInputChange()

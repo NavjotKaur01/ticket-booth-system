@@ -43,7 +43,7 @@ export const reservationCustomerSearchColumns: ColumnDef<ReservationCustomerSear
       cell: ({ row }) => (
         <span
           tabIndex={-1}
-          className="cursor-pointer font-medium text-primary "
+          className="cursor-pointer font-medium "
         >
           {row.original.email}
         </span>
