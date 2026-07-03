@@ -9,6 +9,7 @@ type DataTableActionsColumnOptions<TData> = {
   hiddenActions?: readonly StandardRowAction[]
   getRowSpan?: (row: { id: string; original: TData }) => number
   isVisible?: (row: { id: string; original: TData }) => boolean
+  onAction?: (row: TData, action: StandardRowAction) => void
 }
 
 /** Sticky Action column with Add / Edit / Delete menu items. */
@@ -21,6 +22,7 @@ export function dataTableActionsColumn<TData>(
     hiddenActions,
     getRowSpan,
     isVisible,
+    onAction,
   } = options
 
   return {
@@ -40,6 +42,7 @@ export function dataTableActionsColumn<TData>(
         <StandardRowActionsMenu
           ariaLabel={ariaLabel}
           hiddenActions={hiddenActions}
+          onAction={(action) => onAction?.(row.original, action)}
         />
       )
     },

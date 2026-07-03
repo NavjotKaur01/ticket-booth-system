@@ -19,6 +19,7 @@ type ExportDataDialogProps = {
   onOpenChange: (open: boolean) => void
   onExport: (format: ExportFormat) => Promise<boolean> | boolean
   defaultFormat?: ExportFormat
+  excelDescription?: string
 }
 
 const EXPORT_OPTIONS: Array<{
@@ -36,7 +37,7 @@ const EXPORT_OPTIONS: Array<{
   {
     value: "excel",
     label: "Export to Excel",
-    description: "Download a CSV file compatible with Excel.",
+    description: "Download an Excel workbook (.xlsx).",
     icon: FileSpreadsheet,
   },
   {
@@ -52,6 +53,7 @@ export function ExportDataDialog({
   onOpenChange,
   onExport,
   defaultFormat = "excel",
+  excelDescription = "Download a CSV file compatible with Excel.",
 }: ExportDataDialogProps) {
   const [format, setFormat] = useState<ExportFormat>(defaultFormat)
   const [saving, setSaving] = useState(false)
@@ -144,7 +146,9 @@ export function ExportDataDialog({
                         {option.label}
                       </span>
                       <span className="block text-xs leading-relaxed text-muted-foreground">
-                        {option.description}
+                        {option.value === "excel"
+                          ? excelDescription
+                          : option.description}
                       </span>
                     </span>
                   </span>

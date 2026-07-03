@@ -1,6 +1,7 @@
 import { FileDown, Plus, Search } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
+import { ExportDataDialog } from "@/components/common/export-data-dialog"
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -11,6 +12,7 @@ import { ReservationNoteDialog } from "@/features/reservations/reservation-note-
 import { ReservationDataTable } from "@/features/reservations/reservation-data-table"
 import { ReservationHistoryDialog } from "@/features/reservations/reservation-history-dialog"
 import { ReservationFiltersCard } from "@/features/reservations/reservation-filters-card"
+import { exportReservations } from "@/features/reservations/reservation-export"
 import { getMockTicketPrintData, printReservationTicket } from "@/services/ticket-print.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useReservationData } from "@/hooks/use-reservation-data"
@@ -28,6 +30,7 @@ import {
 import { resolveReservationTotalSeats } from "@/lib/resolve-reservation-total-seats"
 import type { CancelReservationPaymentRow } from "@/types/cancel-reservation-payment"
 import { filterReservations } from "@/lib/filter-reservations"
+import type { ExportFormat } from "@/lib/export-table-data"
 import type { Reservation } from "@/types/reservation"
 import { useGetShowSectionsQuery, useGetSystemDefaultsQuery } from "@/store/api/clubmanApi"
 
@@ -67,6 +70,7 @@ export function Reservations() {
   const [cancelOpen, setCancelOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [noteOpen, setNoteOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [selectedReservation, setSelectedReservation] =
     useState<Reservation | null>(null)
   const [isCancellingReservation, setIsCancellingReservation] = useState(false)
@@ -207,6 +211,10 @@ export function Reservations() {
       refetchShowSections(),
       refetchShows(),
     ])
+  }
+
+  function handleExport(format: ExportFormat) {
+    return exportReservations(filteredReservations, format)
   }
 
 
@@ -505,7 +513,13 @@ export function Reservations() {
           </div>
 
           <div className="flex shrink-0 items-center justify-end gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={filteredReservations.length === 0}
+              onClick={() => setExportOpen(true)}
+            >
               <FileDown className="size-3.5" />
               Export
             </Button>
@@ -603,6 +617,12 @@ export function Reservations() {
         isSubmitting={isSavingReservationNote}
         error={saveReservationNoteError}
         onSave={handleSaveReservationNote}
+      />
+      <ExportDataDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        onExport={handleExport}
+        excelDescription="Download an Excel workbook (.xlsx)."
       />
 
     </div>
