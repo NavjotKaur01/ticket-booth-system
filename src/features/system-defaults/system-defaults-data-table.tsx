@@ -8,15 +8,30 @@ import type { SystemDefault } from "@/types/system-default"
 type SystemDefaultsDataTableProps = {
   data: SystemDefault[]
   hiddenActions?: readonly StandardRowAction[]
+  editingRecordId?: string | null
+  onEdit?: (record: SystemDefault) => void
+  onCancelEdit?: () => void
+  onSaveValue?: (record: SystemDefault, value: string) => void
 }
 
 export function SystemDefaultsDataTable({
   data,
   hiddenActions,
+  editingRecordId = null,
+  onEdit,
+  onCancelEdit,
+  onSaveValue,
 }: SystemDefaultsDataTableProps) {
   const columns = useMemo(
-    () => createSystemDefaultColumns({ hiddenActions }),
-    [hiddenActions]
+    () =>
+      createSystemDefaultColumns({
+        hiddenActions,
+        editingRecordId,
+        onEdit,
+        onCancelEdit,
+        onSaveValue,
+      }),
+    [editingRecordId, hiddenActions, onCancelEdit, onEdit, onSaveValue]
   )
 
   return (
@@ -26,6 +41,10 @@ export function SystemDefaultsDataTable({
       emptyMessage="No record found"
       entityLabel="records"
       pageSize={10}
+      onRowDoubleClick={(row) => onEdit?.(row.original)}
+      getRowClassName={(row) =>
+        row.id === editingRecordId ? "bg-muted hover:bg-muted" : undefined
+      }
     />
   )
 }

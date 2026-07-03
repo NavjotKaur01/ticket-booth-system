@@ -1,4 +1,4 @@
-import { downloadCsv } from "@/lib/download-csv"
+import * as XLSX from "xlsx"
 
 export type ExportColumn<T> = {
   header: string
@@ -108,13 +108,13 @@ export async function exportTableData(
     case "clipboard":
       await copyTextToClipboard(convertToClipboardText(headers, rows))
       return true
-    case "excel":
-      downloadCsv(
-        headers,
-        rows.map((row) => row.map((value) => value)),
-        `${filename}.csv`
-      )
+    case "excel": {
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Data")
+      XLSX.writeFile(workbook, `${filename}.xlsx`, { compression: true })
       return true
+    }
     case "html":
       downloadFile(
         convertToHtmlTable(headers, rows),

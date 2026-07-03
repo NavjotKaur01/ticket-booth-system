@@ -1,21 +1,45 @@
 import { useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
-import { systemDefaults } from "@/data/system-defaults"
+import { systemDefaults as initialSystemDefaults } from "@/data/system-defaults"
 import { SystemDefaultsDataTable } from "@/features/system-defaults/system-defaults-data-table"
 import { SystemDefaultsScreenFilter } from "@/features/system-defaults/system-defaults-screen-filter"
+import { useAppSession } from "@/hooks/use-app-session"
 import { filterSystemDefaults } from "@/lib/filter-system-defaults"
-import { EMPTY_SYSTEM_DEFAULT_FILTERS } from "@/types/system-default"
+import { EMPTY_SYSTEM_DEFAULT_FILTERS, type SystemDefault } from "@/types/system-default"
 
-const SYSTEM_DEFAULT_HIDDEN_ACTIONS = ["Delete"] as const
+const SYSTEM_DEFAULT_HIDDEN_ACTIONS = ["Delete", "Add"] as const
 
 export function SystemDefaults() {
+  const { username } = useAppSession()
+  const [records, setRecords] = useState(initialSystemDefaults)
   const [filters, setFilters] = useState(EMPTY_SYSTEM_DEFAULT_FILTERS)
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null)
 
   const filteredRecords = useMemo(
-    () => filterSystemDefaults(systemDefaults, filters),
-    [filters]
+    () => filterSystemDefaults(records, filters),
+    [filters, records]
   )
+
+  function handleOpenEdit(record: SystemDefault) {
+    setEditingRecordId(record.id)
+  }
+
+  function handleSaveValue(record: SystemDefault, value: string) {
+    setRecords((currentRecords) =>
+      currentRecords.map((currentRecord) =>
+        currentRecord.id === record.id
+          ? {
+              ...currentRecord,
+              defaultValue: value,
+              lastUpdateId: username || currentRecord.lastUpdateId,
+              lastUpdateDt: new Date().toLocaleString(),
+            }
+          : currentRecord
+      )
+    )
+    setEditingRecordId(null)
+  }
 
   return (
     <div className="space-y-3">
@@ -38,6 +62,10 @@ export function SystemDefaults() {
         <SystemDefaultsDataTable
           data={filteredRecords}
           hiddenActions={SYSTEM_DEFAULT_HIDDEN_ACTIONS}
+          editingRecordId={editingRecordId}
+          onEdit={handleOpenEdit}
+          onCancelEdit={() => setEditingRecordId(null)}
+          onSaveValue={handleSaveValue}
         />
       </PanelCard>
     </div>

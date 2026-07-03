@@ -14,12 +14,14 @@ export type StandardRowAction = "Add" | "Edit" | "Delete"
 type StandardRowActionsMenuProps = {
   ariaLabel?: string
   hiddenActions?: readonly StandardRowAction[]
+  onAction?: (action: StandardRowAction) => void
 }
 
 /** Standard three-dot row menu used across admin and main page tables. */
 export function StandardRowActionsMenu({
   ariaLabel = "Row actions",
   hiddenActions = [],
+  onAction,
 }: StandardRowActionsMenuProps) {
   const visibleActions = STANDARD_ROW_ACTIONS.filter(
     (action) => !hiddenActions.includes(action)
@@ -44,7 +46,9 @@ export function StandardRowActionsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[8rem]">
         {visibleActions.map((action) => (
-          <DropdownMenuItem key={action}>{action}</DropdownMenuItem>
+          <DropdownMenuItem key={action} onSelect={() => onAction?.(action)}>
+            {action}
+          </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
