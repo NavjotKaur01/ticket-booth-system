@@ -6,6 +6,14 @@ function startOfDay(date: Date) {
   return value
 }
 
+function startOfWeek(date: Date, localizer: DateLocalizer) {
+  const value = startOfDay(date)
+  const weekStartsOn = localizer.startOfWeek("")
+  const dayOffset = (value.getDay() - weekStartsOn + 7) % 7
+  value.setDate(value.getDate() - dayOffset)
+  return value
+}
+
 export function toDate(value: stringOrDate) {
   return value instanceof Date ? value : new Date(value)
 }
@@ -47,7 +55,8 @@ export function getCurrentMonthShiftedVisibleDays(
   now: Date
 ) {
   const standardVisibleDays = getStandardMonthVisibleDays(date, localizer)
-  return buildSequentialDays(now, standardVisibleDays.length, localizer)
+  const weekStart = startOfWeek(now, localizer)
+  return buildSequentialDays(weekStart, standardVisibleDays.length, localizer)
 }
 
 

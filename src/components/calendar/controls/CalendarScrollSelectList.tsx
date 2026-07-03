@@ -20,6 +20,7 @@ type CalendarScrollSelectListProps = {
   onSelect: (value: string) => void
   isOpen: boolean
   clearOptionLabel?: string
+  className?: string
 }
 
 export function getCalendarSelectOptions(
@@ -44,6 +45,7 @@ export function CalendarScrollSelectList({
   onSelect,
   isOpen,
   clearOptionLabel,
+  className,
 }: CalendarScrollSelectListProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const displayOptions = getCalendarSelectOptions(value, options, clearOptionLabel)
@@ -125,7 +127,10 @@ export function CalendarScrollSelectList({
   return (
     <div
       ref={listRef}
-      className="calendar-thin-scrollbar max-h-44 touch-pan-y overscroll-contain overflow-y-auto pr-1 [-webkit-overflow-scrolling:touch]"
+      className={cn(
+        "calendar-thin-scrollbar max-h-44 touch-pan-y overscroll-contain overflow-y-auto pr-1 [-webkit-overflow-scrolling:touch]",
+        className
+      )}
       onKeyDown={handleKeyDown}
       onWheel={handleWheel}
       onTouchMove={handleTouchMove}

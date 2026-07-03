@@ -94,8 +94,6 @@ export default function EventCalendar() {
   const [refreshInterval, setRefreshInterval] = useState(DEFAULT_REFRESH_SECONDS)
   const [calendarDate, setCalendarDate] = useState(() => new Date())
   const [calendarView, setCalendarView] = useState<View>("month")
-  const [shouldShiftInitialCurrentMonth, setShouldShiftInitialCurrentMonth] =
-    useState(true)
   const [recurrenceDate, setRecurrenceDate] = useState<Date | null>(null)
   const [recurrenceState, setRecurrenceState] = useState<RecurrenceState | null>(null)
   const [recurrenceError, setRecurrenceError] = useState<string | null>(null)
@@ -141,24 +139,15 @@ export default function EventCalendar() {
     isReady
   )
 
-  useEffect(() => {
-    if (
-      shouldShiftInitialCurrentMonth &&
-      !dayjs(calendarDate).isSame(dayjs(), "month")
-    ) {
-      setShouldShiftInitialCurrentMonth(false)
-    }
-  }, [calendarDate, shouldShiftInitialCurrentMonth])
-
   const defaultMinTime = useMemo(() => buildTime(0), [])
   const defaultMaxTime = useMemo(() => buildTime(23, 59), [])
   const defaultScrollTime = useMemo(() => buildTime(8), [])
   const calendarViews = useMemo(
     () => ({
-      month: createTodayFirstMonthView(shouldShiftInitialCurrentMonth),
+      month: createTodayFirstMonthView(true),
       week: true,
     }),
-    [shouldShiftInitialCurrentMonth]
+    []
   )
 
   const suppressNextSlotSelection = useCallback(() => {
@@ -339,6 +328,23 @@ export default function EventCalendar() {
     []
   )
 
+  const dayPropGetter = useCallback(
+    (date: Date) => {
+      const today = getStartOfDay(new Date())
+      const day = getStartOfDay(date)
+      const isShiftedCurrentMonth =
+        calendarView === "month" &&
+        dayjs(calendarDate).isSame(today, "month")
+
+      if (isShiftedCurrentMonth && day < today) {
+        return { className: "calendar-past-day" }
+      }
+
+      return {}
+    },
+    [calendarDate, calendarView]
+  )
+
   const handleSelectSlot = useCallback((slotInfo: SlotInfo) => {
     const selectedDate = getStartOfDay(slotInfo.start)
 
@@ -428,6 +434,7 @@ export default function EventCalendar() {
         className="min-h-0 flex-1"
         components={components}
         eventPropGetter={eventPropGetter}
+        dayPropGetter={dayPropGetter}
         selectable
         onSelectSlot={handleSelectSlot}
       />
