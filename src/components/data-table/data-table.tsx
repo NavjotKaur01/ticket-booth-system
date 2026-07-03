@@ -63,6 +63,8 @@ type DataTableProps<TData> = {
   getRowId?: (originalRow: TData, index: number) => string
   onRowClick?: (row: Row<TData>) => void
   onRowDoubleClick?: (row: Row<TData>) => void
+  getRowTabIndex?: (row: Row<TData>) => number | undefined
+  onRowActivate?: (row: Row<TData>) => void
   /** Noun shown in pagination, e.g. "records" or "reservations". */
   entityLabel?: string
   getRowClassName?: (row: TData) => string | undefined
@@ -82,6 +84,8 @@ export function DataTable<TData>({
   getRowId,
   onRowClick,
   onRowDoubleClick,
+  getRowTabIndex,
+  onRowActivate,
   entityLabel = "records",
   getRowClassName,
 }: DataTableProps<TData>) {
@@ -149,6 +153,16 @@ export function DataTable<TData>({
                   )}
                   onClick={() => onRowClick?.(row)}
                   onDoubleClick={() => onRowDoubleClick?.(row)}
+                  tabIndex={getRowTabIndex?.(row)}
+                  onKeyDown={(event) => {
+                    if (
+                      onRowActivate &&
+                      (event.key === "Enter" || event.key === " ")
+                    ) {
+                      event.preventDefault()
+                      onRowActivate(row)
+                    }
+                  }}
                 >
                   {row.getVisibleCells().map((cell) => {
                     const rowSpan = cell.column.columnDef.meta?.getRowSpan?.(row)
