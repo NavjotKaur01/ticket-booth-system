@@ -19,10 +19,11 @@ type DatePickerCalendarPanelProps = {
   onMonthChange: (month: Date) => void
   selected?: Date
   onSelect?: (date: Date) => void
-  disabled?: Matcher
+  disabled?: Matcher | Matcher[]
   startMonth?: Date
   endMonth?: Date
   minDate?: Date
+  maxDate?: Date
   className?: string
 }
 
@@ -54,6 +55,7 @@ export function DatePickerCalendarPanel({
   startMonth = getDefaultCalendarStartMonth(),
   endMonth = getDefaultCalendarEndMonth(),
   minDate,
+  maxDate = endMonth,
   className,
 }: DatePickerCalendarPanelProps) {
   const [view, setView] = useState<PickerView>("calendar")
@@ -166,7 +168,7 @@ export function DatePickerCalendarPanel({
           startMonth={startMonth}
           endMonth={endMonth}
           minDate={minDate}
-          maxDate={endMonth}
+          maxDate={maxDate}
         />
       ) : (
         <Calendar

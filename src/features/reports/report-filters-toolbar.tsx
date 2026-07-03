@@ -195,6 +195,7 @@ export function ReportFiltersToolbar({
                   id="report-viewer-from"
                   value={filters.dateFrom}
                   onChange={(value) => onFilterChange("dateFrom", value)}
+                  maxDate={filters.dateTo}
                   className="h-9 w-full bg-background"
                 />
               </div>
@@ -205,6 +206,7 @@ export function ReportFiltersToolbar({
                   id="report-viewer-to"
                   value={filters.dateTo}
                   onChange={(value) => onFilterChange("dateTo", value)}
+                  minDate={filters.dateFrom}
                   className="h-9 w-full bg-background"
                 />
               </div>
