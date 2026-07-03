@@ -33,6 +33,8 @@ type CalendarDatePickerControlProps = {
   value: string
   onChange: (value: string) => void
   disablePastDates?: boolean
+  minDate?: string | Date
+  maxDate?: string | Date
   placeholder?: string
   className?: string
   displayFormat?: string
@@ -52,6 +54,8 @@ export default function CalendarDatePickerControl({
   value,
   onChange,
   disablePastDates = false,
+  minDate,
+  maxDate,
   placeholder = "Select date",
   className,
   displayFormat,
@@ -60,7 +64,21 @@ export default function CalendarDatePickerControl({
   const selectedDate = parseDateValue(value)
   const [isOpen, setIsOpen] = useState(false)
   const [visibleMonth, setVisibleMonth] = useState<Date>(() => selectedDate ?? new Date())
-  const minSelectableDate = disablePastDates ? getStartOfDay(new Date()) : undefined
+  const explicitMinDate =
+    typeof minDate === "string" ? parseDateValue(minDate) : minDate ? getStartOfDay(minDate) : null
+  const pastMinDate = disablePastDates ? getStartOfDay(new Date()) : null
+  const minSelectableDate =
+    explicitMinDate && pastMinDate
+      ? explicitMinDate > pastMinDate
+        ? explicitMinDate
+        : pastMinDate
+      : (explicitMinDate ?? pastMinDate ?? undefined)
+  const maxSelectableDate =
+    typeof maxDate === "string" ? parseDateValue(maxDate) : maxDate ? getStartOfDay(maxDate) : null
+  const disabledDates = [
+    ...(minSelectableDate ? [{ before: minSelectableDate }] : []),
+    ...(maxSelectableDate ? [{ after: maxSelectableDate }] : []),
+  ]
 
   useEffect(() => {
     if (selectedDate) {
@@ -104,9 +122,10 @@ export default function CalendarDatePickerControl({
             onMonthChange={setVisibleMonth}
             selected={selectedDate ?? undefined}
             startMonth={minSelectableDate}
-            endMonth={getDefaultCalendarEndMonth()}
+            endMonth={maxSelectableDate ?? getDefaultCalendarEndMonth()}
             minDate={minSelectableDate}
-            disabled={minSelectableDate ? { before: minSelectableDate } : undefined}
+            maxDate={maxSelectableDate ?? undefined}
+            disabled={disabledDates.length > 0 ? disabledDates : undefined}
             onSelect={(nextDate) => {
               onChange(dayjs(getStartOfDay(nextDate)).format("YYYY-MM-DD"))
               setIsOpen(false)
