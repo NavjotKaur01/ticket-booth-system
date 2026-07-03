@@ -246,7 +246,7 @@ export const REPORT_CONFIGS: Record<string, ReportConfig> = {
   "web-counts":                { ...BASE, endpoint: "GetWebCountReport",               title: "Web Counts",                 showDateRange: true },
   "web-gift-certificates":     { ...BASE, endpoint: "GetWebGiftCertificatesReport",    title: "Web Gift Certificates",      showDateRange: true },
   "web-reservations-for-day":  { ...BASE, endpoint: "GetWebReservationForDayReport",   title: "Web Reservations for Day",   showDateRange: true },
-  "zipcode-breakdown":         { ...BASE, endpoint: "GetZipCodeBreakDownReport",        title: "ZipCode Breakdown",          showDateRange: false },
+  "zipcode-breakdown":         { ...BASE, endpoint: "GetZipCodeBreakDownReport",        title: "ZipCode Breakdown",          showDateRange: true },
 }
 
 /** Maps WPF PermDesc values to internal report ids (desktop ReportVM switch). */

@@ -1040,8 +1040,8 @@ export function AddReservationDialog ({
   const [specialNotesOpen, setSpecialNotesOpen] = useState(true)
   const [notes, setNotes] = useState('')
   const [dinner, setDinner] = useState(false)
-  const [showDate, setShowDate] = useState(todayDateValue)
-  const [showTime, setShowTime] = useState(initialShowTime ?? '')
+  const [showDate, setShowDate] = useState(() => initialShowDate ?? todayDateValue())
+  const [showTime, setShowTime] = useState(() => initialShowTime ?? '')
   const [section, setSection] = useState('')
   const [partyBySection, setPartyBySection] = useState<Record<string, number>>(
     {}
@@ -1952,9 +1952,10 @@ export function AddReservationDialog ({
     pendingPartyFocusRef.current = true
 
     if (!reservation) {
-      setShowDate(todayDateValue())
+      setShowDate(initialShowDate ?? todayDateValue())
+      setShowTime(initialShowTime ?? '')
     }
-  }, [open, reservation])
+  }, [initialShowDate, initialShowTime, open, reservation])
 
   useEffect(() => {
     clearCustomerSearch()

@@ -83,6 +83,7 @@ export function Reports() {
   const [generateError, setGenerateError] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
   const [isExportingPdf, setIsExportingPdf] = useState(false)
+  const [isFilterHeaderOpen, setIsFilterHeaderOpen] = useState(true)
 
   const isComicReport = draftFilters.reportType === "comic-ticket-revenue"
   const { data: rawComedianList = [] } = useGetComedianListQuery(connectionName, {
@@ -268,6 +269,7 @@ export function Reports() {
       }
 
       setGeneratedResult(result)
+      setIsFilterHeaderOpen(false)
     } catch (error) {
       const message =
         error instanceof Error
@@ -353,7 +355,9 @@ export function Reports() {
             isLoadingReportOptions={isLoadingReportOptions}
             reportOptionsError={isReportOptionsError}
             activeQuickRange={activeQuickRange}
+            isFilterHeaderOpen={isFilterHeaderOpen}
             onFilterChange={updateDraftField}
+            onFilterHeaderOpenChange={setIsFilterHeaderOpen}
             onGenerate={() => void handleGenerate()}
             onToday={handleToday}
             onYesterday={handleYesterday}

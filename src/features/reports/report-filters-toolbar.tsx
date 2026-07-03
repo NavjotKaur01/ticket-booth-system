@@ -1,4 +1,4 @@
-﻿import { FileDown, FileText, Printer } from "lucide-react"
+﻿import { ChevronDown, ChevronUp, FileDown, FileText, Printer } from "lucide-react"
 
 import CalendarDatePickerControl from "@/components/calendar/controls/CalendarDatePickerControl"
 import CalendarSelectControl from "@/components/calendar/controls/CalendarSelectControl"
@@ -27,10 +27,12 @@ type ReportFiltersToolbarProps = {
   isLoadingReportOptions?: boolean
   reportOptionsError?: boolean
   activeQuickRange?: "today" | "yesterday" | null
+  isFilterHeaderOpen?: boolean
   onFilterChange: <K extends keyof ReportViewerFilters>(
     key: K,
     value: ReportViewerFilters[K]
   ) => void
+  onFilterHeaderOpenChange?: (open: boolean) => void
   onGenerate: () => void
   onToday: () => void
   onYesterday: () => void
@@ -49,7 +51,9 @@ export function ReportFiltersToolbar({
   isLoadingReportOptions = false,
   reportOptionsError = false,
   activeQuickRange = null,
+  isFilterHeaderOpen = true,
   onFilterChange,
+  onFilterHeaderOpenChange,
   onGenerate,
   onToday,
   onYesterday,
@@ -71,19 +75,42 @@ export function ReportFiltersToolbar({
     showSeparateByUsers ||
     showWebReservationOnly ||
     showCustomerFilters
+  const selectedReportLabel =
+    reportOptions.find((option) => option.id === filters.reportType)?.label ??
+    "Report Filters"
+  const ToggleIcon = isFilterHeaderOpen ? ChevronUp : ChevronDown
 
   return (
-    <div className="bg-background px-4 py-4">
-      <div className="space-y-4 rounded-xl border border-border/70 bg-muted/10 p-4 sm:p-3.5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">
-              Report Viewer
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Set filters, then generate the report when you are ready.
-            </p>
-          </div>
+    <div className="bg-background px-3 py-2 md:px-4 md:py-4">
+      <div className="rounded-xl border border-border/70 bg-muted/10">
+        <Button
+          type="button"
+          variant="ghost"
+          className="flex h-auto w-full justify-between gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-muted/40 md:hidden"
+          onClick={() => onFilterHeaderOpenChange?.(!isFilterHeaderOpen)}
+          aria-expanded={isFilterHeaderOpen}
+        >
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-foreground">
+              Report Filters
+            </span>
+            <span className="block truncate text-xs font-normal text-muted-foreground">
+              {selectedReportLabel}
+            </span>
+          </span>
+          <ToggleIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+        </Button>
+
+        <div className={cn("space-y-4 p-4 sm:p-3.5", !isFilterHeaderOpen && "hidden md:block")}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="hidden md:block">
+              <h1 className="text-xl font-semibold tracking-tight text-foreground">
+                Report Viewer
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Set filters, then generate the report when you are ready.
+              </p>
+            </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -152,6 +179,7 @@ export function ReportFiltersToolbar({
                     : "Select report"
               }
               className="h-9 w-full bg-background"
+              listClassName="max-h-80"
               options={reportOptions.map((option) => ({
                 value: option.id,
                 label: option.label,
@@ -316,6 +344,7 @@ export function ReportFiltersToolbar({
             )}
           </div>
         )}
+      </div>
       </div>
     </div>
   )

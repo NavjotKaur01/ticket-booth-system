@@ -268,7 +268,8 @@ input[type="number"] {
 }
 
 /* Off-range days (prev/next month dates) */
-.rbc-off-range-bg {
+.rbc-off-range-bg,
+.rbc-month-view .rbc-day-bg.calendar-past-day {
   background-color: color-mix(in srgb, var(--color-muted) 65%, var(--color-background));
 }
 

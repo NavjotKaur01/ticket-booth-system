@@ -23,6 +23,7 @@ type CalendarSelectControlProps = {
   options: CalendarSelectOption[]
   placeholder?: string
   className?: string
+  listClassName?: string
   disabled?: boolean
   triggerRef?: RefObject<HTMLButtonElement | null>
   onTriggerKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void
@@ -37,6 +38,7 @@ export default function CalendarSelectControl({
   options,
   placeholder = "Select",
   className,
+  listClassName,
   disabled = false,
   triggerRef,
   onTriggerKeyDown,
@@ -90,6 +92,7 @@ export default function CalendarSelectControl({
           options={options}
           onSelect={handleSelect}
           clearOptionLabel={allowClear ? placeholder : undefined}
+          className={listClassName}
         />
       </PopoverContent>
     </Popover>
