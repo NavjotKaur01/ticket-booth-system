@@ -98,7 +98,24 @@ export function saveReservation(request: SaveReservationRequest) {
   ).then(normalizeReservationIds)
 }
 
+/** New reservation — always SaveReservation, never UpdateReservation. */
+export function createNewReservation(request: SaveReservationRequest) {
+  if (request.ReservationId) {
+    throw new Error(
+      'createNewReservation must not include ReservationId. Use updateReservation for edits.'
+    )
+  }
+
+  return saveReservation(request)
+}
+
 export function updateReservation(request: SaveReservationRequest) {
+  if (!request.ReservationId?.trim()) {
+    throw new Error(
+      'updateReservation requires ReservationId. New reservations must use createNewReservation.'
+    )
+  }
+
   return dispatchEndpoint<unknown, SaveReservationRequest>(
     clubmanApi.endpoints.updateReservation,
     request

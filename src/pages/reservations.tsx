@@ -512,7 +512,11 @@ export function Reservations() {
             <Button
               size="sm"
               className="gap-1.5"
-              onClick={() => setAddOpen(true)}
+              onClick={() => {
+                setEditOpen(false)
+                setSelectedReservation(null)
+                setAddOpen(true)
+              }}
             >
               <Plus className="size-3.5" />
               Add

@@ -227,8 +227,7 @@ function buildReservationCore ({
     IsReservationCheckedIn: isReservationCheckedIn ?? false,
     TixPaid: ticketCounts.tixPaid,
     TixComp: ticketCounts.tixComp,
-    TixDisc: ticketCounts.tixDisc,
-    IsSaveReservationOnly: true
+    TixDisc: ticketCounts.tixDisc
   }
 
   if (includeCustomerModel) {
@@ -258,16 +257,27 @@ function buildReservationCore ({
   return request
 }
 
-/** Step 1 — create reservation only (desktop add-reservation screen). */
+/** Create reservation without payment (e.g. comp / zero-total). */
 export function buildSaveReservationOnlyRequest (
   params: BuildReservationRequestParams
 ): SaveReservationRequest {
-  return buildReservationCore(params)
+  return {
+    ...buildReservationCore(params),
+    IsSaveReservationOnly: true
+  }
 }
 
-/** Desktop payment screen — always sends payment payload (amount may be 0). */
-export function buildUpdateReservationPaymentRequest (
-  params: BuildUpdateReservationPaymentParams
+type BuildReservationWithPaymentParams = BuildReservationRequestParams & {
+  paymentAmount: number
+  paymentType: ReservationPaymentType
+  paymentFields: ReservationPaymentFields
+  reservationId?: string
+  isPaymentLoad?: boolean
+  resSelectedPromotionId?: string
+}
+
+function buildReservationWithPaymentRequest (
+  params: BuildReservationWithPaymentParams
 ): SaveReservationRequest {
   const {
     reservationId,
@@ -286,8 +296,7 @@ export function buildUpdateReservationPaymentRequest (
 
   return {
     ...buildReservationCore(params),
-    ReservationId: reservationId,
-    IsSaveReservationOnly: false,
+    ...(reservationId ? { ReservationId: reservationId } : {}),
     PaymentTypeLookupCode: paymentLookupCode,
     PaymentAmount: roundedPaymentAmount,
     IsTicketPartyUpdate:
@@ -306,6 +315,23 @@ export function buildUpdateReservationPaymentRequest (
       searchType
     })
   }
+}
+
+/** New reservation with payment — single SaveReservation call (matches desktop). */
+export function buildSaveReservationWithPaymentRequest (
+  params: Omit<
+    BuildUpdateReservationPaymentParams,
+    'reservationId' | 'isPaymentLoad' | 'resSelectedPromotionId'
+  >
+): SaveReservationRequest {
+  return buildReservationWithPaymentRequest(params)
+}
+
+/** Desktop payment screen — always sends payment payload (amount may be 0). */
+export function buildUpdateReservationPaymentRequest (
+  params: BuildUpdateReservationPaymentParams
+): SaveReservationRequest {
+  return buildReservationWithPaymentRequest(params)
 }
 
 /** Update an existing reservation (desktop payment screen save). */

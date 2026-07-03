@@ -67,10 +67,15 @@ import {
   type ReservationCustomerSearchCriteria
 } from '@/lib/reservation-customer-search-criteria'
 import { saveCustomer } from '@/lib/api/customers'
-import { saveReservation, saveReservationNote, updateReservation } from '@/lib/api/reservations'
+import {
+  createNewReservation,
+  saveReservationNote,
+  updateReservation
+} from '@/lib/api/reservations'
 import { buildReservationNoteRequest } from '@/lib/build-reservation-note-request'
 import {
   buildSaveReservationOnlyRequest,
+  buildSaveReservationWithPaymentRequest,
   buildUpdateReservationPaymentRequest
 } from '@/lib/build-save-reservation-request'
 import { mapReservationSearchCriteriaToCustomerForm } from '@/lib/map-reservation-search-to-customer-form'
@@ -1675,25 +1680,20 @@ export function AddReservationDialog ({
         return
       }
 
-      const reservationIds = await saveReservation(
-        buildSaveReservationOnlyRequest(reservationParams)
+      const reservationIds = await createNewReservation(
+        shouldApplyPayment
+          ? buildSaveReservationWithPaymentRequest({
+              ...reservationParams,
+              paymentAmount: parseReservationMoney(savePaymentAmount),
+              paymentType,
+              paymentFields
+            })
+          : buildSaveReservationOnlyRequest(reservationParams)
       )
       const reservationId = reservationIds[0]
 
       if (!reservationId) {
         throw new Error('Reservation was created but no reservation id was returned.')
-      }
-
-      if (shouldApplyPayment) {
-        await updateReservation(
-          buildUpdateReservationPaymentRequest({
-            ...reservationParams,
-            reservationId,
-            paymentAmount: parseReservationMoney(savePaymentAmount),
-            paymentType,
-            paymentFields
-          })
-        )
       }
 
       const ticketData = createTicketPrintData({

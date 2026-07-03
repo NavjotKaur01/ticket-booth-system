@@ -77,7 +77,8 @@ export type SaveReservationRequest = {
   TixPaid: number
   TixComp: number
   TixDisc: number
-  IsSaveReservationOnly: boolean
+  /** When true, create reservation only (no payment). Omit when saving with payment. */
+  IsSaveReservationOnly?: boolean
   ReservationId?: string
   IsTicketPartyUpdate?: boolean
   IsPaymentLoad?: boolean
