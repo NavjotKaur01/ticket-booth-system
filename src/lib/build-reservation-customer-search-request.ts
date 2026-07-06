@@ -8,7 +8,7 @@ type BuildReservationCustomerSearchRequestParams = {
   criteria: ReservationCustomerSearchCriteria
 }
 
-export function buildReservationCustomerSearchRequest ({
+export function buildReservationCustomerSearchRequest({
   connectionName,
   searchType,
   criteria
