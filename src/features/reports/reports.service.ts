@@ -242,6 +242,7 @@ export const REPORT_CONFIGS: Record<string, ReportConfig> = {
   "revenue":                   { ...BASE, endpoint: "GetRevenueReport",                 title: "Revenue",                    showDateRange: true },
   "sales-by-day":              { ...BASE, endpoint: "GetSaleByDayReport",              title: "Sales By Day",               showDateRange: true },
   "sales-by-show":             { ...BASE, endpoint: "GetSaleByShowReport",             title: "Sales By Show",              showDateRange: true },
+  "today-sales":               { ...BASE, endpoint: "GetRecentSales",                   title: "Today Sales",                showDateRange: false },
   "ticket-price-breakdown":    { ...BASE, endpoint: "GetTicketPriceBreakDownReport",    title: "Ticket Price Breakdown",     showDateRange: true },
   "web-counts":                { ...BASE, endpoint: "GetWebCountReport",               title: "Web Counts",                 showDateRange: true },
   "web-gift-certificates":     { ...BASE, endpoint: "GetWebGiftCertificatesReport",    title: "Web Gift Certificates",      showDateRange: true },
@@ -269,6 +270,7 @@ const PERM_DESC_TO_REPORT_ID: Record<string, string> = {
   "Revenue": "revenue",
   "Sales By Day": "sales-by-day",
   "Sales By Show": "sales-by-show",
+  "Today Sales": "today-sales",
   "Ticket Price Breakdown": "ticket-price-breakdown",
   "Web Counts": "web-counts",
   "Web Gift Certificates": "web-gift-certificates",
@@ -276,12 +278,7 @@ const PERM_DESC_TO_REPORT_ID: Record<string, string> = {
   "ZipCode Breakdown": "zipcode-breakdown",
 }
 
-const EXCLUDED_PERM_DESCS = new Set(["ZipCode Sales", "Today Sales"])
-
-/** Legacy alias for old dashboard links — maps to quick-view-sales. */
-const REPORT_TYPE_ALIASES: Record<string, string> = {
-  "today-sales": "quick-view-sales",
-}
+const EXCLUDED_PERM_DESCS = new Set(["ZipCode Sales"])
 
 function normalizePermDesc(desc: string): string {
   return desc.trim().replace(/\//g, "\\").replace(/\s+/g, " ").toLowerCase()
@@ -328,12 +325,32 @@ export const DEFAULT_REPORT_VIEWER_OPTIONS: ReportViewerOption[] = [
   { id: "revenue", label: "Revenue" },
   { id: "sales-by-day", label: "Sales By Day" },
   { id: "sales-by-show", label: "Sales By Show" },
+  { id: "today-sales", label: "Today Sales" },
   { id: "ticket-price-breakdown", label: "Ticket Price Breakdown" },
   { id: "web-counts", label: "Web Counts" },
   { id: "web-gift-certificates", label: "Web Gift Certificates" },
   { id: "web-reservations-for-day", label: "Web Reservations for Day" },
   { id: "zipcode-breakdown", label: "ZipCode Breakdown" },
 ]
+
+const TODAY_SALES_OPTION: ReportViewerOption = { id: "today-sales", label: "Today Sales" }
+
+/** Today Sales uses GetRecentSales and is always available in the viewer (WPF excludes it from permissions list). */
+function ensureTodaySalesOption(options: ReportViewerOption[]): ReportViewerOption[] {
+  if (options.some((option) => option.id === TODAY_SALES_OPTION.id)) {
+    return options
+  }
+
+  const next = [...options]
+  const ticketPriceIdx = next.findIndex((option) => option.id === "ticket-price-breakdown")
+  if (ticketPriceIdx >= 0) {
+    next.splice(ticketPriceIdx, 0, TODAY_SALES_OPTION)
+  } else {
+    next.push(TODAY_SALES_OPTION)
+  }
+
+  return next
+}
 
 /** Mirrors WPF ReportVM.GetReportsByRole user role resolution. */
 export function resolveReportUserRole(userRight: string): { userRole: string; locationScoped: boolean } {
@@ -403,30 +420,30 @@ export function resolveReportViewerOptions(
   userRight: string,
   { isError = false }: { isError?: boolean } = {}
 ): ReportViewerOption[] {
-  if (isError) return DEFAULT_REPORT_VIEWER_OPTIONS
+  if (isError) return ensureTodaySalesOption(DEFAULT_REPORT_VIEWER_OPTIONS)
 
   const fromApi = buildReportViewerOptionsFromPermissions(permissions ?? [], userRight)
 
   // API returned rows but none mapped — use full desktop list
   if (!fromApi.length && (permissions?.length ?? 0) > 0) {
-    return DEFAULT_REPORT_VIEWER_OPTIONS
+    return ensureTodaySalesOption(DEFAULT_REPORT_VIEWER_OPTIONS)
   }
 
   // API returned too few mapped reports vs raw rows — mapping miss
   if (fromApi.length > 0 && (permissions?.length ?? 0) > fromApi.length + 2) {
-    return DEFAULT_REPORT_VIEWER_OPTIONS
+    return ensureTodaySalesOption(DEFAULT_REPORT_VIEWER_OPTIONS)
   }
 
   // API returned a partial list (e.g. only 3 role-scoped rows) — use full desktop list.
   // WPF shows all PermDesc entries from the API; when the web API returns too few,
   // fall back so the dropdown matches the desktop Report Viewer.
   if (fromApi.length > 0 && fromApi.length < MIN_API_REPORT_OPTIONS) {
-    return DEFAULT_REPORT_VIEWER_OPTIONS
+    return ensureTodaySalesOption(DEFAULT_REPORT_VIEWER_OPTIONS)
   }
 
-  if (fromApi.length > 0) return fromApi
+  if (fromApi.length > 0) return ensureTodaySalesOption(fromApi)
 
-  return DEFAULT_REPORT_VIEWER_OPTIONS
+  return ensureTodaySalesOption(DEFAULT_REPORT_VIEWER_OPTIONS)
 }
 
 export function getReportConfig(reportType: string): ReportConfig {
@@ -446,9 +463,7 @@ export function resolveReportType(
   reportType?: string | null,
   availableOptions: ReportViewerOption[] = []
 ) {
-  const normalized = reportType
-    ? (REPORT_TYPE_ALIASES[reportType] ?? reportType)
-    : null
+  const normalized = reportType?.trim() || null
 
   if (!normalized) {
     return availableOptions[0]?.id ?? "manager-checkout"

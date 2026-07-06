@@ -5,7 +5,7 @@ import type {
   StatSummary,
 } from "@/types/dashboard"
 import { dashboardNewsImage } from "@/constants/assets"
-import { ROUTES } from "@/constants/routes"
+import { reportViewerUrl, ROUTES } from "@/constants/routes"
 
 export const statSummaries: StatSummary[] = [
   {
@@ -17,7 +17,7 @@ export const statSummaries: StatSummary[] = [
     id: "today",
     label: "Today Sold",
     value: 1,
-    href: ROUTES.reports,
+    href: reportViewerUrl("today-sales"),
   },
   {
     id: "week",

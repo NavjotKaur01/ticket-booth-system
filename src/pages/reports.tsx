@@ -3,10 +3,11 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 
 import { PanelCard } from "@/components/common/panel-card"
-import { ROUTES } from "@/constants/routes"
+import { ROUTES, reportViewerUrl } from "@/constants/routes"
 import { useAppSession } from "@/hooks/use-app-session"
 import { ReportFiltersToolbar } from "@/features/reports/report-filters-toolbar"
 import { ReportViewerResults } from "@/features/reports/report-viewer-results"
+import { TodaySalesReport } from "@/features/reports/today-sales-report"
 import {
   buildReportPermissionRequest,
   buildReportRequest,
@@ -35,6 +36,10 @@ function buildFilename(base: string, extension: string) {
   const safeBase = base.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
   const stamp = dayjs().format("YYYYMMDD-HHmm")
   return `${safeBase || "report"}-${stamp}.${extension}`
+}
+
+function isTodaySalesReportParam(reportParam: string | null) {
+  return reportParam === "today-sales"
 }
 
 export function Reports() {
@@ -68,22 +73,32 @@ export function Reports() {
     [reportPermissions, userRight, isReportOptionsError]
   )
 
+  const initialReportParam = searchParams.get("report")
+  const isTodaySalesFromUrl = isTodaySalesReportParam(initialReportParam)
+
   const locationOptions = useMemo(
     () => createReportViewerLocationOptions(locations, locationId, locationName),
     [locationId, locationName, locations]
   )
-  const [draftFilters, setDraftFilters] = useState<ReportViewerFilters>(() =>
-    createDefaultReportFilters({
+  const [draftFilters, setDraftFilters] = useState<ReportViewerFilters>(() => {
+    const defaults = createDefaultReportFilters({
       locationId: locationId ?? locationOptions[0]?.id ?? "",
     })
-  )
+
+    if (isTodaySalesFromUrl) {
+      return { ...defaults, reportType: "today-sales" }
+    }
+
+    return defaults
+  })
   const [generatedResult, setGeneratedResult] = useState<ReportViewerResult | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [activeQuickRange, setActiveQuickRange] = useState<"today" | "yesterday" | null>(null)
   const [generateError, setGenerateError] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
   const [isExportingPdf, setIsExportingPdf] = useState(false)
-  const [isFilterHeaderOpen, setIsFilterHeaderOpen] = useState(true)
+  const [isFilterHeaderOpen, setIsFilterHeaderOpen] = useState(!isTodaySalesFromUrl)
+  const [showTodaySalesReport, setShowTodaySalesReport] = useState(isTodaySalesFromUrl)
 
   const isComicReport = draftFilters.reportType === "comic-ticket-revenue"
   const { data: rawComedianList = [] } = useGetComedianListQuery(connectionName, {
@@ -104,10 +119,41 @@ export function Reports() {
   )
 
   useEffect(() => {
-    if (searchParams.has("report")) {
-      navigate(ROUTES.reports, { replace: true })
+    const requestedReport = searchParams.get("report")
+    if (!requestedReport || !reportOptions.length) return
+
+    const resolvedReportType = resolveReportType(requestedReport, reportOptions)
+    const nextConfig = getReportConfig(resolvedReportType)
+
+    setDraftFilters((current) => {
+      if (current.reportType === resolvedReportType) return current
+
+      return {
+        ...current,
+        reportType: resolvedReportType,
+        headlinerId: nextConfig.showComicPicker ? current.headlinerId : "",
+        isAllDates: nextConfig.showAllDatesOption ? current.isAllDates : false,
+        isWebReservationOnly: nextConfig.showWebReservationOnly
+          ? current.isWebReservationOnly
+          : false,
+        isSeparateByUsers:
+          resolvedReportType === "door-checkout"
+            ? true
+            : nextConfig.showSeparateByUsers
+              ? current.isSeparateByUsers
+              : false,
+      }
+    })
+
+    if (resolvedReportType === "today-sales") {
+      setShowTodaySalesReport(true)
+      setGeneratedResult(null)
+      setIsFilterHeaderOpen(false)
+      return
     }
-  }, [searchParams, navigate])
+
+    setShowTodaySalesReport(false)
+  }, [searchParams, reportOptions])
 
   useEffect(() => {
     if (!locationId) return
@@ -129,8 +175,15 @@ export function Reports() {
   useEffect(() => {
     if (!reportOptions.length) return
 
+    const urlReport = searchParams.get("report")
+
     setDraftFilters((current) => {
-      const nextReportType = resolveReportType(current.reportType, reportOptions)
+      const sourceType =
+        (showTodaySalesReport || isTodaySalesReportParam(urlReport)) &&
+        reportOptions.some((option) => option.id === "today-sales")
+          ? "today-sales"
+          : current.reportType
+      const nextReportType = resolveReportType(sourceType, reportOptions)
       if (nextReportType === current.reportType) return current
       const nextConfig = getReportConfig(nextReportType)
       return {
@@ -142,7 +195,7 @@ export function Reports() {
         isSeparateByUsers: nextReportType === "door-checkout" ? true : (nextConfig.showSeparateByUsers ? current.isSeparateByUsers : false),
       }
     })
-  }, [reportOptions])
+  }, [reportOptions, showTodaySalesReport, searchParams])
 
   function updateDraftField<K extends keyof ReportViewerFilters>(
     key: K,
@@ -151,6 +204,8 @@ export function Reports() {
     if (key === "reportType") {
       const nextType = value as string
       const nextConfig = getReportConfig(nextType)
+      setShowTodaySalesReport(false)
+      setGeneratedResult(null)
       setDraftFilters((current) => ({
         ...current,
         [key]: value,
@@ -159,6 +214,13 @@ export function Reports() {
         isWebReservationOnly: nextConfig.showWebReservationOnly ? current.isWebReservationOnly : false,
         isSeparateByUsers: nextType === "door-checkout" ? true : (nextConfig.showSeparateByUsers ? current.isSeparateByUsers : false),
       }))
+
+      if (nextType === "today-sales") {
+        navigate(reportViewerUrl("today-sales"), { replace: true })
+      } else if (searchParams.get("report")) {
+        navigate(ROUTES.reports, { replace: true })
+      }
+      return
     } else {
       setDraftFilters((current) => ({ ...current, [key]: value }))
     }
@@ -169,6 +231,22 @@ export function Reports() {
   }
 
   async function handleGenerate(nextFilters = draftFilters) {
+    if (nextFilters.reportType === "today-sales") {
+      setIsGenerating(true)
+      setGenerateError(null)
+      setExportError(null)
+      setShowTodaySalesReport(true)
+      setGeneratedResult(null)
+      setIsFilterHeaderOpen(false)
+      setIsGenerating(false)
+      navigate(reportViewerUrl("today-sales"), { replace: true })
+      return
+    }
+
+    setShowTodaySalesReport(false)
+    if (searchParams.get("report") === "today-sales") {
+      navigate(ROUTES.reports, { replace: true })
+    }
     const config = getReportConfig(nextFilters.reportType)
 
     if (config.showComicPicker && !nextFilters.headlinerId) {
@@ -304,7 +382,7 @@ export function Reports() {
   }
 
   function handlePrint() {
-    if (!generatedResult) {
+    if (!generatedResult || showTodaySalesReport) {
       return
     }
 
@@ -313,7 +391,7 @@ export function Reports() {
   }
 
   function handleExport() {
-    if (!generatedResult) {
+    if (!generatedResult || showTodaySalesReport) {
       return
     }
 
@@ -324,7 +402,7 @@ export function Reports() {
   }
 
   async function handlePdf() {
-    if (!generatedResult || isExportingPdf) {
+    if (!generatedResult || showTodaySalesReport || isExportingPdf) {
       return
     }
 
@@ -370,11 +448,21 @@ export function Reports() {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto bg-background">
-          <ReportViewerResults
-            result={generatedResult}
-            isLoading={isGenerating}
-            errorMessage={generateError}
-          />
+          {showTodaySalesReport ? (
+            <div className="p-4">
+              <TodaySalesReport
+                clubSlug={connectionName ?? ""}
+                location={draftFilters.locationId}
+                locationsReady={Boolean(connectionName && draftFilters.locationId)}
+              />
+            </div>
+          ) : (
+            <ReportViewerResults
+              result={generatedResult}
+              isLoading={isGenerating}
+              errorMessage={generateError}
+            />
+          )}
         </div>
       </PanelCard>
     </div>
