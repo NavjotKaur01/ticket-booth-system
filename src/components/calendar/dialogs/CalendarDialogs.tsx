@@ -183,6 +183,9 @@ export default function CalendarDialogs({
         open={isEditComicOpen}
         event={editComicEvent}
         onOpenChange={setIsEditComicOpen}
+        connectionName={connectionString}
+        locationId={locationId}
+        username={username}
       />
       <AddShowDialog
         open={isEditShowOpen}

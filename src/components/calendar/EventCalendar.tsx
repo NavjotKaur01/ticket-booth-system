@@ -285,6 +285,15 @@ export default function EventCalendar() {
     []
   )
 
+  const handleDoubleClickEvent = useCallback(
+    (event: CalendarEvent) => {
+      // Double-click on a show opens the Add Reservation dialog, matching CM behaviour
+      setReservationEvent(event)
+      setIsAddReservationOpen(true)
+    },
+    []
+  )
+
   const handleRecurrenceSave = useCallback((form: RecurrenceFormValue) => {
     const validationError = validateRecurrenceForm(form)
     if (validationError) {
@@ -437,6 +446,7 @@ export default function EventCalendar() {
         dayPropGetter={dayPropGetter}
         selectable
         onSelectSlot={handleSelectSlot}
+        onDoubleClickEvent={handleDoubleClickEvent}
       />
       <CalendarDialogs
         isAddEditPackageOpen={isAddEditPackageOpen}

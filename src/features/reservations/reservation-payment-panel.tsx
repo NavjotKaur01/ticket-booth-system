@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { FormField } from '@/components/forms/form-fields'
 import { ScrollSelectControl } from '@/components/common/scroll-select-control'
 import { Button } from '@/components/ui/button'
@@ -126,6 +127,8 @@ function CreditCardNumberField ({
   value: string
   onChange: (value: string) => void
 }) {
+  const [showLimitMessage, setShowLimitMessage] = useState(false)
+
   return (
     <FormField
       label='Credit Card Number'
@@ -135,10 +138,21 @@ function CreditCardNumberField ({
       <Input
         id='payment-card-number'
         value={value}
-        onChange={event => onChange(event.target.value)}
+        onChange={event => {
+          const rawValue = event.target.value.replace(/\D/g, '')
+          if (rawValue.length > 16) {
+            setShowLimitMessage(true)
+          } else {
+            setShowLimitMessage(false)
+          }
+          onChange(rawValue.slice(0, 16))
+        }}
         className={COMPACT_INPUT}
         autoComplete='cc-number'
       />
+      {showLimitMessage && (
+        <p className="mt-1 text-[10px] text-destructive leading-tight">Cannot exceed 16 digits</p>
+      )}
     </FormField>
   )
 }

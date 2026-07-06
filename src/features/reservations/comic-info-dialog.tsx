@@ -1,6 +1,6 @@
 import { User } from "lucide-react"
 import type { ReactNode } from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 
 import { FormField } from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
@@ -64,10 +64,13 @@ type ComicInfoTab = (typeof COMIC_TABS)[number]["id"]
 type ComicInfoDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  stageName: string
+  stageName?: string
+  comic?: ComicInfo | null
   nested?: boolean
   isLoading?: boolean
   onSave?: (values: ComicInfo) => void | Promise<void>
+  onChangeImage?: (base64Image: string) => void | Promise<void>
+  onDeleteImage?: () => void | Promise<void>
 }
 
 type UpdateField = <K extends keyof ComicInfo>(
@@ -178,14 +181,44 @@ function ComicInfoTabs({
   )
 }
 
-function ComicProfileCard({ form }: { form: ComicInfo }) {
+function ComicProfileCard({
+  form,
+  onChangeImage,
+  onDeleteImage,
+}: {
+  form: ComicInfo
+  onChangeImage?: (base64Image: string) => void | Promise<void>
+  onDeleteImage?: () => void | Promise<void>
+}) {
   const displayName =
     [form.firstName, form.lastName].filter(Boolean).join(" ") || form.stageName
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string
+      // Extract just the base64 part
+      const base64 = dataUrl.split(",")[1]
+      if (base64 && onChangeImage) {
+        onChangeImage(base64)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
 
   return (
     <div className="flex shrink-0 flex-col items-center gap-2 self-start text-center sm:sticky sm:top-0">
       <div className="flex size-24 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-background shadow-xs">
-        <User className="size-11 text-muted-foreground/55" aria-hidden />
+        {form.imageUrl ? (
+          <img src={form.imageUrl} alt={displayName} className="h-full w-full object-cover" />
+        ) : (
+          <User className="size-11 text-muted-foreground/55" aria-hidden />
+        )}
       </div>
       <div className="space-y-0.5 px-1">
         <p className="text-sm font-semibold leading-snug text-foreground">
@@ -196,14 +229,36 @@ function ComicProfileCard({ form }: { form: ComicInfo }) {
           {form.artistType || "Comedian"}
         </p>
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="h-8 px-3 text-xs"
-      >
-        Change image
-      </Button>
+      <input
+        type="file"
+        accept="image/*"
+        className="hidden"
+        ref={fileInputRef}
+        onChange={handleImageChange}
+      />
+      <div className="flex flex-col gap-1 w-full">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 px-3 text-xs w-full"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={!onChangeImage}
+        >
+          Change image
+        </Button>
+        {form.imageUrl && onDeleteImage && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 px-3 text-xs w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={onDeleteImage}
+          >
+            Remove image
+          </Button>
+        )}
+      </div>
     </div>
   )
 }
@@ -211,13 +266,17 @@ function ComicProfileCard({ form }: { form: ComicInfo }) {
 function ComedianInfoPanel({
   form,
   updateField,
+  onChangeImage,
+  onDeleteImage,
 }: {
   form: ComicInfo
   updateField: UpdateField
+  onChangeImage?: (base64Image: string) => void | Promise<void>
+  onDeleteImage?: () => void | Promise<void>
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-[9.5rem_minmax(0,1fr)] sm:items-start">
-      <ComicProfileCard form={form} />
+      <ComicProfileCard form={form} onChangeImage={onChangeImage} onDeleteImage={onDeleteImage} />
 
       <div className="min-w-0 space-y-4">
         <FormSection title="Identity">
@@ -489,19 +548,22 @@ export function ComicInfoDialog({
   open,
   onOpenChange,
   stageName,
+  comic,
   nested = false,
   isLoading = false,
   onSave,
+  onChangeImage,
+  onDeleteImage,
 }: ComicInfoDialogProps) {
-  const [form, setForm] = useState<ComicInfo>(() => getComicInfo(stageName))
+  const [form, setForm] = useState<ComicInfo>(() => comic ?? getComicInfo(stageName ?? ""))
   const [activeTab, setActiveTab] = useState<ComicInfoTab>("info")
 
   useEffect(() => {
     if (open && !isLoading) {
-      setForm(getComicInfo(stageName))
+      setForm(comic ?? getComicInfo(stageName ?? ""))
       setActiveTab("info")
     }
-  }, [isLoading, open, stageName])
+  }, [isLoading, open, comic, stageName])
 
   function updateField<K extends keyof ComicInfo>(
     field: K,
@@ -542,7 +604,12 @@ export function ComicInfoDialog({
                 aria-labelledby={`comic-tab-${activeTab}`}
               >
                 {activeTab === "info" ? (
-                  <ComedianInfoPanel form={form} updateField={updateField} />
+                  <ComedianInfoPanel
+                    form={form}
+                    updateField={updateField}
+                    onChangeImage={onChangeImage}
+                    onDeleteImage={onDeleteImage}
+                  />
                 ) : (
                   <ContactAddressPanel form={form} updateField={updateField} />
                 )}

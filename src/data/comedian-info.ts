@@ -19,6 +19,7 @@ export type ComicInfo = {
   altUrl: string
   artistType: string
   preferredContact: string
+  imageUrl?: string
 }
 
 export const comicInfoByStageName: Record<string, ComicInfo> = {
