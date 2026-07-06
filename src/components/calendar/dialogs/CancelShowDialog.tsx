@@ -14,10 +14,11 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { CalendarEvent } from "@/data/calendarEvents"
 
 import {
-  cancelShow,
   getCancelShowDialogData,
   type CancelShowDialogData,
 } from "../service/cancelShow.service"
+import { useCancelShowMutation } from "@/store/api/clubmanApi"
+import { useAppSession } from "@/hooks/use-app-session"
 
 type CancelShowDialogProps = {
   open: boolean
@@ -56,10 +57,13 @@ export default function CancelShowDialog({
   onOpenChange,
   onCancelShow,
 }: CancelShowDialogProps) {
+  const { connectionName } = useAppSession()
   const [dialogData, setDialogData] = useState<CancelShowDialogData | null>(null)
   const [step, setStep] = useState<CancelShowStep>("confirm")
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const [cancelShow] = useCancelShowMutation()
 
   useEffect(() => {
     if (!open) {
@@ -101,9 +105,16 @@ export default function CancelShowDialog({
     setIsSubmitting(true)
 
     try {
-      await cancelShow(dialogData.eventId)
+      await cancelShow({
+        ConnectionString: connectionName,
+        CalendarShowId: dialogData.eventId,
+        IsSoftDelete: dialogData.reservationCount > 0,
+      }).unwrap()
+
       onCancelShow?.(dialogData.eventId)
       onOpenChange(false)
+    } catch (err) {
+      console.error("Failed to cancel show", err)
     } finally {
       setIsSubmitting(false)
     }

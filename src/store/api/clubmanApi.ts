@@ -37,11 +37,17 @@ import type {
   SaveShowRequestModel,
 } from "@/types/api/save-show"
 import type { ApiCustomerSearchItem } from "@/types/api/customer-search"
+import type { ApiComedianInfo } from "@/types/api/comedian-info"
 import type {
   ApiMarketingComedianSearchItem,
   ApiMarketingFilterCustomer,
   MarketingComedianSearchRequest,
 } from "@/types/api/marketing-filter-search"
+import type { ComicInfo } from "@/data/comedian-info"
+
+// import type { ComedianRequestModel } from "@/types/api/comedian-info"
+import { buildUpdateComedianRequest } from "@/lib/build-update-comedian-request"
+import { buildUpdateComedianImageRequest } from "@/lib/build-update-comedian-image-request"
 import { buildMarketingFilterSearchRequest } from "@/lib/build-marketing-filter-search-request"
 import type { MarketingFilterForm } from "@/types/marketing-filter"
 import type { ApiCustomerDetail, CustomerRequest } from "@/types/api/customer"
@@ -69,6 +75,7 @@ import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { ReservationCustomerSearchItem } from "@/types/api/reservation-customer-search"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
 import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
+import type { ShowRequestModel } from "@/types/api/cancel-show"
 import type { ReservationNoteRequest } from "@/types/api/reservation-note"
 import { mapReservationDetail } from "@/lib/map-reservation-detail"
 import type { ReservationHistoryItem } from "@/types/api/reservation-history"
@@ -104,6 +111,7 @@ export const clubmanApi = createApi({
     "Calendar",
     "DailyTransaction",
     "SystemDefault",
+    "Comedians"
   ],
   endpoints: (builder) => ({
     getLocations: builder.query({
@@ -915,6 +923,78 @@ export const clubmanApi = createApi({
         method: "GET",
       }),
       transformResponse: (response: ApiReportComedian[]) => response ?? [],
+      providesTags: ["Comedians"],
+    }),
+
+    getComedianInfo: builder.query<
+      ApiComedianInfo,
+      { connectionName: string; comicId: string }
+    >({
+      query: ({ connectionName, comicId }) =>
+        calendarApiPath(connectionName, comicId, "GetComedianInfo"),
+      transformResponse: (response: ApiComedianInfo | ApiComedianInfo[]) => {
+        return Array.isArray(response) ? response[0] : response
+      },
+      providesTags: ["Comedians"],
+    }),
+
+    updateComedian: builder.mutation<
+      unknown,
+      {
+        connectionName: string
+        locationId: string
+        username: string
+        comicId: string
+        form: ComicInfo
+      }
+    >({
+      query: (params) => ({
+        url: calendarApiPath("UpdateComedain"),
+        method: "PUT",
+        body: buildUpdateComedianRequest(params),
+      }),
+      invalidatesTags: ["Comedians"],
+    }),
+
+    updateComedianImage: builder.mutation<
+      unknown,
+      {
+        connectionName: string
+        locationId: string
+        username: string
+        comicId?: string
+        base64Image: string
+      }
+    >({
+      query: (params) => ({
+        url: calendarApiPath("AddUpdateComedainImage"),
+        method: "PUT",
+        body: buildUpdateComedianImageRequest(params),
+      }),
+      invalidatesTags: ["Comedians"],
+    }),
+
+    deleteComedianImage: builder.mutation<
+      unknown,
+      {
+        connectionName: string
+        comicId: string
+      }
+    >({
+      query: ({ connectionName, comicId }) => ({
+        url: calendarApiPath(connectionName, comicId, "DeleteComedainImage"),
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Comedians"],
+    }),
+
+    cancelShow: builder.mutation<unknown, ShowRequestModel>({
+      query: (body) => ({
+        url: calendarApiPath("CancelShow"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Calendar"],
     }),
   }),
 })
@@ -964,4 +1044,9 @@ export const {
   useGenerateReportMutation,
   useGetReportPermissionAccessesQuery,
   useGetComedianListQuery,
+  useGetComedianInfoQuery,
+  useUpdateComedianMutation,
+  useUpdateComedianImageMutation,
+  useDeleteComedianImageMutation,
+  useCancelShowMutation,
 } = clubmanApi

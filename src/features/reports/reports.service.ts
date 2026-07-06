@@ -1,4 +1,4 @@
-﻿import dayjs from "dayjs"
+import dayjs from "dayjs"
 
 import {
   buildAuditReportExportBlob,
@@ -483,13 +483,13 @@ function formatCurrency(value: string | number | null | undefined) {
 function formatDisplayDate(value: string | null | undefined) {
   if (!value) return "-"
   const parsed = dayjs(value)
-  return parsed.isValid() ? parsed.format("DD/MM/YYYY") : value
+  return parsed.isValid() ? parsed.format("MM/DD/YYYY") : value
 }
 
 function formatDisplayDateTime(value: string | null | undefined) {
   if (!value) return "-"
   const parsed = dayjs(value)
-  return parsed.isValid() ? parsed.format("DD/MM/YYYY HH:mm") : value
+  return parsed.isValid() ? parsed.format("MM/DD/YYYY HH:mm") : value
 }
 
 function formatQuickViewDate(value: unknown): string {
@@ -1647,7 +1647,7 @@ export function transformReportApiResponse({
 }): ReportViewerResult {
   const config = getReportConfig(reportType)
   const subtitle = buildSubtitle(filters, locationOptions)
-  const generatedAt = dayjs().format("DD/MM/YYYY HH:mm")
+  const generatedAt = dayjs().format("MM/DD/YYYY HH:mm")
 
   switch (reportType) {
     case "banned-inactive-customers":

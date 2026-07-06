@@ -151,7 +151,7 @@ type CustomerSearchCriteria = ReservationCustomerSearchCriteria
 
 const EMPTY_CUSTOMER_SEARCH_CRITERIA = EMPTY_RESERVATION_CUSTOMER_SEARCH_CRITERIA
 
-function hasCustomerSearchCriteria (
+function hasCustomerSearchCriteria(
   searchType: 'customer' | 'business',
   criteria: CustomerSearchCriteria
 ) {
@@ -165,7 +165,7 @@ const SECTION_SEAT_STYLES = {
   availableValue: 'font-semibold text-emerald-600'
 } as const
 
-function SectionSeatDisplay ({ option }: { option: SectionOption }) {
+function SectionSeatDisplay({ option }: { option: SectionOption }) {
   return (
     <div className='flex min-w-max items-center justify-end gap-x-1.5 whitespace-nowrap text-sm tabular-nums'>
       <span className='shrink-0 tabular-nums text-foreground'>
@@ -189,11 +189,11 @@ function SectionSeatDisplay ({ option }: { option: SectionOption }) {
   )
 }
 
-function selectNumericInput (event: FocusEvent<HTMLInputElement>) {
+function selectNumericInput(event: FocusEvent<HTMLInputElement>) {
   event.target.select()
 }
 
-function SectionPicker ({
+function SectionPicker({
   sections,
   sectionsLoading,
   section,
@@ -255,7 +255,7 @@ function SectionPicker ({
     )
   }
 
-  function focusPartyInput (sectionId: string) {
+  function focusPartyInput(sectionId: string) {
     requestAnimationFrame(() => {
       const input = partyInputRefs.current[sectionId]
       input?.focus({ preventScroll: true })
@@ -263,12 +263,12 @@ function SectionPicker ({
     })
   }
 
-  function handleSectionValueChange (value: string) {
+  function handleSectionValueChange(value: string) {
     onSectionChange(value)
     focusPartyInput(value)
   }
 
-  function focusPassesInput () {
+  function focusPassesInput() {
     requestAnimationFrame(() => {
       const input = passesInputRef.current
       input?.focus({ preventScroll: true })
@@ -276,12 +276,12 @@ function SectionPicker ({
     })
   }
 
-  function handlePromoChange (value: string) {
+  function handlePromoChange(value: string) {
     onPromoChange(value)
     focusPassesAfterPromoCloseRef.current = true
   }
 
-  function handlePromoCloseAutoFocus (event: Event) {
+  function handlePromoCloseAutoFocus(event: Event) {
     if (!focusPassesAfterPromoCloseRef.current) {
       return
     }
@@ -291,7 +291,7 @@ function SectionPicker ({
     focusPassesInput()
   }
 
-  function handlePassesInputKeyDown (event: KeyboardEvent<HTMLInputElement>) {
+  function handlePassesInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key !== 'Tab') {
       return
     }
@@ -422,7 +422,7 @@ function SectionPicker ({
   )
 }
 
-function formatShowDate (dateValue: string) {
+function formatShowDate(dateValue: string) {
   const parsed = new Date(`${dateValue}T00:00:00`)
   if (Number.isNaN(parsed.getTime())) {
     return reservationShowMeta.showDate
@@ -436,25 +436,25 @@ function formatShowDate (dateValue: string) {
   })
 }
 
-function parseShowDateValue (dateValue: string) {
+function parseShowDateValue(dateValue: string) {
   const parsed = new Date(`${dateValue}T00:00:00`)
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
-function getStartOfDay (date: Date) {
+function getStartOfDay(date: Date) {
   const value = new Date(date)
   value.setHours(0, 0, 0, 0)
   return value
 }
 
-function formatDateInputValue (date: Date) {
+function formatDateInputValue(date: Date) {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
 
-function TotalsBreakdown ({
+function TotalsBreakdown({
   selectedSection,
   partySize,
   totals,
@@ -541,7 +541,7 @@ function TotalsBreakdown ({
   )
 }
 
-function InlineRadioGroup ({
+function InlineRadioGroup({
   value,
   onChange,
   options,
@@ -576,7 +576,7 @@ function InlineRadioGroup ({
   )
 }
 
-function OriginSegmentedControl ({
+function OriginSegmentedControl({
   value,
   onChange
 }: {
@@ -606,7 +606,7 @@ function OriginSegmentedControl ({
   )
 }
 
-function BookingOptionsBar ({
+function BookingOptionsBar({
   shows,
   showTime,
   onShowTimeChange,
@@ -667,24 +667,26 @@ function BookingOptionsBar ({
   )
 }
 
-function CustomerSearchHeader ({
+function CustomerSearchHeader({
   searchType,
   onSearchTypeChange,
   onSearch,
   onClear,
-  onAddCustomer
+  onAddCustomer,
+  hasSelectedCustomer
 }: {
   searchType: 'customer' | 'business'
   onSearchTypeChange: (value: string) => void
   onSearch: () => void
   onClear: () => void
-  onAddCustomer: () => void
+  onAddCustomer?: () => void
+  hasSelectedCustomer?: boolean
 }) {
   const isBusiness = searchType === 'business'
 
   return (
     <div className='flex flex-wrap items-center gap-x-3 gap-y-2'>
-       <div className='flex min-w-0 items-center gap-2'>
+      <div className='flex min-w-0 items-center gap-2'>
         <h3 className='text-sm font-semibold text-foreground'>
           Customer & Search
         </h3>
@@ -708,7 +710,7 @@ function CustomerSearchHeader ({
           onClick={onSearch}
         />
         <IconActionButton
-          label={isBusiness ? 'Add Business' : 'Add Customer'}
+          label={isBusiness ? 'Add Business' : hasSelectedCustomer ? 'Edit Customer' : 'Add Customer'}
           icon={UserPlus}
           tabIndex={-1}
           onClick={isBusiness ? undefined : onAddCustomer}
@@ -725,7 +727,7 @@ function CustomerSearchHeader ({
   )
 }
 
-function CustomerSearchFields ({
+function CustomerSearchFields({
   searchType,
   criteria,
   onCriteriaChange,
@@ -742,7 +744,7 @@ function CustomerSearchFields ({
 }) {
   const inputClass = cn('w-full', COMPACT_INPUT)
 
-  function updateField (field: keyof CustomerSearchCriteria, value: string) {
+  function updateField(field: keyof CustomerSearchCriteria, value: string) {
     onCriteriaChange({ ...criteria, [field]: value })
   }
 
@@ -823,7 +825,7 @@ function CustomerSearchFields ({
   )
 }
 
-function MetaIconButton ({
+function MetaIconButton({
   label,
   icon: Icon,
   onClick
@@ -852,7 +854,7 @@ function MetaIconButton ({
   )
 }
 
-function ReservationShowDatePicker ({
+function ReservationShowDatePicker({
   showDate,
   onShowDateChange
 }: {
@@ -871,7 +873,7 @@ function ReservationShowDatePicker ({
     }
   }, [showDate])
 
-  function handleOpenChange (nextOpen: boolean) {
+  function handleOpenChange(nextOpen: boolean) {
     setIsOpen(nextOpen)
 
     if (nextOpen && selectedDate) {
@@ -902,25 +904,25 @@ function ReservationShowDatePicker ({
         </TooltipTrigger>
         <TooltipContent side='top'>Change show date</TooltipContent>
       </Tooltip>
-        <PopoverContent align='start' className='w-auto p-0'>
-          {isOpen ? (
-            <DatePickerCalendarPanel
-              key={`reservation-show-date-${showDate}`}
-              month={visibleMonth}
-              onMonthChange={setVisibleMonth}
-              selected={selectedDate ?? undefined}
-              onSelect={nextDate => {
-                onShowDateChange(formatDateInputValue(getStartOfDay(nextDate)))
-                setIsOpen(false)
-              }}
-            />
-          ) : null}
-        </PopoverContent>
+      <PopoverContent align='start' className='w-auto p-0'>
+        {isOpen ? (
+          <DatePickerCalendarPanel
+            key={`reservation-show-date-${showDate}`}
+            month={visibleMonth}
+            onMonthChange={setVisibleMonth}
+            selected={selectedDate ?? undefined}
+            onSelect={nextDate => {
+              onShowDateChange(formatDateInputValue(getStartOfDay(nextDate)))
+              setIsOpen(false)
+            }}
+          />
+        ) : null}
+      </PopoverContent>
     </Popover>
   )
 }
 
-function ShowMetaRow ({
+function ShowMetaRow({
   comicName,
   showDate,
   onShowDateChange,
@@ -997,7 +999,7 @@ function ShowMetaRow ({
   )
 }
 
-export function AddReservationDialog ({
+export function AddReservationDialog({
   open,
   onOpenChange,
   onSaved,
@@ -1406,8 +1408,8 @@ export function AddReservationDialog ({
 
   const partyValidationError = selectedSection
     ? validateReservationParty(partySize, availableSeatsForParty, {
-        requirePositive: showPartyRequiredError
-      })
+      requirePositive: showPartyRequiredError
+    })
     : null
 
   const partyIsValid =
@@ -1428,7 +1430,7 @@ export function AddReservationDialog ({
     searchType === 'customer' &&
     hasCompleteNewCustomerCriteria(searchCriteria)
 
-  function focusSelectedPartyInput (sectionId = section) {
+  function focusSelectedPartyInput(sectionId = section) {
     const targetSectionId =
       sectionId || availableSections[0]?.id || selectedSection?.id || ''
 
@@ -1443,14 +1445,14 @@ export function AddReservationDialog ({
     })
   }
 
-  function focusLastNameInput () {
+  function focusLastNameInput() {
     requestAnimationFrame(() => {
       lastNameInputRef.current?.focus({ preventScroll: true })
       lastNameInputRef.current?.select()
     })
   }
 
-  function handleShowTimeKeyDown (
+  function handleShowTimeKeyDown(
     event: KeyboardEvent<HTMLButtonElement>,
     show: (typeof showOptions)[number]
   ) {
@@ -1467,11 +1469,11 @@ export function AddReservationDialog ({
     focusSelectedPartyInput()
   }
 
-  function handleShowTimeFocus () {
+  function handleShowTimeFocus() {
     dialogScrollRef.current?.scrollTo({ top: 0 })
   }
 
-  function handlePartyInputKeyDown (
+  function handlePartyInputKeyDown(
     event: KeyboardEvent<HTMLInputElement>,
     sectionId: string
   ) {
@@ -1490,12 +1492,12 @@ export function AddReservationDialog ({
     focusLastNameInput()
   }
 
-  function openAddCustomerDialog (initialValues: CustomerFormValues | null = null) {
+  function openAddCustomerDialog(initialValues: CustomerFormValues | null = null) {
     setAddCustomerInitialValues(initialValues)
     setIsAddCustomerOpen(true)
   }
 
-  async function handleAddNewCustomer () {
+  async function handleAddNewCustomer() {
     if (!canAddNewCustomer || isCreatingCustomer) {
       return
     }
@@ -1524,7 +1526,7 @@ export function AddReservationDialog ({
     }
   }
 
-  function handleFillMoreDetails () {
+  function handleFillMoreDetails() {
     openAddCustomerDialog(
       mapReservationSearchCriteriaToCustomerForm(searchCriteria)
     )
@@ -1551,13 +1553,13 @@ export function AddReservationDialog ({
     }
   }
 
-  function handlePaymentTypeChange (value: ReservationPaymentType) {
+  function handlePaymentTypeChange(value: ReservationPaymentType) {
     setPaymentType(value)
     setPaymentFields(createEmptyReservationPaymentFields())
     setPaymentSaveError(null)
   }
 
-  function updatePaymentField<K extends keyof ReservationPaymentFields> (
+  function updatePaymentField<K extends keyof ReservationPaymentFields>(
     key: K,
     value: ReservationPaymentFields[K]
   ) {
@@ -1565,7 +1567,7 @@ export function AddReservationDialog ({
     setPaymentSaveError(null)
   }
 
-  function getSelectedCustomerDetails () {
+  function getSelectedCustomerDetails() {
     return {
       lastName: searchCriteria.lastName,
       firstName: searchCriteria.firstName,
@@ -1575,7 +1577,7 @@ export function AddReservationDialog ({
     }
   }
 
-  async function handleSaveReservation () {
+  async function handleSaveReservation() {
     if (!effectiveCustomerId || isSavingReservation) {
       return
     }
@@ -1600,10 +1602,10 @@ export function AddReservationDialog ({
       formatReservationMoney(
         isEditMode
           ? Math.max(
-              0,
-              saveTotals.total -
-                parseReservationMoney(reservation?.paid ?? '$0.00')
-            )
+            0,
+            saveTotals.total -
+            parseReservationMoney(reservation?.paid ?? '$0.00')
+          )
           : saveTotals.total > 0
             ? saveTotals.total
             : 0
@@ -1768,11 +1770,11 @@ export function AddReservationDialog ({
       const reservationIds = await createNewReservation(
         shouldApplyPayment
           ? buildSaveReservationWithPaymentRequest({
-              ...reservationParams,
-              paymentAmount: parseReservationMoney(savePaymentAmount),
-              paymentType,
-              paymentFields
-            })
+            ...reservationParams,
+            paymentAmount: parseReservationMoney(savePaymentAmount),
+            paymentType,
+            paymentFields
+          })
           : buildSaveReservationOnlyRequest(reservationParams)
       )
       const reservationId = reservationIds[0]
@@ -1813,7 +1815,7 @@ export function AddReservationDialog ({
     }
   }
 
-  async function selectSavedCustomer (
+  async function selectSavedCustomer(
     customer: CustomerFormValues,
     results: ReservationCustomerSearchResult[]
   ) {
@@ -1828,11 +1830,11 @@ export function AddReservationDialog ({
     }
   }
 
-  function handleReservationInputChange () {
+  function handleReservationInputChange() {
     setPaymentAmountOverride(null)
   }
 
-  function persistCurrentBookingForm (showId: string) {
+  function persistCurrentBookingForm(showId: string) {
     if (!showId) {
       return
     }
@@ -1844,12 +1846,12 @@ export function AddReservationDialog ({
     })
   }
 
-  function clearBookingFormCaches () {
+  function clearBookingFormCaches() {
     bookingFormCacheRef.current.clear()
     sectionsInitializedForShowRef.current = ''
   }
 
-  function resetBookingForDateChange () {
+  function resetBookingForDateChange() {
     clearBookingFormCaches()
     handleReservationInputChange()
     setSection('')
@@ -1858,7 +1860,7 @@ export function AddReservationDialog ({
     setPromo('none')
   }
 
-  function handleShowTimeChange (value: string) {
+  function handleShowTimeChange(value: string) {
     if (value === activeShowTime) {
       // activeShowTime can resolve to the first API result one render before
       // showTime state is synchronized.
@@ -1875,19 +1877,19 @@ export function AddReservationDialog ({
     setShowTime(value)
   }
 
-  function handlePaymentAmountChange (value: string) {
+  function handlePaymentAmountChange(value: string) {
     setPaymentAmountOverride(value)
     setPaymentSaveError(null)
   }
 
-  function clearCustomerSearch () {
+  function clearCustomerSearch() {
     clearReservationCustomerSearch()
     setSearchRowSelection({})
     setSearchCriteria(EMPTY_CUSTOMER_SEARCH_CRITERIA)
     setCreateCustomerError(null)
   }
 
-  function handleCustomerSearch () {
+  function handleCustomerSearch() {
     if (!hasCustomerSearchCriteria(searchType, searchCriteria)) {
       clearCustomerSearch()
       return
@@ -1898,7 +1900,7 @@ export function AddReservationDialog ({
     void searchReservationCustomers(searchType, searchCriteria)
   }
 
-  function handleSearchResultSelect (
+  function handleSearchResultSelect(
     result: ReservationCustomerSearchResult | ReservationBusinessSearchResult
   ) {
     setSearchCriteria({
@@ -1961,7 +1963,7 @@ export function AddReservationDialog ({
     clearCustomerSearch()
   }, [searchType])
 
-  function setSectionParty (sectionId: string, value: number) {
+  function setSectionParty(sectionId: string, value: number) {
     handleReservationInputChange()
     setShowPartyRequiredError(false)
 
@@ -1975,7 +1977,7 @@ export function AddReservationDialog ({
     }))
   }
 
-  async function applySavedCustomer (customer: CustomerFormValues) {
+  async function applySavedCustomer(customer: CustomerFormValues) {
     const { area, prefix, line } = customer.phone
     const nextCriteria = {
       lastName: customer.lastName,
@@ -2010,6 +2012,28 @@ export function AddReservationDialog ({
     await selectSavedCustomer(customer, results ?? [])
   }
 
+  const selectedCustomerSearchId = Object.keys(searchRowSelection).find(
+    id => searchRowSelection[id]
+  )
+  const selectedCustomerSearchResult =
+    searchType === 'customer' && selectedCustomerSearchId
+      ? customerSearchResults.find(c => c.id === selectedCustomerSearchId)
+      : null
+
+  const customerToEdit = selectedCustomerSearchResult
+    ? ({
+      id: selectedCustomerSearchResult.id,
+      lastName: selectedCustomerSearchResult.lastName,
+      firstName: selectedCustomerSearchResult.firstName,
+      email: selectedCustomerSearchResult.email,
+      phoneNo: selectedCustomerSearchResult.phoneNo,
+      // Fill other required fields with defaults to satisfy the Customer type
+      password: '',
+      address: '',
+      city: '',
+      status: ''
+    } as any)
+    : null
 
   return (
     <>
@@ -2050,182 +2074,183 @@ export function AddReservationDialog ({
               className='min-h-0 flex-1 overflow-y-auto px-4 py-2 pb-3'
             >
               <div className='grid gap-3 lg:grid-cols-2 lg:gap-4'>
-                  <div className='min-w-0 space-y-2.5 lg:pr-1'>
-                    <ShowMetaRow
-                      comicName={comicName}
-                      showDate={showDate}
-                      onShowDateChange={value => {
-                        resetBookingForDateChange()
-                        setShowDate(value)
-                      }}
-                      shows={availableShows}
-                      showTime={activeShowTime}
-                      onShowTimeChange={handleShowTimeChange}
-                      showTimeButtonRef={selectedShowTimeButtonRef}
-                      onShowTimeKeyDown={handleShowTimeKeyDown}
-                      onShowTimeFocus={handleShowTimeFocus}
-                      origin={origin}
-                      onOriginChange={id => {
-                        handleReservationInputChange()
-                        setOrigin(id as (typeof ORIGIN_OPTIONS)[number]['id'])
-                      }}
-                      onOpenComicInfo={() => setComicInfoOpen(true)}
-                      dinner={dinner}
-                      onDinnerChange={setDinner}
-                      showsLoading={showsLoading}
+                <div className='min-w-0 space-y-2.5 lg:pr-1'>
+                  <ShowMetaRow
+                    comicName={comicName}
+                    showDate={showDate}
+                    onShowDateChange={value => {
+                      resetBookingForDateChange()
+                      setShowDate(value)
+                    }}
+                    shows={availableShows}
+                    showTime={activeShowTime}
+                    onShowTimeChange={handleShowTimeChange}
+                    showTimeButtonRef={selectedShowTimeButtonRef}
+                    onShowTimeKeyDown={handleShowTimeKeyDown}
+                    onShowTimeFocus={handleShowTimeFocus}
+                    origin={origin}
+                    onOriginChange={id => {
+                      handleReservationInputChange()
+                      setOrigin(id as (typeof ORIGIN_OPTIONS)[number]['id'])
+                    }}
+                    onOpenComicInfo={() => setComicInfoOpen(true)}
+                    dinner={dinner}
+                    onDinnerChange={setDinner}
+                    showsLoading={showsLoading}
+                  />
+
+                  <SectionPicker
+                    sections={availableSections}
+                    sectionsLoading={sectionsLoading}
+                    section={section}
+                    onSectionChange={value => {
+                      handleReservationInputChange()
+                      setSection(value)
+                    }}
+                    partyBySection={partyBySection}
+                    onPartyChange={setSectionParty}
+                    partyInputRefs={partyInputRefs}
+                    onPartyInputKeyDown={handlePartyInputKeyDown}
+                    partyError={partyValidationError}
+                    promo={effectivePromo}
+                    onPromoChange={value => {
+                      handleReservationInputChange()
+                      setPromo(value)
+                    }}
+                    promoOptions={promoOptions}
+                    promoLoading={promoLoading}
+                    passes={passes}
+                    onPassesChange={value => {
+                      handleReservationInputChange()
+                      setPasses(value)
+                    }}
+                    onPassesTabForward={focusLastNameInput}
+                  />
+
+                  <div className='rounded-lg border border-border/60 p-2.5'>
+                    {sectionsError || promosError ? (
+                      <p className='mb-2 text-xs text-destructive'>
+                        {sectionsError ?? promosError}
+                      </p>
+                    ) : null}
+                    <TotalsBreakdown
+                      selectedSection={selectedSection}
+                      partySize={partySize}
+                      totals={totals}
+                      amountDue={amountDue}
                     />
-
-                    <SectionPicker
-                      sections={availableSections}
-                      sectionsLoading={sectionsLoading}
-                      section={section}
-                      onSectionChange={value => {
-                        handleReservationInputChange()
-                        setSection(value)
-                      }}
-                      partyBySection={partyBySection}
-                      onPartyChange={setSectionParty}
-                      partyInputRefs={partyInputRefs}
-                      onPartyInputKeyDown={handlePartyInputKeyDown}
-                      partyError={partyValidationError}
-                      promo={effectivePromo}
-                      onPromoChange={value => {
-                        handleReservationInputChange()
-                        setPromo(value)
-                      }}
-                      promoOptions={promoOptions}
-                      promoLoading={promoLoading}
-                      passes={passes}
-                      onPassesChange={value => {
-                        handleReservationInputChange()
-                        setPasses(value)
-                      }}
-                      onPassesTabForward={focusLastNameInput}
-                    />
-
-                    <div className='rounded-lg border border-border/60 p-2.5'>
-                      {sectionsError || promosError ? (
-                        <p className='mb-2 text-xs text-destructive'>
-                          {sectionsError ?? promosError}
-                        </p>
-                      ) : null}
-                      <TotalsBreakdown
-                        selectedSection={selectedSection}
-                        partySize={partySize}
-                        totals={totals}
-                        amountDue={amountDue}
-                      />
-                    </div>
-                  </div>
-
-                  <div className='flex min-w-0 flex-col gap-3 border-t border-border/50 pt-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4'>
-                    <div className='flex flex-col gap-2.5'>
-                      <div className='shrink-0'>
-                        <CustomerSearchHeader
-                          searchType={searchType}
-                          onSearchTypeChange={value =>
-                            setSearchType(value as 'customer' | 'business')
-                          }
-                          onSearch={handleCustomerSearch}
-                          onClear={clearCustomerSearch}
-                          onAddCustomer={() =>
-                            openAddCustomerDialog(
-                              mapReservationSearchCriteriaToCustomerForm(searchCriteria)
-                            )
-                          }
-                        />
-                      </div>
-
-                      <div className='shrink-0'>
-                        <CustomerSearchFields
-                          searchType={searchType}
-                          criteria={searchCriteria}
-                          onCriteriaChange={setSearchCriteria}
-                          // onFieldBlur={handleCustomerSearch}
-                          onFieldEnter={handleCustomerSearch}
-                          lastNameInputRef={lastNameInputRef}
-                        />
-                      </div>
-
-                      {customerSearchError || createCustomerError ? (
-                        <p className='text-xs text-destructive'>
-                          {customerSearchError ?? createCustomerError}
-                        </p>
-                      ) : null}
-
-                      {hasSearched ? (
-                        <div className='shrink-0'>
-                          <ReservationSearchResultsTable
-                            searchType={searchType}
-                            customerResults={customerSearchResults}
-                            businessResults={businessSearchResults}
-                            hasSearched={hasSearched}
-                            loading={customerSearchLoading}
-                            canAddNewCustomer={canAddNewCustomer}
-                            creatingCustomer={isCreatingCustomer}
-                            onAddNewCustomer={() => void handleAddNewCustomer()}
-                            onFillMoreDetails={handleFillMoreDetails}
-                            rowSelection={searchRowSelection}
-                            onRowSelectionChange={setSearchRowSelection}
-                            onResultSelect={handleSearchResultSelect}
-                          />
-                        </div>
-                      ) : null}
-
-                      <div className='w-full shrink-0 space-y-2'>
-                        <div className='flex justify-end'>
-                          <Button
-                            type='button'
-                            variant='link'
-                            size='sm'
-                            tabIndex={-1}
-                            className='h-auto px-0 pt-0 text-sm font-normal underline'
-                            onClick={() => setSpecialNotesOpen(current => !current)}
-                            aria-expanded={specialNotesOpen}
-                          >
-                            Special Notes
-                          </Button>
-                        </div>
-
-                        {specialNotesOpen ? (
-                          <Textarea
-                            ref={notesInputRef}
-                            value={notes}
-                            onChange={event => setNotes(event.target.value)}
-                            placeholder='Enter notes or special requests...'
-                            className='min-h-20 w-full resize-y text-sm shadow-xs'
-                          />
-                        ) : null}
-                      </div>
-
-                      <div className='shrink-0'>
-                        <ReservationPaymentPanel
-                          paymentType={paymentType}
-                          onPaymentTypeChange={handlePaymentTypeChange}
-                          paymentAmount={paymentAmount}
-                          onPaymentAmountChange={handlePaymentAmountChange}
-                          fields={paymentFields}
-                          onFieldChange={updatePaymentField}
-                          paymentDisabled={!paymentRequired}
-                        />
-                        {paymentSaveError || saveReservationError ? (
-                          <p className='text-xs text-destructive'>
-                            {paymentSaveError ?? saveReservationError}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div className='shrink-0 border-t border-border/50 pt-3 pb-1'>
-                      <ReservationPaymentActions
-                        onCancel={() => onOpenChange(false)}
-                        onSave={() => void handleSaveReservation()}
-                        saveDisabled={!canSave}
-                        saving={isSavingReservation}
-                      />
-                    </div>
                   </div>
                 </div>
+
+                <div className='flex min-w-0 flex-col gap-3 border-t border-border/50 pt-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4'>
+                  <div className='flex flex-col gap-2.5'>
+                    <div className='shrink-0'>
+                      <CustomerSearchHeader
+                        searchType={searchType}
+                        onSearchTypeChange={value =>
+                          setSearchType(value as 'customer' | 'business')
+                        }
+                        onSearch={handleCustomerSearch}
+                        onClear={clearCustomerSearch}
+                        hasSelectedCustomer={!!customerToEdit}
+                        onAddCustomer={() =>
+                          openAddCustomerDialog(
+                            mapReservationSearchCriteriaToCustomerForm(searchCriteria)
+                          )
+                        }
+                      />
+                    </div>
+
+                    <div className='shrink-0'>
+                      <CustomerSearchFields
+                        searchType={searchType}
+                        criteria={searchCriteria}
+                        onCriteriaChange={setSearchCriteria}
+                        // onFieldBlur={handleCustomerSearch}
+                        onFieldEnter={handleCustomerSearch}
+                        lastNameInputRef={lastNameInputRef}
+                      />
+                    </div>
+
+                    {customerSearchError || createCustomerError ? (
+                      <p className='text-xs text-destructive'>
+                        {customerSearchError ?? createCustomerError}
+                      </p>
+                    ) : null}
+
+                    {hasSearched ? (
+                      <div className='shrink-0'>
+                        <ReservationSearchResultsTable
+                          searchType={searchType}
+                          customerResults={customerSearchResults}
+                          businessResults={businessSearchResults}
+                          hasSearched={hasSearched}
+                          loading={customerSearchLoading}
+                          canAddNewCustomer={canAddNewCustomer}
+                          creatingCustomer={isCreatingCustomer}
+                          onAddNewCustomer={() => void handleAddNewCustomer()}
+                          onFillMoreDetails={handleFillMoreDetails}
+                          rowSelection={searchRowSelection}
+                          onRowSelectionChange={setSearchRowSelection}
+                          onResultSelect={handleSearchResultSelect}
+                        />
+                      </div>
+                    ) : null}
+
+                    <div className='w-full shrink-0 space-y-2'>
+                      <div className='flex justify-end'>
+                        <Button
+                          type='button'
+                          variant='link'
+                          size='sm'
+                          tabIndex={-1}
+                          className='h-auto px-0 pt-0 text-sm font-normal underline'
+                          onClick={() => setSpecialNotesOpen(current => !current)}
+                          aria-expanded={specialNotesOpen}
+                        >
+                          Special Notes
+                        </Button>
+                      </div>
+
+                      {specialNotesOpen ? (
+                        <Textarea
+                          ref={notesInputRef}
+                          value={notes}
+                          onChange={event => setNotes(event.target.value)}
+                          placeholder='Enter notes or special requests...'
+                          className='min-h-20 w-full resize-y text-sm shadow-xs'
+                        />
+                      ) : null}
+                    </div>
+
+                    <div className='shrink-0'>
+                      <ReservationPaymentPanel
+                        paymentType={paymentType}
+                        onPaymentTypeChange={handlePaymentTypeChange}
+                        paymentAmount={paymentAmount}
+                        onPaymentAmountChange={handlePaymentAmountChange}
+                        fields={paymentFields}
+                        onFieldChange={updatePaymentField}
+                        paymentDisabled={!paymentRequired}
+                      />
+                      {paymentSaveError || saveReservationError ? (
+                        <p className='text-xs text-destructive'>
+                          {paymentSaveError ?? saveReservationError}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className='shrink-0 border-t border-border/50 pt-3 pb-1'>
+                    <ReservationPaymentActions
+                      onCancel={() => onOpenChange(false)}
+                      onSave={() => void handleSaveReservation()}
+                      saveDisabled={!canSave}
+                      saving={isSavingReservation}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </DialogContent>
         </TooltipProvider>
@@ -2254,6 +2279,7 @@ export function AddReservationDialog ({
         connectionName={connectionName}
         locationId={locationId}
         lastUpdateId={username}
+        customer={customerToEdit}
         initialValues={addCustomerInitialValues}
         onSaved={applySavedCustomer}
       />
