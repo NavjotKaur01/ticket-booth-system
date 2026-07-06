@@ -1,4 +1,4 @@
-﻿import {
+import {
   Calendar,
   Info,
   Search,
@@ -1989,12 +1989,27 @@ export function AddReservationDialog ({
     setIsAddCustomerOpen(false)
     setAddCustomerInitialValues(null)
     setSearchRowSelection({})
-    const results = (await searchReservationCustomers(
+
+    // The backend may not have committed the new customer record to the search
+    // index by the time we immediately query, causing ReservationSearchCustomer
+    // to return empty. Retry once after a short delay if the first attempt finds
+    // no results (race condition between SaveCustomer and the search endpoint).
+    let results = (await searchReservationCustomers(
       'customer',
       nextCriteria
     )) as ReservationCustomerSearchResult[]
+
+    if (!results || results.length === 0) {
+      await new Promise<void>(resolve => setTimeout(resolve, 800))
+      results = (await searchReservationCustomers(
+        'customer',
+        nextCriteria
+      )) as ReservationCustomerSearchResult[]
+    }
+
     await selectSavedCustomer(customer, results ?? [])
   }
+
 
   return (
     <>

@@ -2,6 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { formatMarketingFilterName } from "@/lib/filter-marketing-records"
+import { formatPhoneParts, parsePhoneString } from "@/lib/phone-segment-input"
 import type { MarketingFilterRecord } from "@/types/marketing-filter"
 
 export const marketingFilterColumns: ColumnDef<MarketingFilterRecord>[] = [
@@ -68,9 +69,14 @@ export const marketingFilterColumns: ColumnDef<MarketingFilterRecord>[] = [
 
       return (
         <div className="space-y-0.5 tabular-nums">
-          {numbers.map((phone, index) => (
-            <div key={`${phone}-${index}`}>{phone}</div>
-          ))}
+          {numbers.map((phone, index) => {
+            const formatted = formatPhoneParts(parsePhoneString(phone))
+            return (
+              <div key={`${phone}-${index}`}>
+                {formatted || phone}
+              </div>
+            )
+          })}
         </div>
       )
     },

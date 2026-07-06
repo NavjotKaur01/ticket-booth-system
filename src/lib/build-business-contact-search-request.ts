@@ -27,8 +27,8 @@ export function hasBusinessContactSearchCriteria(
 ) {
   return Boolean(
     filters.businessName.trim() ||
-      filters.lastName.trim() ||
-      filters.firstName.trim() ||
-      filters.email.trim()
+    filters.lastName.trim() ||
+    filters.firstName.trim() ||
+    filters.email.trim()
   )
 }

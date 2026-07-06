@@ -41,6 +41,12 @@ export type ApiMarketingFilterCustomer = {
   AreaCode?: string | null
   Phone1?: string | null
   Phone2?: string | null
+  AltAreaCode?: string | null
+  AltPhone1?: string | null
+  AltPhone2?: string | null
+  AltAreaCode_2?: string | null
+  AltPhone1_2?: string | null
+  AltPhone2_2?: string | null
   Email1?: string | null
   DateCreated?: string | null
   Active?: string | null

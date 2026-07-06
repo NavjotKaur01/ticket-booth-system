@@ -10,6 +10,15 @@ function normalizeText(value: string | null | undefined) {
   return value.replace(/\s+/g, " ").trim()
 }
 
+function combinePhoneParts(
+  area: string | null | undefined,
+  prefix: string | null | undefined,
+  line: string | null | undefined
+) {
+  const parts = [area, prefix, line].map((p) => p?.trim()).filter(Boolean)
+  return parts.join("")
+}
+
 function formatCreatedOn(value: string | null | undefined) {
   const normalized = normalizeText(value)
   if (!normalized) {
@@ -30,9 +39,9 @@ export function mapMarketingFilterResults(
       email: normalizeText(item.Email1),
       address: normalizeText(item.Addr1),
       address2: normalizeText(item.Addr2),
-      phone: normalizeText(item.Phone),
-      phone1: normalizeText(item.Phone1),
-      phone2: normalizeText(item.Phone2),
+      phone: combinePhoneParts(item.AreaCode, item.Phone1, item.Phone2) || normalizeText(item.Phone),
+      phone1: combinePhoneParts(item.AltAreaCode, item.AltPhone1, item.AltPhone2),
+      phone2: combinePhoneParts(item.AltAreaCode_2, item.AltPhone1_2, item.AltPhone2_2),
       zipCode: normalizeText(item.Zip),
       createdOn: formatCreatedOn(item.DateCreated),
       city: normalizeText(item.City),
