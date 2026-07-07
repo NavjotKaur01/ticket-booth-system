@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils"
 
 // ─── API shape ────────────────────────────────────────────────────────────────
 
-type PaymentEntry = { Amount?: number; CCType?: string }
+type PaymentEntry = { Amount?: number; CCType?: string; PymtType?: string }
 type PromoEntry = {
   Promo?: string
   PartyNo?: number
@@ -42,10 +42,13 @@ export type ManagerCheckoutApiShow = {
   CashForPOS?: PaymentEntry[]
   CashForWeb?: PaymentEntry[]
   CashForWebRefunds?: PaymentEntry[]
+  TotalReceipts?: string | number
+  TotalRecipts?: string | number
   FillPromoList?: PromoEntry[]
   BookedShowSectionList?: ShowSectionEntry[]
   PromoSourceList?: PromoSourceEntry[]
   OriginSourceList?: OriginEntry[]
+  OriginShowList?: OriginEntry[]
 }
 
 // ─── Payment helpers ───────────────────────────────────────────────────────────
@@ -67,7 +70,7 @@ const PAYMENT_LABELS: Record<PayCol, string> = {
 
 function normalizeCC(ccType = ""): PayCol {
   const t = ccType.trim().toUpperCase()
-  if (t === "CASH") return "cash"
+  if (["CASH", "CASH DRAWER"].includes(t)) return "cash"
   if (["AMERICAN EXPRESS", "AMX", "AMEX"].includes(t)) return "amex"
   if (t === "DISCOVER") return "discover"
   if (["MASTERCARD", "MC", "MASTER CARD"].includes(t)) return "mastercard"
@@ -81,7 +84,7 @@ function normalizeCC(ccType = ""): PayCol {
 function mapPayments(items: PaymentEntry[] = []): Record<PayCol, number> {
   const result = {} as Record<PayCol, number>
   for (const item of items) {
-    const key = normalizeCC(item.CCType)
+    const key = normalizeCC(item.PymtType || item.CCType)
     result[key] = (result[key] ?? 0) + (item.Amount ?? 0)
   }
   return result
@@ -276,7 +279,7 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
   const promos = show.FillPromoList ?? []
   const sources = show.PromoSourceList ?? []
   const sections = show.BookedShowSectionList ?? []
-  const origins = (show.OriginSourceList ?? []).filter(
+  const origins = (show.OriginSourceList ?? show.OriginShowList ?? []).filter(
     (o) => o.Origin && (n(o.Party) !== 0 || n(o.Seated) !== 0 || n(o.Paid) !== 0)
   )
 
@@ -475,7 +478,12 @@ export function ManagerCheckoutView({ rawData, subtitle, generatedAt }: ManagerC
       </div>
 
       {shows.map((show, idx) => {
-        const ticketPriceStr = (show.TicketPrice ?? []).map((p) => `$${p}`).join(", ") || "N/A"
+        const ticketPriceStr = (show.TicketPrice ?? [])
+          .map((p) => {
+            const num = Number(p)
+            return Number.isFinite(num) ? fmt(num) : `$${p}`
+          })
+          .join(", ") || "N/A"
 
         return (
           <div key={show.ShowId ?? idx} className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
@@ -503,6 +511,10 @@ export function ManagerCheckoutView({ rawData, subtitle, generatedAt }: ManagerC
               <div className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] gap-2 sm:flex sm:gap-2">
                 <span className="font-medium text-muted-foreground">Ticket Price:</span>
                 <span className="min-w-0 break-words">{ticketPriceStr}</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="font-medium text-muted-foreground">Total Receipts:</span>
+                <span>{String(show.TotalReceipts ?? show.TotalRecipts ?? "N/A")}</span>
               </div>
             </div>
 
