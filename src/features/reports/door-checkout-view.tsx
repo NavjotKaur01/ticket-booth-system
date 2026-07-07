@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { Maximize2, Minimize2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useGenerateReportMutation } from "@/store/api/clubmanApi"
 import type { ReportDrillContext } from "@/features/reports/reports.service"
@@ -85,6 +86,7 @@ function resolvePaymentCodes(displayName: string): { PymtType: string; CCType: s
 }
 
 const fmt = fmtAmount
+const DRILL_STICKY_HEADER_CLASS = "sticky top-0 z-20 bg-muted"
 
 function fmtDatetime(v: string | Date | undefined): string {
   if (!v) return "—"
@@ -107,6 +109,7 @@ function DrillDownDialog({
   const [drillRows, setDrillRows] = useState<DrillRow[] | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   // Fetch on mount
   useEffect(() => {
@@ -146,14 +149,33 @@ function DrillDownDialog({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className={REPORT_DRILL_DIALOG_CLASS}>
-        <DialogHeader className={REPORT_DRILL_HEADER_CLASS}>
-          <DialogTitle className="text-base">
+      <DialogContent
+        className={cn(
+          REPORT_DRILL_DIALOG_CLASS,
+          isExpanded &&
+            "h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-2rem)]"
+        )}
+      >
+        <DialogHeader className={cn(REPORT_DRILL_HEADER_CLASS, "pr-24")}>
+          <DialogTitle className="text-base flex flex-col lg:flex-row">
             Door CheckOut Drill Down Report
             {target.label && (
               <span className="ml-2 text-sm font-normal text-muted-foreground">— {target.label}</span>
             )}
           </DialogTitle>
+          <button
+            type="button"
+            className="absolute top-2 right-14 flex size-8 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+            aria-label={isExpanded ? "Restore dialog size" : "Expand dialog"}
+            title={isExpanded ? "Restore" : "Expand"}
+            onClick={() => setIsExpanded((current) => !current)}
+          >
+            {isExpanded ? (
+              <Minimize2 className="size-4" />
+            ) : (
+              <Maximize2 className="size-4" />
+            )}
+          </button>
         </DialogHeader>
 
         {isLoading && (
@@ -167,53 +189,55 @@ function DrillDownDialog({
         )}
 
         {!isLoading && !error && drillRows && (
-          <div className={REPORT_DRILL_BODY_CLASS}>
-            <ReportTable>
-              <thead className="sticky top-0 z-10">
-                <tr>
-                  <ReportTh>Show</ReportTh>
-                  <ReportTh>Status</ReportTh>
-                  <ReportTh>Payment Type</ReportTh>
-                  <ReportTh>CC Type</ReportTh>
-                  <ReportTh>Source</ReportTh>
-                  <ReportTh>Promo</ReportTh>
-                  <ReportTh right>Amount</ReportTh>
-                  <ReportTh>Cust LName</ReportTh>
-                  <ReportTh>Cust FName</ReportTh>
-                  <ReportTh>Pymt LName</ReportTh>
-                  <ReportTh>Pymt FName</ReportTh>
-                  <ReportTh>CreatedBy</ReportTh>
-                  <ReportTh>CreateDt</ReportTh>
-                </tr>
-              </thead>
-              <tbody>
-                {drillRows.length === 0 ? (
+          <div className={cn(REPORT_DRILL_BODY_CLASS, "flex overflow-hidden p-0")}>
+            <ReportTableScroll className="mx-5 my-4 min-h-0 flex-1 overflow-auto">
+              <ReportTable className="min-w-max border-separate border-spacing-0">
+                <thead>
                   <tr>
-                    <ReportTd colSpan={13} center className="py-6 text-muted-foreground">
-                      No records found
-                    </ReportTd>
+                    <ReportTh className={DRILL_STICKY_HEADER_CLASS}>Show</ReportTh>
+                    <ReportTh className={DRILL_STICKY_HEADER_CLASS}>Status</ReportTh>
+                    <ReportTh className={DRILL_STICKY_HEADER_CLASS}>Payment Type</ReportTh>
+                    <ReportTh className={DRILL_STICKY_HEADER_CLASS}>CC Type</ReportTh>
+                    <ReportTh className={DRILL_STICKY_HEADER_CLASS}>Source</ReportTh>
+                    <ReportTh className={DRILL_STICKY_HEADER_CLASS}>Promo</ReportTh>
+                    <ReportTh className={DRILL_STICKY_HEADER_CLASS} right>Amount</ReportTh>
+                    <ReportTh className={DRILL_STICKY_HEADER_CLASS}>Cust LName</ReportTh>
+                    <ReportTh className={DRILL_STICKY_HEADER_CLASS}>Cust FName</ReportTh>
+                    <ReportTh className={DRILL_STICKY_HEADER_CLASS}>Pymt LName</ReportTh>
+                    <ReportTh className={DRILL_STICKY_HEADER_CLASS}>Pymt FName</ReportTh>
+                    <ReportTh className={DRILL_STICKY_HEADER_CLASS}>CreatedBy</ReportTh>
+                    <ReportTh className={DRILL_STICKY_HEADER_CLASS}>CreateDt</ReportTh>
                   </tr>
-                ) : (
-                  drillRows.map((row, i) => (
-                    <tr key={i} className={reportRowClass(i)}>
-                      <ReportTd>{fmtDatetime(row.Showdt)}</ReportTd>
-                      <ReportTd>{row.PymtStatus ?? "—"}</ReportTd>
-                      <ReportTd blue>{row.PymtType ?? "—"}</ReportTd>
-                      <ReportTd>{row.CCType ?? "—"}</ReportTd>
-                      <ReportTd>{row.Source ?? "—"}</ReportTd>
-                      <ReportTd>{row.Promo ?? "—"}</ReportTd>
-                      <ReportTd right>${fmt(row.Amount ?? 0)}</ReportTd>
-                      <ReportTd>{row.CustLName ?? "—"}</ReportTd>
-                      <ReportTd>{row.CustFName ?? "—"}</ReportTd>
-                      <ReportTd>{row.PymtLName ?? "—"}</ReportTd>
-                      <ReportTd>{row.PymtFName ?? "—"}</ReportTd>
-                      <ReportTd>{row.CreatedBy ?? "—"}</ReportTd>
-                      <ReportTd>{fmtDatetime(row.CreatedDate)}</ReportTd>
+                </thead>
+                <tbody>
+                  {drillRows.length === 0 ? (
+                    <tr>
+                      <ReportTd colSpan={13} center className="py-6 text-muted-foreground">
+                        No records found
+                      </ReportTd>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </ReportTable>
+                  ) : (
+                    drillRows.map((row, i) => (
+                      <tr key={i} className={reportRowClass(i)}>
+                        <ReportTd>{fmtDatetime(row.Showdt)}</ReportTd>
+                        <ReportTd>{row.PymtStatus ?? "—"}</ReportTd>
+                        <ReportTd blue>{row.PymtType ?? "—"}</ReportTd>
+                        <ReportTd>{row.CCType ?? "—"}</ReportTd>
+                        <ReportTd>{row.Source ?? "—"}</ReportTd>
+                        <ReportTd>{row.Promo ?? "—"}</ReportTd>
+                        <ReportTd right>${fmt(row.Amount ?? 0)}</ReportTd>
+                        <ReportTd>{row.CustLName ?? "—"}</ReportTd>
+                        <ReportTd>{row.CustFName ?? "—"}</ReportTd>
+                        <ReportTd>{row.PymtLName ?? "—"}</ReportTd>
+                        <ReportTd>{row.PymtFName ?? "—"}</ReportTd>
+                        <ReportTd>{row.CreatedBy ?? "—"}</ReportTd>
+                        <ReportTd>{fmtDatetime(row.CreatedDate)}</ReportTd>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </ReportTable>
+            </ReportTableScroll>
           </div>
         )}
 
