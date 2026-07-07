@@ -36,7 +36,7 @@ function parseDecimal(value: string, fallback = 0) {
 }
 
 function toGuid(value: string) {
-  return value && value !== "select" ? value : null
+  return value && value !== "select" ? value : EMPTY_GUID
 }
 
 function yn(value: boolean) {
@@ -65,6 +65,7 @@ function buildSectionList(
   pendingCustomSections: SectionLookupItem[]
 ): ShowSectionDetModel[] {
   return rows.map((row) => ({
+    ShowDetID: row.ShowDetID,
     ShowSec: resolveSectionCode(
       row.Section,
       row.ShowSec,
