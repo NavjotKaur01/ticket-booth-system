@@ -3,6 +3,7 @@ import type {
   AddShowDialogData,
   ShowTimeOption,
 } from "@/types/calendar-show"
+import { formatDateForDisplay } from "@/lib/date-display-format"
 
 const AGE_RESTRICTIONS = [
   { value: "A", label: "A - All ages", description: "All ages" },
@@ -42,6 +43,16 @@ function yn(value: string | null | undefined) {
   return value?.trim().toUpperCase() === "Y"
 }
 
+function formatShowDayLabel(
+  showDay: string | null | undefined,
+  showDate: string | null | undefined
+) {
+  const formattedDate =
+    formatDateForDisplay(showDate, "") || formatDateForDisplay(showDay, "")
+
+  return formattedDate || showDay || "Show"
+}
+
 export function mapDefaultShowSectionsToDialogData(
   sections: ApiDefaultShowSection[],
   performers: AddShowDialogData["performers"]
@@ -70,7 +81,7 @@ export function mapDefaultShowSectionsToDialogData(
       const first = rows[0]
       return {
         id: showDefId,
-        dayLabel: first.ShowDay ?? "Show",
+        dayLabel: formatShowDayLabel(first.ShowDay, first.ShowDate),
         timeRange: formatTimeRange(first.ShowTim, first.ShowArrival),
         enabled: true,
         sections: rows.map((row) => ({
