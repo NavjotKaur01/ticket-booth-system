@@ -572,6 +572,14 @@ export function ComicInfoDialog({
     }
   }, [isLoading, open, comic, stageName, hasInitialized])
 
+  // If the image is updated by the API while the modal is open, we sync just the image to the local form state
+  // to avoid overwriting other edits the user may have in progress.
+  useEffect(() => {
+    if (hasInitialized && comic?.imageUrl !== form.imageUrl) {
+      setForm((current) => ({ ...current, imageUrl: comic?.imageUrl }))
+    }
+  }, [comic?.imageUrl, hasInitialized, form.imageUrl])
+
   function updateField<K extends keyof ComicInfo>(
     field: K,
     value: ComicInfo[K]

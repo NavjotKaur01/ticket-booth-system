@@ -180,8 +180,10 @@ function applyDesktopPayments(
 
     if (matched) continue
 
-    switch (String(item.PymtType ?? "").toLowerCase()) {
+    const paymentType = String(item.PymtType || item.CCType || "").trim().toLowerCase()
+    switch (paymentType) {
       case "cash":
+      case "cash drawer":
         bucket.cash = amount
         bucket.subTotal += amount
         if (trackTotal) bucket.total += amount
