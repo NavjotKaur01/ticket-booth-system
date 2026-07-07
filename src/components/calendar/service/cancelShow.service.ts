@@ -1,4 +1,5 @@
 import type { CalendarEvent } from "@/data/calendarEvents"
+import { formatDateForDisplay } from "@/lib/date-display-format"
 
 export type CancelShowDialogData = {
   eventId: string
@@ -8,16 +9,8 @@ export type CancelShowDialogData = {
   reservationCount: number
 }
 
-function padTwo(value: number) {
-  return String(value).padStart(2, "0")
-}
-
 function formatCancelShowDate(date: Date) {
-  const day = padTwo(date.getDate())
-  const month = padTwo(date.getMonth() + 1)
-  const year = date.getFullYear()
-
-  return `${day}/${month}/${year} 00:00:00`
+  return `${formatDateForDisplay(date)} 00:00:00`
 }
 
 function formatCancelShowTime(time: string) {

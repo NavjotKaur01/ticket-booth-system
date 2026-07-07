@@ -81,12 +81,12 @@ export function ReportFiltersToolbar({
   const ToggleIcon = isFilterHeaderOpen ? ChevronUp : ChevronDown
 
   return (
-    <div className="bg-background px-3 py-2 md:px-4 md:py-4">
+    <div className="bg-background px-3 py-2 lg:px-4 lg:py-4">
       <div className="rounded-xl border border-border/70 bg-muted/10">
         <Button
           type="button"
           variant="ghost"
-          className="flex h-auto w-full justify-between gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-muted/40 md:hidden"
+          className="flex h-auto w-full justify-between gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-muted/40 lg:hidden"
           onClick={() => onFilterHeaderOpenChange?.(!isFilterHeaderOpen)}
           aria-expanded={isFilterHeaderOpen}
         >
@@ -101,9 +101,9 @@ export function ReportFiltersToolbar({
           <ToggleIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
         </Button>
 
-        <div className={cn("space-y-4 p-4 sm:p-3.5", !isFilterHeaderOpen && "hidden md:block")}>
+        <div className={cn("space-y-4 p-4 sm:p-3.5", !isFilterHeaderOpen && "hidden lg:block")}>
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
               <h1 className="text-xl font-semibold tracking-tight text-foreground">
                 Report Viewer
               </h1>
@@ -160,8 +160,8 @@ export function ReportFiltersToolbar({
           className={cn(
             "grid gap-3",
             effectiveDateRange
-              ? "md:grid-cols-2 2xl:grid-cols-[minmax(15rem,19rem)_minmax(11rem,13rem)_minmax(11rem,13rem)_1fr] 2xl:items-end"
-              : "md:grid-cols-2 2xl:grid-cols-[minmax(15rem,19rem)_1fr] 2xl:items-end"
+              ? "lg:grid-cols-2 2xl:grid-cols-[minmax(15rem,19rem)_minmax(11rem,13rem)_minmax(11rem,13rem)_1fr] 2xl:items-end"
+              : "lg:grid-cols-2 2xl:grid-cols-[minmax(15rem,19rem)_1fr] 2xl:items-end"
           )}
         >
           <div className="space-y-1.5">
@@ -217,7 +217,7 @@ export function ReportFiltersToolbar({
             className={cn(
               "flex flex-wrap items-center gap-2 pt-2",
               effectiveDateRange
-                ? "md:col-span-2 2xl:col-span-1 2xl:justify-end 2xl:pt-0"
+                ? "lg:col-span-2 2xl:col-span-1 2xl:justify-end 2xl:pt-0"
                 : "2xl:justify-end 2xl:pt-0"
             )}
           >
