@@ -8,7 +8,9 @@ export function isCancelledReservationStatus(resStatus: string | null | undefine
 }
 export const PAYMENT_STATUS_PAYMENT = 'PSTAT01'
 export const ACTION_FORM_RESERVATION = 'fromReservation'
+export const ACTION_FORM_MOVE_RESERVATION = 'fromMoveReservation'
 export const ACTION_SAVE_RESERVATION = 'cmdSaveReservationWithPayment'
+export const ACTION_MOVE_RESERVATION = 'CMDMoveReservation'
 export const EMPTY_GUID = '00000000-0000-0000-0000-000000000000'
 
 const ORIGIN_LOOKUP_CODES = {

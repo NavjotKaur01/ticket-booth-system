@@ -20,7 +20,22 @@ export type ReservationDetailPaymentItem = {
 export type ReservationDetail = {
   ReservationID?: string
   CustomerID?: string | null
+  ShowId?: string | null
+  ShowDetID?: string | null
   PartyNo?: number | null
+  OrigPartyNo?: number | null
+  ResSec?: string | null
+  Sources?: string | null
+  ResSource?: string | null
+  Promo?: string | null
+  NumPasses?: number | null
+  SubTotal?: number | null
+  SVC?: number | null
+  Discount?: number | null
+  SalesTax?: number | null
+  Total?: number | null
+  Dinner?: string | null
+  VIP?: string | null
   ResPayments?: number | null
   CustFirstName?: string | null
   CustLastName?: string | null

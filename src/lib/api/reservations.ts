@@ -1,8 +1,10 @@
 import { dispatchEndpoint } from "@/lib/api/dispatch-endpoint"
+import { buildUpcomingShowDetailsRequest } from "@/lib/map-upcoming-show-details"
 import { clubmanApi } from "@/store/api/clubmanApi"
 import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
 import type { ReservationNoteRequest } from "@/types/api/reservation-note"
+import type { MoveReservationRequest } from "@/types/api/move-reservation"
 import type { ReservationDetail } from "@/types/api/reservation-detail"
 import type { ReservationHistoryItem } from "@/types/api/reservation-history"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
@@ -166,4 +168,38 @@ export function saveReservationNote(request: ReservationNoteRequest) {
     clubmanApi.endpoints.saveReservationNote,
     request
   )
+}
+
+export function fetchUpcomingShowDetails({
+  connectionString,
+  locationId,
+  startDateIso,
+}: {
+  connectionString: string
+  locationId: string
+  startDateIso: string
+}) {
+  return dispatchEndpoint<ShowDetailsByDateItem[], ReturnType<typeof buildUpcomingShowDetailsRequest>>(
+    clubmanApi.endpoints.getUpcomingShowDetails,
+    buildUpcomingShowDetailsRequest({
+      connectionString,
+      locationId,
+      startDateIso,
+    })
+  )
+}
+
+function normalizeMoveReservationIds(response: unknown): string[] {
+  if (Array.isArray(response)) {
+    return response.map((id) => String(id)).filter(Boolean)
+  }
+
+  return []
+}
+
+export function moveReservation(request: MoveReservationRequest) {
+  return dispatchEndpoint<unknown, MoveReservationRequest>(
+    clubmanApi.endpoints.saveMoveReservation,
+    request
+  ).then(normalizeMoveReservationIds)
 }

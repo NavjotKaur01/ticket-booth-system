@@ -77,9 +77,14 @@ import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { ReservationCustomerSearchItem } from "@/types/api/reservation-customer-search"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
 import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
+import type {
+  MoveReservationRequest,
+  UpcomingShowDetailsRequest,
+} from "@/types/api/move-reservation"
 import type { ShowRequestModel } from "@/types/api/cancel-show"
 import type { ReservationNoteRequest } from "@/types/api/reservation-note"
 import { mapReservationDetail } from "@/lib/map-reservation-detail"
+import { mapUpcomingShowDetails } from "@/lib/map-upcoming-show-details"
 import type { ReservationHistoryItem } from "@/types/api/reservation-history"
 import type { DailyTransactionItem } from "@/types/api/daily-transaction"
 import type {
@@ -778,6 +783,24 @@ export const clubmanApi = createApi({
       invalidatesTags: ["Reservation", "ShowDetails"],
     }),
 
+    getUpcomingShowDetails: builder.mutation({
+      query: (body: UpcomingShowDetailsRequest) => ({
+        url: reservationApiPath("GetUpComingShowDetails"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => mapUpcomingShowDetails(response),
+    }),
+
+    saveMoveReservation: builder.mutation({
+      query: (body: MoveReservationRequest) => ({
+        url: reservationApiPath("SaveMoveReservation"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
     getCalendarData: builder.query({
       query: ({
         connectionString,
@@ -1064,6 +1087,8 @@ export const {
   useUpdateReservationMutation,
   useCancelReservationMutation,
   useRevertCancelReservationMutation,
+  useGetUpcomingShowDetailsMutation,
+  useSaveMoveReservationMutation,
   useGetDailyTransactionDataQuery,
   useGetRecentSalesReportQuery,
   useGetCalendarDataQuery,

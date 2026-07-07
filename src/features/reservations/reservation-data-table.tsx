@@ -11,6 +11,7 @@ type ReservationDataTableProps = {
   displayPhone?: boolean
   onCancelReservation?: (reservation: Reservation) => void
   onUnCancelReservation?: (reservation: Reservation) => void
+  onMoveReservation?: (reservation: Reservation) => void
   onPrintTickets?: (reservation: Reservation) => void
   onPrintIndividualTickets?: (reservation: Reservation) => void
   onPrintReceipt?: (reservation: Reservation) => void
@@ -25,6 +26,7 @@ export function ReservationDataTable({
   displayPhone = false,
   onCancelReservation,
   onUnCancelReservation,
+  onMoveReservation,
   onPrintTickets,
   onPrintIndividualTickets,
   onPrintReceipt,
@@ -38,6 +40,7 @@ export function ReservationDataTable({
         displayPhone,
         onCancelReservation,
         onUnCancelReservation,
+        onMoveReservation,
         onPrintTickets,
         onPrintIndividualTickets,
         onPrintReceipt,
@@ -48,6 +51,7 @@ export function ReservationDataTable({
       displayPhone,
       onCancelReservation,
       onUnCancelReservation,
+      onMoveReservation,
       onPrintTickets,
       onPrintIndividualTickets,
       onPrintReceipt,

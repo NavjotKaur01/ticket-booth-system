@@ -9,6 +9,7 @@ type ReservationColumnsOptions = {
   displayPhone?: boolean
   onCancelReservation?: (reservation: Reservation) => void
   onUnCancelReservation?: (reservation: Reservation) => void
+  onMoveReservation?: (reservation: Reservation) => void
   onPrintTickets?: (reservation: Reservation) => void
   onPrintIndividualTickets?: (reservation: Reservation) => void
   onPrintReceipt?: (reservation: Reservation) => void
@@ -38,6 +39,7 @@ export function createReservationColumns({
   displayPhone = false,
   onCancelReservation,
   onUnCancelReservation,
+  onMoveReservation,
   onPrintTickets,
   onPrintIndividualTickets,
   onPrintReceipt,
@@ -320,6 +322,7 @@ export function createReservationColumns({
           isCancelled={row.original.isCancelled}
           onCancelReservation={() => onCancelReservation?.(row.original)}
           onUnCancelReservation={() => onUnCancelReservation?.(row.original)}
+          onMoveReservation={() => onMoveReservation?.(row.original)}
           onPrintTickets={() => onPrintTickets?.(row.original)}
           onPrintIndividualTickets={() => onPrintIndividualTickets?.(row.original)}
           onPrintReceipt={() => onPrintReceipt?.(row.original)}

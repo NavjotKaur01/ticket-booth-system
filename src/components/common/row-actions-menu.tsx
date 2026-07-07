@@ -24,6 +24,7 @@ type RowActionsMenuProps = {
   isCancelled?: boolean
   onCancelReservation?: () => void
   onUnCancelReservation?: () => void
+  onMoveReservation?: () => void
   onPrintTickets?: () => void
   onPrintIndividualTickets?: () => void
   onPrintReceipt?: () => void
@@ -36,6 +37,7 @@ export function RowActionsMenu({
   isCancelled = false,
   onCancelReservation,
   onUnCancelReservation,
+  onMoveReservation,
   onPrintTickets,
   onPrintIndividualTickets,
   onPrintReceipt,
@@ -56,6 +58,11 @@ export function RowActionsMenu({
 
     if (action === "UnCancel Reservation") {
       onUnCancelReservation?.()
+      return
+    }
+
+    if (action === "Move Reservation") {
+      onMoveReservation?.()
       return
     }
 

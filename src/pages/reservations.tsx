@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { AddReservationDialog } from "@/features/reservations/add-reservation-dialog"
 import { CancelReservationDialog } from "@/features/reservations/cancel-reservation-dialog"
+import { MoveReservationDialog } from "@/features/reservations/move-reservation-dialog"
 import { ReservationNoteDialog } from "@/features/reservations/reservation-note-dialog"
 import { ReservationDataTable } from "@/features/reservations/reservation-data-table"
 import { ReservationHistoryDialog } from "@/features/reservations/reservation-history-dialog"
@@ -68,6 +69,7 @@ export function Reservations() {
   const [addOpen, setAddOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
+  const [moveOpen, setMoveOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [noteOpen, setNoteOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
@@ -246,6 +248,26 @@ export function Reservations() {
     }
 
     await handleReservationSaved(_reservationIds, ticketData)
+  }
+
+  function handleOpenMoveReservation(reservation: Reservation) {
+    if (reservation.isCancelled) {
+      return
+    }
+
+    setSelectedReservation(reservation)
+    setMoveOpen(true)
+  }
+
+  function handleMoveDialogOpenChange(open: boolean) {
+    setMoveOpen(open)
+    if (!open) {
+      setSelectedReservation(null)
+    }
+  }
+
+  async function handleReservationMoved() {
+    await refreshReservations()
   }
 
   function handleOpenReservationHistory(reservation: Reservation) {
@@ -558,6 +580,7 @@ export function Reservations() {
           displayPhone={displayPhone}
           onCancelReservation={handleOpenCancelReservation}
           onUnCancelReservation={handleUnCancelReservation}
+          onMoveReservation={handleOpenMoveReservation}
           onPrintTickets={(reservation) => {
             void handlePrintReservation(reservation, {
               layout: "combined",
@@ -602,6 +625,16 @@ export function Reservations() {
         isSubmitting={isCancellingReservation}
         error={cancelReservationError}
         onSave={handleSaveCancelReservation}
+      />
+      <MoveReservationDialog
+        open={moveOpen}
+        onOpenChange={handleMoveDialogOpenChange}
+        reservation={selectedReservation}
+        connectionName={connectionName}
+        locationId={locationId}
+        username={username}
+        currentShowId={showTime}
+        onMoved={handleReservationMoved}
       />
       <ReservationHistoryDialog
         open={historyOpen}
