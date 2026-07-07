@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { formatDateForDisplay } from "@/lib/date-display-format"
 
 import type { RecurrenceFormValue } from "@/types/recurrence"
 
@@ -72,11 +73,7 @@ function formatDate(date: Date | null) {
     return "Select date"
   }
 
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date)
+  return formatDateForDisplay(date, "Select date")
 }
 
 function getStartOfDay(date: Date) {
