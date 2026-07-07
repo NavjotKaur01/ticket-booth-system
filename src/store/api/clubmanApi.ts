@@ -36,6 +36,8 @@ import type {
   ComedianSearchRequestModel,
   SaveShowRequestModel,
 } from "@/types/api/save-show"
+import type { UpdateShowRequestModel } from "@/types/api/update-show"
+import type { ApiShowData, ApiShowProperties } from "@/types/api/get-show-data"
 import type { ApiCustomerSearchItem } from "@/types/api/customer-search"
 import type { ApiComedianInfo } from "@/types/api/comedian-info"
 import type {
@@ -996,6 +998,33 @@ export const clubmanApi = createApi({
       }),
       invalidatesTags: ["Calendar"],
     }),
+
+    getShowData: builder.query<
+      ApiShowData[],
+      { connectionName: string; showId: string }
+    >({
+      query: ({ connectionName, showId }) =>
+        calendarApiPath(connectionName, showId, "GetShowData"),
+      providesTags: ["Calendar"],
+    }),
+
+    updateShow: builder.mutation<unknown, UpdateShowRequestModel>({
+      query: (body) => ({
+        url: calendarApiPath("UpdateShow"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Calendar"],
+    }),
+
+    getShowProperties: builder.query<
+      ApiShowProperties,
+      { connectionName: string; showId: string }
+    >({
+      query: ({ connectionName, showId }) =>
+        calendarApiPath(connectionName, showId, "GetShowProperties"),
+      providesTags: ["Calendar"],
+    }),
   }),
 })
 
@@ -1049,4 +1078,9 @@ export const {
   useUpdateComedianImageMutation,
   useDeleteComedianImageMutation,
   useCancelShowMutation,
+  useGetShowDataQuery,
+  useLazyGetShowDataQuery,
+  useGetShowPropertiesQuery,
+  useLazyGetShowPropertiesQuery,
+  useUpdateShowMutation,
 } = clubmanApi

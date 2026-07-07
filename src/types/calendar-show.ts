@@ -61,5 +61,6 @@ export type AddShowFormValues = {
   webFee: string
   useSectionFee: boolean
   preSalePrivateShow: boolean
+  isShowSoldOut: boolean
   selectedShowTimeIds: string[]
 }

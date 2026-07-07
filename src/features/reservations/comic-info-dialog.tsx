@@ -557,13 +557,20 @@ export function ComicInfoDialog({
 }: ComicInfoDialogProps) {
   const [form, setForm] = useState<ComicInfo>(() => comic ?? getComicInfo(stageName ?? ""))
   const [activeTab, setActiveTab] = useState<ComicInfoTab>("info")
+  const [hasInitialized, setHasInitialized] = useState(false)
 
   useEffect(() => {
-    if (open && !isLoading) {
+    if (!open) {
+      setHasInitialized(false)
+      return
+    }
+    
+    if (open && !isLoading && !hasInitialized) {
       setForm(comic ?? getComicInfo(stageName ?? ""))
       setActiveTab("info")
+      setHasInitialized(true)
     }
-  }, [isLoading, open, comic, stageName])
+  }, [isLoading, open, comic, stageName, hasInitialized])
 
   function updateField<K extends keyof ComicInfo>(
     field: K,
