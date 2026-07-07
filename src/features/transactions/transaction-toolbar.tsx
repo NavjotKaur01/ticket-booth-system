@@ -1,5 +1,6 @@
 import { RefreshCw } from "lucide-react"
 
+import CalendarDatePickerControl from "@/components/calendar/controls/CalendarDatePickerControl"
 import { IconActionButton } from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -51,11 +52,10 @@ export function TransactionToolbar({
           Show Date
         </Label>
         <div className="flex items-center gap-1.5">
-          <Input
+          <CalendarDatePickerControl
             id="transaction-show-date"
-            type="date"
             value={filters.showDate}
-            onChange={(event) => onFilterChange("showDate", event.target.value)}
+            onChange={(value) => onFilterChange("showDate", value)}
             className={fieldClassName}
           />
           <Button

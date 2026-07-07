@@ -115,7 +115,7 @@ function n(v: number | undefined | null): number {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+    <div className="bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground break-words">
       {children}
     </div>
   )
@@ -202,46 +202,48 @@ function PaymentTable({ show }: { show: ManagerCheckoutApiShow }) {
   ]
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-xs">
-        <thead>
-          <tr>
-            <Th className="min-w-22">Type</Th>
-            {PAYMENT_COLS.map((c) => (
-              <Th key={c} right>{PAYMENT_LABELS[c]}</Th>
-            ))}
-            <Th right>SubTotal</Th>
-            <Th right>Total</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
-              <Td bold={row.label === "Totals"}>{row.label}</Td>
+    <div>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-xs">
+          <thead>
+            <tr>
+              <Th className="min-w-22">Type</Th>
               {PAYMENT_COLS.map((c) => (
-                <Td key={c} right red={(row.data[c] ?? 0) < 0}>
-                  {(row.data[c] ?? 0) !== 0 ? fmt(row.data[c]) : ""}
-                </Td>
+                <Th key={c} right>{PAYMENT_LABELS[c]}</Th>
               ))}
-              <Td right>{row.sub !== 0 ? fmt(row.sub) : ""}</Td>
-              <Td right bold>{row.total != null ? fmt(row.total) : ""}</Td>
+              <Th right>SubTotal</Th>
+              <Th right>Total</Th>
             </tr>
-          ))}
-          {/* Totals row */}
-          <tr className="bg-muted/40">
-            <Td bold>Totals</Td>
-            {PAYMENT_COLS.map((c) => (
-              <Td key={c} right bold>{(totals[c] ?? 0) !== 0 ? fmt(totals[c]) : "$0.00"}</Td>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
+                <Td bold={row.label === "Totals"}>{row.label}</Td>
+                {PAYMENT_COLS.map((c) => (
+                  <Td key={c} right red={(row.data[c] ?? 0) < 0}>
+                    {(row.data[c] ?? 0) !== 0 ? fmt(row.data[c]) : ""}
+                  </Td>
+                ))}
+                <Td right>{row.sub !== 0 ? fmt(row.sub) : ""}</Td>
+                <Td right bold>{row.total != null ? fmt(row.total) : ""}</Td>
+              </tr>
             ))}
-            <Td right bold>{fmt(totalsSub)}</Td>
-            <Td right bold>{fmt(totalCash)}</Td>
-          </tr>
-        </tbody>
-      </table>
+            {/* Totals row */}
+            <tr className="bg-muted/40">
+              <Td bold>Totals</Td>
+              {PAYMENT_COLS.map((c) => (
+                <Td key={c} right bold>{(totals[c] ?? 0) !== 0 ? fmt(totals[c]) : "$0.00"}</Td>
+              ))}
+              <Td right bold>{fmt(totalsSub)}</Td>
+              <Td right bold>{fmt(totalCash)}</Td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       {/* Financial summary */}
       <div className="mt-1 flex justify-end">
-        <table className="border-collapse text-xs">
+        <table className="w-full max-w-[12rem] border-collapse text-xs sm:w-auto">
           <tbody>
             {[
               { label: "Saletax", value: saleTax },
@@ -487,28 +489,28 @@ export function ManagerCheckoutView({ rawData, subtitle, generatedAt }: ManagerC
           <div key={show.ShowId ?? idx} className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
             {/* Show header */}
             <SectionLabel>{show.Location || "—"} — Manager Checkout</SectionLabel>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 px-3 py-2 text-xs sm:grid-cols-3">
-              <div className="flex gap-2">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-1.5 px-3 py-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] gap-2 sm:flex sm:gap-2">
                 <span className="font-medium text-muted-foreground">Show Date:</span>
-                <span>{show.DateStr || "—"}</span>
+                <span className="min-w-0 break-words tabular-nums">{show.DateStr || "—"}</span>
               </div>
-              <div className="flex gap-2">
+              <div className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] gap-2 sm:flex sm:gap-2">
                 <span className="font-medium text-muted-foreground">Show Time:</span>
-                <span>{show.TimeStr || "—"}</span>
+                <span className="min-w-0 break-words">{show.TimeStr || "—"}</span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex min-w-0 flex-wrap gap-x-2 gap-y-1">
                 <span className="font-medium text-muted-foreground">Booked:</span>
                 <span>{n(show.Booked)}</span>
                 <span className="font-medium text-muted-foreground ml-3">(Pre) Seat:</span>
                 <span>{n(show.PreSeated)}</span>
               </div>
-              <div className="flex gap-2">
+              <div className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] gap-2 sm:flex sm:gap-2">
                 <span className="font-medium text-muted-foreground">Comic Name:</span>
-                <span className="font-medium">{show.Comic || "—"}</span>
+                <span className="min-w-0 break-words font-medium">{show.Comic || "—"}</span>
               </div>
-              <div className="flex gap-2">
+              <div className="grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] gap-2 sm:flex sm:gap-2">
                 <span className="font-medium text-muted-foreground">Ticket Price:</span>
-                <span>{ticketPriceStr}</span>
+                <span className="min-w-0 break-words">{ticketPriceStr}</span>
               </div>
               <div className="flex gap-2">
                 <span className="font-medium text-muted-foreground">Total Receipts:</span>
