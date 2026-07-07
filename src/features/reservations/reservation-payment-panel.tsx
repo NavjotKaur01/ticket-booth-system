@@ -17,6 +17,7 @@ import {
 } from '@/lib/calculate-reservation-totals'
 import { cn } from '@/lib/utils'
 import type { ReservationPaymentFields } from '@/types/reservation-payment'
+import { detectCardBrand, type CardBrand } from '@/lib/detect-card-brand'
 
 const COMPACT_INPUT = 'h-9 w-full text-sm'
 const FIELD_LABEL = '[&_label]:mb-1 [&_label]:text-xs'
@@ -120,6 +121,35 @@ function PaymentAmountField ({
   )
 }
 
+/** SVG card brand logos — self-contained, no external network request */
+function CardBrandLogo({ brand }: { brand: CardBrand }) {
+  const getCardIcon = () => {
+    switch (brand) {
+      case "VISA":
+        return "/assets/cards/visa.svg"
+      case "MASTERCARD":
+        return "/assets/cards/master-card.svg"
+      case "AMEX":
+        return "/assets/cards/american-express.svg"
+      case "DISCOVER":
+        return "/assets/cards/discover.svg"
+      default:
+        return null
+    }
+  }
+
+  const src = getCardIcon()
+  if (!src) return null
+
+  return (
+    <img
+      src={src}
+      alt={`${brand} logo`}
+      className="h-6 w-auto object-contain"
+    />
+  )
+}
+
 function CreditCardNumberField ({
   value,
   onChange
@@ -128,6 +158,7 @@ function CreditCardNumberField ({
   onChange: (value: string) => void
 }) {
   const [showLimitMessage, setShowLimitMessage] = useState(false)
+  const detectedCard = detectCardBrand(value)
 
   return (
     <FormField
@@ -135,21 +166,30 @@ function CreditCardNumberField ({
       htmlFor='payment-card-number'
       className='min-w-0'
     >
-      <Input
-        id='payment-card-number'
-        value={value}
-        onChange={event => {
-          const rawValue = event.target.value.replace(/\D/g, '')
-          if (rawValue.length > 16) {
-            setShowLimitMessage(true)
-          } else {
-            setShowLimitMessage(false)
-          }
-          onChange(rawValue.slice(0, 16))
-        }}
-        className={COMPACT_INPUT}
-        autoComplete='cc-number'
-      />
+      <div className="relative flex items-center">
+        <Input
+          id='payment-card-number'
+          value={value}
+          onChange={event => {
+            const rawValue = event.target.value.replace(/\D/g, '')
+            if (rawValue.length > 16) {
+              setShowLimitMessage(true)
+            } else {
+              setShowLimitMessage(false)
+            }
+            onChange(rawValue.slice(0, 16))
+          }}
+          className={cn(COMPACT_INPUT, detectedCard ? 'pr-14' : '')}
+          autoComplete='cc-number'
+          inputMode='numeric'
+          maxLength={16}
+        />
+        {detectedCard && (
+          <span className="pointer-events-none absolute right-2 flex items-center">
+            <CardBrandLogo brand={detectedCard.brand} />
+          </span>
+        )}
+      </div>
       {showLimitMessage && (
         <p className="mt-1 text-[10px] text-destructive leading-tight">Cannot exceed 16 digits</p>
       )}

@@ -1,4 +1,4 @@
-// import { useEffect } from "react"
+import { useMemo } from "react"
 
 import type { ComicInfo } from "@/data/comedian-info"
 import type { CalendarEvent } from "@/data/calendarEvents"
@@ -35,36 +35,40 @@ export default function EditComicDialog({
   const [updateComedianImage] = useUpdateComedianImageMutation()
   const [deleteComedianImage] = useDeleteComedianImageMutation()
 
+  const mappedInfo: ComicInfo | null = useMemo(() => {
+    if (!comedianInfo || !event) return null
+
+    return {
+      lastName: comedianInfo.LastName ?? "",
+      firstName: comedianInfo.FirstName ?? "",
+      stageName: comedianInfo.StageName ?? event.performer,
+      about: comedianInfo.GlobalBio ?? comedianInfo.LocalBio ?? "",
+      notes: comedianInfo.GlobalNote ?? comedianInfo.LocalNote ?? "",
+      email: comedianInfo.Email ?? "",
+      address: comedianInfo.Address1 ?? "",
+      address2: comedianInfo.Address2 ?? "",
+      city: comedianInfo.City ?? "",
+      state: comedianInfo.State ?? "",
+      zipCode: comedianInfo.ZipCode ?? "",
+      country: comedianInfo.Country ?? "",
+      homePhone: comedianInfo.HomePhone ?? "",
+      mobilePhone: comedianInfo.CellPhone ?? "",
+      fax: comedianInfo.Fax ?? "",
+      url: comedianInfo.URL ?? "",
+      altUrl: comedianInfo.AltURL ?? "",
+      artistType: comedianInfo.ArtistType?.trim() ?? "",
+      preferredContact: comedianInfo.PreferredContact ?? "email",
+      imageUrl: (() => {
+        const imgData = comedianInfo.LocalPicture ?? comedianInfo.GlobalPicture ?? comedianInfo.LocalPic ?? comedianInfo.GlobalPic ?? comedianInfo.Pic
+        if (!imgData) return ""
+        return imgData.startsWith("data:image") ? imgData : `data:image/jpeg;base64,${imgData}`
+      })(),
+    }
+  }, [comedianInfo, event])
+
   if (!open || !event) {
     return null
   }
-
-  const mappedInfo: ComicInfo | null = comedianInfo ? {
-    lastName: comedianInfo.LastName ?? "",
-    firstName: comedianInfo.FirstName ?? "",
-    stageName: comedianInfo.StageName ?? event.performer,
-    about: comedianInfo.GlobalBio ?? comedianInfo.LocalBio ?? "",
-    notes: comedianInfo.GlobalNote ?? comedianInfo.LocalNote ?? "",
-    email: comedianInfo.Email ?? "",
-    address: comedianInfo.Address1 ?? "",
-    address2: comedianInfo.Address2 ?? "",
-    city: comedianInfo.City ?? "",
-    state: comedianInfo.State ?? "",
-    zipCode: comedianInfo.ZipCode ?? "",
-    country: comedianInfo.Country ?? "",
-    homePhone: comedianInfo.HomePhone ?? "",
-    mobilePhone: comedianInfo.CellPhone ?? "",
-    fax: comedianInfo.Fax ?? "",
-    url: comedianInfo.URL ?? "",
-    altUrl: comedianInfo.AltURL ?? "",
-    artistType: comedianInfo.ArtistType?.trim() ?? "",
-    preferredContact: comedianInfo.PreferredContact ?? "email",
-    imageUrl: (() => {
-      const imgData = comedianInfo.LocalPicture ?? comedianInfo.GlobalPicture ?? comedianInfo.LocalPic ?? comedianInfo.GlobalPic ?? comedianInfo.Pic
-      if (!imgData) return ""
-      return imgData.startsWith("data:image") ? imgData : `data:image/jpeg;base64,${imgData}`
-    })(),
-  } : null
 
   return (
     <ComicInfoDialog
