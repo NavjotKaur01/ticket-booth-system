@@ -487,7 +487,7 @@ export default function AddShowDialog({
   }, [open, recurrence, connectionString, locationId, isShowDataLoading]) // removed initialEvent
 
   useEffect(() => {
-    if (!dialogData || !isShowDataReady) return
+    if (!open || !dialogData || !isShowDataReady) return
 
     if (isEditMode && showData && showData.length > 0 && showProperties) {
       const mainShowData = showData[0]
@@ -525,7 +525,7 @@ export default function AddShowDialog({
       })
       setIsLoading(false)
     }
-  }, [dialogData, isEditMode, showData, showProperties, isShowDataReady, initialEvent])
+  }, [open, dialogData, isEditMode, showData, showProperties, isShowDataReady, initialEvent])
 
   const performers = dialogData?.performers ?? []
   let showTimes = dialogData?.showTimes ?? []
@@ -590,7 +590,6 @@ export default function AddShowDialog({
       return
     }
 
-    setHasSubmitted(true)
     const normalizedFormValues = normalizeFeeValues(formValues)
     if (normalizedFormValues !== formValues) {
       setFormValues(normalizedFormValues)
@@ -633,6 +632,7 @@ export default function AddShowDialog({
     const currentValidationErrors = getAddShowValidationErrors(normalizedFormValues)
     const firstFieldError = Object.values(currentValidationErrors).find(Boolean)
     if (firstFieldError) {
+      setHasSubmitted(true)
       setErrorMessage(null)
       return
     }

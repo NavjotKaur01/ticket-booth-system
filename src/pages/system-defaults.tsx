@@ -44,7 +44,7 @@ export function SystemDefaults() {
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-semibold tracking-tight text-foreground">
-        Defaults
+        Applications Default Data
       </h1>
 
       <PanelCard>

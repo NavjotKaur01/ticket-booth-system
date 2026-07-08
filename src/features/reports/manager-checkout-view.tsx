@@ -1,4 +1,8 @@
+import { useState } from "react"
 import { cn } from "@/lib/utils"
+import type { ReportDrillContext } from "@/features/reports/reports.service"
+import { ReportDrillDialog } from "@/features/reports/report-drill-dialog"
+import type { DrillColumn } from "@/features/reports/report-drill-dialog"
 
 // ─── API shape ────────────────────────────────────────────────────────────────
 
@@ -84,7 +88,10 @@ function normalizeCC(ccType = ""): PayCol {
 function mapPayments(items: PaymentEntry[] = []): Record<PayCol, number> {
   const result = {} as Record<PayCol, number>
   for (const item of items) {
-    const key = normalizeCC(item.PymtType || item.CCType)
+    // Prefer CCType for card-column resolution (e.g. "Visa", "MasterCard").
+    // Fall back to PymtType only when CCType is blank — this handles the
+    // "Cash" / "CASH DRAWER" case where PymtType is "Cash" and CCType is "".
+    const key = normalizeCC(item.CCType || item.PymtType)
     result[key] = (result[key] ?? 0) + (item.Amount ?? 0)
   }
   return result
@@ -163,9 +170,83 @@ function Td({
   )
 }
 
+// ─── Payment drill-down helpers ────────────────────────────────────────────────
+
+type DrillKey = {
+  drillType: string
+  type: "Payment" | "Fill"
+  web: "Y" | "N"
+}
+
+function resolveDrillKey(rowLabel: string, col: PayCol): DrillKey | null {
+  const isWeb = rowLabel === "Web"
+  const isDrawerOrPos = rowLabel === "Cash Drawer" || rowLabel === "POS"
+
+  // Only Cash Drawer, POS, and Web rows are drillable source rows
+  if (!isWeb && !isDrawerOrPos) return null
+
+  if (col === "cash") {
+    return { drillType: "PYMT05", type: "Payment", web: isWeb ? "Y" : "N" }
+  }
+
+  // Any card column (Visa, AmEx, MasterCard, Discover, GiftCard, GiftCert, WebGiftCert)
+  const cardTypes: PayCol[] = ["amex", "discover", "mastercard", "visa", "giftcard", "giftcert", "webgiftcert"]
+  if (cardTypes.includes(col)) {
+    return { drillType: "CCTYPE04", type: "Fill", web: isWeb ? "Y" : "N" }
+  }
+
+  return null
+}
+
+const DRILL_COLUMNS: DrillColumn[] = [
+  { key: "PaymentStatus", label: "Payment Status", keys: ["PaymentStatus", "PymtStatus", "Status"] },
+  { key: "PymtType",      label: "Payment Type",   keys: ["PaymentType", "paymentType", "PymtType", "pymttype", "CCType", "cctype", "Type", "type"] },
+  { key: "CustLName",     label: "Cust LName",     keys: ["CustLName", "LastName", "Lname"] },
+  { key: "CustFName",     label: "Cust FName",     keys: ["CustFName", "FirstName", "Fname"] },
+  { key: "PymtLName",     label: "Pymt LName",     keys: ["PymtLName"] },
+  { key: "PymtFName",     label: "Pymt FName",     keys: ["PymtFName"] },
+  { key: "Amount",        label: "Amount",         right: true, format: "currency" },
+  { key: "CreatedBy",     label: "CreatedBy",      keys: ["CreatedBy"] },
+  { key: "PaymentTime",   label: "Payment Time",   format: "datetime", keys: ["PaymentTime", "paymentTime", "PaymentDate", "paymentDate", "CreateDt", "CreatedDate"] },
+]
+
+// ─── Drill cell ────────────────────────────────────────────────────────────────
+
+function DrillCell({
+  value,
+  drillKey,
+  drillContext,
+  show,
+  onDrill,
+}: {
+  value: number
+  drillKey: DrillKey | null
+  drillContext?: ReportDrillContext
+  show: ManagerCheckoutApiShow
+  onDrill: (params: { showId: string; dk: DrillKey }) => void
+}) {
+  if (!value) return null
+
+  const canDrill = !!drillContext && !!drillKey && !!show.ShowId
+
+  if (!canDrill) {
+    return <>{fmt(value)}</>
+  }
+
+  return (
+    <button
+      type="button"
+      className="text-blue-600 hover:underline cursor-pointer font-inherit"
+      onClick={() => onDrill({ showId: show.ShowId!, dk: drillKey! })}
+    >
+      {fmt(value)}
+    </button>
+  )
+}
+
 // ─── Payment breakdown table ───────────────────────────────────────────────────
 
-function PaymentTable({ show }: { show: ManagerCheckoutApiShow }) {
+function PaymentTable({ show, drillContext }: { show: ManagerCheckoutApiShow; drillContext?: ReportDrillContext }) {
   const cashDrawer = mapPayments(show.CashForCashDrawer)
   const refund = mapPayments(show.CashFoRefund)
   const pos = mapPayments(show.CashForPOS)
@@ -182,24 +263,29 @@ function PaymentTable({ show }: { show: ManagerCheckoutApiShow }) {
   const totals = sumCols([cashDrawer, refund, pos, posRefund, web, webRefund])
   const totalsSub = rowSubtotal(totals)
 
-  const refundTotal = cashDrawerSub + refundSub
-  const posTotal = posSub + 0
-  const webRefundTotal = webSub + webRefundSub
-  const totalCash = refundTotal + posTotal + webRefundTotal
+  // Net total per section = source - refund
+  const cashDrawerNet = cashDrawerSub - refundSub
+  const posNet        = posSub
+  const webNet        = webSub - webRefundSub
+  const totalCash     = cashDrawerNet + posNet + webNet
 
   const saleTax = n(show.SaleTax)
   const fee = n(show.Fee)
   const netSales = totalCash - saleTax
   const revenue = netSales - fee
 
-  const rows: { label: string; data: Record<PayCol, number>; sub: number; total?: number }[] = [
-    { label: "Cash Drawer", data: cashDrawer, sub: cashDrawerSub, total: refundTotal },
-    { label: "Refund", data: refund, sub: refundSub },
-    { label: "POS", data: pos, sub: posSub, total: posTotal },
-    { label: "Refund", data: posRefund, sub: 0 },
-    { label: "Web", data: web, sub: webSub, total: webRefundTotal },
-    { label: "Web/Refund", data: webRefund, sub: webRefundSub },
+  // alwaysShowSub: refund rows always render $0.00 even when empty (matches desktop)
+  // total: only appears on refund rows (after subtracting refund from its source)
+  const rows: { label: string; data: Record<PayCol, number>; sub: number; total?: number; alwaysShowSub?: boolean; showZero?: boolean }[] = [
+    { label: "Cash Drawer", data: cashDrawer, sub: cashDrawerSub },
+    { label: "Refund",      data: refund,     sub: refundSub,     total: cashDrawerNet, alwaysShowSub: true },
+    { label: "POS",         data: pos,        sub: posSub,        showZero: true },
+    { label: "Refund",      data: posRefund,  sub: 0,             total: posNet,        alwaysShowSub: true },
+    { label: "Web",         data: web,        sub: webSub },
+    { label: "Web/Refund",  data: webRefund,  sub: webRefundSub,  total: webNet,        alwaysShowSub: true },
   ]
+
+  const [activeDrill, setActiveDrill] = useState<{ showId: string; dk: DrillKey } | null>(null)
 
   return (
     <div>
@@ -219,12 +305,24 @@ function PaymentTable({ show }: { show: ManagerCheckoutApiShow }) {
             {rows.map((row, i) => (
               <tr key={i} className={i % 2 === 0 ? "bg-background" : "bg-muted/20"}>
                 <Td bold={row.label === "Totals"}>{row.label}</Td>
-                {PAYMENT_COLS.map((c) => (
-                  <Td key={c} right red={(row.data[c] ?? 0) < 0}>
-                    {(row.data[c] ?? 0) !== 0 ? fmt(row.data[c]) : ""}
-                  </Td>
-                ))}
-                <Td right>{row.sub !== 0 ? fmt(row.sub) : ""}</Td>
+                {PAYMENT_COLS.map((c) => {
+                  const dk = resolveDrillKey(row.label, c)
+                  const cellVal = row.data[c] ?? 0
+                  return (
+                    <Td key={c} right red={(row.data[c] ?? 0) < 0}>
+                      <DrillCell
+                        value={cellVal}
+                        drillKey={dk}
+                        drillContext={drillContext}
+                        show={show}
+                        onDrill={setActiveDrill}
+                      />
+                    </Td>
+                  )
+                })}
+                {/* Refund rows always show $0.00 in SubTotal (red), matching desktop */}
+                <Td right red={row.alwaysShowSub}>{(row.sub !== 0 || row.alwaysShowSub || row.showZero) ? fmt(row.sub) : ""}</Td>
+                {/* Total only appears on Refund rows */}
                 <Td right bold>{row.total != null ? fmt(row.total) : ""}</Td>
               </tr>
             ))}
@@ -263,6 +361,26 @@ function PaymentTable({ show }: { show: ManagerCheckoutApiShow }) {
           </tbody>
         </table>
       </div>
+
+      {activeDrill && drillContext && (
+        <ReportDrillDialog
+          title={`Payment Detail — ${show.Comic ?? ""} (${show.DateStr ?? ""})`}
+          endpoint="ManagerCheckOutDrillDown"
+          body={{
+            Connection: drillContext.connectionName,
+            StartDate: drillContext.startDate,
+            EndDate: drillContext.endDate,
+            LocaltionId: drillContext.locationId,
+            ShowId: activeDrill.showId,
+            DrillType: activeDrill.dk.drillType,
+            Type: activeDrill.dk.type,
+            Web: activeDrill.dk.web,
+          }}
+          columns={DRILL_COLUMNS}
+          footerTotals
+          onClose={() => setActiveDrill(null)}
+        />
+      )}
     </div>
   )
 }
@@ -453,9 +571,10 @@ type ManagerCheckoutViewProps = {
   rawData: unknown
   subtitle: string
   generatedAt: string
+  drillContext?: ReportDrillContext
 }
 
-export function ManagerCheckoutView({ rawData, subtitle, generatedAt }: ManagerCheckoutViewProps) {
+export function ManagerCheckoutView({ rawData, subtitle, generatedAt, drillContext }: ManagerCheckoutViewProps) {
   const shows = Array.isArray(rawData) ? (rawData as ManagerCheckoutApiShow[]) : []
 
   if (!shows.length) {
@@ -520,7 +639,7 @@ export function ManagerCheckoutView({ rawData, subtitle, generatedAt }: ManagerC
 
             <div className="space-y-4 p-3">
               {/* 1 — Payment breakdown */}
-              <PaymentTable show={show} />
+              <PaymentTable show={show} drillContext={drillContext} />
 
               {/* 2–3 — Checked-In, sources, origin, and show sections */}
               <ManagerCheckoutDetailTables show={show} />
