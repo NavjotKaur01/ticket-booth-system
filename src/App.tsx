@@ -47,6 +47,7 @@ import { NavigationRoles } from "@/pages/navigation-roles"
 import { NavigationLocation } from "@/pages/navigation-location"
 import { News } from "@/pages/news"
 import { RolesManagement } from "@/pages/roles-management"
+import { ComicManager } from "@/pages/comic-manager"
 import { VenueAds } from "@/pages/venue-ads"
 import { VenueRotatingAds } from "@/pages/venue-rotating-ads"
 import { VenueInfo } from "@/pages/venue-info"
@@ -121,6 +122,7 @@ function App() {
             <Route path="navigation-location" element={<NavigationLocation />} />
             <Route path="news" element={<News />} />
             <Route path="roles" element={<RolesManagement />} />
+            <Route path="comic-manager" element={<ComicManager />} />
           </Route>
 
           <Route path="venue">
