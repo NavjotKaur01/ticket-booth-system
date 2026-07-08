@@ -44,6 +44,8 @@ export const ROUTES = {
   navigationDropDowns: "/administrator/navigation-drop-downs",
   navigationRoles: "/administrator/navigation-roles",
   navigationLocation: "/administrator/navigation-location",
+  news: "/administrator/news",
+  roles: "/administrator/roles",
   businessContacts: "/ticketbooth/business-contacts",
   commentCards: "/ticketbooth/comment-cards",
   giftCards: "/ticketbooth/gift-cards",
@@ -77,6 +79,8 @@ export const ROUTE_PREFERRED_NAV_ITEM_IDS: Partial<Record<string, string>> = {
   [ROUTES.navigationDropDowns]: "navigation-drop-downs",
   [ROUTES.navigationRoles]: "navigation-roles",
   [ROUTES.navigationLocation]: "navigation-location",
+  [ROUTES.news]: "news",
+  [ROUTES.roles]: "roles",
 }
 
 export function reportViewerUrl(reportType?: string) {
@@ -114,6 +118,8 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.navigationDropDowns]: "Navigation Drop Downs",
   [ROUTES.navigationRoles]: "Navigation Roles",
   [ROUTES.navigationLocation]: "Navigation Location",
+  [ROUTES.news]: "News",
+  [ROUTES.roles]: "Roles",
   [ROUTES.venueInfo]: "Venue Info",
   [ROUTES.venueShowTimes]: "Venue Show Times",
   [ROUTES.foodMenu]: "Food Menu",

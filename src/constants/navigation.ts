@@ -69,8 +69,8 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
           { id: "navigation-location", label: "Navigation Location", href: ROUTES.navigationLocation },
         ],
       },
-      { id: "news", label: "News" },
-      { id: "roles", label: "Roles", href: ROUTES.userAccess },
+      { id: "news", label: "News", href: ROUTES.news },
+      { id: "roles", label: "Roles", href: ROUTES.roles },
       {
         id: "customers",
         label: "Customers",
