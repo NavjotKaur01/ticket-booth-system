@@ -41,7 +41,7 @@ const ERROR_FIELD_CLASS =
   'border border-destructive '
 const ERROR_TEXT_CLASS = 'text-[11px] leading-tight text-destructive'
 
-function getMonthNameFromNumber (month: string) {
+function getMonthNameFromNumber(month: string) {
   const monthIndex = Number(month) - 1
 
   if (!Number.isInteger(monthIndex) || monthIndex < 0 || monthIndex > 11) {
@@ -51,7 +51,7 @@ function getMonthNameFromNumber (month: string) {
   return EXPIRATION_MONTHS[monthIndex]
 }
 
-function getMonthNumberFromName (monthName: string) {
+function getMonthNumberFromName(monthName: string) {
   const index = EXPIRATION_MONTHS.indexOf(
     monthName as (typeof EXPIRATION_MONTHS)[number]
   )
@@ -63,7 +63,7 @@ function getMonthNumberFromName (monthName: string) {
   return String(index + 1).padStart(2, '0')
 }
 
-function groupCardDigits (digits: string, groups: number[]) {
+function groupCardDigits(digits: string, groups: number[]) {
   const parts: string[] = []
   let cursor = 0
 
@@ -81,7 +81,7 @@ function groupCardDigits (digits: string, groups: number[]) {
   return parts.filter(Boolean).join(' ')
 }
 
-function getCardNumberGroups (brand?: CardBrand | null) {
+function getCardNumberGroups(brand?: CardBrand | null) {
   if (brand === 'AMEX') {
     return [4, 6, 5]
   }
@@ -89,7 +89,7 @@ function getCardNumberGroups (brand?: CardBrand | null) {
   return [4, 4, 4, 4, 3]
 }
 
-function formatCardNumber (
+function formatCardNumber(
   value: string,
   maxLength = 19,
   brand?: CardBrand | null
@@ -99,14 +99,14 @@ function formatCardNumber (
   return groupCardDigits(digits, getCardNumberGroups(brand))
 }
 
-function getFormattedCardInputMaxLength (
+function getFormattedCardInputMaxLength(
   maxLength: number,
   brand?: CardBrand | null
 ) {
   return formatCardNumber('9'.repeat(maxLength), maxLength, brand).length
 }
 
-function formatExpiryInput (value: string) {
+function formatExpiryInput(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 4)
 
   if (digits.length <= 2) {
@@ -116,7 +116,7 @@ function formatExpiryInput (value: string) {
   return `${digits.slice(0, 2)} / ${digits.slice(2)}`
 }
 
-function getExpiryInputValue (expMonth: string, expYear: string) {
+function getExpiryInputValue(expMonth: string, expYear: string) {
   if (!expMonth && expYear.length <= 4) {
     return formatExpiryInput(expYear)
   }
@@ -131,7 +131,7 @@ function getExpiryInputValue (expMonth: string, expYear: string) {
   return `${month} / ${year}`
 }
 
-function PaymentTypeField ({
+function PaymentTypeField({
   paymentType,
   onPaymentTypeChange,
   error
@@ -159,7 +159,7 @@ function PaymentTypeField ({
   )
 }
 
-function PaymentAmountField ({
+function PaymentAmountField({
   value,
   onChange,
   error
@@ -200,19 +200,19 @@ function CardBrandLogo({ brand }: { brand: CardBrand }) {
   const getCardIcon = () => {
     switch (brand) {
       case 'VISA':
-        return '/public/assets/cards/visa.svg'
+        return '/assets/cards/visa.svg'
       case 'MASTERCARD':
-        return '/public/assets/cards/master-card.svg'
+        return '/assets/cards/master-card.svg'
       case 'AMEX':
-        return '/public/assets/cards/american-express.svg'
+        return '/assets/cards/american-express.svg'
       case 'DISCOVER':
-        return '/public/assets/cards/discover.svg'
+        return '/assets/cards/discover.svg'
       case 'JCB':
-        return '/public/assets/cards/jcb.svg'
+        return '/assets/cards/jcb.svg'
       case 'MAESTRO':
-        return '/public/assets/cards/maestro.svg'
+        return '/assets/cards/maestro.svg'
       case 'UNIONPAY':
-        return '/public/assets/cards/unionpay.svg'
+        return '/assets/cards/unionpay.svg'
       default:
         return null
     }
@@ -230,7 +230,7 @@ function CardBrandLogo({ brand }: { brand: CardBrand }) {
   )
 }
 
-function CardBrandStrip ({
+function CardBrandStrip({
   cardNumber,
   resolvedBrand
 }: {
@@ -306,7 +306,7 @@ function CardBrandStrip ({
   )
 }
 
-function CreditCardNumberField ({
+function CreditCardNumberField({
   value,
   onChange,
   error
@@ -377,7 +377,7 @@ function CreditCardNumberField ({
   )
 }
 
-function GiftAccountField ({
+function GiftAccountField({
   paymentType,
   value,
   onChange,
@@ -405,7 +405,7 @@ function GiftAccountField ({
   )
 }
 
-function BillingAddressField ({
+function BillingAddressField({
   value,
   onChange,
   error
@@ -433,7 +433,7 @@ function BillingAddressField ({
   )
 }
 
-function CreditCardInformationField ({
+function CreditCardInformationField({
   fields,
   onFieldChange,
   showZip = false,
@@ -584,7 +584,7 @@ function CreditCardInformationField ({
   )
 }
 
-function PaymentFormFields ({
+function PaymentFormFields({
   paymentType,
   onPaymentTypeChange,
   paymentAmount,
@@ -696,7 +696,7 @@ function PaymentFormFields ({
         <PaymentTypeField
           paymentType={paymentType}
           onPaymentTypeChange={onPaymentTypeChange}
-            error={validationErrors.paymentType}
+          error={validationErrors.paymentType}
         />
         <PaymentAmountField
           value={paymentAmount}
@@ -708,7 +708,7 @@ function PaymentFormFields ({
   )
 }
 
-export function ReservationPaymentActions ({
+export function ReservationPaymentActions({
   onCancel,
   onSave,
   saveDisabled,
@@ -748,7 +748,7 @@ export function ReservationPaymentActions ({
   )
 }
 
-export function ReservationPaymentPanel ({
+export function ReservationPaymentPanel({
   paymentType,
   onPaymentTypeChange,
   paymentAmount,
