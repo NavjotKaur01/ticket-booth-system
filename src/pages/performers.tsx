@@ -4,28 +4,19 @@ import type { RowSelectionState } from "@tanstack/react-table"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { performers as initialPerformers } from "@/data/performers"
 import { AddPerformerDialog } from "@/features/performers/add-performer-dialog"
 import { PerformerDataTable } from "@/features/performers/performer-data-table"
 import { PerformerFiltersCard } from "@/features/performers/performer-filters-card"
 import { UpdatePerformerDialog } from "@/features/performers/update-performer-dialog"
 import { useAppSession } from "@/hooks/use-app-session"
-import { useLocations } from "@/hooks/use-locations"
 import { filterPerformers } from "@/lib/filter-performers"
 import { mapUpdateFormToPerformer } from "@/lib/map-performer-form"
 import type { Performer, PerformerFilters } from "@/types/performer"
 import type { UpdatePerformerFormValues } from "@/types/performer-form"
 
 export function Performers() {
-  const { clubSlug, locationId } = useAppSession()
-  const { locations } = useLocations(clubSlug)
+  const { locationId } = useAppSession()
   const [rows, setRows] = useState<Performer[]>(initialPerformers)
   const [filters, setFilters] = useState<PerformerFilters>({
     firstName: "",
@@ -133,33 +124,15 @@ export function Performers() {
           Performers
         </h1>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={filters.locationId}
-            onValueChange={(value) => updateFilter("locationId", value)}
-          >
-            <SelectTrigger className="h-8 w-[11rem]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {locations.map((location) => (
-                <SelectItem key={location.id} value={location.id}>
-                  {location.shortName || location.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Button
-            type="button"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setAddOpen(true)}
-          >
-            <Plus className="size-3.5" />
-            Add New Performer
-          </Button>
-        </div>
+        <Button
+          type="button"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => setAddOpen(true)}
+        >
+          <Plus className="size-3.5" />
+          Add New Performer
+        </Button>
       </div>
 
       <PerformerFiltersCard
