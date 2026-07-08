@@ -1,5 +1,6 @@
 import { EXPIRATION_MONTHS } from '@/data/reservation-payment-options'
 import type { ReservationPaymentType } from '@/data/reservation-payment-options'
+// import { parsePhoneSearchParts } from '@/lib/parse-phone-search-parts'
 import {
   ACTION_FORM_RESERVATION,
   ACTION_SAVE_RESERVATION,
@@ -48,6 +49,7 @@ type BuildUpdateReservationPaymentParams = BuildReservationRequestParams & {
   isPaymentLoad?: boolean
   resSelectedPromotionId?: string
   includeCustomerModel?: boolean
+
 }
 
 function roundMoney(value: number) {
@@ -173,7 +175,9 @@ function buildReservationCore({
   locationId,
   userRights,
   lastUpdateId,
+  // searchType,
   customerId,
+  // searchCriteria,
   selectedSection,
   origin,
   party,
@@ -186,6 +190,7 @@ function buildReservationCore({
   isReservationCheckedIn
 }: BuildReservationRequestParams): SaveReservationRequest {
   const originCode = getReservationOriginLookupCode(origin)
+  // const phone = parsePhoneSearchParts(searchCriteria.phoneNo)
   const ticketCounts = buildTicketCounts(party, promo)
 
   const request: SaveReservationRequest = {

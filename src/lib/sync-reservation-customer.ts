@@ -65,3 +65,60 @@ export async function syncReservationCustomerIfChanged ({
     }
   })
 }
+
+export function hasReservationSearchResultChanges (
+  originalResult: import('@/data/reservation-search-results').ReservationCustomerSearchResult,
+  criteria: ReservationCustomerSearchCriteria
+) {
+  return (
+    criteria.lastName.trim() !== originalResult.lastName.trim() ||
+    criteria.firstName.trim() !== originalResult.firstName.trim() ||
+    criteria.email.trim() !== originalResult.email.trim() ||
+    normalizePhoneDigits(criteria.phoneNo) !==
+      normalizePhoneDigits(originalResult.phoneNo)
+  )
+}
+
+export type SyncReservationCustomerSearchResultParams = {
+  connectionName: string
+  locationId: string
+  lastUpdateId: string
+  customerId: string
+  originalResult: import('@/data/reservation-search-results').ReservationCustomerSearchResult
+  searchCriteria: ReservationCustomerSearchCriteria
+}
+
+export async function syncReservationCustomerSearchResultIfChanged ({
+  connectionName,
+  locationId,
+  lastUpdateId,
+  customerId,
+  originalResult,
+  searchCriteria
+}: SyncReservationCustomerSearchResultParams) {
+  if (!hasReservationSearchResultChanges(originalResult, searchCriteria)) {
+    return
+  }
+
+  const apiCustomer = await getCustomerById({
+    connectionName,
+    locationId,
+    customerId
+  })
+  const existingForm = mapApiCustomerToForm(apiCustomer)
+  const editedForm = mapReservationSearchCriteriaToCustomerForm(searchCriteria)
+
+  await updateCustomer({
+    connectionName,
+    locationId,
+    lastUpdateId,
+    customerId,
+    form: {
+      ...existingForm,
+      lastName: editedForm.lastName,
+      firstName: editedForm.firstName,
+      email: editedForm.email,
+      phone: editedForm.phone
+    }
+  })
+}

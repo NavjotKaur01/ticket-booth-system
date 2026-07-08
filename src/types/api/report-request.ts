@@ -18,4 +18,5 @@ export type ReportRequestModel = {
   CCType?: string
   Type?: string
   Web?: string
+  ReservationId?: string
 }
