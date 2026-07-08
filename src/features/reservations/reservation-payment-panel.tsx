@@ -591,7 +591,6 @@ function PaymentFormFields ({
   onPaymentAmountChange,
   fields,
   onFieldChange,
-  paymentDisabled,
   validationErrors = {}
 }: {
   paymentType: ReservationPaymentType
