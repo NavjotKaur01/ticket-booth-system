@@ -5,6 +5,7 @@ import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
 import type { ReservationNoteRequest } from "@/types/api/reservation-note"
 import type { MoveReservationRequest } from "@/types/api/move-reservation"
+import type { ReservationCheckInRequest } from "@/types/api/reservation-check-in"
 import type { ReservationDetail } from "@/types/api/reservation-detail"
 import type { ReservationHistoryItem } from "@/types/api/reservation-history"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
@@ -202,4 +203,11 @@ export function moveReservation(request: MoveReservationRequest) {
     clubmanApi.endpoints.saveMoveReservation,
     request
   ).then(normalizeMoveReservationIds)
+}
+
+export function reservationCheckIn(request: ReservationCheckInRequest) {
+  return dispatchEndpoint<unknown, ReservationCheckInRequest>(
+    clubmanApi.endpoints.reservationCheckIn,
+    request
+  )
 }

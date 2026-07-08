@@ -7,6 +7,8 @@ export function isCancelledReservationStatus(resStatus: string | null | undefine
   return resStatus?.trim().toUpperCase() === RESERVATION_STATUS_CANCELLED
 }
 export const PAYMENT_STATUS_PAYMENT = 'PSTAT01'
+export const PAYMENT_STATUS_REFUND = 'PSTAT21'
+export const PAYMENT_STATUS_PROMO = 'PSTAT31'
 export const ACTION_FORM_RESERVATION = 'fromReservation'
 export const ACTION_FORM_MOVE_RESERVATION = 'fromMoveReservation'
 export const ACTION_SAVE_RESERVATION = 'cmdSaveReservationWithPayment'

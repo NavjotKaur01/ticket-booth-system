@@ -24,6 +24,7 @@ export type ReservationDetail = {
   ShowDetID?: string | null
   PartyNo?: number | null
   OrigPartyNo?: number | null
+  CheckedIn?: number | null
   ResSec?: string | null
   Sources?: string | null
   ResSource?: string | null

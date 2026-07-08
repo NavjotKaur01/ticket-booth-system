@@ -77,6 +77,7 @@ import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { ReservationCustomerSearchItem } from "@/types/api/reservation-customer-search"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
 import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
+import type { ReservationCheckInRequest } from "@/types/api/reservation-check-in"
 import type {
   MoveReservationRequest,
   UpcomingShowDetailsRequest,
@@ -801,6 +802,15 @@ export const clubmanApi = createApi({
       invalidatesTags: ["Reservation", "ShowDetails"],
     }),
 
+    reservationCheckIn: builder.mutation({
+      query: (body: ReservationCheckInRequest) => ({
+        url: reservationApiPath("ReservationCheckIn"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
     getCalendarData: builder.query({
       query: ({
         connectionString,
@@ -1089,6 +1099,7 @@ export const {
   useRevertCancelReservationMutation,
   useGetUpcomingShowDetailsMutation,
   useSaveMoveReservationMutation,
+  useReservationCheckInMutation,
   useGetDailyTransactionDataQuery,
   useGetRecentSalesReportQuery,
   useGetCalendarDataQuery,

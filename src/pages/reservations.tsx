@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { AddReservationDialog } from "@/features/reservations/add-reservation-dialog"
 import { CancelReservationDialog } from "@/features/reservations/cancel-reservation-dialog"
 import { MoveReservationDialog } from "@/features/reservations/move-reservation-dialog"
+import { ReservationCheckInPromoDialog } from "@/features/reservations/reservation-check-in-promo-dialog"
 import { ReservationNoteDialog } from "@/features/reservations/reservation-note-dialog"
 import { ReservationDataTable } from "@/features/reservations/reservation-data-table"
 import { ReservationHistoryDialog } from "@/features/reservations/reservation-history-dialog"
@@ -21,9 +22,14 @@ import { useShowDetailsByDate } from "@/hooks/use-show-details-by-date"
 import { calculateReservationShowStats } from "@/lib/calculate-reservation-show-stats"
 import { readBoothSeatDefault } from "@/lib/booth-seat-default"
 import { writeStoredBoothSeatCount } from "@/lib/booth-seat-storage"
-import { cancelReservation, revertCancelReservation, saveReservationNote } from "@/lib/api/reservations"
+import { cancelReservation, fetchReservationDetailById, reservationCheckIn, revertCancelReservation, saveReservationNote } from "@/lib/api/reservations"
 import { buildCancelReservationRequest } from "@/lib/build-cancel-reservation-request"
+import { buildReservationCheckInRequest } from "@/lib/build-reservation-check-in-request"
 import { buildReservationNoteRequest } from "@/lib/build-reservation-note-request"
+import {
+  needsPromoValidation,
+  validateReservationCheckIn,
+} from "@/lib/validate-reservation-check-in"
 import {
   readReservationFilters,
   writeReservationFilters,
@@ -33,6 +39,7 @@ import type { CancelReservationPaymentRow } from "@/types/cancel-reservation-pay
 import { filterReservations } from "@/lib/filter-reservations"
 import type { ExportFormat } from "@/lib/export-table-data"
 import type { Reservation } from "@/types/reservation"
+import type { ReservationDetail } from "@/types/api/reservation-detail"
 import { useGetShowSectionsQuery, useGetSystemDefaultsQuery } from "@/store/api/clubmanApi"
 
 /** ISO date string (yyyy-mm-dd) for the local calendar day. */
@@ -70,6 +77,7 @@ export function Reservations() {
   const [editOpen, setEditOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
+  const [checkInPromoOpen, setCheckInPromoOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [noteOpen, setNoteOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
@@ -96,6 +104,10 @@ export function Reservations() {
   )
   const [displayPhone, setDisplayPhone] = useState(false)
   const [reservationPrintError, setReservationPrintError] = useState<string | null>(null)
+  const [checkInError, setCheckInError] = useState<string | null>(null)
+  const [isCheckingInReservation, setIsCheckingInReservation] = useState(false)
+  const [pendingCheckInDetail, setPendingCheckInDetail] =
+    useState<ReservationDetail | null>(null)
 
   const { shows, loading: showsLoading, error: showsError, refetch: refetchShows } =
     useShowDetailsByDate(
@@ -268,6 +280,89 @@ export function Reservations() {
 
   async function handleReservationMoved() {
     await refreshReservations()
+  }
+
+  async function submitReservationCheckIn(reservationId: string) {
+    await reservationCheckIn(
+      buildReservationCheckInRequest({
+        connectionName,
+        reservationId,
+        lastUpdateId: username,
+      })
+    )
+    await refreshReservations()
+    setCheckInPromoOpen(false)
+    setPendingCheckInDetail(null)
+  }
+
+  function handleCheckInPromoDialogOpenChange(open: boolean) {
+    setCheckInPromoOpen(open)
+    if (!open) {
+      setPendingCheckInDetail(null)
+    }
+  }
+
+  async function handleConfirmCheckInPromo() {
+    const reservationId =
+      pendingCheckInDetail?.ReservationID?.trim() ?? selectedReservation?.id ?? ""
+
+    if (!reservationId || !isReady) {
+      return
+    }
+
+    setIsCheckingInReservation(true)
+    setCheckInError(null)
+
+    try {
+      await submitReservationCheckIn(reservationId)
+    } catch (requestError) {
+      setCheckInError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Failed to check in reservation"
+      )
+    } finally {
+      setIsCheckingInReservation(false)
+    }
+  }
+
+  async function handleCheckInReservation(reservation: Reservation) {
+    if (!isReady || reservation.isCancelled) {
+      return
+    }
+
+    setIsCheckingInReservation(true)
+    setCheckInError(null)
+    setSelectedReservation(reservation)
+
+    try {
+      const detail = await fetchReservationDetailById({
+        connectionString: connectionName,
+        reservationId: reservation.id,
+      })
+
+      const validation = validateReservationCheckIn(detail)
+      if (!validation.canCheckIn) {
+        setCheckInError(validation.error)
+        return
+      }
+
+      if (needsPromoValidation(detail)) {
+        setPendingCheckInDetail(detail)
+        setCheckInPromoOpen(true)
+        return
+      }
+
+      await submitReservationCheckIn(reservation.id)
+    } catch (requestError) {
+      setCheckInError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Failed to check in reservation"
+      )
+    } finally {
+      setIsCheckingInReservation(false)
+    }
   }
 
   function handleOpenReservationHistory(reservation: Reservation) {
@@ -573,13 +668,19 @@ export function Reservations() {
             {reservationPrintError}
           </p>
         ) : null}
+        {checkInError ? (
+          <p className="px-3 py-2 text-sm text-destructive">{checkInError}</p>
+        ) : null}
 
         <ReservationDataTable
           data={filteredReservations}
-          loading={reservationsLoading || isUncancellingReservation}
+          loading={reservationsLoading || isUncancellingReservation || isCheckingInReservation}
           displayPhone={displayPhone}
           onCancelReservation={handleOpenCancelReservation}
           onUnCancelReservation={handleUnCancelReservation}
+          onCheckIn={(reservation) => {
+            void handleCheckInReservation(reservation)
+          }}
           onMoveReservation={handleOpenMoveReservation}
           onPrintTickets={(reservation) => {
             void handlePrintReservation(reservation, {
@@ -635,6 +736,14 @@ export function Reservations() {
         username={username}
         currentShowId={showTime}
         onMoved={handleReservationMoved}
+      />
+      <ReservationCheckInPromoDialog
+        open={checkInPromoOpen}
+        onOpenChange={handleCheckInPromoDialogOpenChange}
+        promo={pendingCheckInDetail?.Promo?.trim() ?? selectedReservation?.promo ?? ""}
+        passes={pendingCheckInDetail?.NumPasses ?? 0}
+        isSubmitting={isCheckingInReservation}
+        onConfirm={handleConfirmCheckInPromo}
       />
       <ReservationHistoryDialog
         open={historyOpen}

@@ -134,6 +134,7 @@ export function mapReservationDetail(response: unknown): ReservationDetail {
     ShowDetID: readString(record, ['ShowDetID', 'showDetID', 'showDetId']) || null,
     PartyNo: readNumber(record, ['PartyNo', 'partyNo']),
     OrigPartyNo: readNumber(record, ['OrigPartyNo', 'origPartyNo']),
+    CheckedIn: readNumber(record, ['CheckedIn', 'checkedIn']),
     ResSec: readString(record, ['ResSec', 'resSec']) || null,
     Sources: readString(record, ['Sources', 'sources']) || null,
     ResSource: readString(record, ['ResSource', 'resSource']) || null,
