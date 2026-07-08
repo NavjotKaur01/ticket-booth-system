@@ -24,7 +24,7 @@ export type DrillColumn = {
   key: string
   label: string
   right?: boolean
-  format?: "text" | "number" | "currency" | "datetime"
+  format?: "text" | "number" | "currency" | "datetime" | "date"
   keys?: string[]
 }
 
@@ -56,6 +56,11 @@ function fmtCell(col: DrillColumn, v: unknown): string {
   if (col.format === "datetime") {
     const d = dayjs(String(v))
     return d.isValid() ? d.format("M/D/YYYY h:mm:ss A") : String(v)
+  }
+
+  if (col.format === "date") {
+    const d = dayjs(String(v))
+    return d.isValid() ? d.format("M/D/YYYY") : String(v)
   }
 
   if (col.format === "currency" || (col.right && col.format !== "number")) {

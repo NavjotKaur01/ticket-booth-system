@@ -174,25 +174,34 @@ function Td({
 
 type DrillKey = {
   drillType: string
-  type: "Payment" | "Fill"
+  type: string
   web: "Y" | "N"
 }
 
 function resolveDrillKey(rowLabel: string, col: PayCol): DrillKey | null {
-  const isWeb = rowLabel === "Web"
-  const isDrawerOrPos = rowLabel === "Cash Drawer" || rowLabel === "POS"
+  const isWeb = rowLabel === "Web" || rowLabel === "Web/Refund"
+  const isRefund = rowLabel === "Refund" || rowLabel === "Web/Refund"
+  const isDrawerOrPos = rowLabel === "Cash Drawer" || rowLabel === "POS" || rowLabel === "Refund"
 
-  // Only Cash Drawer, POS, and Web rows are drillable source rows
+  // Only Cash Drawer, POS, Web, and their Refund rows are drillable
   if (!isWeb && !isDrawerOrPos) return null
 
-  if (col === "cash") {
-    return { drillType: "PYMT05", type: "Payment", web: isWeb ? "Y" : "N" }
-  }
+  const webFlag = isWeb ? "Y" : "N"
 
-  // Any card column (Visa, AmEx, MasterCard, Discover, GiftCard, GiftCert, WebGiftCert)
-  const cardTypes: PayCol[] = ["amex", "discover", "mastercard", "visa", "giftcard", "giftcert", "webgiftcert"]
-  if (cardTypes.includes(col)) {
-    return { drillType: "CCTYPE04", type: "Fill", web: isWeb ? "Y" : "N" }
+  if (col === "cash") {
+    return { drillType: "PYMT05", type: isRefund ? "Refund" : "Payment", web: webFlag }
+  } else if (col === "giftcard") {
+    return { drillType: "PYMT03", type: isRefund ? "Refund" : "Payment", web: webFlag }
+  } else if (col === "giftcert" || col === "webgiftcert") {
+    return { drillType: "PYMT04", type: isRefund ? "Refund" : "Payment", web: webFlag }
+  } else if (col === "amex") {
+    return { drillType: "CCTYPE01", type: isRefund ? "CRefund" : "Fill", web: webFlag }
+  } else if (col === "discover") {
+    return { drillType: "CCTYPE02", type: isRefund ? "CRefund" : "Fill", web: webFlag }
+  } else if (col === "mastercard") {
+    return { drillType: "CCTYPE03", type: isRefund ? "CRefund" : "Fill", web: webFlag }
+  } else if (col === "visa") {
+    return { drillType: "CCTYPE04", type: isRefund ? "CRefund" : "Fill", web: webFlag }
   }
 
   return null
@@ -277,11 +286,11 @@ function PaymentTable({ show, drillContext }: { show: ManagerCheckoutApiShow; dr
   // alwaysShowSub: refund rows always render $0.00 even when empty (matches desktop)
   // total: only appears on refund rows (after subtracting refund from its source)
   const rows: { label: string; data: Record<PayCol, number>; sub: number; total?: number; alwaysShowSub?: boolean; showZero?: boolean }[] = [
-    { label: "Cash Drawer", data: cashDrawer, sub: cashDrawerSub },
+    { label: "Cash Drawer", data: cashDrawer, sub: cashDrawerSub, showZero: true },
     { label: "Refund",      data: refund,     sub: refundSub,     total: cashDrawerNet, alwaysShowSub: true },
     { label: "POS",         data: pos,        sub: posSub,        showZero: true },
     { label: "Refund",      data: posRefund,  sub: 0,             total: posNet,        alwaysShowSub: true },
-    { label: "Web",         data: web,        sub: webSub },
+    { label: "Web",         data: web,        sub: webSub,        showZero: true },
     { label: "Web/Refund",  data: webRefund,  sub: webRefundSub,  total: webNet,        alwaysShowSub: true },
   ]
 
@@ -364,7 +373,7 @@ function PaymentTable({ show, drillContext }: { show: ManagerCheckoutApiShow; dr
 
       {activeDrill && drillContext && (
         <ReportDrillDialog
-          title={`Payment Detail — ${show.Comic ?? ""} (${show.DateStr ?? ""})`}
+          title="Manager checkout -drill Down Payment Verification"
           endpoint="ManagerCheckOutDrillDown"
           body={{
             Connection: drillContext.connectionName,

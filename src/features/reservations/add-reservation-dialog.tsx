@@ -99,7 +99,7 @@ import {
   resolveReservationEditCustomerId
 } from '@/lib/reservation-edit'
 import { EMPTY_GUID } from '@/lib/reservation-lookup-codes'
-import { syncReservationCustomerIfChanged } from '@/lib/sync-reservation-customer'
+import { syncReservationCustomerIfChanged, syncReservationCustomerSearchResultIfChanged } from '@/lib/sync-reservation-customer'
 import { validateReservationParty } from '@/lib/validate-reservation-party'
 import {
   getFirstReservationPaymentError,
@@ -1789,6 +1789,20 @@ export function AddReservationDialog({
         await onSaved?.([reservation.id])
         onOpenChange(false)
         return
+      }
+
+      if (!isEditMode && searchType === 'customer' && effectiveCustomerId) {
+        const originalResult = customerSearchResults.find(c => c.id === effectiveCustomerId)
+        if (originalResult) {
+          await syncReservationCustomerSearchResultIfChanged({
+            connectionName,
+            locationId,
+            lastUpdateId: username,
+            customerId: effectiveCustomerId,
+            originalResult,
+            searchCriteria: customerDetails
+          })
+        }
       }
 
       const reservationIds = await createNewReservation(
