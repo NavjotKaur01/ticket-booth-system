@@ -79,7 +79,7 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
           { id: "transaction-log-viewer", label: "Transaction Log Viewer" },
         ],
       },
-      { id: "comic-manager", label: "Comic Manager", href: ROUTES.performers },
+      { id: "comic-manager", label: "Comic Manager", href: ROUTES.comicManager },
       { id: "features-and-tips", label: "Features And Tips" },
       { id: "sum-contact-leads", label: "SUM Contact Leads" },
       { id: "events", label: "Events" },
