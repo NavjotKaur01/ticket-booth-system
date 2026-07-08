@@ -35,6 +35,11 @@ import { formatReservationMoney, parseReservationMoney } from '@/lib/calculate-r
 import { fetchUpcomingShowDetails, moveReservation } from '@/lib/api/reservations'
 import { mapReservationSourceToOrigin } from '@/lib/reservation-edit'
 import {
+  getFirstReservationPaymentError,
+  validateReservationPaymentFields,
+  type ReservationPaymentValidationErrors
+} from '@/lib/validate-reservation-payment'
+import {
   filterUpcomingShowsByDate,
   getActiveUpcomingShows,
   toIsoShowDate
@@ -168,6 +173,8 @@ export function MoveReservationDialog({
   const [destinationSectionId, setDestinationSectionId] = useState('')
   const [dinner, setDinner] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [paymentValidationErrors, setPaymentValidationErrors] =
+    useState<ReservationPaymentValidationErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [chargeConfirmOpen, setChargeConfirmOpen] = useState(false)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
@@ -393,7 +400,25 @@ export function MoveReservationDialog({
       return
     }
 
+    if (includePayment) {
+      const nextPaymentErrors = validateReservationPaymentFields({
+        paymentType,
+        fields: paymentFields,
+        paymentAmount: formatReservationMoney(chargeAmount),
+        paymentRequired: true,
+        disallowCash: origin === 'phone'
+      })
+      const paymentError = getFirstReservationPaymentError(nextPaymentErrors)
+
+      if (paymentError) {
+        setPaymentValidationErrors(nextPaymentErrors)
+        setSubmitError(paymentError)
+        return
+      }
+    }
+
     setIsSubmitting(true)
+    setPaymentValidationErrors({})
     setSubmitError(null)
 
     try {
@@ -819,17 +844,25 @@ export function MoveReservationDialog({
 
             <ReservationPaymentPanel
               paymentType={paymentType}
-              onPaymentTypeChange={setPaymentType}
+              onPaymentTypeChange={value => {
+                setPaymentType(value)
+                setPaymentFields(createEmptyReservationPaymentFields())
+                setPaymentValidationErrors({})
+                setSubmitError(null)
+              }}
               paymentAmount={formatReservationMoney(chargeAmount)}
               onPaymentAmountChange={() => undefined}
               fields={paymentFields}
-              onFieldChange={(key, value) =>
+              onFieldChange={(key, value) => {
                 setPaymentFields(current => ({ ...current, [key]: value }))
-              }
+                setPaymentValidationErrors({})
+                setSubmitError(null)
+              }}
               paymentDisabled
+              validationErrors={paymentValidationErrors}
             />
 
-            {submitError ? (
+            {submitError && Object.keys(paymentValidationErrors).length === 0 ? (
               <p className='text-sm text-destructive'>{submitError}</p>
             ) : null}
           </div>
