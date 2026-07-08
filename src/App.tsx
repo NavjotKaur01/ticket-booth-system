@@ -45,6 +45,8 @@ import { NavigationManagement } from "@/pages/navigation-management"
 import { NavigationDropDowns } from "@/pages/navigation-drop-downs"
 import { NavigationRoles } from "@/pages/navigation-roles"
 import { NavigationLocation } from "@/pages/navigation-location"
+import { News } from "@/pages/news"
+import { RolesManagement } from "@/pages/roles-management"
 import { VenueAds } from "@/pages/venue-ads"
 import { VenueRotatingAds } from "@/pages/venue-rotating-ads"
 import { VenueInfo } from "@/pages/venue-info"
@@ -117,6 +119,8 @@ function App() {
             <Route path="navigation-drop-downs" element={<NavigationDropDowns />} />
             <Route path="navigation-roles" element={<NavigationRoles />} />
             <Route path="navigation-location" element={<NavigationLocation />} />
+            <Route path="news" element={<News />} />
+            <Route path="roles" element={<RolesManagement />} />
           </Route>
 
           <Route path="venue">
