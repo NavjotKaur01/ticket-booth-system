@@ -36,7 +36,11 @@ function parseDecimal(value: string, fallback = 0) {
 }
 
 function toGuid(value: string) {
-  return value && value !== "select" ? value : EMPTY_GUID
+  return value && value !== "select" && value !== EMPTY_GUID ? value : EMPTY_GUID
+}
+
+function toOptionalGuid(value: string): string | null {
+  return value && value !== "select" && value !== EMPTY_GUID ? value : null
 }
 
 function yn(value: boolean) {
@@ -157,10 +161,10 @@ export function buildSaveShowRequest({
         ShowTim: toApiDateTime(resolvedShowTim),
         ShowArrival: toApiDateTime(resolvedShowArrival),
         Headliner: toGuid(form.headlinerId),
-        Headliner2: toGuid(form.headliner2Id),
-        Feature: toGuid(form.featureId),
-        Feature2: toGuid(form.feature2Id),
-        Opener: toGuid(form.openerId),
+        Headliner2: toOptionalGuid(form.headliner2Id),
+        Feature: toOptionalGuid(form.featureId),
+        Feature2: toOptionalGuid(form.feature2Id),
+        Opener: toOptionalGuid(form.openerId),
         IsUseSectionFee: form.useSectionFee,
         ShowDinner: yn(form.dinner),
         NoPasses: yn(form.noPasses),

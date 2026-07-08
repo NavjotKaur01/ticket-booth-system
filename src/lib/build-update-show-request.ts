@@ -32,7 +32,11 @@ function parseDecimal(value: string, fallback = 0) {
 }
 
 function toGuid(value: string) {
-  return value && value !== "select" ? value : EMPTY_GUID
+  return value && value !== "select" && value !== EMPTY_GUID ? value : EMPTY_GUID
+}
+
+function toOptionalGuid(value: string): string | null {
+  return value && value !== "select" && value !== EMPTY_GUID ? value : null
 }
 
 // function resolveAge(ageRestriction: string) {
@@ -145,10 +149,10 @@ export function buildUpdateShowRequest({
     LastUpdateDt: formatUsDateTime(new Date()),
     LastUpdateId: username,
     HeadlinerGuid1: toGuid(form.headlinerId),
-    HeadlinerGuid2: toGuid(form.headliner2Id),
-    FeatureGuid1: toGuid(form.featureId),
-    FeatureGuid2: toGuid(form.feature2Id),
-    OpenerGuid: toGuid(form.openerId),
+    HeadlinerGuid2: toOptionalGuid(form.headliner2Id),
+    FeatureGuid1: toOptionalGuid(form.featureId),
+    FeatureGuid2: toOptionalGuid(form.feature2Id),
+    OpenerGuid: toOptionalGuid(form.openerId),
     IsDinner: form.dinner,
     IsNoPasses: form.noPasses,
     IsVIPSeating: form.vipSeating,
