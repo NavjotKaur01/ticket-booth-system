@@ -1037,7 +1037,7 @@ export default function AddShowDialog({
         onOpenChange={setIsVerifyOpen}
         rows={verifyRows}
         onRowsChange={handleVerifyRowsChange}
-        onConfirm={handleConfirmSave}
+        onConfirm={() => handleConfirmSave()}
         isSaving={isSaving}
       />
     </>
