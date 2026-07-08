@@ -5,6 +5,9 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import { PanelCard } from "@/components/common/panel-card"
 import { ROUTES, reportViewerUrl } from "@/constants/routes"
 import { useAppSession } from "@/hooks/use-app-session"
+import { fetchRecentSalesReport } from "@/lib/api/recent-sales"
+import { mapRecentSalesReport } from "@/lib/map-recent-sales-report"
+import { createTodaySalesPdfBlob, buildTodaySalesExportBlob } from "@/features/reports/today-sales-export"
 import { ReportFiltersToolbar } from "@/features/reports/report-filters-toolbar"
 import { ReportViewerResults } from "@/features/reports/report-viewer-results"
 import { TodaySalesReport } from "@/features/reports/today-sales-report"
@@ -390,8 +393,32 @@ export function Reports() {
     openReportPrintWindow(generatedResult, locationName)
   }
 
-  function handleExport() {
-    if (!generatedResult || showTodaySalesReport) {
+  async function handleExport() {
+    if (showTodaySalesReport) {
+      const activeLocationId = draftFilters.locationId || locationId
+
+      if (!connectionName || !activeLocationId) {
+        setExportError("Location is not ready. Please generate the report first.")
+        return
+      }
+
+      setExportError(null)
+
+      try {
+        const apiData = await fetchRecentSalesReport(connectionName, activeLocationId)
+        const summary = mapRecentSalesReport(apiData)
+        const blob = buildTodaySalesExportBlob(summary, locationName)
+        downloadBlob(blob, buildFilename("Today Sales", "xlsx"))
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to export report. Please try again."
+        setExportError(message)
+      }
+
+      return
+    }
+
+    if (!generatedResult) {
       return
     }
 
@@ -402,7 +429,38 @@ export function Reports() {
   }
 
   async function handlePdf() {
-    if (!generatedResult || showTodaySalesReport || isExportingPdf) {
+    if (isExportingPdf) {
+      return
+    }
+
+    if (showTodaySalesReport) {
+      const activeLocationId = draftFilters.locationId || locationId
+
+      if (!connectionName || !activeLocationId) {
+        setExportError("Location is not ready. Please generate the report first.")
+        return
+      }
+
+      setIsExportingPdf(true)
+      setExportError(null)
+
+      try {
+        const apiData = await fetchRecentSalesReport(connectionName, activeLocationId)
+        const summary = mapRecentSalesReport(apiData)
+        const blob = await createTodaySalesPdfBlob(summary, locationName)
+        downloadBlob(blob, buildFilename("Today Sales", "pdf"))
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to export PDF. Please try again."
+        setExportError(message)
+      } finally {
+        setIsExportingPdf(false)
+      }
+
+      return
+    }
+
+    if (!generatedResult) {
       return
     }
 
@@ -440,7 +498,7 @@ export function Reports() {
             onToday={handleToday}
             onYesterday={handleYesterday}
             onPrint={handlePrint}
-            onExport={handleExport}
+            onExport={() => void handleExport()}
             onPdf={() => void handlePdf()}
             isExportingPdf={isExportingPdf}
             exportError={exportError}
