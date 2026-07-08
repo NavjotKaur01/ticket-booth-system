@@ -55,6 +55,15 @@ function getParentMenuIdForPath(
   return null
 }
 
+function getActiveSubMenuId(pathname: string, items: NavSubItem[]): string | null {
+  for (const item of items) {
+    if (item.items?.length && hasActiveSubItem(pathname, item)) {
+      return item.id
+    }
+  }
+  return null
+}
+
 function navButtonClassName(active: boolean, collapsed: boolean) {
   return cn(
     "flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-all",
@@ -118,32 +127,100 @@ function NavLinkItem({
   return link
 }
 
+function NavSubTreeList({
+  items,
+  pathname,
+  depth,
+  onNavigate,
+  onSubMenuAction,
+}: {
+  items: NavSubItem[]
+  pathname: string
+  depth: number
+  onNavigate?: () => void
+  onSubMenuAction?: (action: NavSubItemAction) => void
+}) {
+  const [openSubMenuId, setOpenSubMenuId] = useState<string | null>(() =>
+    getActiveSubMenuId(pathname, items)
+  )
+
+  useEffect(() => {
+    const activeSubMenuId = getActiveSubMenuId(pathname, items)
+    if (activeSubMenuId) {
+      setOpenSubMenuId(activeSubMenuId)
+    }
+  }, [pathname, items])
+
+  return (
+    <>
+      {items.map((subItem) => (
+        <NavSubTreeItem
+          key={subItem.id}
+          item={subItem}
+          pathname={pathname}
+          depth={depth}
+          openSubMenuId={openSubMenuId}
+          onOpenSubMenuChange={setOpenSubMenuId}
+          onNavigate={onNavigate}
+          onSubMenuAction={onSubMenuAction}
+        />
+      ))}
+    </>
+  )
+}
+
 function NavSubTreeItem({
   item,
   pathname,
   depth,
+  openSubMenuId,
+  onOpenSubMenuChange,
   onNavigate,
   onSubMenuAction,
 }: {
   item: NavSubItem
   pathname: string
   depth: number
+  openSubMenuId?: string | null
+  onOpenSubMenuChange?: (id: string | null) => void
   onNavigate?: () => void
   onSubMenuAction?: (action: NavSubItemAction) => void
 }) {
   const hasChildren = Boolean(item.items?.length)
   const active = hasActiveSubItem(pathname, item)
+  const usesAccordion = hasChildren && onOpenSubMenuChange !== undefined
   const [isOpen, setIsOpen] = useState(active)
+  const expanded = usesAccordion ? openSubMenuId === item.id : isOpen
 
   useEffect(() => {
-    if (active) {
-      setIsOpen(true)
+    if (!active) {
+      return
     }
-  }, [active])
+
+    if (usesAccordion && onOpenSubMenuChange) {
+      onOpenSubMenuChange(item.id)
+      return
+    }
+
+    setIsOpen(true)
+  }, [active, item.id, onOpenSubMenuChange, usesAccordion])
+
+  function handleOpenChange(open: boolean) {
+    if (usesAccordion && onOpenSubMenuChange) {
+      onOpenSubMenuChange(open ? item.id : null)
+      return
+    }
+
+    setIsOpen(open)
+  }
 
   if (hasChildren) {
     return (
-      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="group/sub-collapsible">
+      <Collapsible
+        open={expanded}
+        onOpenChange={handleOpenChange}
+        className="group/sub-collapsible"
+      >
         <CollapsibleTrigger asChild>
           <button
             type="button"
@@ -160,16 +237,13 @@ function NavSubTreeItem({
               depth === 0 ? "ml-3.5 pl-2.5" : "ml-4 pl-2.5"
             )}
           >
-            {item.items?.map((childItem) => (
-              <NavSubTreeItem
-                key={childItem.id}
-                item={childItem}
-                pathname={pathname}
-                depth={depth + 1}
-                onNavigate={onNavigate}
-                onSubMenuAction={onSubMenuAction}
-              />
-            ))}
+            <NavSubTreeList
+              items={item.items ?? []}
+              pathname={pathname}
+              depth={depth + 1}
+              onNavigate={onNavigate}
+              onSubMenuAction={onSubMenuAction}
+            />
           </div>
         </CollapsibleContent>
       </Collapsible>
@@ -261,16 +335,13 @@ function NavCollapsibleItem({
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="ml-4 space-y-0.5 border-l border-sidebar-border py-0.5 pl-2.5">
-          {item.items?.map((subItem) => (
-            <NavSubTreeItem
-              key={subItem.id}
-              item={subItem}
-              pathname={pathname}
-              depth={0}
-              onNavigate={onNavigate}
-              onSubMenuAction={onSubMenuAction}
-            />
-          ))}
+          <NavSubTreeList
+            items={item.items ?? []}
+            pathname={pathname}
+            depth={0}
+            onNavigate={onNavigate}
+            onSubMenuAction={onSubMenuAction}
+          />
         </div>
       </CollapsibleContent>
     </Collapsible>
