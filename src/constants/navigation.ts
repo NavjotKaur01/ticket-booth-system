@@ -50,9 +50,13 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
         id: "user-setup",
         label: "User Setup",
         items: [
-          { id: "create-user", label: "Create User", href: ROUTES.users },
-          { id: "modify-user", label: "Modify User", href: ROUTES.users },
-          { id: "add-user-to-locations", label: "Add User To Location(s)" },
+          { id: "create-user", label: "Create User", href: ROUTES.createUser },
+          { id: "modify-user", label: "Modify User", href: ROUTES.modifyUser },
+          {
+            id: "add-user-to-locations",
+            label: "Add User To Location(s)",
+            href: ROUTES.addUserToLocations,
+          },
         ],
       },
       {

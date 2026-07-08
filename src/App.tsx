@@ -38,6 +38,9 @@ import { Locations } from "@/pages/locations"
 import { Domains } from "@/pages/domains"
 import { VenueGateway } from "@/pages/venue-gateway"
 import { WebServers } from "@/pages/web-servers"
+import { CreateUser } from "@/pages/create-user"
+import { ModifyUser } from "@/pages/modify-user"
+import { AddUserToLocations } from "@/pages/add-user-to-locations"
 import { VenueAds } from "@/pages/venue-ads"
 import { VenueRotatingAds } from "@/pages/venue-rotating-ads"
 import { VenueInfo } from "@/pages/venue-info"
@@ -96,6 +99,12 @@ function App() {
             <Route
               path="club-reservation-settings"
               element={<ClubReservationSettings />}
+            />
+            <Route path="create-user" element={<CreateUser />} />
+            <Route path="modify-user" element={<ModifyUser />} />
+            <Route
+              path="add-user-to-locations"
+              element={<AddUserToLocations />}
             />
           </Route>
 

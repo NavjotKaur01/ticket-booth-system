@@ -37,6 +37,9 @@ export const ROUTES = {
   reservationDefaults: "/administrator/reservation-defaults",
   onlineSettings: "/administrator/online-settings",
   clubReservationSettings: "/administrator/club-reservation-settings",
+  createUser: "/administrator/create-user",
+  modifyUser: "/administrator/modify-user",
+  addUserToLocations: "/administrator/add-user-to-locations",
   businessContacts: "/ticketbooth/business-contacts",
   commentCards: "/ticketbooth/comment-cards",
   giftCards: "/ticketbooth/gift-cards",
@@ -63,6 +66,9 @@ export const ROUTE_PREFERRED_NAV_ITEM_IDS: Partial<Record<string, string>> = {
   [ROUTES.reservationDefaults]: "reservation-defaults",
   [ROUTES.onlineSettings]: "online-settings",
   [ROUTES.clubReservationSettings]: "club-reservation-settings",
+  [ROUTES.createUser]: "create-user",
+  [ROUTES.modifyUser]: "modify-user",
+  [ROUTES.addUserToLocations]: "add-user-to-locations",
 }
 
 export function reportViewerUrl(reportType?: string) {
@@ -93,6 +99,9 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.reservationDefaults]: "Reservation Defaults",
   [ROUTES.onlineSettings]: "Online Settings",
   [ROUTES.clubReservationSettings]: "Club Reservation Settings",
+  [ROUTES.createUser]: "Create User",
+  [ROUTES.modifyUser]: "Modify User",
+  [ROUTES.addUserToLocations]: "Add User To Location(s)",
   [ROUTES.venueInfo]: "Venue Info",
   [ROUTES.venueShowTimes]: "Venue Show Times",
   [ROUTES.foodMenu]: "Food Menu",
