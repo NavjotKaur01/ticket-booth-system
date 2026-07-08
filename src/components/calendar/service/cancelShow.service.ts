@@ -1,5 +1,6 @@
 import type { CalendarEvent } from "@/data/calendarEvents"
 import { formatDateForDisplay } from "@/lib/date-display-format"
+import { formatShowTime } from "@/lib/format-show-time"
 
 export type CancelShowDialogData = {
   eventId: string
@@ -10,18 +11,11 @@ export type CancelShowDialogData = {
 }
 
 function formatCancelShowDate(date: Date) {
-  return `${formatDateForDisplay(date)} 00:00:00`
+  return formatDateForDisplay(date)
 }
 
 function formatCancelShowTime(time: string) {
-  const normalized = time.replace(/\s+/g, "").toUpperCase()
-  const match = normalized.match(/^(\d{1,2}):(\d{2})(AM|PM)$/)
-
-  if (!match) {
-    return time
-  }
-
-  return `${match[1]}:${match[2]}${match[3]}`
+  return formatShowTime(time, { seconds: true })
 }
 
 function getReservationCount(event: CalendarEvent) {

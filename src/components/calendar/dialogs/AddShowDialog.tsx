@@ -32,6 +32,7 @@ import SaveVerifyDialog from "./SaveVerifyDialog"
 import {
   buildSaveShowFilterList,
 } from "@/lib/map-default-show-sections"
+import { formatShowTime } from "@/lib/format-show-time"
 import {
   validateAddShowForm,
 } from "@/lib/build-save-show-request"
@@ -533,11 +534,15 @@ export default function AddShowDialog({
 
   if (isEditMode && showData && showData.length > 0) {
     const mainShowData = showData[0]
+    const arrivalTime =
+      formatShowTime(mainShowData.ShowArrival, { seconds: true }) ?? ""
+    const showTime = formatShowTime(mainShowData.ShowTim, { seconds: true }) ?? ""
+
     showTimes = [
       {
         id: "edit-show-time",
         dayLabel: dayjs(mainShowData.ShowDate).format("dddd"),
-        timeRange: `${dayjs(mainShowData.ShowArrival).format("h:mm A")} - ${dayjs(mainShowData.ShowTim).format("h:mm A")}`,
+        timeRange: `${arrivalTime} - ${showTime}`,
         enabled: true,
         sections: showData.map(row => ({
           id: row.ShowDetID,
