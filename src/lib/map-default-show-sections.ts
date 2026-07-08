@@ -4,6 +4,7 @@ import type {
   ShowTimeOption,
 } from "@/types/calendar-show"
 import { formatDateForDisplay } from "@/lib/date-display-format"
+import { formatShowTime } from "@/lib/format-show-time"
 
 const AGE_RESTRICTIONS = [
   { value: "A", label: "A - All ages", description: "All ages" },
@@ -18,16 +19,7 @@ function formatTimeRange(showTim: string | null, showArrival: string | null) {
       return ""
     }
 
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) {
-      return value
-    }
-
-    return date.toLocaleString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    })
+    return formatShowTime(value, { seconds: true }) ?? ""
   }
 
   const start = format(showTim)

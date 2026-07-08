@@ -156,8 +156,10 @@ function buildPaymentModel({
   }
 
   if (paymentType !== 'cash') {
+    const cardNumber = paymentFields.cardNumber.replace(/\D/g, '')
+
     payment.CCType = detectCreditCardType(paymentFields.cardNumber)
-    payment.CreditCardNubmer = paymentFields.cardNumber.trim()
+    payment.CreditCardNubmer = cardNumber
     payment.CCExpYear = paymentFields.expYear
     payment.CCExpMonth = getExpirationMonthNumber(paymentFields.expMonth)
     payment.SecurityCode = paymentFields.cvv.trim()

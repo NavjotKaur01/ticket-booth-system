@@ -1,4 +1,3 @@
-import { EXPIRATION_MONTHS } from '@/data/reservation-payment-options'
 import type { ReservationPaymentType } from '@/data/reservation-payment-options'
 
 export type ReservationPaymentFields = {
@@ -20,8 +19,8 @@ export function createEmptyReservationPaymentFields (): ReservationPaymentFields
   return {
     cardNumber: '',
     cvv: '',
-    expMonth: EXPIRATION_MONTHS[0],
-    expYear: String(new Date().getFullYear()),
+    expMonth: '',
+    expYear: '',
     billingAddress: '',
     zipCode: '',
     accountNumber: ''

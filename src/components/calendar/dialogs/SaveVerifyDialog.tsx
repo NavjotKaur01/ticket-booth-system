@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { formatShowTime } from "@/lib/format-show-time"
 import type { ApiDefaultShowSection } from "@/types/api/save-show"
 
 type SaveVerifyDialogProps = {
@@ -33,16 +34,7 @@ function formatVerifyTime(value: string | null) {
     return ""
   }
 
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return date.toLocaleString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })
+  return formatShowTime(value, { seconds: true }) ?? ""
 }
 
 function formatVerifyTimeRange(row: ApiDefaultShowSection) {
@@ -145,7 +137,6 @@ export default function SaveVerifyDialog({
           <Button type="button" onClick={onConfirm} disabled={isSaving || rows.length === 0}>
             {isSaving ? "Saving..." : "Save"}
           </Button>
-          <span className="px-2 text-sm text-muted-foreground">OR</span>
           <Button
             type="button"
             variant="ghost"
