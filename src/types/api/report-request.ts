@@ -16,4 +16,6 @@ export type ReportRequestModel = {
   ShowDateStr?: string
   PymtType?: string
   CCType?: string
+  Type?: string
+  Web?: string
 }

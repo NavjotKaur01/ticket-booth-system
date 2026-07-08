@@ -1102,7 +1102,8 @@ function transformManagerCheckout(
   reportType: string,
   title: string,
   subtitle: string,
-  generatedAt: string
+  generatedAt: string,
+  drillContext?: ReportDrillContext
 ): ReportViewerResult {
   const rows = toRows(data)
   return {
@@ -1114,6 +1115,7 @@ function transformManagerCheckout(
     emptyMessage: rows.length === 0 ? "No records found" : "",
     generatedAt,
     rawData: data,
+    drillContext,
   }
 }
 
@@ -1665,7 +1667,12 @@ export function transformReportApiResponse({
     case "sales-by-show":
       return transformSalesByShow(data, reportType, config.title, subtitle, generatedAt)
     case "manager-checkout":
-      return transformManagerCheckout(data, reportType, config.title, subtitle, generatedAt)
+      return transformManagerCheckout(data, reportType, config.title, subtitle, generatedAt, {
+        connectionName,
+        startDate: filters.dateFrom,
+        endDate: filters.dateTo,
+        locationId: filters.locationId,
+      })
     case "door-checkout":
       return transformDoorCheckout(data, reportType, config.title, subtitle, generatedAt, {
         connectionName,

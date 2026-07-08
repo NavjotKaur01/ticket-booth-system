@@ -1,6 +1,5 @@
 import { EXPIRATION_MONTHS } from '@/data/reservation-payment-options'
 import type { ReservationPaymentType } from '@/data/reservation-payment-options'
-import { parsePhoneSearchParts } from '@/lib/parse-phone-search-parts'
 import {
   ACTION_FORM_RESERVATION,
   ACTION_SAVE_RESERVATION,
@@ -39,7 +38,6 @@ type BuildReservationRequestParams = {
   notes: string
   dinner: boolean
   isReservationCheckedIn?: boolean
-  includeCustomerModel?: boolean
 }
 
 type BuildUpdateReservationPaymentParams = BuildReservationRequestParams & {
@@ -49,13 +47,14 @@ type BuildUpdateReservationPaymentParams = BuildReservationRequestParams & {
   paymentFields: ReservationPaymentFields
   isPaymentLoad?: boolean
   resSelectedPromotionId?: string
+  includeCustomerModel?: boolean
 }
 
-function roundMoney (value: number) {
+function roundMoney(value: number) {
   return Math.round(value * 100) / 100
 }
 
-function getExpirationMonthNumber (monthName: string) {
+function getExpirationMonthNumber(monthName: string) {
   const index = EXPIRATION_MONTHS.indexOf(
     monthName as (typeof EXPIRATION_MONTHS)[number]
   )
@@ -67,7 +66,7 @@ function getExpirationMonthNumber (monthName: string) {
   return String(index + 1).padStart(2, '0')
 }
 
-function detectCreditCardType (cardNumber: string) {
+function detectCreditCardType(cardNumber: string) {
   const digits = cardNumber.replace(/\D/g, '')
 
   if (/^4/.test(digits)) {
@@ -89,7 +88,7 @@ function detectCreditCardType (cardNumber: string) {
   return 'CCTYPE04'
 }
 
-function buildTicketCounts (party: number, promo: ReservationPromo | null) {
+function buildTicketCounts(party: number, promo: ReservationPromo | null) {
   if (!promo) {
     return { tixPaid: party, tixComp: 0, tixDisc: 0 }
   }
@@ -117,7 +116,7 @@ function buildTicketCounts (party: number, promo: ReservationPromo | null) {
   }
 }
 
-function buildPaymentModel ({
+function buildPaymentModel({
   paymentType,
   paymentFields,
   paymentAmount,
@@ -167,14 +166,12 @@ function buildPaymentModel ({
   return payment
 }
 
-function buildReservationCore ({
+function buildReservationCore({
   connectionName,
   locationId,
   userRights,
   lastUpdateId,
-  searchType,
   customerId,
-  searchCriteria,
   selectedSection,
   origin,
   party,
@@ -184,11 +181,9 @@ function buildReservationCore ({
   totals,
   notes,
   dinner,
-  isReservationCheckedIn,
-  includeCustomerModel = true
+  isReservationCheckedIn
 }: BuildReservationRequestParams): SaveReservationRequest {
   const originCode = getReservationOriginLookupCode(origin)
-  const phone = parsePhoneSearchParts(searchCriteria.phoneNo)
   const ticketCounts = buildTicketCounts(party, promo)
 
   const request: SaveReservationRequest = {
@@ -230,35 +225,11 @@ function buildReservationCore ({
     TixDisc: ticketCounts.tixDisc
   }
 
-  if (includeCustomerModel) {
-    if (searchType === 'customer') {
-      request.CustomerModel = {
-        CustomerId: customerId,
-        CustLastName: searchCriteria.lastName.trim(),
-        CustFirstName: searchCriteria.firstName.trim(),
-        Email1: searchCriteria.email.trim(),
-        AreaCode: phone.areaCode,
-        Phone1: phone.phone1,
-        Phone2: phone.phone2
-      }
-    } else {
-      request.BusinessCustomerModel = {
-        BusinessId: customerId,
-        BusinessName: searchCriteria.businessName.trim(),
-        BusLastName: searchCriteria.lastName.trim(),
-        BusFirstName: searchCriteria.firstName.trim(),
-        AreaCode: phone.areaCode,
-        Phone1: phone.phone1,
-        Phone2: phone.phone2
-      }
-    }
-  }
-
   return request
 }
 
 /** Create reservation without payment (e.g. comp / zero-total). */
-export function buildSaveReservationOnlyRequest (
+export function buildSaveReservationOnlyRequest(
   params: BuildReservationRequestParams
 ): SaveReservationRequest {
   return {
@@ -276,7 +247,7 @@ type BuildReservationWithPaymentParams = BuildReservationRequestParams & {
   resSelectedPromotionId?: string
 }
 
-function buildReservationWithPaymentRequest (
+function buildReservationWithPaymentRequest(
   params: BuildReservationWithPaymentParams
 ): SaveReservationRequest {
   const {
@@ -318,7 +289,7 @@ function buildReservationWithPaymentRequest (
 }
 
 /** New reservation with payment — single SaveReservation call (matches desktop). */
-export function buildSaveReservationWithPaymentRequest (
+export function buildSaveReservationWithPaymentRequest(
   params: Omit<
     BuildUpdateReservationPaymentParams,
     'reservationId' | 'isPaymentLoad' | 'resSelectedPromotionId'
@@ -328,14 +299,14 @@ export function buildSaveReservationWithPaymentRequest (
 }
 
 /** Desktop payment screen — always sends payment payload (amount may be 0). */
-export function buildUpdateReservationPaymentRequest (
+export function buildUpdateReservationPaymentRequest(
   params: BuildUpdateReservationPaymentParams
 ): SaveReservationRequest {
   return buildReservationWithPaymentRequest(params)
 }
 
 /** Update an existing reservation (desktop payment screen save). */
-export function buildUpdateReservationRequest (
+export function buildUpdateReservationRequest(
   params: BuildUpdateReservationPaymentParams
 ): SaveReservationRequest {
   return buildUpdateReservationPaymentRequest(params)
