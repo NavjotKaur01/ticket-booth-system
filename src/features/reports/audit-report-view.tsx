@@ -26,20 +26,20 @@ type AuditRow = {
   IsComp?: boolean | number | string
 }
 
-function fmtDt (v: string | undefined): string {
+function fmtDt(v: string | undefined): string {
   if (!v) return '—'
   const d = dayjs(v)
-  return d.isValid() ? d.format('MM/DD/YYYY HH:mm') : v
+  return d.isValid() ? d.format('MM/DD/YYYY hh:mm:ss A') : v
 }
 
 const DRILL_COLUMNS: DrillColumn[] = [
-  { key: 'ShowDate', label: 'Show Date' },
-  { key: 'ShowTym', label: 'Show Time' },
-  { key: 'Headliner', label: 'Headliner' },
   { key: 'FirstName', label: 'First Name' },
   { key: 'LastName', label: 'Last Name' },
   { key: 'Amount', label: 'Amount', right: true },
-  { key: 'PaymentType', label: 'Payment Type' }
+  { key: 'PaymentType', label: 'Payment Type' },
+  { key: 'Headliner', label: 'Headliner' },
+  { key: 'ShowTym', label: 'Show Time' },
+  { key: 'ShowDt', label: 'Show Date', format: 'date' }
 ]
 
 type Props = {
@@ -49,14 +49,14 @@ type Props = {
   drillContext?: ReportDrillContext
 }
 
-export function AuditReportView ({
+export function AuditReportView({
   rawData,
   subtitle,
   generatedAt,
   drillContext
 }: Props) {
   const rows = Array.isArray(rawData) ? (rawData as AuditRow[]) : []
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedRow, setSelectedRow] = useState<AuditRow | null>(null)
 
   if (!rows.length) {
     return <ReportEmpty />
@@ -76,22 +76,22 @@ export function AuditReportView ({
             <thead>
               <tr>
                 <th className='border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground'>
-                  Create Date
+                  Comic Last Name
+                </th>
+                <th className='border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground'>
+                  Created Date
                 </th>
                 <th className='border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground'>
                   Adjusted Date
                 </th>
                 <th className='border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground'>
-                  Moved By
+                  Type
+                </th>
+                <th className='border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground'>
+                  Changed By
                 </th>
                 <th className='border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground'>
                   Created By
-                </th>
-                <th className='border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground'>
-                  Comic
-                </th>
-                <th className='border border-border bg-muted/50 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground'>
-                  Type
                 </th>
               </tr>
             </thead>
@@ -99,11 +99,11 @@ export function AuditReportView ({
               {rows.map((row, i) => {
                 const type =
                   row.IsComp === true ||
-                  row.IsComp === 1 ||
-                  row.IsComp === 'true'
+                    row.IsComp === 1 ||
+                    row.IsComp === 'true'
                     ? 'Comp'
                     : 'Move Reservation'
-                const canDrill = Boolean(drillContext && row.ReservationID)
+                const canDrill = Boolean(drillContext)
                 return (
                   <tr
                     key={i}
@@ -113,32 +113,31 @@ export function AuditReportView ({
                     )}
                     onDoubleClick={() => {
                       if (canDrill) {
-                        setSelectedId(row.ReservationID!)
+                        setSelectedRow(row)
                       }
                     }}
                   >
+                    <td className='border border-border px-3 py-2 text-xs'>
+                      {row.ComicName ?? '—'}
+                    </td>
                     <td className='border border-border px-3 py-2 text-xs'>
                       {fmtDt(row.CreateDt)}
                     </td>
                     <td className='border border-border px-3 py-2 text-xs'>
                       {fmtDt(row.AdjustedDt)}
                     </td>
+                    <td
+                      className={cn(
+                        'border border-border px-3 py-2 text-xs text-blue-600'
+                      )}
+                    >
+                      {type}
+                    </td>
                     <td className='border border-border px-3 py-2 text-xs'>
                       {row.MovedBy ?? '—'}
                     </td>
                     <td className='border border-border px-3 py-2 text-xs'>
                       {row.CreatedBy ?? '—'}
-                    </td>
-                    <td className='border border-border px-3 py-2 text-xs'>
-                      {row.ComicName ?? '—'}
-                    </td>
-                    <td
-                      className={cn(
-                        'border border-border px-3 py-2 text-xs',
-                        type === 'Comp' && 'text-blue-600'
-                      )}
-                    >
-                      {type}
                     </td>
                   </tr>
                 )
@@ -150,19 +149,25 @@ export function AuditReportView ({
 
       <ReportRecordCount count={rows.length} />
 
-      {selectedId && drillContext && (
+      {selectedRow && drillContext && (
         <ReportDrillDialog
-          title='Audit Drill Down'
+          title='Audit Drill Down Report:'
           endpoint='GetAduitReportDrillDown'
           body={{
             Connection: drillContext.connectionName,
             StartDate: dayjs(drillContext.startDate).format('MM/DD/YYYY'),
             EndDate: dayjs(drillContext.endDate).format('MM/DD/YYYY'),
             LocaltionId: drillContext.locationId,
-            ShowId: selectedId
+            ReservationId: selectedRow.ReservationID || (selectedRow as any).ReservationId,
+            Type:
+              selectedRow.IsComp === true ||
+              selectedRow.IsComp === 1 ||
+              selectedRow.IsComp === 'true'
+                ? 'Comp'
+                : 'Move Reservation'
           }}
           columns={DRILL_COLUMNS}
-          onClose={() => setSelectedId(null)}
+          onClose={() => setSelectedRow(null)}
         />
       )}
     </ReportViewShell>
