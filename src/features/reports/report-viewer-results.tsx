@@ -1,4 +1,4 @@
-﻿import type { ReportViewerResult } from "@/features/reports/reports.service"
+import type { ReportViewerResult } from "@/features/reports/reports.service"
 import {
   ReportCard,
   ReportHeader,
@@ -71,6 +71,7 @@ export function ReportViewerResults({
         rawData={result.rawData}
         subtitle={result.subtitle}
         generatedAt={result.generatedAt}
+        drillContext={result.drillContext}
       />
     )
   }
