@@ -30,6 +30,14 @@ import { TicketDefault } from "@/pages/ticket-default"
 import { Transactions } from "@/pages/transactions"
 import { UserAccess } from "@/pages/user-access"
 import { Users } from "@/pages/users"
+import { ClubReservationSettings } from "@/pages/club-reservation-settings"
+import { OnlineSettings } from "@/pages/online-settings"
+import { ReservationDefaults } from "@/pages/reservation-defaults"
+import { DomainConfigurationPage } from "@/pages/domain-configuration"
+import { Locations } from "@/pages/locations"
+import { Domains } from "@/pages/domains"
+import { VenueGateway } from "@/pages/venue-gateway"
+import { WebServers } from "@/pages/web-servers"
 import { VenueAds } from "@/pages/venue-ads"
 import { VenueRotatingAds } from "@/pages/venue-rotating-ads"
 import { VenueInfo } from "@/pages/venue-info"
@@ -72,6 +80,23 @@ function App() {
             <Route path="system-defaults" element={<SystemDefaults />} />
             <Route path="user-access" element={<UserAccess />} />
             <Route path="users" element={<Users />} />
+            <Route path="web-servers" element={<WebServers />} />
+            <Route path="domains" element={<Domains />} />
+            <Route path="locations" element={<Locations />} />
+            <Route
+              path="domain-configuration"
+              element={<DomainConfigurationPage />}
+            />
+            <Route path="venue-gateway" element={<VenueGateway />} />
+            <Route
+              path="reservation-defaults"
+              element={<ReservationDefaults />}
+            />
+            <Route path="online-settings" element={<OnlineSettings />} />
+            <Route
+              path="club-reservation-settings"
+              element={<ClubReservationSettings />}
+            />
           </Route>
 
           <Route path="venue">

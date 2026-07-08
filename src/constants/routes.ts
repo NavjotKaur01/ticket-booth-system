@@ -29,6 +29,14 @@ export const ROUTES = {
   systemDefaults: "/administrator/system-defaults",
   userAccess: "/administrator/user-access",
   users: "/administrator/users",
+  webServers: "/administrator/web-servers",
+  domains: "/administrator/domains",
+  locations: "/administrator/locations",
+  domainConfiguration: "/administrator/domain-configuration",
+  venueGateway: "/administrator/venue-gateway",
+  reservationDefaults: "/administrator/reservation-defaults",
+  onlineSettings: "/administrator/online-settings",
+  clubReservationSettings: "/administrator/club-reservation-settings",
   businessContacts: "/ticketbooth/business-contacts",
   commentCards: "/ticketbooth/comment-cards",
   giftCards: "/ticketbooth/gift-cards",
@@ -40,6 +48,22 @@ export const ROUTES = {
   changePassword: "/my-account/change-password",
   login: "/login",
 } as const
+
+/** When multiple nav items share a route, only this id is highlighted as active. */
+export const ROUTE_PREFERRED_NAV_ITEM_IDS: Partial<Record<string, string>> = {
+  [ROUTES.performers]: "comedians",
+  [ROUTES.systemDefaults]: "system-defaults",
+  [ROUTES.userAccess]: "user-access",
+  [ROUTES.users]: "user",
+  [ROUTES.webServers]: "web-servers",
+  [ROUTES.domains]: "domains",
+  [ROUTES.locations]: "locations",
+  [ROUTES.domainConfiguration]: "domain-configuration",
+  [ROUTES.venueGateway]: "venue-gateway",
+  [ROUTES.reservationDefaults]: "reservation-defaults",
+  [ROUTES.onlineSettings]: "online-settings",
+  [ROUTES.clubReservationSettings]: "club-reservation-settings",
+}
 
 export function reportViewerUrl(reportType?: string) {
   if (!reportType) return ROUTES.reports
@@ -61,6 +85,14 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.systemDefaults]: "System Defaults",
   [ROUTES.userAccess]: "User Access",
   [ROUTES.users]: "User",
+  [ROUTES.webServers]: "Web Servers",
+  [ROUTES.domains]: "Domains",
+  [ROUTES.locations]: "Locations",
+  [ROUTES.domainConfiguration]: "Domain Configuration",
+  [ROUTES.venueGateway]: "Venue Gateway",
+  [ROUTES.reservationDefaults]: "Reservation Defaults",
+  [ROUTES.onlineSettings]: "Online Settings",
+  [ROUTES.clubReservationSettings]: "Club Reservation Settings",
   [ROUTES.venueInfo]: "Venue Info",
   [ROUTES.venueShowTimes]: "Venue Show Times",
   [ROUTES.foodMenu]: "Food Menu",

@@ -13,7 +13,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { ROUTES } from "@/constants/routes"
+import { ROUTES, ROUTE_PREFERRED_NAV_ITEM_IDS } from "@/constants/routes"
 import { quickLinks } from "@/data/dashboard"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useFilteredSidebarNav } from "@/hooks/use-filtered-sidebar-nav"
@@ -35,8 +35,25 @@ function isNavActive(pathname: string, href: string) {
   return false
 }
 
+function isRouteMatch(pathname: string, item: NavSubItem) {
+  return Boolean(item.href && isNavActive(pathname, item.href))
+}
+
+function isSubItemLinkActive(pathname: string, item: NavSubItem) {
+  if (!isRouteMatch(pathname, item)) {
+    return false
+  }
+
+  const preferredId = ROUTE_PREFERRED_NAV_ITEM_IDS[item.href!]
+  if (preferredId) {
+    return item.id === preferredId
+  }
+
+  return true
+}
+
 function hasActiveSubItem(pathname: string, item: NavSubItem): boolean {
-  if (item.href && isNavActive(pathname, item.href)) {
+  if (isRouteMatch(pathname, item)) {
     return true
   }
 
@@ -187,13 +204,14 @@ function NavSubTreeItem({
   onSubMenuAction?: (action: NavSubItemAction) => void
 }) {
   const hasChildren = Boolean(item.items?.length)
-  const active = hasActiveSubItem(pathname, item)
+  const hasActiveChild = hasActiveSubItem(pathname, item)
+  const linkActive = isSubItemLinkActive(pathname, item)
   const usesAccordion = hasChildren && onOpenSubMenuChange !== undefined
-  const [isOpen, setIsOpen] = useState(active)
+  const [isOpen, setIsOpen] = useState(hasActiveChild)
   const expanded = usesAccordion ? openSubMenuId === item.id : isOpen
 
   useEffect(() => {
-    if (!active) {
+    if (!hasActiveChild) {
       return
     }
 
@@ -203,7 +221,7 @@ function NavSubTreeItem({
     }
 
     setIsOpen(true)
-  }, [active, item.id, onOpenSubMenuChange, usesAccordion])
+  }, [hasActiveChild, item.id, onOpenSubMenuChange, usesAccordion])
 
   function handleOpenChange(open: boolean) {
     if (usesAccordion && onOpenSubMenuChange) {
@@ -224,7 +242,7 @@ function NavSubTreeItem({
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className={subItemButtonClassName(active, depth)}
+            className={subItemButtonClassName(hasActiveChild, depth)}
           >
             <span className="truncate">{item.label}</span>
             <ChevronRight className="ml-auto size-3.5 shrink-0 transition-transform duration-200 group-data-[state=open]/sub-collapsible:rotate-90" />
@@ -255,7 +273,7 @@ function NavSubTreeItem({
       <Link
         to={item.href}
         onClick={onNavigate}
-        className={subItemButtonClassName(active, depth)}
+        className={subItemButtonClassName(linkActive, depth)}
       >
         <span className="truncate">{item.label}</span>
       </Link>
