@@ -38,6 +38,15 @@ import { Locations } from "@/pages/locations"
 import { Domains } from "@/pages/domains"
 import { VenueGateway } from "@/pages/venue-gateway"
 import { WebServers } from "@/pages/web-servers"
+import { CreateUser } from "@/pages/create-user"
+import { ModifyUser } from "@/pages/modify-user"
+import { AddUserToLocations } from "@/pages/add-user-to-locations"
+import { NavigationManagement } from "@/pages/navigation-management"
+import { NavigationDropDowns } from "@/pages/navigation-drop-downs"
+import { NavigationRoles } from "@/pages/navigation-roles"
+import { NavigationLocation } from "@/pages/navigation-location"
+import { News } from "@/pages/news"
+import { RolesManagement } from "@/pages/roles-management"
 import { VenueAds } from "@/pages/venue-ads"
 import { VenueRotatingAds } from "@/pages/venue-rotating-ads"
 import { VenueInfo } from "@/pages/venue-info"
@@ -97,6 +106,21 @@ function App() {
               path="club-reservation-settings"
               element={<ClubReservationSettings />}
             />
+            <Route path="create-user" element={<CreateUser />} />
+            <Route path="modify-user" element={<ModifyUser />} />
+            <Route
+              path="add-user-to-locations"
+              element={<AddUserToLocations />}
+            />
+            <Route
+              path="navigation-management"
+              element={<NavigationManagement />}
+            />
+            <Route path="navigation-drop-downs" element={<NavigationDropDowns />} />
+            <Route path="navigation-roles" element={<NavigationRoles />} />
+            <Route path="navigation-location" element={<NavigationLocation />} />
+            <Route path="news" element={<News />} />
+            <Route path="roles" element={<RolesManagement />} />
           </Route>
 
           <Route path="venue">
