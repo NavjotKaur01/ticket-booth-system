@@ -32,6 +32,7 @@ import SaveVerifyDialog from "./SaveVerifyDialog"
 import {
   buildSaveShowFilterList,
 } from "@/lib/map-default-show-sections"
+import { formatShowTime } from "@/lib/format-show-time"
 import {
   validateAddShowForm,
 } from "@/lib/build-save-show-request"
@@ -73,7 +74,11 @@ const emptyFormValues: AddShowFormValues = {
 type AddShowValidationErrors = Partial<
   Record<
     | "headlinerId"
-    | "selectedShowTimeIds",
+    | "selectedShowTimeIds"
+    | "dayOfShowFee"
+    | "phoneFee"
+    | "walkupFee"
+    | "webFee",
     string
   >
 >
@@ -141,6 +146,26 @@ function getAddShowValidationErrors(
     errors.selectedShowTimeIds = "Select at least one show time."
   }
 
+  const dayOfShowVal = Number.parseFloat(formValues.dayOfShowFee)
+  if (!formValues.dayOfShowFee || !Number.isFinite(dayOfShowVal) || dayOfShowVal <= 0) {
+    errors.dayOfShowFee = "Day of Show Fee must be greater than 0."
+  }
+
+  const phoneVal = Number.parseFloat(formValues.phoneFee)
+  if (!formValues.phoneFee || !Number.isFinite(phoneVal) || phoneVal < 0) {
+    errors.phoneFee = "Phone Fee must be 0 or greater."
+  }
+
+  const walkupVal = Number.parseFloat(formValues.walkupFee)
+  if (!formValues.walkupFee || !Number.isFinite(walkupVal) || walkupVal < 0) {
+    errors.walkupFee = "Walkup Fee must be 0 or greater."
+  }
+
+  const webVal = Number.parseFloat(formValues.webFee)
+  if (!formValues.webFee || !Number.isFinite(webVal) || webVal < 0) {
+    errors.webFee = "Web Fee must be 0 or greater."
+  }
+
   return errors
 }
 
@@ -149,15 +174,7 @@ function normalizeMinimumNumberValue(value: string, minimum: number) {
   return Number.isFinite(parsed) && parsed >= minimum ? String(parsed) : String(minimum)
 }
 
-function normalizeFeeValues(formValues: AddShowFormValues): AddShowFormValues {
-  return {
-    ...formValues,
-    dayOfShowFee: normalizeMinimumNumberValue(formValues.dayOfShowFee, 1),
-    phoneFee: normalizeMinimumNumberValue(formValues.phoneFee, 0),
-    walkupFee: normalizeMinimumNumberValue(formValues.walkupFee, 0),
-    webFee: normalizeMinimumNumberValue(formValues.webFee, 0),
-  }
-}
+
 
 type AddShowDialogProps = {
   open: boolean
@@ -209,14 +226,6 @@ function PerformerSelect({
             label: performer.name,
           }))}
         />
-        <p
-          className={cn(
-            "mt-0.5 min-h-4 text-xs leading-tight",
-            error ? "text-destructive" : "text-transparent"
-          )}
-        >
-          {error ?? "No error"}
-        </p>
       </div>
       <Button type="button" size="icon" className="hidden sm:inline-flex" aria-label={`Add ${label}`}>
         <PlusCircle className="size-4" />
@@ -233,13 +242,14 @@ function FeeInput({
   label,
   value,
   onChange,
-  minimum,
+  error,
 }: {
   id: string
   label: string
   value: string
   onChange: (value: string) => void
   minimum: number
+  error?: boolean
 }) {
   return (
     <div className="grid gap-1.5 sm:grid-cols-[auto_6rem] sm:items-start sm:gap-2">
@@ -251,12 +261,13 @@ function FeeInput({
           id={id}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          onBlur={(event) =>
-            onChange(normalizeMinimumNumberValue(event.target.value, minimum))
-          }
           onFocus={(event) => event.currentTarget.select()}
           onClick={(event) => event.currentTarget.select()}
-          className="h-9 w-full sm:w-24"
+          autoComplete="off"
+          className={cn(
+            "h-9 w-full sm:w-24",
+            error && "border-destructive ring-2 ring-destructive/20"
+          )}
         />
       </div>
     </div>
@@ -533,11 +544,15 @@ export default function AddShowDialog({
 
   if (isEditMode && showData && showData.length > 0) {
     const mainShowData = showData[0]
+    const arrivalTime =
+      formatShowTime(mainShowData.ShowArrival, { seconds: true }) ?? ""
+    const showTime = formatShowTime(mainShowData.ShowTim, { seconds: true }) ?? ""
+
     showTimes = [
       {
         id: "edit-show-time",
         dayLabel: dayjs(mainShowData.ShowDate).format("dddd"),
-        timeRange: `${dayjs(mainShowData.ShowArrival).format("h:mm A")} - ${dayjs(mainShowData.ShowTim).format("h:mm A")}`,
+        timeRange: `${arrivalTime} - ${showTime}`,
         enabled: true,
         sections: showData.map(row => ({
           id: row.ShowDetID,
@@ -565,6 +580,7 @@ export default function AddShowDialog({
   )
 
   const visibleValidationErrors = hasSubmitted ? validationErrors : {}
+  const hasErrors = Object.keys(validationErrors).length > 0
 
   function updateField<K extends keyof AddShowFormValues>(
     field: K,
@@ -588,11 +604,6 @@ export default function AddShowDialog({
   function handleSave() {
     if (!dialogData || !recurrence) {
       return
-    }
-
-    const normalizedFormValues = normalizeFeeValues(formValues)
-    if (normalizedFormValues !== formValues) {
-      setFormValues(normalizedFormValues)
     }
 
     let filteredRows: ApiDefaultShowSection[] = []
@@ -625,11 +636,11 @@ export default function AddShowDialog({
     } else {
       filteredRows = buildSaveShowFilterList(
         dialogData.sectionRows,
-        normalizedFormValues.selectedShowTimeIds
+        formValues.selectedShowTimeIds
       )
     }
 
-    const currentValidationErrors = getAddShowValidationErrors(normalizedFormValues)
+    const currentValidationErrors = getAddShowValidationErrors(formValues)
     const firstFieldError = Object.values(currentValidationErrors).find(Boolean)
     if (firstFieldError) {
       setHasSubmitted(true)
@@ -637,7 +648,7 @@ export default function AddShowDialog({
       return
     }
 
-    const validationError = validateAddShowForm(normalizedFormValues, filteredRows)
+    const validationError = validateAddShowForm(formValues, filteredRows)
 
     if (validationError) {
       setErrorMessage(validationError)
@@ -646,10 +657,9 @@ export default function AddShowDialog({
 
     setErrorMessage(null)
     setVerifyRows(filteredRows.map((row) => ({ ...row })))
-    setFormValues(normalizedFormValues)
 
     if (isEditMode) {
-      handleConfirmSave(normalizedFormValues, filteredRows)
+      handleConfirmSave(formValues, filteredRows)
     } else {
       setIsVerifyOpen(true)
     }
@@ -770,7 +780,10 @@ export default function AddShowDialog({
                   <ArrowLeft className="size-4" />
                 </Button>
               ) : null}
-              <DialogTitle className="text-base sm:text-lg">{title}</DialogTitle>
+              <DialogTitle className={cn("text-base sm:text-lg flex w-full items-center justify-between flex-wrap gap-x-2")}>
+                {title}
+                <span className={cn(`${hasSubmitted && hasErrors && "mr-2 sm:mr-8 text-xs border border-red-600 text-red-600 bg-red-600/10 font-normal p-1.5 rounded-sm"}`)}>{hasSubmitted && hasErrors && "Please fill required fields"}</span>
+              </DialogTitle>
             </div>
           </DialogHeader>
 
@@ -838,13 +851,13 @@ export default function AddShowDialog({
                     </div>
                   </div>
 
-                  {!isShowDetailsVisible ? (
-                    <div>
-                      <Button type="button" onClick={() => setIsShowDetailsVisible(true)}>
-                        Show Default
-                      </Button>
-                    </div>
-                  ) : (
+                  <div>
+                    <Button type="button" onClick={() => setIsShowDetailsVisible(!isShowDetailsVisible)}>
+                      {isShowDetailsVisible ? "Hide Default" : "Show Default"}
+                    </Button>
+                  </div>
+
+                  {isShowDetailsVisible && (
                     <fieldset className="rounded-md border p-3 sm:p-4">
                       <legend className="px-2 text-sm font-medium">Show Details</legend>
                       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-3">
@@ -880,10 +893,31 @@ export default function AddShowDialog({
                         Note: Select minimum age [ Blank = Do not show age on web, A = All ages, Y = Over 21, N = Over 18, S = Special case set min age ]
                       </p>
                     </fieldset>
-
                   )}
-                  <fieldset className="rounded-md border p-3 sm:p-4">
-                    <legend className="px-2 text-sm font-medium">Fees or Recurrence</legend>
+                  <fieldset
+                    className={cn(
+                      "rounded-md border p-3 sm:p-4",
+                      hasSubmitted &&
+                        (validationErrors.dayOfShowFee ||
+                          validationErrors.phoneFee ||
+                          validationErrors.walkupFee ||
+                          validationErrors.webFee) &&
+                        "border-destructive"
+                    )}
+                  >
+                    <legend
+                      className={cn(
+                        "px-2 text-sm font-medium",
+                        hasSubmitted &&
+                          (validationErrors.dayOfShowFee ||
+                            validationErrors.phoneFee ||
+                            validationErrors.walkupFee ||
+                            validationErrors.webFee) &&
+                          "text-destructive"
+                      )}
+                    >
+                      Fees or Recurrence
+                    </legend>
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:flex sm:flex-wrap sm:items-start sm:gap-x-5">
                         <FeeInput
@@ -892,6 +926,7 @@ export default function AddShowDialog({
                           value={formValues.dayOfShowFee}
                           onChange={(value) => updateField("dayOfShowFee", value)}
                           minimum={1}
+                          error={hasSubmitted && Boolean(validationErrors.dayOfShowFee)}
                         />
                         <FeeInput
                           id="phone-fee"
@@ -899,6 +934,7 @@ export default function AddShowDialog({
                           value={formValues.phoneFee}
                           onChange={(value) => updateField("phoneFee", value)}
                           minimum={0}
+                          error={hasSubmitted && Boolean(validationErrors.phoneFee)}
                         />
                         <FeeInput
                           id="walkup-fee"
@@ -906,6 +942,7 @@ export default function AddShowDialog({
                           value={formValues.walkupFee}
                           onChange={(value) => updateField("walkupFee", value)}
                           minimum={0}
+                          error={hasSubmitted && Boolean(validationErrors.walkupFee)}
                         />
                         <FeeInput
                           id="web-fee"
@@ -913,6 +950,7 @@ export default function AddShowDialog({
                           value={formValues.webFee}
                           onChange={(value) => updateField("webFee", value)}
                           minimum={0}
+                          error={hasSubmitted && Boolean(validationErrors.webFee)}
                         />
                       </div>
                       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">

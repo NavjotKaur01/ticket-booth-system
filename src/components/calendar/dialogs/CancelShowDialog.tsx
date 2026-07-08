@@ -167,7 +167,7 @@ export default function CancelShowDialog({
                 <div>
                   <dt className="sr-only">Date</dt>
                   <dd>
-                    <span className="font-medium">Date:</span> {dialogData.showDate}
+                    <span className="font-medium">Date:</span> {dialogData.showDate} 12:00:00 AM
                   </dd>
                 </div>
                 <div>
