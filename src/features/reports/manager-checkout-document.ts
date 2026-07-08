@@ -48,28 +48,39 @@ function moneyCells(bucket: ManagerCheckoutPaymentBucket, blankZero = false) {
 }
 
 function buildPaymentTable(show: ManagerCheckoutShowDocument): string {
+  // Recompute net totals from buckets directly — same logic as manager-checkout-view.tsx
+  const cashDrawerNet = show.cashDrawer.subTotal - show.refund.subTotal
+  const posNet        = show.pos.subTotal - show.posRefund.subTotal
+  const webNet        = show.web.subTotal - show.webRefund.subTotal
+  const totalCash     = cashDrawerNet + posNet + webNet
+  const saleTax       = show.saleTax
+  const netSales      = totalCash - saleTax
+  const fees          = show.fees
+  const revenue       = netSales - fees
+
   const rows = [
-    { label: "Cash Drawer", bucket: show.cashDrawer, sub: show.cashDrawer.subTotal, total: show.refundTotal },
-    { label: "Refund", bucket: show.refund, sub: show.refund.subTotal, total: show.refundTotal },
-    { label: "POS", bucket: show.pos, sub: show.pos.subTotal, total: show.refundTotal2 },
-    { label: "Refund", bucket: show.posRefund, sub: show.posRefund.subTotal, total: show.refundTotal2 },
-    { label: "Web", bucket: show.web, sub: show.web.subTotal, total: show.webRefundTotal },
-    { label: "Web/Refunds", bucket: show.webRefund, sub: show.webRefund.subTotal, total: show.webRefundTotal },
+    // "Total" column is null for source rows, net value only on Refund rows (matches view)
+    { label: "Cash Drawer", bucket: show.cashDrawer,  sub: show.cashDrawer.subTotal,  total: null as number | null },
+    { label: "Refund",      bucket: show.refund,      sub: show.refund.subTotal,      total: cashDrawerNet },
+    { label: "POS",         bucket: show.pos,         sub: show.pos.subTotal,         total: null as number | null },
+    { label: "Refund",      bucket: show.posRefund,   sub: show.posRefund.subTotal,   total: posNet },
+    { label: "Web",         bucket: show.web,         sub: show.web.subTotal,         total: null as number | null },
+    { label: "Web/Refunds", bucket: show.webRefund,   sub: show.webRefund.subTotal,   total: webNet },
     {
       label: "Total",
       bucket: {
         ...show.columnTotals,
         subTotal: show.subTotal,
-        total: show.totalCash,
+        total: totalCash,
       } as ManagerCheckoutPaymentBucket,
       sub: show.subTotal,
-      total: show.totalCash,
+      total: totalCash,
       bold: true,
     },
-    { label: "Sale Tax", summary: show.saleTax },
-    { label: "Net Sales", summary: show.netSales },
-    { label: "fee", summary: show.fees },
-    { label: "Revenue", summary: show.revenue },
+    { label: "Sale Tax",  summary: saleTax  },
+    { label: "Net Sales", summary: netSales },
+    { label: "Fee",       summary: fees     },
+    { label: "Revenue",   summary: revenue  },
   ]
 
   const body = rows
@@ -77,7 +88,7 @@ function buildPaymentTable(show: ManagerCheckoutShowDocument): string {
       if ("summary" in row) {
         return `<tr>
           <td class="left">${row.label}</td>
-          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
           <td></td>
           <td class="center">${formatDesktopMoney(row.summary ?? 0)}</td>
         </tr>`
@@ -86,8 +97,8 @@ function buildPaymentTable(show: ManagerCheckoutShowDocument): string {
       const bucket = row.bucket as ManagerCheckoutPaymentBucket
       return `<tr${row.bold ? ' class="bold"' : ""}>
         <td class="left">${row.label}</td>
-        ${moneyCells(bucket, true)}
-        <td class="center">${row.sub ? formatDesktopMoney(row.sub) : ""}</td>
+        ${moneyCells(bucket, false)}
+        <td class="center">${formatDesktopMoney(row.sub ?? 0)}</td>
         <td class="center">${row.total != null ? formatDesktopMoney(row.total) : ""}</td>
       </tr>`
     })
@@ -105,6 +116,7 @@ function buildPaymentTable(show: ManagerCheckoutShowDocument): string {
     <tbody>${body}</tbody>
   </table>`
 }
+
 
 function buildCheckedInTable(show: ManagerCheckoutShowDocument): string {
   const promoRows = show.promos
