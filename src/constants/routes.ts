@@ -40,6 +40,10 @@ export const ROUTES = {
   createUser: "/administrator/create-user",
   modifyUser: "/administrator/modify-user",
   addUserToLocations: "/administrator/add-user-to-locations",
+  navigationManagement: "/administrator/navigation-management",
+  navigationDropDowns: "/administrator/navigation-drop-downs",
+  navigationRoles: "/administrator/navigation-roles",
+  navigationLocation: "/administrator/navigation-location",
   businessContacts: "/ticketbooth/business-contacts",
   commentCards: "/ticketbooth/comment-cards",
   giftCards: "/ticketbooth/gift-cards",
@@ -69,6 +73,10 @@ export const ROUTE_PREFERRED_NAV_ITEM_IDS: Partial<Record<string, string>> = {
   [ROUTES.createUser]: "create-user",
   [ROUTES.modifyUser]: "modify-user",
   [ROUTES.addUserToLocations]: "add-user-to-locations",
+  [ROUTES.navigationManagement]: "navigation-management",
+  [ROUTES.navigationDropDowns]: "navigation-drop-downs",
+  [ROUTES.navigationRoles]: "navigation-roles",
+  [ROUTES.navigationLocation]: "navigation-location",
 }
 
 export function reportViewerUrl(reportType?: string) {
@@ -102,6 +110,10 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.createUser]: "Create User",
   [ROUTES.modifyUser]: "Modify User",
   [ROUTES.addUserToLocations]: "Add User To Location(s)",
+  [ROUTES.navigationManagement]: "Navigation Management",
+  [ROUTES.navigationDropDowns]: "Navigation Drop Downs",
+  [ROUTES.navigationRoles]: "Navigation Roles",
+  [ROUTES.navigationLocation]: "Navigation Location",
   [ROUTES.venueInfo]: "Venue Info",
   [ROUTES.venueShowTimes]: "Venue Show Times",
   [ROUTES.foodMenu]: "Food Menu",

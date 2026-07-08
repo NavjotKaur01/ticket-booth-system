@@ -1,0 +1,317 @@
+import type {
+  NavigationDropdownParent,
+  NavigationDropdownRecord,
+  NavigationManagementRecord,
+  NavigationTreeNode,
+} from "@/types/navigation-admin"
+import { USER_SETUP_ROLES, type UserSetupRole } from "@/data/user-setup"
+
+export const navigationManagementRecords: NavigationManagementRecord[] = [
+  {
+    id: "nav-home",
+    menu: "Home",
+    navigationUrl: "~/Account/Dashboard/DashboardDefault.aspx",
+    level: 0,
+    order: 10,
+    active: "Y",
+    updatedBy: "rodrigf3",
+    parentMenu: "",
+  },
+  {
+    id: "nav-contact-us",
+    menu: "Contact Us",
+    navigationUrl: "",
+    level: 0,
+    order: 20,
+    active: "Y",
+    updatedBy: "max",
+    parentMenu: "",
+  },
+  {
+    id: "nav-dashboard",
+    menu: "Dashboard",
+    navigationUrl: "",
+    level: 0,
+    order: 30,
+    active: "Y",
+    updatedBy: "max",
+    parentMenu: "",
+  },
+  {
+    id: "nav-venue-manager",
+    menu: "Venue Manager",
+    navigationUrl: "",
+    level: 0,
+    order: 40,
+    active: "Y",
+    updatedBy: "max",
+    parentMenu: "",
+  },
+  {
+    id: "nav-venue-info",
+    menu: "Venue Info",
+    navigationUrl: "~/Account/ClubManager/ClubManagerDefault.aspx",
+    level: 1,
+    order: 10,
+    active: "Y",
+    updatedBy: "max",
+    parentMenu: "Venue Manager",
+  },
+  {
+    id: "nav-venue-show-times",
+    menu: "Venue Show Times",
+    navigationUrl: "~/Account/ClubManager/ClubShowTimes/ClubShowTimesDefault.aspx",
+    level: 1,
+    order: 20,
+    active: "Y",
+    updatedBy: "max",
+    parentMenu: "Venue Manager",
+  },
+  {
+    id: "nav-defaults",
+    menu: "Defaults",
+    navigationUrl: "",
+    level: 1,
+    order: 30,
+    active: "Y",
+    updatedBy: "max",
+    parentMenu: "Venue Manager",
+  },
+  {
+    id: "nav-clubman",
+    menu: "Clubman",
+    navigationUrl: "~/Account/ClubManager/Defaults/DefaultsClubman.aspx",
+    level: 2,
+    order: 10,
+    active: "Y",
+    updatedBy: "max",
+    parentMenu: "Defaults",
+  },
+  {
+    id: "nav-promotions",
+    menu: "Promotions",
+    navigationUrl: "~/Account/ClubManager/Defaults/DefaultsPromotions.aspx",
+    level: 2,
+    order: 20,
+    active: "Y",
+    updatedBy: "max",
+    parentMenu: "Defaults",
+  },
+  {
+    id: "nav-reservation",
+    menu: "Reservation",
+    navigationUrl: "~/Account/ClubManager/Defaults/Defaultsreservation.aspx",
+    level: 2,
+    order: 30,
+    active: "Y",
+    updatedBy: "max",
+    parentMenu: "Defaults",
+  },
+]
+
+export const navigationDropdownParents: NavigationDropdownParent[] = [
+  {
+    id: "dropdown-home",
+    displayText: "Home",
+    active: "Y",
+    navigationUrl: "~/Default.aspx",
+    dropDowns: [],
+  },
+  {
+    id: "dropdown-contact-us",
+    displayText: "Contact Us",
+    active: "Y",
+    navigationUrl: "~/ContactUs.aspx",
+    dropDowns: [],
+  },
+  {
+    id: "dropdown-dashboard",
+    displayText: "Dashboard",
+    active: "Y",
+    navigationUrl: "~/Account/Dashboard/DashboardDefault.aspx",
+    dropDowns: [],
+  },
+  {
+    id: "dropdown-venue-manager",
+    displayText: "Venue Manager",
+    active: "Y",
+    navigationUrl: "",
+    dropDowns: [
+      { id: "dd-venue-info", name: "Venue Info", active: "Y" },
+      { id: "dd-show-times", name: "Venue Show Times", active: "Y" },
+    ],
+  },
+]
+
+/** @deprecated Use navigationDropdownParents for drop downs management UI. */
+export const navigationDropdownRecords: NavigationDropdownRecord[] = [
+  {
+    id: "dropdown-home",
+    displayText: "Home",
+    active: "Y",
+    navigationUrl: "~/Default.aspx",
+    level: 0,
+  },
+  {
+    id: "dropdown-contact-us",
+    displayText: "Contact Us",
+    active: "Y",
+    navigationUrl: "~/ContactUs.aspx",
+    level: 0,
+  },
+  {
+    id: "dropdown-dashboard",
+    displayText: "Dashboard",
+    active: "Y",
+    navigationUrl: "~/Account/Dashboard/DashboardDefault.aspx",
+    level: 0,
+  },
+  {
+    id: "dropdown-venue-manager",
+    displayText: "Venue Manager",
+    active: "Y",
+    navigationUrl: "",
+    level: 0,
+  },
+  {
+    id: "dropdown-venue-info",
+    displayText: "Venue Info",
+    active: "Y",
+    navigationUrl: "~/Account/ClubManager/ClubManagerDefault.aspx",
+    level: 1,
+  },
+  {
+    id: "dropdown-venue-show-times",
+    displayText: "Venue Show Times",
+    active: "Y",
+    navigationUrl: "~/Account/ClubManager/ClubShowTimes/ClubShowTimesDefault.aspx",
+    level: 1,
+  },
+  {
+    id: "dropdown-defaults",
+    displayText: "Defaults",
+    active: "Y",
+    navigationUrl: "",
+    level: 1,
+  },
+  {
+    id: "dropdown-clubman",
+    displayText: "Clubman",
+    active: "Y",
+    navigationUrl: "~/Account/ClubManager/Defaults/DefaultsClubman.aspx",
+    level: 2,
+  },
+  {
+    id: "dropdown-promotions",
+    displayText: "Promotions",
+    active: "Y",
+    navigationUrl: "~/Account/ClubManager/Defaults/DefaultsPromotions.aspx",
+    level: 2,
+  },
+  {
+    id: "dropdown-reservation",
+    displayText: "Reservation",
+    active: "Y",
+    navigationUrl: "~/Account/ClubManager/Defaults/Defaultsreservation.aspx",
+    level: 2,
+  },
+]
+
+export const navigationMenuTree: NavigationTreeNode[] = [
+  { id: "home", label: "Home" },
+  { id: "contact-us", label: "Contact Us" },
+  { id: "dashboard", label: "Dashboard" },
+  {
+    id: "venue-manager",
+    label: "Venue Manager",
+    children: [
+      { id: "venue-info", label: "Venue Info" },
+      { id: "venue-show-times", label: "Venue Show Times" },
+      {
+        id: "defaults",
+        label: "Defaults",
+        children: [
+          { id: "clubman", label: "Clubman" },
+          { id: "promotions", label: "Promotions" },
+          { id: "reservation", label: "Reservation" },
+          { id: "systems", label: "Systems" },
+          { id: "web-club-defaults", label: "Web Club Defaults" },
+          { id: "disclaimers", label: "Disclaimers" },
+        ],
+      },
+      {
+        id: "events",
+        label: "Events",
+        children: [{ id: "event-calendar", label: "Event Calendar" }],
+      },
+      { id: "food-menu", label: "Food Menu" },
+      { id: "ads", label: "Ads" },
+      { id: "form-emails", label: "Form Emails" },
+      {
+        id: "employment",
+        label: "Employment",
+        children: [
+          { id: "employment-openings", label: "Openings" },
+          { id: "employment-questions", label: "Questions" },
+          { id: "employment-applicants", label: "Applicants" },
+        ],
+      },
+      { id: "webpages-text", label: "Webpages Text" },
+      { id: "free-forms", label: "Free Forms" },
+      { id: "news-ticker", label: "News Ticker" },
+      { id: "rotating-ads", label: "Rotating Ads" },
+      { id: "gift-of-laughter", label: "Gift of Laughter" },
+      { id: "socials", label: "Socials" },
+      { id: "section-description", label: "Section Description" },
+      { id: "pre-sale-private-show", label: "Pre-sale Private Show" },
+    ],
+  },
+  {
+    id: "customer",
+    label: "Customer",
+    children: [
+      { id: "log-in-management", label: "Log In Management" },
+      { id: "transaction-log-viewer", label: "Transaction Log Viewer" },
+    ],
+  },
+  { id: "performers", label: "Performers" },
+  {
+    id: "reports",
+    label: "Reports",
+    children: [
+      { id: "reports-viewer", label: "Reports Viewer" },
+      { id: "transactions", label: "Transactions" },
+    ],
+  },
+  {
+    id: "administration",
+    label: "Administration",
+    children: [
+      { id: "admin-users", label: "Users" },
+      { id: "admin-system-defaults", label: "System Defaults" },
+    ],
+  },
+  { id: "manuals", label: "Manuals" },
+]
+
+export const navigationExcludedLocations = [
+  "JV Landscaping",
+  "Little Rock Loony Bin",
+  "Standupmedia",
+  "Tulsa Loony Bin",
+  "Wichita Loony Bin",
+]
+
+export const navigationRoleAssignments: Record<string, UserSetupRole[]> = {
+  home: ["Guest"],
+  "contact-us": ["Guest", "User"],
+  dashboard: ["Manager", "Administrator"],
+  "venue-manager": ["Manager"],
+  "venue-info": ["Manager", "User"],
+  performers: ["User"],
+  reports: ["Administrator", "Accountant"],
+  administration: ["Administrator"],
+  manuals: ["Guest", "User"],
+}
+
+export { USER_SETUP_ROLES }
