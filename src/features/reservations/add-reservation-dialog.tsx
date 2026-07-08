@@ -98,7 +98,11 @@ import {
 import { EMPTY_GUID } from '@/lib/reservation-lookup-codes'
 import { syncReservationCustomerIfChanged } from '@/lib/sync-reservation-customer'
 import { validateReservationParty } from '@/lib/validate-reservation-party'
-import { validateReservationPayment } from '@/lib/validate-reservation-payment'
+import {
+  getFirstReservationPaymentError,
+  validateReservationPaymentFields,
+  type ReservationPaymentValidationErrors
+} from '@/lib/validate-reservation-payment'
 import { todayDateValue } from '@/lib/today-date-value'
 import { cn } from '@/lib/utils'
 import { useAppSession } from '@/hooks/use-app-session'
@@ -1064,7 +1068,8 @@ export function AddReservationDialog({
   const [saveReservationError, setSaveReservationError] = useState<
     string | null
   >(null)
-  const [paymentSaveError, setPaymentSaveError] = useState<string | null>(null)
+  const [paymentValidationErrors, setPaymentValidationErrors] =
+    useState<ReservationPaymentValidationErrors>({})
   const [showPartyRequiredError, setShowPartyRequiredError] = useState(false)
   const [comicInfoOpen, setComicInfoOpen] = useState(false)
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false)
@@ -1556,7 +1561,7 @@ export function AddReservationDialog({
   function handlePaymentTypeChange(value: ReservationPaymentType) {
     setPaymentType(value)
     setPaymentFields(createEmptyReservationPaymentFields())
-    setPaymentSaveError(null)
+    setPaymentValidationErrors({})
   }
 
   function updatePaymentField<K extends keyof ReservationPaymentFields>(
@@ -1564,7 +1569,7 @@ export function AddReservationDialog({
     value: ReservationPaymentFields[K]
   ) {
     setPaymentFields(current => ({ ...current, [key]: value }))
-    setPaymentSaveError(null)
+    setPaymentValidationErrors({})
   }
 
   function getSelectedCustomerDetails() {
@@ -1644,7 +1649,7 @@ export function AddReservationDialog({
 
     setShowPartyRequiredError(true)
     setSaveReservationError(null)
-    setPaymentSaveError(null)
+    setPaymentValidationErrors({})
 
     const availableSeats = isEditMode
       ? saveSection.available + (reservation?.qty ?? 0)
@@ -1660,15 +1665,17 @@ export function AddReservationDialog({
     }
 
     if (shouldApplyPayment && editPaymentAmount > 0) {
-      const paymentError = validateReservationPayment({
+      const nextPaymentErrors = validateReservationPaymentFields({
         paymentType,
         fields: paymentFields,
         paymentAmount: savePaymentAmount,
-        paymentRequired: true
+        paymentRequired: true,
+        disallowCash: origin === 'phone'
       })
+      const paymentError = getFirstReservationPaymentError(nextPaymentErrors)
 
       if (paymentError) {
-        setPaymentSaveError(paymentError)
+        setPaymentValidationErrors(nextPaymentErrors)
         return
       }
     }
@@ -1879,7 +1886,7 @@ export function AddReservationDialog({
 
   function handlePaymentAmountChange(value: string) {
     setPaymentAmountOverride(value)
-    setPaymentSaveError(null)
+    setPaymentValidationErrors({})
   }
 
   function clearCustomerSearch() {
@@ -1934,7 +1941,7 @@ export function AddReservationDialog({
       setPaymentFields(createEmptyReservationPaymentFields())
       setIsSavingReservation(false)
       setSaveReservationError(null)
-      setPaymentSaveError(null)
+      setPaymentValidationErrors({})
       setShowPartyRequiredError(false)
       setEditCustomerId(null)
       origPartyRef.current = 0
@@ -2232,10 +2239,11 @@ export function AddReservationDialog({
                         fields={paymentFields}
                         onFieldChange={updatePaymentField}
                         paymentDisabled={!paymentRequired}
+                        validationErrors={paymentValidationErrors}
                       />
-                      {paymentSaveError || saveReservationError ? (
+                      {saveReservationError ? (
                         <p className='text-xs text-destructive'>
-                          {paymentSaveError ?? saveReservationError}
+                          {saveReservationError}
                         </p>
                       ) : null}
                     </div>
