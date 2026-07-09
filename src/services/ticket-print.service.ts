@@ -10,6 +10,8 @@ import type {
   TicketPrintText,
   TicketPrintVenue,
 } from "@/types/ticket-print"
+import type { ReservationPrintProperties } from "@/types/api/reservation-print"
+
 
 const DEFAULT_VENUE: TicketPrintVenue = {
   venueName: "Standupmedia",
@@ -234,28 +236,42 @@ function buildTicketMarkup(
   ticket: TicketPrintData,
   isReprint: boolean,
   qrMarkup: string,
-  includeQr: boolean
+  includeQr: boolean,
+  ticketIndex?: number
 ) {
   const footerText = isReprint ? ticket.text.reprintFooter : ticket.text.printFooter
+  const tablesList = ticket.reservation.tables ? ticket.reservation.tables.split(",").map(s => s.trim()) : []
+  const tableNo = ticketIndex !== undefined && tablesList.length > ticketIndex ? tablesList[ticketIndex] : ticket.reservation.tables || ""
+  
+  const seatsList = ticket.reservation.seatNumbers ? ticket.reservation.seatNumbers.split(",").map(s => {
+    const match = s.trim().match(/#\d+\$(\d+)/)
+    return match ? match[1] : s.trim()
+  }) : []
+  const ticketNo = ticketIndex !== undefined && seatsList.length > ticketIndex ? seatsList[ticketIndex] : (1001 + (ticketIndex || 0)).toString()
+  
+  const headerBox = ticketIndex !== undefined ? `
+      <div class="ticket-header-box">
+        TABLE NO: ${escapeHtml(tableNo)} &nbsp;|&nbsp; TICKET NO: ${escapeHtml(ticketNo)}
+      </div>` : ""
 
   return `
     <section class="ticket">
       <div class="venue">
         <div class="venue-name">${escapeHtml(ticket.venue.venueName)}</div>
         ${ticket.venue.addressLines
-          .map((line) => `<div>${escapeHtml(line)}</div>`)
-          .join("")}
+      .map((line) => `<div>${escapeHtml(line)}</div>`)
+      .join("")}
         <div>${escapeHtml(ticket.venue.website)}</div>
       </div>
 
       <div class="divider"></div>
-
+      ${headerBox}
       <div class="customer-name">${escapeHtml(ticket.customer.fullName)}</div>
       <div class="show-datetime">${escapeHtml(ticket.show.dateTimeLabel)}</div>
       <div class="ticket-summary">
         ${escapeHtml(
-          `${ticket.reservation.partySize} ticket(s) for "${ticket.show.title}"`
-        )}
+        `${ticket.reservation.partySize} ticket(s) for "${ticket.show.title}"`
+      )}
       </div>
       <div class="source">${escapeHtml(ticket.reservation.source)}</div>
       
@@ -292,23 +308,23 @@ async function buildPrintDocument(
 
   const ticketMarkup = layout === "individual"
     ? (await Promise.all(
-        Array.from({ length: normalizedCount }, async () => {
-          const printedTicket = buildPrintedTicket(ticket, 1)
-          const qrMarkup = includeQr
-            ? await buildQrMarkup(printedTicket.qrValue)
-            : ""
-
-          return `<div class="page">${buildTicketMarkup(printedTicket, isReprint, qrMarkup, includeQr)}</div>`
-        })
-      )).join("")
-    : await (async () => {
-        const printedTicket = buildPrintedTicket(ticket, normalizedCount)
+      Array.from({ length: normalizedCount }, async (_, i) => {
+        const printedTicket = buildPrintedTicket(ticket, 1)
         const qrMarkup = includeQr
           ? await buildQrMarkup(printedTicket.qrValue)
           : ""
 
-        return `<div class="page">${buildTicketMarkup(printedTicket, isReprint, qrMarkup, includeQr)}</div>`
-      })()
+        return `<div class="page">${buildTicketMarkup(printedTicket, isReprint, qrMarkup, includeQr, i)}</div>`
+      })
+    )).join("")
+    : await (async () => {
+      const printedTicket = buildPrintedTicket(ticket, normalizedCount)
+      const qrMarkup = includeQr
+        ? await buildQrMarkup(printedTicket.qrValue)
+        : ""
+
+      return `<div class="page">${buildTicketMarkup(printedTicket, isReprint, qrMarkup, includeQr)}</div>`
+    })()
 
   return `<!doctype html>
 <html>
@@ -366,6 +382,11 @@ async function buildPrintDocument(
       }
       .customer-name {
         font-size: 16px;
+      }
+      .ticket-header-box {
+        font-size: 14px;
+        font-weight: 700;
+        margin: 5px 0;
       }
       .show-datetime {
         margin-top: 3px;
@@ -523,6 +544,8 @@ export function createTicketPrintData({
   showLabel,
   locationName,
   qrValue,
+  tables,
+  seatNumbers,
 }: CreateTicketPrintDataParams): TicketPrintData {
   const normalizedPartySize = Math.max(1, partySize)
   const normalizedCheckedInCount = Math.max(
@@ -548,6 +571,8 @@ export function createTicketPrintData({
       paymentType,
       source: formatReservationSource(source),
       section: section || "General",
+      tables: tables || null,
+      seatNumbers: seatNumbers || null,
     },
     text: DEFAULT_TICKET_TEXT,
     qrValue: qrValue || reservationId,
@@ -573,6 +598,8 @@ export async function getMockTicketPrintData({
     paymentType: resolvePaymentType(reservation.source),
     source: reservation.source,
     section: reservation.section || "General",
+    tables: reservation.tables || null,
+    seatNumbers: reservation.seatNo || null,
     showDate,
     showLabel,
     locationName,
@@ -604,16 +631,181 @@ export async function printReservationTicket({
   return await startPrintDocument(html)
 }
 
+export async function printSignatureTicket(properties: ReservationPrintProperties) {
+  const html = buildSignatureMarkup(properties)
+  return await startPrintDocument(html)
+}
 
+function buildSignatureMarkup(properties: ReservationPrintProperties) {
+  const escapeHtml = (unsafe: string) => {
+    return (unsafe || "")
+      .toString()
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;")
+  }
 
+  // Format dates according to image
+  // Current Date e.g. "Thursday, July 09, 2026" and Time "12:16 PM"
+  const now = new Date()
+  const currentDate = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "2-digit", year: "numeric" })
+  const currentTime = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
 
+  // Show Date e.g. "06/28/26 01:30 PM"
+  let showDateTime = ""
+  if (properties.showtm) {
+    const showDt = new Date(properties.showtm)
+    const dateStr = showDt.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "2-digit" })
+    const timeStr = showDt.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+    showDateTime = `${dateStr} ${timeStr}`
+  }
 
+  const reservationIdStr = `{${properties.reservationid}}`
 
-
-
-
-
-
-
-
-
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Signature Slip - ${escapeHtml(properties.CustomerName || "")}</title>
+    <style>
+      :root { color-scheme: light; }
+      body {
+        margin: 0;
+        background: #fff;
+        color: #000;
+        font-family: "Times New Roman", serif;
+      }
+      .page {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0;
+      }
+      .ticket {
+        width: 100%;
+        padding: 0mm 4mm 7mm;
+        box-sizing: border-box;
+      }
+      .center {
+        text-align: center;
+      }
+      .flex-between {
+        display: flex;
+        justify-content: space-between;
+      }
+      .current-date {
+        margin-top: 10px;
+        font-size: 14px;
+      }
+      .current-time {
+        font-size: 14px;
+        margin-bottom: 10px;
+      }
+      .show-time-row {
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+      .show-time-row .right {
+        text-align: right;
+        max-width: 120px;
+      }
+      .tickets-row {
+        margin-bottom: 5px;
+        font-size: 14px;
+      }
+      .venue-section {
+        margin-top: 5px;
+        margin-bottom: 5px;
+        font-size: 14px;
+      }
+      .venue-name {
+        font-size: 16px;
+        font-weight: bold;
+      }
+      .customer-name {
+        font-size: 14px;
+        margin-bottom: 5px;
+      }
+      .reservation-id {
+        font-size: 12px;
+        margin-bottom: 20px;
+        word-break: break-all;
+      }
+      .payment-row {
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      .auth-row {
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 30px;
+      }
+      .signature-row {
+        font-size: 14px;
+        margin-top: 20px;
+        text-align: left;
+      }
+      .signature-line {
+        border-bottom: 1px solid #000;
+        display: inline-block;
+        width: calc(100% - 70px);
+        margin-left: 5px;
+      }
+      @page {
+        size: 80mm auto;
+        margin: 0;
+      }
+      @media print {
+        body {
+          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <section class="ticket">
+        <div class="center current-date">${escapeHtml(currentDate)}</div>
+        <div class="center current-time">${escapeHtml(currentTime)}</div>
+        
+        <div class="flex-between show-time-row">
+          <span>ShowTime</span>
+          <span class="right">${escapeHtml(showDateTime).replace(" AM", "<br/>AM").replace(" PM", "<br/>PM")}</span>
+        </div>
+        
+        <div class="flex-between tickets-row">
+          <span>${properties.PartyNo || 0} ticket(s) for</span>
+          <span>${escapeHtml(properties.Headliner || "")}</span>
+        </div>
+        
+        <div class="center venue-section">
+          <div class="venue-name">${escapeHtml(properties.LocSName || "")}</div>
+          <div>${escapeHtml(properties.LocAddr1 || "")}${escapeHtml(properties.LocCity || "")}, ${escapeHtml(properties.LocState || "")}, ${escapeHtml(properties.LocZip || "").trim()}</div>
+          <div>${escapeHtml(properties.LocURL || "")}</div>
+          <div class="customer-name">${escapeHtml(properties.CustomerName || "")}</div>
+          <div class="reservation-id">${escapeHtml(reservationIdStr)}</div>
+        </div>
+        
+        <div class="flex-between payment-row">
+          <span>${escapeHtml(properties.CardType || "")} ${escapeHtml(properties.CardNum || "")}</span>
+          <span>$${properties.PaiedAmount ? properties.PaiedAmount.toFixed(2) : "0.00"}</span>
+        </div>
+        
+        <div class="flex-between auth-row">
+          <span>Authorization:</span>
+          <span>${escapeHtml(properties.Auth || "")}</span>
+        </div>
+        
+        <div class="signature-row">
+          Signature<span class="signature-line"></span>
+        </div>
+        
+      </section>
+    </div>
+  </body>
+</html>`
+}

@@ -86,6 +86,7 @@ function normalizeReservationDataItem(raw: unknown): ReservationDataItem {
     PaidForFirstName: readString(record, ["PaidForFirstName", "paidForFirstName"]) || null,
     EmailAddress: readString(record, ["EmailAddress", "emailAddress"]) || null,
     SeatNumbers: readString(record, ["SeatNumbers", "seatNumbers"]) || null,
+    Phone: readString(record, ["Phone", "phone"]) || null,
     AreaCode: readString(record, ["AreaCode", "areaCode"]) || null,
     Phone1: readString(record, ["Phone1", "phone1"]) || null,
     Phone2: readString(record, ["Phone2", "phone2"]) || null,
@@ -124,17 +125,36 @@ function normalizeText(value: string | null | undefined) {
   return value?.trim() ?? ""
 }
 
+// to format the phone number properly 
+function toUSPhoneNumberFormat(
+  phone: string
+): string {
+  const phoneNumber = phone.replace(/\D/g, "");
+  const area = phoneNumber.slice(0, 3);
+  const phone1 = phoneNumber.slice(3, 7);
+  const phone2 = phoneNumber.slice(7, 11);
+
+  return `(${area}) ${phone1} - ${phone2}`
+}
+
 function formatPhoneNumber(
   areaCode: string | null | undefined,
   phone1: string | null | undefined,
-  phone2: string | null | undefined
+  phone2: string | null | undefined,
+  phone?: string | null | undefined
 ) {
   const area = normalizeText(areaCode)
   const part1 = normalizeText(phone1)
   const part2 = normalizeText(phone2)
 
+  // when area code, phone 1 and phone 2 is not in the api response correctly, pass the phone into the reservation mapper
+
   if (!area && !part1 && !part2) {
-    return ""
+    const fallback = normalizeText(phone)
+    if (!fallback || fallback === "()-" || fallback === "() -") {
+      return ""
+    }
+    return toUSPhoneNumberFormat(fallback)
   }
 
   if (area && part1 && part2) {
@@ -168,7 +188,7 @@ export function mapReservationDataItem(item: ReservationDataItem): Reservation {
     firstName,
     businessName: normalizeText(item.busName),
     email: normalizeText(item.EmailAddress),
-    phoneNo: formatPhoneNumber(item.AreaCode, item.Phone1, item.Phone2),
+    phoneNo: formatPhoneNumber(item.AreaCode, item.Phone1, item.Phone2, item.Phone),
     source: mapSource(item.LookupSDescSource),
     tables: normalizeText(item.TableNums),
     seatNo: normalizeText(item.SeatNumbers),

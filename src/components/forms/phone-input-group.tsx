@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import {
   getNextPhoneSegmentField,
   getPreviousPhoneSegmentField,
-  mergePhoneDigits,
+  updatePhoneSegment,
   parsePhoneString,
   PHONE_SEGMENT_LENGTHS,
   formatPhoneParts,
@@ -21,6 +21,8 @@ type PhoneInputGroupProps = {
   onChange: (value: PhoneParts) => void
   idPrefix: string
   className?: string
+  onBlur?: () => void
+  onEnter?: () => void
 }
 
 type PhoneStringInputGroupProps = {
@@ -38,6 +40,8 @@ export function PhoneInputGroup({
   onChange,
   idPrefix,
   className,
+  onBlur,
+  onEnter,
 }: PhoneInputGroupProps) {
   const areaRef = useRef<HTMLInputElement>(null)
   const prefixRef = useRef<HTMLInputElement>(null)
@@ -60,7 +64,7 @@ export function PhoneInputGroup({
   }
 
   function handleSegmentChange(field: PhoneSegmentField, rawValue: string) {
-    const next = mergePhoneDigits(value, field, rawValue)
+    const next = updatePhoneSegment(value, field, rawValue)
     onChange(next)
 
     const nextField = getNextPhoneSegmentField(field, next[field])
@@ -70,6 +74,12 @@ export function PhoneInputGroup({
   }
 
   function handleKeyDown(field: PhoneSegmentField, event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      event.preventDefault()
+      onEnter?.()
+      return
+    }
+
     if (event.key !== "Backspace" || value[field].length > 0) {
       return
     }
@@ -84,7 +94,7 @@ export function PhoneInputGroup({
   }
 
   return (
-    <div className={cn("flex min-w-0 items-center gap-1.5", className)}>
+    <div className={cn("grid grid-cols-4 gap-x-2.5", className)}>
       <Input
         ref={areaRef}
         id={`${idPrefix}-area`}
@@ -93,7 +103,8 @@ export function PhoneInputGroup({
         value={value.area}
         onChange={(event) => handleSegmentChange("area", event.target.value)}
         onKeyDown={(event) => handleKeyDown("area", event)}
-        className={cn(SEGMENT_INPUT_CLASS, "w-[4.25rem]")}
+        onBlur={onBlur}
+        className={cn(SEGMENT_INPUT_CLASS)}
       />
       <Input
         ref={prefixRef}
@@ -103,7 +114,8 @@ export function PhoneInputGroup({
         value={value.prefix}
         onChange={(event) => handleSegmentChange("prefix", event.target.value)}
         onKeyDown={(event) => handleKeyDown("prefix", event)}
-        className={cn(SEGMENT_INPUT_CLASS, "w-[4.25rem]")}
+        onBlur={onBlur}
+        className={cn(SEGMENT_INPUT_CLASS)}
       />
       <Input
         ref={lineRef}
@@ -113,7 +125,8 @@ export function PhoneInputGroup({
         value={value.line}
         onChange={(event) => handleSegmentChange("line", event.target.value)}
         onKeyDown={(event) => handleKeyDown("line", event)}
-        className={cn(SEGMENT_INPUT_CLASS, "w-[4.5rem]")}
+        onBlur={onBlur}
+        className={cn(SEGMENT_INPUT_CLASS, "col-span-2")}
       />
     </div>
   )

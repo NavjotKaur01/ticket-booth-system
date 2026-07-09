@@ -2,6 +2,7 @@ import type {
   ReservationBusinessSearchResult,
   ReservationCustomerSearchResult
 } from '@/data/reservation-search-results'
+import { normalizePhoneSearchParts } from '@/lib/parse-phone-search-parts'
 import type { ReservationCustomerSearchItem } from '@/types/api/reservation-customer-search'
 
 function normalizeText (value: string | null | undefined) {
@@ -25,34 +26,48 @@ function formatPhoneNumber (
 }
 
 function mapPhone (item: ReservationCustomerSearchItem) {
-  return formatPhoneNumber(
-    normalizeText(item.AreaCode),
-    normalizeText(item.Phone1),
-    normalizeText(item.Phone2)
-  )
+  return normalizePhoneSearchParts({
+    areaCode: item.AreaCode,
+    phone1: item.Phone1,
+    phone2: item.Phone2
+  })
 }
 
 export function mapReservationCustomerSearchResults (
   items: ReservationCustomerSearchItem[]
 ): ReservationCustomerSearchResult[] {
-  return (items ?? []).map(item => ({
-    id: item.CustomerID,
-    lastName: normalizeText(item.LastName),
-    firstName: normalizeText(item.FirstName),
-    phoneNo: mapPhone(item),
-    email: normalizeText(item.Email1)
-  }))
+  return (items ?? []).map(item => {
+    const phone = mapPhone(item)
+
+    return {
+      id: item.CustomerID,
+      lastName: normalizeText(item.LastName),
+      firstName: normalizeText(item.FirstName),
+      phoneNo: formatPhoneNumber(phone.areaCode, phone.phone1, phone.phone2),
+      areaCode: phone.areaCode,
+      phone1: phone.phone1,
+      phone2: phone.phone2,
+      email: normalizeText(item.Email1)
+    }
+  })
 }
 
 export function mapReservationBusinessSearchResults (
   items: ReservationCustomerSearchItem[]
 ): ReservationBusinessSearchResult[] {
-  return (items ?? []).map(item => ({
-    id: item.CustomerID,
-    businessName:
-      normalizeText(item.BusinessName) || normalizeText(item.BusName),
-    lastName: normalizeText(item.LastName),
-    firstName: normalizeText(item.FirstName),
-    phoneNo: mapPhone(item)
-  }))
+  return (items ?? []).map(item => {
+    const phone = mapPhone(item)
+
+    return {
+      id: item.CustomerID,
+      businessName:
+        normalizeText(item.BusinessName) || normalizeText(item.BusName),
+      lastName: normalizeText(item.LastName),
+      firstName: normalizeText(item.FirstName),
+      phoneNo: formatPhoneNumber(phone.areaCode, phone.phone1, phone.phone2),
+      areaCode: phone.areaCode,
+      phone1: phone.phone1,
+      phone2: phone.phone2
+    }
+  })
 }
