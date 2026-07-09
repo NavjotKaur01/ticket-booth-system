@@ -1,4 +1,4 @@
-import dayjs from "dayjs"
+import { formatUsDateFromValue, parseToDate } from "@/lib/format-us-datetime"
 
 export type DoorCheckoutApiRow = {
   ShowId?: string
@@ -42,8 +42,7 @@ function toNum(v: unknown): number {
 
 function normalizeCheckoutDate(value: string): string {
   if (!value) return "Unknown"
-  const d = dayjs(value)
-  return d.isValid() ? d.format("M/D/YYYY") : value
+  return formatUsDateFromValue(value, "Unknown")
 }
 
 function formatCcLabel(cc: string): string {
@@ -325,10 +324,14 @@ export function buildShowDetailsByCardBucket(rows: DoorCheckoutApiRow[]) {
 }
 
 export function formatCheckoutDateHeading(date: string): string {
-  const parsed = dayjs(date, "M/D/YYYY")
-  if (parsed.isValid()) return parsed.format("dddd, MMMM D, YYYY")
-  const fallback = dayjs(date)
-  return fallback.isValid() ? fallback.format("dddd, MMMM D, YYYY") : date
+  const parsed = parseToDate(date)
+  if (!parsed) return date
+  return parsed.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
 }
 
 export type DoorCheckoutExportSection = {

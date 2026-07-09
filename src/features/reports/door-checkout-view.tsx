@@ -4,7 +4,11 @@ import { cn } from "@/lib/utils"
 import { useGenerateReportMutation } from "@/store/api/clubmanApi"
 import type { ReportDrillContext } from "@/features/reports/reports.service"
 import { formatUsApiDate } from "@/features/reports/reports.service"
-import dayjs from "dayjs"
+import {
+  formatUsDateFromValue,
+  formatUsDateTimeFromValue,
+  parseToDate,
+} from "@/lib/format-us-datetime"
 import {
   Dialog,
   DialogContent,
@@ -89,9 +93,12 @@ const fmt = fmtAmount
 const DRILL_STICKY_HEADER_CLASS = "sticky top-0 z-20 bg-muted"
 
 function fmtDatetime(v: string | Date | undefined): string {
-  if (!v) return "—"
-  const d = dayjs(v)
-  return d.isValid() ? d.format("M/D/YYYY h:mm A") : String(v)
+  return formatUsDateTimeFromValue(v, "—")
+}
+
+function fmtShowLabel(showdt: string, comicName: string): string {
+  const formattedShow = fmtDatetime(showdt)
+  return comicName !== "—" ? `${formattedShow} – ${comicName}` : formattedShow
 }
 
 // ─── Drill-down Dialog ─────────────────────────────────────────────────────────
@@ -126,9 +133,10 @@ function DrillDownDialog({
             EndDate: formatUsApiDate(drillContext.endDate),
             LocaltionId: drillContext.locationId,
             ShowId: target.showId || undefined,
-            ShowDateStr: dayjs(target.showdt).isValid()
-              ? dayjs(target.showdt).toDate().toLocaleDateString("en-US")
-              : target.showdt || undefined,
+            ShowDateStr: (() => {
+              const parsed = parseToDate(target.showdt)
+              return parsed ? formatUsDateFromValue(parsed) : target.showdt || undefined
+            })(),
             PymtType: codes.PymtType,
             CCType: codes.CCType,
             CreatedBy: "",
@@ -284,7 +292,7 @@ function DateSection({
   return (
     <>
       <ReportCard>
-        <ReportSectionBar>Checkout Date: {date}</ReportSectionBar>
+        <ReportSectionBar>Checkout Date: {formatUsDateFromValue(date, date)}</ReportSectionBar>
 
         <div className="space-y-4 p-3">
           {/* 1 — Payment type summary */}
@@ -333,13 +341,13 @@ function DateSection({
                 {showDetails.map((show, si) => (
                   <>
                     {show.paymentLines.map((line, li) => {
-                      const drillLabel = `${show.showdt}${show.comicName !== "—" ? ` – ${show.comicName}` : ""} (${line.type})`
+                      const drillLabel = `${fmtShowLabel(show.showdt, show.comicName)} (${line.type})`
                       const canDrill = !!drillContext
                       return (
                         <tr key={`${si}-${li}`} className={reportRowClass(si)}>
                           {li === 0 ? (
                             <ReportTd className="font-medium" rowSpan={show.paymentLines.length}>
-                              {show.showdt}{show.comicName !== "—" ? ` – ${show.comicName}` : ""}
+                              {fmtShowLabel(show.showdt, show.comicName)}
                             </ReportTd>
                           ) : null}
                           <td
