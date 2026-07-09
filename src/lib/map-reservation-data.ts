@@ -129,7 +129,7 @@ function normalizeText(value: string | null | undefined) {
 function toUSPhoneNumberFormat(
   phone: string
 ): string {
-  const phoneNumber = phone.trim().replace(/\D/g, "");
+  const phoneNumber = phone.replace(/\D/g, "");
   const area = phoneNumber.slice(0, 3);
   const phone1 = phoneNumber.slice(3, 7);
   const phone2 = phoneNumber.slice(7, 11);
@@ -150,7 +150,11 @@ function formatPhoneNumber(
   // when area code, phone 1 and phone 2 is not in the api response correctly, pass the phone into the reservation mapper
 
   if (!area && !part1 && !part2) {
-    return phone !== "()-" ? toUSPhoneNumberFormat(phone) :  "";
+    const fallback = normalizeText(phone)
+    if (!fallback || fallback === "()-" || fallback === "() -") {
+      return ""
+    }
+    return toUSPhoneNumberFormat(fallback)
   }
 
   if (area && part1 && part2) {

@@ -95,6 +95,18 @@ export function getPreviousPhoneSegmentField(
   return null
 }
 
+export function updatePhoneSegment(
+  current: PhoneParts,
+  field: PhoneSegmentField,
+  rawValue: string
+): PhoneParts {
+  return {
+    ...current,
+    [field]: sanitizePhoneDigits(rawValue, PHONE_SEGMENT_LENGTHS[field]),
+  }
+}
+
+/** @deprecated Use updatePhoneSegment for per-field editing. */
 export function mergePhoneDigits(current: PhoneParts, field: PhoneSegmentField, rawValue: string) {
   const incomingDigits = rawValue.replace(/\D/g, "")
 

@@ -1,5 +1,6 @@
 import type { ReservationPaymentType } from '@/data/reservation-payment-options'
 import type { ReservationCustomerSearchResult } from '@/data/reservation-search-results'
+import { parsePhoneSearchParts } from '@/lib/parse-phone-search-parts'
 import { EMPTY_GUID } from '@/lib/reservation-lookup-codes'
 import type { ReservationDetail } from '@/types/api/reservation-detail'
 import type { Reservation } from '@/types/reservation'
@@ -143,13 +144,17 @@ export function findReservationPromoId (
 }
 
 export function buildReservationEditSearchCriteria (reservation: Reservation) {
+  const phone = parsePhoneSearchParts(reservation.phoneNo)
+
   if (reservation.businessName.trim()) {
     return {
       searchType: 'business' as const,
       criteria: {
         lastName: reservation.lastName,
         firstName: reservation.firstName,
-        phoneNo: reservation.phoneNo,
+        areaCode: phone.areaCode,
+        phone1: phone.phone1,
+        phone2: phone.phone2,
         email: '',
         businessName: reservation.businessName
       }
@@ -161,7 +166,9 @@ export function buildReservationEditSearchCriteria (reservation: Reservation) {
     criteria: {
       lastName: reservation.lastName,
       firstName: reservation.firstName,
-      phoneNo: reservation.phoneNo,
+      areaCode: phone.areaCode,
+      phone1: phone.phone1,
+      phone2: phone.phone2,
       email: reservation.email,
       businessName: ''
     }

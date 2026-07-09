@@ -8,6 +8,12 @@ function normalizePhoneDigits (value: string) {
   return value.replace(/\D/g, '')
 }
 
+function criteriaPhoneDigits (criteria: ReservationCustomerSearchCriteria) {
+  return normalizePhoneDigits(
+    [criteria.areaCode, criteria.phone1, criteria.phone2].join('')
+  )
+}
+
 export function hasReservationCustomerChanges (
   reservation: Reservation,
   criteria: ReservationCustomerSearchCriteria
@@ -16,7 +22,7 @@ export function hasReservationCustomerChanges (
     criteria.lastName.trim() !== reservation.lastName.trim() ||
     criteria.firstName.trim() !== reservation.firstName.trim() ||
     criteria.email.trim() !== reservation.email.trim() ||
-    normalizePhoneDigits(criteria.phoneNo) !==
+    criteriaPhoneDigits(criteria) !==
       normalizePhoneDigits(reservation.phoneNo)
   )
 }

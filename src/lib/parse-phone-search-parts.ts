@@ -1,39 +1,41 @@
+import {
+  distributePhoneDigits,
+  PHONE_SEGMENT_LENGTHS,
+} from '@/lib/phone-segment-input'
+
 export type PhoneSearchParts = {
   areaCode: string
   phone1: string
   phone2: string
 }
 
-export function parsePhoneSearchParts (value: string): PhoneSearchParts {
-  const digits = value.replace(/\D/g, '')
+function sanitizePhoneSegment(
+  value: string | null | undefined,
+  maxLength: number
+) {
+  return (value ?? '').replace(/\D/g, '').slice(0, maxLength)
+}
 
-  if (digits.length >= 10) {
-    return {
-      areaCode: digits.slice(0, 3),
-      phone1: digits.slice(3, 6),
-      phone2: digits.slice(6, 10)
-    }
+/** Normalize separate search fields to 3 / 3 / 4 digit segments. */
+export function normalizePhoneSearchParts(parts: {
+  areaCode?: string | null
+  phone1?: string | null
+  phone2?: string | null
+}): PhoneSearchParts {
+  return {
+    areaCode: sanitizePhoneSegment(parts.areaCode, PHONE_SEGMENT_LENGTHS.area),
+    phone1: sanitizePhoneSegment(parts.phone1, PHONE_SEGMENT_LENGTHS.prefix),
+    phone2: sanitizePhoneSegment(parts.phone2, PHONE_SEGMENT_LENGTHS.line),
   }
+}
 
-  if (digits.length >= 7) {
-    return {
-      areaCode: '',
-      phone1: digits.slice(0, 3),
-      phone2: digits.slice(3, 7)
-    }
-  }
-
-  if (digits.length >= 4) {
-    return {
-      areaCode: '',
-      phone1: digits.slice(0, Math.min(3, digits.length)),
-      phone2: digits.slice(3)
-    }
-  }
+/** Split a combined phone string into 3 / 3 / 4 digit search fields. */
+export function parsePhoneSearchParts(value: string): PhoneSearchParts {
+  const parts = distributePhoneDigits(value)
 
   return {
-    areaCode: '',
-    phone1: digits,
-    phone2: ''
+    areaCode: parts.area,
+    phone1: parts.prefix,
+    phone2: parts.line,
   }
 }

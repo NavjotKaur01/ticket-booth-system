@@ -12,8 +12,10 @@ import type { RowSelectionState } from '@tanstack/react-table'
 
 import { DatePickerCalendarPanel } from '@/components/calendar/controls/date-picker-calendar-panel'
 import {
+  FormField,
   IconActionButton
 } from '@/components/forms/form-fields'
+import { PhoneInputGroup } from '@/components/forms/phone-input-group'
 import { ShowTimePicker } from '@/components/common/show-time-picker'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -85,6 +87,7 @@ import {
   buildUpdateReservationPaymentRequest
 } from '@/lib/build-save-reservation-request'
 import { mapReservationSearchCriteriaToCustomerForm } from '@/lib/map-reservation-search-to-customer-form'
+import { parsePhoneSearchParts, normalizePhoneSearchParts } from '@/lib/parse-phone-search-parts'
 import { resolveReservationBooking } from '@/lib/resolve-reservation-booking'
 import {
   buildReservationEditSearchCriteria,
@@ -752,6 +755,32 @@ function CustomerSearchFields({
     onCriteriaChange({ ...criteria, [field]: value })
   }
 
+  function updatePhone(parts: { area: string; prefix: string; line: string }) {
+    onCriteriaChange({
+      ...criteria,
+      areaCode: parts.area,
+      phone1: parts.prefix,
+      phone2: parts.line
+    })
+  }
+
+  const phoneInput = (
+    <FormField label='Phone'>
+      <PhoneInputGroup
+        idPrefix={`reservation-search-phone-${searchType}`}
+        value={{
+          area: criteria.areaCode,
+          prefix: criteria.phone1,
+          line: criteria.phone2
+        }}
+        onChange={updatePhone}
+        onBlur={onFieldBlur}
+        onEnter={onFieldEnter}
+        className='w-full'
+      />
+    </FormField>
+  )
+
   const fieldProps = {
     onBlur: onFieldBlur,
     onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => {
@@ -766,65 +795,59 @@ function CustomerSearchFields({
   if (searchType === 'business') {
     return (
       <div className='grid grid-cols-2 gap-x-2 gap-y-2'>
-        <Input
-          placeholder='Business Name'
-          value={criteria.businessName}
-          onChange={event => updateField('businessName', event.target.value)}
-          {...fieldProps}
-        />
-        <Input
-          placeholder='Last Name'
-          value={criteria.lastName}
-          onChange={event => updateField('lastName', event.target.value)}
-          ref={lastNameInputRef}
-          {...fieldProps}
-        />
-        <Input
-          placeholder='First Name'
-          value={criteria.firstName}
-          onChange={event => updateField('firstName', event.target.value)}
-          {...fieldProps}
-        />
-        <Input
-          type='tel'
-          placeholder='Phone No.'
-          value={criteria.phoneNo}
-          onChange={event => updateField('phoneNo', event.target.value)}
-          {...fieldProps}
-        />
+        <FormField label='Business Name'>
+          <Input
+            value={criteria.businessName}
+            onChange={event => updateField('businessName', event.target.value)}
+            {...fieldProps}
+          />
+        </FormField>
+        <FormField label='Last Name'>
+          <Input
+            value={criteria.lastName}
+            onChange={event => updateField('lastName', event.target.value)}
+            ref={lastNameInputRef}
+            {...fieldProps}
+          />
+        </FormField>
+        <FormField label='First Name'>
+          <Input
+            value={criteria.firstName}
+            onChange={event => updateField('firstName', event.target.value)}
+            {...fieldProps}
+          />
+        </FormField>
+        {phoneInput}
       </div>
     )
   }
 
   return (
     <div className='grid grid-cols-2 gap-x-2 gap-y-2'>
-      <Input
-        placeholder='Last Name'
-        value={criteria.lastName}
-        onChange={event => updateField('lastName', event.target.value)}
-        ref={lastNameInputRef}
-        {...fieldProps}
-      />
-      <Input
-        placeholder='First Name'
-        value={criteria.firstName}
-        onChange={event => updateField('firstName', event.target.value)}
-        {...fieldProps}
-      />
-      <Input
-        type='tel'
-        placeholder='Phone No.'
-        value={criteria.phoneNo}
-        onChange={event => updateField('phoneNo', event.target.value)}
-        {...fieldProps}
-      />
-      <Input
-        type='email'
-        placeholder='Email'
-        value={criteria.email}
-        onChange={event => updateField('email', event.target.value)}
-        {...fieldProps}
-      />
+      <FormField label='Last Name'>
+        <Input
+          value={criteria.lastName}
+          onChange={event => updateField('lastName', event.target.value)}
+          ref={lastNameInputRef}
+          {...fieldProps}
+        />
+      </FormField>
+      <FormField label='First Name'>
+        <Input
+          value={criteria.firstName}
+          onChange={event => updateField('firstName', event.target.value)}
+          {...fieldProps}
+        />
+      </FormField>
+      {phoneInput}
+      <FormField label='Email'>
+        <Input
+          type='email'
+          value={criteria.email}
+          onChange={event => updateField('email', event.target.value)}
+          {...fieldProps}
+        />
+      </FormField>
     </div>
   )
 }
@@ -1572,14 +1595,8 @@ export function AddReservationDialog({
     setPaymentValidationErrors({})
   }
 
-  function getSelectedCustomerDetails() {
-    return {
-      lastName: searchCriteria.lastName,
-      firstName: searchCriteria.firstName,
-      email: searchCriteria.email,
-      phoneNo: searchCriteria.phoneNo,
-      businessName: searchCriteria.businessName
-    }
+  function getSelectedCustomerDetails(): ReservationCustomerSearchCriteria {
+    return searchCriteria
   }
 
   async function handleSaveReservation() {
@@ -1910,11 +1927,18 @@ export function AddReservationDialog({
   function handleSearchResultSelect(
     result: ReservationCustomerSearchResult | ReservationBusinessSearchResult
   ) {
+    const phone =
+      result.areaCode || result.phone1 || result.phone2
+        ? normalizePhoneSearchParts(result)
+        : parsePhoneSearchParts(result.phoneNo)
+
     setSearchCriteria({
       businessName: 'businessName' in result ? result.businessName : '',
       lastName: result.lastName,
       firstName: result.firstName,
-      phoneNo: result.phoneNo,
+      areaCode: phone.areaCode,
+      phone1: phone.phone1,
+      phone2: phone.phone2,
       email: 'email' in result ? result.email : ''
     })
   }
@@ -1986,10 +2010,12 @@ export function AddReservationDialog({
 
   async function applySavedCustomer(customer: CustomerFormValues) {
     const { area, prefix, line } = customer.phone
-    const nextCriteria = {
+    const nextCriteria: ReservationCustomerSearchCriteria = {
       lastName: customer.lastName,
       firstName: customer.firstName,
-      phoneNo: [area, prefix, line].filter(Boolean).join(''),
+      areaCode: area,
+      phone1: prefix,
+      phone2: line,
       email: customer.email,
       businessName: ''
     }

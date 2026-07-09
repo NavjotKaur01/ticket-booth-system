@@ -1,50 +1,49 @@
 export type ReservationCustomerSearchCriteria = {
   lastName: string
   firstName: string
-  phoneNo: string
+  areaCode: string
+  phone1: string
+  phone2: string
   email: string
   businessName: string
 }
 
-export const EMPTY_RESERVATION_CUSTOMER_SEARCH_CRITERIA: ReservationCustomerSearchCriteria =
-  {
-    lastName: '',
-    firstName: '',
-    phoneNo: '',
-    email: '',
-    businessName: ''
-  }
+export const EMPTY_RESERVATION_CUSTOMER_SEARCH_CRITERIA: ReservationCustomerSearchCriteria = {
+  lastName: '',
+  firstName: '',
+  areaCode: '',
+  phone1: '',
+  phone2: '',
+  email: '',
+  businessName: ''
+}
 
-export function hasReservationCustomerSearchCriteria (
+// Rules for complete customer validation
+const CUSTOMER_CRITERIA_RULES: Partial<Record<keyof ReservationCustomerSearchCriteria, number>> = {
+  lastName: 1,
+  firstName: 1,
+  email: 1,
+  areaCode: 3,
+  phone1: 3,
+  phone2: 4
+};
+
+export function hasReservationCustomerSearchCriteria(
   searchType: 'customer' | 'business',
   criteria: ReservationCustomerSearchCriteria
-) {
-  if (searchType === 'business') {
-    return [
-      criteria.businessName,
-      criteria.lastName,
-      criteria.firstName,
-      criteria.phoneNo
-    ].some(value => value.trim().length > 0)
-  }
-
-  return [
-    criteria.lastName,
-    criteria.firstName,
-    criteria.phoneNo,
-    criteria.email
-  ].some(value => value.trim().length > 0)
+): boolean {
+  return Object.entries(criteria).some(([key, value]) => {
+    if (searchType === 'business' && key === 'email') return false;
+    if (searchType === 'customer' && key === 'businessName') return false;
+    return (value as string).trim().length > 0;
+  });
 }
 
-export function hasCompleteNewCustomerCriteria (
+export function hasCompleteNewCustomerCriteria(
   criteria: ReservationCustomerSearchCriteria
-) {
-  const phoneDigits = criteria.phoneNo.replace(/\D/g, '')
-
-  return (
-    criteria.lastName.trim().length > 0 &&
-    criteria.firstName.trim().length > 0 &&
-    criteria.email.trim().length > 0 &&
-    phoneDigits.length >= 10
-  )
-}
+): boolean {
+  return Object.entries(CUSTOMER_CRITERIA_RULES).every(([key, minLength]) => {
+    const value = criteria[key as keyof ReservationCustomerSearchCriteria];
+    return value.trim().length >= (minLength || 1);
+  });
+}   
