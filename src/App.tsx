@@ -1,4 +1,4 @@
-﻿import { BrowserRouter, Route, Routes } from "react-router-dom"
+import { BrowserRouter, Route, Routes } from "react-router-dom"
 
 import { GiftFeatureGuard } from "@/components/auth/gift-feature-guard"
 import { ProtectedLayout } from "@/components/auth/protected-layout"
@@ -48,6 +48,9 @@ import { NavigationLocation } from "@/pages/navigation-location"
 import { News } from "@/pages/news"
 import { RolesManagement } from "@/pages/roles-management"
 import { ComicManager } from "@/pages/comic-manager"
+import { FeaturesAndTips } from "@/pages/features-and-tips"
+import { SumContactLeads } from "@/pages/sum-contact-leads"
+import { Events } from "@/pages/events"
 import { LoginManagement } from "@/pages/login-management"
 import { TransactionLogViewer } from "@/pages/transaction-log-viewer"
 import { VenueAds } from "@/pages/venue-ads"
@@ -127,6 +130,9 @@ function App() {
             <Route path="comic-manager" element={<ComicManager />} />
             <Route path="log-in-management" element={<LoginManagement />} />
             <Route path="transaction-log-viewer" element={<TransactionLogViewer />} />
+            <Route path="features-and-tips" element={<FeaturesAndTips />} />
+            <Route path="sum-contact-leads" element={<SumContactLeads />} />
+            <Route path="events" element={<Events />} />
           </Route>
 
           <Route path="venue">
