@@ -76,7 +76,7 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
         label: "Customers",
         items: [
           { id: "log-in-management", label: "Log In Management", href: ROUTES.logInManagement },
-          { id: "transaction-log-viewer", label: "Transaction Log Viewer" },
+          { id: "transaction-log-viewer", label: "Transaction Log Viewer", href: ROUTES.transactionLogViewer },
         ],
       },
       { id: "comic-manager", label: "Comic Manager", href: ROUTES.comicManager },
