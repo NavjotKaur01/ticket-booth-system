@@ -9,6 +9,7 @@ import { AdjustFeesDialog } from "@/features/administrator/adjust-fees-dialog"
 import { PaymentHistoryDialog } from "@/features/search/payment-history-dialog"
 import { SearchReservationDialog } from "@/features/search/search-reservation-dialog"
 import { useAppSession } from "@/hooks/use-app-session"
+import { usePrefetchDashboard } from "@/hooks/use-prefetch-dashboard"
 import { cn } from "@/lib/utils"
 import type { NavSubItemAction } from "@/types/navigation"
 import type { UserSession } from "@/types/dashboard"
@@ -41,6 +42,7 @@ function handleSubMenuAction(
 
 export function AppLayout({ session }: AppLayoutProps) {
   const { locSName } = useAppSession()
+  usePrefetchDashboard()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [adjustFeesOpen, setAdjustFeesOpen] = useState(false)

@@ -103,6 +103,13 @@ export const login = createAsyncThunk(
       // Booth seat defaults are optional; reservations can load them later.
     }
 
+    dispatch(
+      clubmanApi.endpoints.loadDashboard.initiate({
+        connectionName: connectionString,
+        locationId: resolvedLocation.id,
+      })
+    )
+
     return credentials
   }
 )

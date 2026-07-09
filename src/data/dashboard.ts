@@ -7,27 +7,23 @@ import type {
 import { dashboardNewsImage } from "@/constants/assets"
 import { reportViewerUrl, ROUTES } from "@/constants/routes"
 
-export const statSummaries: StatSummary[] = [
+export const statSummaryDefinitions: Omit<StatSummary, "value">[] = [
   {
     id: "yesterday",
     label: "Yesterday Ticket Sold",
-    value: 1,
   },
   {
     id: "today",
     label: "Today Sold",
-    value: 1,
     href: reportViewerUrl("today-sales"),
   },
   {
     id: "week",
     label: "This Week Sold",
-    value: 2,
   },
   {
     id: "month",
     label: "This Month Sold",
-    value: 40,
   },
 ]
 

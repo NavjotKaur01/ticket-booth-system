@@ -1,10 +1,16 @@
 import { StatsSummary } from "@/components/dashboard/stats-summary"
 import { NewsGrid } from "@/components/dashboard/news-grid"
 import { useAppSession } from "@/hooks/use-app-session"
-import { newsItems, statSummaries } from "@/data/dashboard"
+import { useDashboardData } from "@/hooks/use-dashboard-data"
+import { newsItems } from "@/data/dashboard"
 
 export function Dashboard() {
-  const { locSName } = useAppSession()
+  const { locSName, connectionName, locationId, isReady } = useAppSession()
+  const { stats, loading, error } = useDashboardData(
+    connectionName,
+    locationId,
+    isReady
+  )
 
   return (
     <div className="space-y-4">
@@ -17,7 +23,9 @@ export function Dashboard() {
         </p>
       </div>
 
-      <StatsSummary stats={statSummaries} />
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+      <StatsSummary stats={stats} loading={loading} />
       <NewsGrid items={newsItems} />
     </div>
   )

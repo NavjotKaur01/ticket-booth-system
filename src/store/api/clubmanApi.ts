@@ -60,6 +60,7 @@ import type {
 import type { ApiLocation } from "@/types/api/locations"
 import type { ApiPromotionSearchItem } from "@/types/api/promotion-search"
 import type { ApiSystemLookupItem } from "@/types/api/system-lookup"
+import type { ApiDashboardData } from "@/types/api/dashboard-data"
 import type { ApiSystemDefaultItem } from "@/types/api/system-defaults"
 import type { RecentSalesReportData } from "@/types/api/recent-sales"
 import type { ReportPermissionAccess } from "@/types/api/report-permission-access"
@@ -120,6 +121,7 @@ export const clubmanApi = createApi({
     "RecentSales",
     "Calendar",
     "DailyTransaction",
+    "Dashboard",
     "SystemDefault",
     "Comedians"
   ],
@@ -700,6 +702,24 @@ export const clubmanApi = createApi({
       ],
     }),
 
+    loadDashboard: builder.query({
+      query: ({
+        connectionName,
+        locationId,
+      }: {
+        connectionName: string
+        locationId: string
+      }) => ({
+        url: systemApiPath(connectionName, locationId, "LoadDashboard"),
+        method: "GET",
+      }),
+      transformResponse: (response: unknown) => response as ApiDashboardData,
+      keepUnusedDataFor: 300,
+      providesTags: (_result, _error, arg) => [
+        { type: "Dashboard", id: `${arg.connectionName}:${arg.locationId}` },
+      ],
+    }),
+
     saveReservation: builder.mutation({
       query: (body: SaveReservationRequest) => ({
         url: reservationApiPath("SaveReservation"),
@@ -1110,6 +1130,7 @@ export const {
   useGetShowDetailsByDateQuery,
   useGetShowSectionsQuery,
   useGetSystemDefaultsQuery,
+  useLoadDashboardQuery,
   useSaveReservationMutation,
   useUpdateReservationMutation,
   useCancelReservationMutation,

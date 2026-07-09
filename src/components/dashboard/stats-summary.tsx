@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils"
 
 type StatsSummaryProps = {
   stats: StatSummary[]
+  loading?: boolean
 }
 
 const statIcons: Record<string, LucideIcon> = {
@@ -41,7 +42,13 @@ const statStyles: Record<string, { bg: string; icon: string }> = {
   },
 }
 
-function StatCard({ stat }: { stat: StatSummary }) {
+function StatCard({
+  stat,
+  loading = false,
+}: {
+  stat: StatSummary
+  loading?: boolean
+}) {
   const Icon = statIcons[stat.id] ?? Ticket
   const style = statStyles[stat.id] ?? statStyles.yesterday
 
@@ -59,7 +66,7 @@ function StatCard({ stat }: { stat: StatSummary }) {
         {stat.label}
       </p>
       <p className="mt-1 text-2xl font-bold tabular-nums leading-none tracking-tight">
-        {stat.value}
+        {loading ? "…" : stat.value}
       </p>
     </CardContent>
   )
@@ -81,14 +88,14 @@ function StatCard({ stat }: { stat: StatSummary }) {
   )
 }
 
-export function StatsSummary({ stats }: StatsSummaryProps) {
+export function StatsSummary({ stats, loading = false }: StatsSummaryProps) {
   return (
     <section
       aria-label="Ticket sales summary"
       className="grid grid-cols-2 gap-3 lg:grid-cols-4"
     >
       {stats.map((stat) => (
-        <StatCard key={stat.id} stat={stat} />
+        <StatCard key={stat.id} stat={stat} loading={loading} />
       ))}
     </section>
   )
