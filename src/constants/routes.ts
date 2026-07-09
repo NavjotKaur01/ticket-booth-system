@@ -47,6 +47,7 @@ export const ROUTES = {
   news: "/administrator/news",
   roles: "/administrator/roles",
   comicManager: "/administrator/comic-manager",
+  logInManagement: "/administrator/log-in-management",
   businessContacts: "/ticketbooth/business-contacts",
   commentCards: "/ticketbooth/comment-cards",
   giftCards: "/ticketbooth/gift-cards",
@@ -83,6 +84,7 @@ export const ROUTE_PREFERRED_NAV_ITEM_IDS: Partial<Record<string, string>> = {
   [ROUTES.news]: "news",
   [ROUTES.roles]: "roles",
   [ROUTES.comicManager]: "comic-manager",
+  [ROUTES.logInManagement]: "log-in-management",
 }
 
 export function reportViewerUrl(reportType?: string) {
@@ -123,6 +125,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.news]: "News",
   [ROUTES.roles]: "Roles",
   [ROUTES.comicManager]: "Comic Manager",
+  [ROUTES.logInManagement]: "Log In Management",
   [ROUTES.venueInfo]: "Venue Info",
   [ROUTES.venueShowTimes]: "Venue Show Times",
   [ROUTES.foodMenu]: "Food Menu",
