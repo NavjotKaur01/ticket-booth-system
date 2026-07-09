@@ -49,6 +49,7 @@ import { News } from "@/pages/news"
 import { RolesManagement } from "@/pages/roles-management"
 import { ComicManager } from "@/pages/comic-manager"
 import { LoginManagement } from "@/pages/login-management"
+import { TransactionLogViewer } from "@/pages/transaction-log-viewer"
 import { VenueAds } from "@/pages/venue-ads"
 import { VenueRotatingAds } from "@/pages/venue-rotating-ads"
 import { VenueInfo } from "@/pages/venue-info"
@@ -125,6 +126,7 @@ function App() {
             <Route path="roles" element={<RolesManagement />} />
             <Route path="comic-manager" element={<ComicManager />} />
             <Route path="log-in-management" element={<LoginManagement />} />
+            <Route path="transaction-log-viewer" element={<TransactionLogViewer />} />
           </Route>
 
           <Route path="venue">
