@@ -80,8 +80,7 @@ export function hasReservationSearchResultChanges (
     criteria.lastName.trim() !== originalResult.lastName.trim() ||
     criteria.firstName.trim() !== originalResult.firstName.trim() ||
     criteria.email.trim() !== originalResult.email.trim() ||
-    normalizePhoneDigits(criteria.phoneNo) !==
-      normalizePhoneDigits(originalResult.phoneNo)
+    criteriaPhoneDigits(criteria) !== normalizePhoneDigits(originalResult.phoneNo)
   )
 }
 
