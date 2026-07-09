@@ -16,6 +16,7 @@ type ReservationColumnsOptions = {
   onPrintReceipt?: (reservation: Reservation) => void
   onReservationHistory?: (reservation: Reservation) => void
   onAddNote?: (reservation: Reservation) => void
+  onPrintSignature?: (reservation: Reservation) => void
 }
 
 function emptyCell(value: string | number | null | undefined) {
@@ -47,6 +48,7 @@ export function createReservationColumns({
   onPrintReceipt,
   onReservationHistory,
   onAddNote,
+  onPrintSignature,
 }: ReservationColumnsOptions = {}): ColumnDef<Reservation>[] {
   const columns: ColumnDef<Reservation>[] = [
     {
@@ -331,6 +333,7 @@ export function createReservationColumns({
           onPrintReceipt={() => onPrintReceipt?.(row.original)}
           onReservationHistory={() => onReservationHistory?.(row.original)}
           onAddNote={() => onAddNote?.(row.original)}
+          onPrintSignature={() => onPrintSignature?.(row.original)}
         />
       ),
     }

@@ -126,25 +126,25 @@ export function updateReservation(request: SaveReservationRequest) {
 }
 
 type FetchReservationDetailByIdParams = {
-  connectionString: string
+  connectionName: string
   reservationId: string
 }
 
 export function fetchReservationDetailById({
-  connectionString,
+  connectionName,
   reservationId,
 }: FetchReservationDetailByIdParams) {
   return dispatchEndpoint<ReservationDetail, FetchReservationDetailByIdParams>(
     clubmanApi.endpoints.getReservationDetailById,
-    { connectionString, reservationId }
+    { connectionName, reservationId }
   )
 }
 
 export function fetchReservationHistoryById({
   connectionString,
   reservationId,
-}: FetchReservationDetailByIdParams) {
-  return dispatchEndpoint<ReservationHistoryItem[], FetchReservationDetailByIdParams>(
+}: { connectionString: string; reservationId: string }) {
+  return dispatchEndpoint<ReservationHistoryItem[], { connectionString: string; reservationId: string }>(
     clubmanApi.endpoints.getReservationHistoryById,
     { connectionString, reservationId }
   )

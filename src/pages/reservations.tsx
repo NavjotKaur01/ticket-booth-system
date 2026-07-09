@@ -1,4 +1,4 @@
-import { FileDown, Plus, Search } from "lucide-react"
+import { FileDown, Plus, Search, X } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { ExportDataDialog } from "@/components/common/export-data-dialog"
@@ -15,7 +15,7 @@ import { ReservationDataTable } from "@/features/reservations/reservation-data-t
 import { ReservationHistoryDialog } from "@/features/reservations/reservation-history-dialog"
 import { ReservationFiltersCard } from "@/features/reservations/reservation-filters-card"
 import { exportReservations } from "@/features/reservations/reservation-export"
-import { getMockTicketPrintData, printReservationTicket } from "@/services/ticket-print.service"
+import { getMockTicketPrintData, printReservationTicket, printSignatureTicket } from "@/services/ticket-print.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useReservationData } from "@/hooks/use-reservation-data"
 import { useShowDetailsByDate } from "@/hooks/use-show-details-by-date"
@@ -40,7 +40,7 @@ import { filterReservations } from "@/lib/filter-reservations"
 import type { ExportFormat } from "@/lib/export-table-data"
 import type { Reservation } from "@/types/reservation"
 import type { ReservationDetail } from "@/types/api/reservation-detail"
-import { useGetShowSectionsQuery, useGetSystemDefaultsQuery } from "@/store/api/clubmanApi"
+import { useGetShowSectionsQuery, useGetSystemDefaultsQuery, clubmanApi } from "@/store/api/clubmanApi"
 
 /** ISO date string (yyyy-mm-dd) for the local calendar day. */
 function todayDateValue() {
@@ -103,6 +103,7 @@ export function Reservations() {
     storedFilters.showCancelled ?? false
   )
   const [displayPhone, setDisplayPhone] = useState(false)
+  const [signaturePrintError, setSignaturePrintError] = useState<string | null>(null)
   const [reservationPrintError, setReservationPrintError] = useState<string | null>(null)
   const [checkInError, setCheckInError] = useState<string | null>(null)
   const [isCheckingInReservation, setIsCheckingInReservation] = useState(false)
@@ -141,6 +142,9 @@ export function Reservations() {
     { connectionName, locationId },
     { skip: !connectionName || !locationId }
   )
+
+  const [getReservationDetail] = clubmanApi.useLazyGetReservationDetailByIdQuery()
+  const [getReservationPrintProperties] = clubmanApi.useLazyGetReservationPrintPropertiesQuery()
 
   const boothSeatDefault = useMemo(
     () => readBoothSeatDefault(systemDefaults),
@@ -337,7 +341,7 @@ export function Reservations() {
 
     try {
       const detail = await fetchReservationDetailById({
-        connectionString: connectionName,
+        connectionName: connectionName,
         reservationId: reservation.id,
       })
 
@@ -543,6 +547,66 @@ export function Reservations() {
     }
   }
 
+  async function handlePrintSignature(reservation: Reservation) {
+    setSignaturePrintError(null)
+    setReservationPrintError(null)
+
+    try {
+      if (!connectionName) {
+        throw new Error("Missing connection string")
+      }
+
+
+
+      // Step 1: Validation (API 1)
+      const resDet = await getReservationDetail({
+        connectionName,
+        reservationId: reservation.id,
+      }).unwrap()
+
+      if (!resDet) {
+        throw new Error("Reservation details not found.")
+      }
+
+      const paymentList = resDet.PaymentList || []
+
+      const validPayments = paymentList.filter(
+        (pymt) =>
+          pymt.ReservationID === reservation.id &&
+          (pymt.PaymentTypeCode?.trim() === "PYMT02" ||
+            pymt.PaymentTypeCode?.trim() === "PYMT03" ||
+            pymt.PaymentTypeCode?.trim() === "PYMT07") &&
+          (pymt.PaymentStatusCode?.trim() === "PSTAT01" ||
+            pymt.PaymentStatusCode?.trim() === "PSTAT21" ||
+            pymt.PaymentStatusCode?.trim() === "PSTAT31")
+      )
+
+      const totalPay = validPayments.reduce((sum, pymt) => sum + (pymt.Amount ?? 0), 0)
+
+      if (totalPay <= 0 || totalPay !== (resDet.Total ?? 0)) {
+        setSignaturePrintError("No Credit Card payment found to print signature")
+        return
+      }
+
+      // Step 2: Fetch Print Properties (API 2)
+      const printProperties = await getReservationPrintProperties({
+        connectionName,
+        reservationId: reservation.id,
+      }).unwrap()
+
+      // Step 3: Print
+      const didStart = await printSignatureTicket(printProperties)
+
+      if (!didStart) {
+        throw new Error("Unable to start printing. Please allow popups and try again.")
+      }
+    } catch (error) {
+      setSignaturePrintError(
+        error instanceof Error ? error.message : "Unable to print signature. Please try again."
+      )
+    }
+  }
+
   async function handleReservationSaved(
     _reservationIds: string[],
     ticketData?: import("@/types/ticket-print").TicketPrintData
@@ -659,17 +723,36 @@ export function Reservations() {
           <p className="px-3 py-2 text-sm text-destructive">{reservationsError}</p>
         ) : null}
         {uncancelReservationError ? (
-          <p className="px-3 py-2 text-sm text-destructive">
-            {uncancelReservationError}
-          </p>
+          <div className="flex items-center justify-between px-3 py-2 text-sm text-destructive bg-destructive/10 rounded-md mx-3 mb-2">
+            <p>{uncancelReservationError}</p>
+            <button type="button" onClick={() => setUncancelReservationError(null)} className="hover:opacity-70">
+              <X className="size-4" />
+            </button>
+          </div>
         ) : null}
         {reservationPrintError ? (
-          <p className="px-3 py-2 text-sm text-destructive">
-            {reservationPrintError}
-          </p>
+          <div className="flex items-center justify-between px-3 py-2 text-sm text-destructive bg-destructive/10 rounded-md mx-3 mb-2">
+            <p>{reservationPrintError}</p>
+            <button type="button" onClick={() => setReservationPrintError(null)} className="hover:opacity-70">
+              <X className="size-4" />
+            </button>
+          </div>
+        ) : null}
+        {signaturePrintError ? (
+          <div className="flex items-center justify-between px-3 py-2 text-sm text-destructive bg-destructive/10 rounded-md mx-3 mb-2">
+            <p>{signaturePrintError}</p>
+            <button type="button" onClick={() => setSignaturePrintError(null)} className="hover:opacity-70">
+              <X className="size-4" />
+            </button>
+          </div>
         ) : null}
         {checkInError ? (
-          <p className="px-3 py-2 text-sm text-destructive">{checkInError}</p>
+          <div className="flex items-center justify-between px-3 py-2 text-sm text-destructive bg-destructive/10 rounded-md mx-3 mb-2">
+            <p>{checkInError}</p>
+            <button type="button" onClick={() => setCheckInError(null)} className="hover:opacity-70">
+              <X className="size-4" />
+            </button>
+          </div>
         ) : null}
 
         <ReservationDataTable
@@ -703,6 +786,7 @@ export function Reservations() {
           onReservationHistory={handleOpenReservationHistory}
           onAddNote={handleOpenAddNote}
           onEditReservation={handleOpenEditReservation}
+          onPrintSignature={(res) => void handlePrintSignature(res)}
         />
       </PanelCard>
 

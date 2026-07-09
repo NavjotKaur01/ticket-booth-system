@@ -17,7 +17,7 @@ export function useReservationDetail(
   const shouldSkip = !enabled || !connectionString || !reservationId
 
   const { data, isLoading, isFetching, error } = useGetReservationDetailByIdQuery(
-    { connectionString, reservationId },
+    { connectionName: connectionString, reservationId },
     { skip: shouldSkip }
   )
 
