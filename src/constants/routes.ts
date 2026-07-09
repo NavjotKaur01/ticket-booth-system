@@ -1,4 +1,4 @@
-﻿/** Application route paths - keep in sync with App.tsx route definitions. */
+/** Application route paths - keep in sync with App.tsx route definitions. */
 export const ROUTES = {
   dashboard: "/",
   reservations: "/reservations",
@@ -49,6 +49,9 @@ export const ROUTES = {
   comicManager: "/administrator/comic-manager",
   logInManagement: "/administrator/log-in-management",
   transactionLogViewer: "/administrator/transaction-log-viewer",
+  featuresAndTips: "/administrator/features-and-tips",
+  sumContactLeads: "/administrator/sum-contact-leads",
+  events: "/administrator/events",
   businessContacts: "/ticketbooth/business-contacts",
   commentCards: "/ticketbooth/comment-cards",
   giftCards: "/ticketbooth/gift-cards",
@@ -87,6 +90,9 @@ export const ROUTE_PREFERRED_NAV_ITEM_IDS: Partial<Record<string, string>> = {
   [ROUTES.comicManager]: "comic-manager",
   [ROUTES.logInManagement]: "log-in-management",
   [ROUTES.transactionLogViewer]: "transaction-log-viewer",
+  [ROUTES.featuresAndTips]: "features-and-tips",
+  [ROUTES.sumContactLeads]: "sum-contact-leads",
+  [ROUTES.events]: "events",
 }
 
 export function reportViewerUrl(reportType?: string) {
@@ -129,6 +135,9 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.comicManager]: "Comic Manager",
   [ROUTES.logInManagement]: "Log In Management",
   [ROUTES.transactionLogViewer]: "Transaction Log Viewer",
+  [ROUTES.featuresAndTips]: "Features And Tips",
+  [ROUTES.sumContactLeads]: "SUM Contact Leads",
+  [ROUTES.events]: "Events",
   [ROUTES.venueInfo]: "Venue Info",
   [ROUTES.venueShowTimes]: "Venue Show Times",
   [ROUTES.foodMenu]: "Food Menu",

@@ -1,4 +1,4 @@
-﻿import {
+import {
   BarChart3,
   Bookmark,
   Building2,
@@ -80,9 +80,9 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
         ],
       },
       { id: "comic-manager", label: "Comic Manager", href: ROUTES.comicManager },
-      { id: "features-and-tips", label: "Features And Tips" },
-      { id: "sum-contact-leads", label: "SUM Contact Leads" },
-      { id: "events", label: "Events" },
+      { id: "features-and-tips", label: "Features And Tips", href: ROUTES.featuresAndTips },
+      { id: "sum-contact-leads", label: "SUM Contact Leads", href: ROUTES.sumContactLeads },
+      { id: "events", label: "Events", href: ROUTES.events },
       // { id: "clubman-log", label: "Clubman Log" },
       { id: "adjust-fees", label: "Adjust Fees", action: "adjust-fees" },
       { id: "comedians", label: "Comedians", href: ROUTES.performers },
