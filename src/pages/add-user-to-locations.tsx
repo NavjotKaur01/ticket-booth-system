@@ -1,4 +1,4 @@
-import { Check, Search } from "lucide-react"
+import { Search } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
@@ -8,98 +8,84 @@ import {
   AdminPanelActions,
   AdminPanelStats,
   AdminPanelToolbar,
-  ADMIN_SPLIT_PANEL_2COL_CLASS,
 } from "@/components/layout/admin-page"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { UserSetupColumn } from "@/features/user-setup/user-setup-column"
+import { UserLocationAssignCard } from "@/features/user-setup/user-location-assign-card"
 import { UserSetupFeedback } from "@/features/user-setup/user-setup-feedback"
 import { userSetupLocations, userSetupUsers } from "@/data/user-setup"
 import { cn } from "@/lib/utils"
 
+type UserFilter = "all" | "assigned" | "unassigned"
+
+const FILTER_OPTIONS: { value: UserFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "assigned", label: "Assigned" },
+  { value: "unassigned", label: "Unassigned" },
+]
+
 export function AddUserToLocations() {
-  const [selectedLocation, setSelectedLocation] = useState(userSetupLocations[3])
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([])
-  const [userSearch, setUserSearch] = useState("")
-  const [assignedUsers, setAssignedUsers] = useState<Record<string, string[]>>(() =>
-    Object.fromEntries(userSetupLocations.map((location) => [location, []]))
+  const [userLocations, setUserLocations] = useState<Record<string, string[]>>(() =>
+    Object.fromEntries(userSetupUsers.map((user) => [user, []]))
   )
+  const [userSearch, setUserSearch] = useState("")
+  const [userFilter, setUserFilter] = useState<UserFilter>("all")
   const [message, setMessage] = useState<string | null>(null)
   const [messageVariant, setMessageVariant] = useState<"success" | "error">("success")
 
-  const locationAssignments = useMemo(
-    () => assignedUsers[selectedLocation] ?? [],
-    [assignedUsers, selectedLocation]
+  const assignedUserCount = useMemo(
+    () =>
+      userSetupUsers.filter((user) => (userLocations[user]?.length ?? 0) > 0).length,
+    [userLocations]
+  )
+
+  const totalAssignments = useMemo(
+    () =>
+      Object.values(userLocations).reduce(
+        (total, locations) => total + locations.length,
+        0
+      ),
+    [userLocations]
   )
 
   const filteredUsers = useMemo(() => {
     const query = userSearch.trim().toLowerCase()
-    if (!query) return userSetupUsers
-    return userSetupUsers.filter((userName) =>
-      userName.toLowerCase().includes(query)
-    )
-  }, [userSearch])
 
-  function toggleUser(userName: string, checked: boolean) {
-    setSelectedUsers((current) =>
-      checked
-        ? [...current, userName]
-        : current.filter((item) => item !== userName)
-    )
-  }
+    return userSetupUsers.filter((user) => {
+      const assignedCount = userLocations[user]?.length ?? 0
 
-  function toggleAllUsers() {
-    const visibleUsers = filteredUsers
-    const allVisibleSelected = visibleUsers.every((userName) =>
-      selectedUsers.includes(userName)
-    )
+      if (userFilter === "assigned" && assignedCount === 0) return false
+      if (userFilter === "unassigned" && assignedCount > 0) return false
+      if (!query) return true
 
-    setSelectedUsers((current) => {
-      if (allVisibleSelected) {
-        return current.filter((userName) => !visibleUsers.includes(userName))
-      }
-
-      return Array.from(new Set([...current, ...visibleUsers]))
+      return user.toLowerCase().includes(query)
     })
-  }
+  }, [userFilter, userLocations, userSearch])
 
-  function addSelected() {
-    if (selectedUsers.length === 0) {
-      setMessageVariant("error")
-      setMessage("Select at least one user to add.")
+  function handleSave(user: string, locations: string[]) {
+    const previousCount = userLocations[user]?.length ?? 0
+    const nextCount = locations.length
+
+    setUserLocations((current) => ({
+      ...current,
+      [user]: locations,
+    }))
+
+    setMessageVariant("success")
+    if (nextCount > previousCount) {
+      setMessage(
+        `Assigned ${nextCount - previousCount} location(s) to ${user}.`
+      )
       return
     }
 
-    const count = selectedUsers.length
-    setAssignedUsers((current) => ({
-      ...current,
-      [selectedLocation]: Array.from(
-        new Set([...(current[selectedLocation] ?? []), ...selectedUsers])
-      ),
-    }))
-    setSelectedUsers([])
-    setMessageVariant("success")
-    setMessage(`Added ${count} user(s) to ${selectedLocation}.`)
-  }
-
-  function removeSelected() {
-    if (selectedUsers.length === 0) {
-      setMessageVariant("error")
-      setMessage("Select at least one user to remove.")
+    if (nextCount < previousCount) {
+      setMessage(
+        `Removed ${previousCount - nextCount} location(s) from ${user}.`
+      )
       return
     }
 
-    const count = selectedUsers.length
-    setAssignedUsers((current) => ({
-      ...current,
-      [selectedLocation]: (current[selectedLocation] ?? []).filter(
-        (userName) => !selectedUsers.includes(userName)
-      ),
-    }))
-    setSelectedUsers([])
-    setMessageVariant("success")
-    setMessage(`Removed ${count} user(s) from ${selectedLocation}.`)
+    setMessage(`Updated location assignments for ${user}.`)
   }
 
   return (
@@ -109,132 +95,79 @@ export function AddUserToLocations() {
       <PanelCard>
         <AdminPanelToolbar>
           <AdminPanelStats>
-            Location:{" "}
-            <span className="font-semibold text-foreground">{selectedLocation}</span>
-            {" · "}
-            Assigned:{" "}
             <span className="font-semibold tabular-nums text-foreground">
-              {locationAssignments.length}
-            </span>
-            {" · "}
-            Selected:{" "}
+              {assignedUserCount}
+            </span>{" "}
+            of{" "}
             <span className="font-semibold tabular-nums text-foreground">
-              {selectedUsers.length}
-            </span>
+              {userSetupUsers.length}
+            </span>{" "}
+            users assigned
+            {" · "}
+            <span className="font-semibold tabular-nums text-foreground">
+              {totalAssignments}
+            </span>{" "}
+            total location assignments
           </AdminPanelStats>
 
           <AdminPanelActions>
-            <Button type="button" variant="outline" size="sm" onClick={toggleAllUsers}>
-              Toggle All Users
-            </Button>
-            <Button type="button" size="sm" onClick={addSelected}>
-              Add Selected
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={removeSelected}>
-              Remove Selected
-            </Button>
+            <div className="relative w-full sm:w-56">
+              <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={userSearch}
+                onChange={(event) => setUserSearch(event.target.value)}
+                placeholder="Search users..."
+                className="h-9 pl-8"
+              />
+            </div>
           </AdminPanelActions>
         </AdminPanelToolbar>
 
-        <div className={ADMIN_SPLIT_PANEL_2COL_CLASS}>
-          <UserSetupColumn title="Location">
-            <div className="calendar-thin-scrollbar max-h-96 space-y-1 overflow-y-auto">
-              {userSetupLocations.map((location) => {
-                const active = location === selectedLocation
-                const count = assignedUsers[location]?.length ?? 0
+        <div className="flex flex-wrap gap-1.5 border-b px-3 py-2 sm:px-4">
+          {FILTER_OPTIONS.map((option) => {
+            const active = userFilter === option.value
 
-                return (
-                  <button
-                    key={location}
-                    type="button"
-                    onClick={() => {
-                      setSelectedLocation(location)
-                      setSelectedUsers([])
-                      setMessage(null)
-                    }}
-                    className={cn(
-                      "flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors",
-                      active
-                        ? "border-primary/30 bg-primary/10 font-medium text-primary"
-                        : "border-transparent hover:bg-muted/40"
-                    )}
-                  >
-                    <span className="truncate">{location}</span>
-                    {count > 0 ? (
-                      <span className="ml-2 shrink-0 text-xs tabular-nums text-muted-foreground">
-                        {count}
-                      </span>
-                    ) : null}
-                  </button>
-                )
-              })}
-            </div>
-          </UserSetupColumn>
-
-          <UserSetupColumn
-            title="Users"
-            headerRight={
-              <span className="text-xs tabular-nums text-muted-foreground">
-                {filteredUsers.length} shown
-              </span>
-            }
-          >
-            <div className="space-y-3">
-              <div className="relative">
-                <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={userSearch}
-                  onChange={(event) => setUserSearch(event.target.value)}
-                  placeholder="Search users..."
-                  className="h-9 pl-8"
-                />
-              </div>
-
-              <div className="calendar-thin-scrollbar max-h-96 space-y-1 overflow-y-auto rounded-md border border-border p-2">
-                {filteredUsers.length === 0 ? (
-                  <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-                    No users match your search.
-                  </p>
-                ) : (
-                  filteredUsers.map((userName) => {
-                    const checked = selectedUsers.includes(userName)
-                    const assigned = locationAssignments.includes(userName)
-                    const inputId = `location-user-${userName}`
-
-                    return (
-                      <label
-                        key={userName}
-                        htmlFor={inputId}
-                        className={cn(
-                          "flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors",
-                          checked ? "bg-primary/10" : "hover:bg-muted/50"
-                        )}
-                      >
-                        <Checkbox
-                          id={inputId}
-                          checked={checked}
-                          onCheckedChange={(value) =>
-                            toggleUser(userName, value === true)
-                          }
-                        />
-                        <span
-                          className={cn(
-                            "flex-1 text-sm font-normal",
-                            assigned && "font-medium text-primary"
-                          )}
-                        >
-                          {userName}
-                        </span>
-                        {assigned ? (
-                          <Check className="size-3.5 shrink-0 text-primary" />
-                        ) : null}
-                      </label>
-                    )
-                  })
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setUserFilter(option.value)}
+                className={cn(
+                  "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                  active
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                 )}
-              </div>
+              >
+                {option.label}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="p-3 sm:p-4">
+          {filteredUsers.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center">
+              <p className="text-sm font-medium text-foreground">
+                No users match your search
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Try a different filter or clear the search.
+              </p>
             </div>
-          </UserSetupColumn>
+          ) : (
+            <div className="mx-auto grid max-w-4xl grid-cols-1 gap-3 md:grid-cols-2">
+              {filteredUsers.map((user) => (
+                <UserLocationAssignCard
+                  key={user}
+                  userName={user}
+                  assignedLocations={userLocations[user] ?? []}
+                  allLocations={userSetupLocations}
+                  onSave={(locations) => handleSave(user, locations)}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {message ? (
