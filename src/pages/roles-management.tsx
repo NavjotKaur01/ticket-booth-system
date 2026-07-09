@@ -3,6 +3,14 @@ import { useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { FormField } from "@/components/forms/form-fields"
+import {
+  AdminPageShell,
+  AdminPageTitle,
+  AdminPanelActions,
+  AdminPanelStats,
+  AdminPanelToolbar,
+  ADMIN_SPLIT_PANEL_2COL_CLASS,
+} from "@/components/layout/admin-page"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { createSystemRole, systemRoles as initialRoles } from "@/data/system-roles"
@@ -64,14 +72,12 @@ export function RolesManagement() {
   }
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">
-        Roles Management
-      </h1>
+    <AdminPageShell>
+      <AdminPageTitle>Roles Management</AdminPageTitle>
 
       <PanelCard>
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2">
-          <p className="text-xs text-muted-foreground">
+        <AdminPanelToolbar>
+          <AdminPanelStats>
             Roles:{" "}
             <span className="font-semibold tabular-nums text-foreground">
               {roles.length}
@@ -81,21 +87,23 @@ export function RolesManagement() {
             <span className="font-semibold tabular-nums text-foreground">
               {selectedRoleIds.length}
             </span>
-          </p>
+          </AdminPanelStats>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={handleRemove}
-          >
-            <Trash2 className="size-3.5" />
-            Remove
-          </Button>
-        </div>
+          <AdminPanelActions>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={handleRemove}
+            >
+              <Trash2 className="size-3.5" />
+              Remove
+            </Button>
+          </AdminPanelActions>
+        </AdminPanelToolbar>
 
-        <div className="grid lg:grid-cols-2 lg:divide-x">
+        <div className={ADMIN_SPLIT_PANEL_2COL_CLASS}>
           <UserSetupColumn title="Roles" contentClassName="p-3">
             <div className="overflow-hidden rounded-lg border border-border bg-background">
               <div className="border-b bg-muted/50 px-3 py-2">
@@ -152,6 +160,6 @@ export function RolesManagement() {
           <UserSetupFeedback message={message} variant={messageVariant} />
         ) : null}
       </PanelCard>
-    </div>
+    </AdminPageShell>
   )
 }

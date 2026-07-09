@@ -2,6 +2,14 @@ import { Check, Search } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
+import {
+  AdminPageShell,
+  AdminPageTitle,
+  AdminPanelActions,
+  AdminPanelStats,
+  AdminPanelToolbar,
+  ADMIN_SPLIT_PANEL_2COL_CLASS,
+} from "@/components/layout/admin-page"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -95,14 +103,12 @@ export function AddUserToLocations() {
   }
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">
-        Administration - Add User to Location(s)
-      </h1>
+    <AdminPageShell>
+      <AdminPageTitle>Administration - Add User to Location(s)</AdminPageTitle>
 
       <PanelCard>
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2">
-          <p className="text-xs text-muted-foreground">
+        <AdminPanelToolbar>
+          <AdminPanelStats>
             Location:{" "}
             <span className="font-semibold text-foreground">{selectedLocation}</span>
             {" · "}
@@ -115,9 +121,9 @@ export function AddUserToLocations() {
             <span className="font-semibold tabular-nums text-foreground">
               {selectedUsers.length}
             </span>
-          </p>
+          </AdminPanelStats>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <AdminPanelActions>
             <Button type="button" variant="outline" size="sm" onClick={toggleAllUsers}>
               Toggle All Users
             </Button>
@@ -127,10 +133,10 @@ export function AddUserToLocations() {
             <Button type="button" variant="outline" size="sm" onClick={removeSelected}>
               Remove Selected
             </Button>
-          </div>
-        </div>
+          </AdminPanelActions>
+        </AdminPanelToolbar>
 
-        <div className="grid lg:grid-cols-2 lg:divide-x">
+        <div className={ADMIN_SPLIT_PANEL_2COL_CLASS}>
           <UserSetupColumn title="Location">
             <div className="calendar-thin-scrollbar max-h-96 space-y-1 overflow-y-auto">
               {userSetupLocations.map((location) => {
@@ -235,6 +241,6 @@ export function AddUserToLocations() {
           <UserSetupFeedback message={message} variant={messageVariant} />
         ) : null}
       </PanelCard>
-    </div>
+    </AdminPageShell>
   )
 }

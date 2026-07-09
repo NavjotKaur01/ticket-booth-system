@@ -12,14 +12,14 @@ type EventGroupCardProps = {
 export function EventGroupCard({ group }: EventGroupCardProps) {
   return (
     <section className="border-b last:border-b-0">
-      <div className="border-b bg-muted/30 px-3 py-2 text-center">
+      <div className="border-b bg-muted/30 px-3 py-2 text-center sm:text-left">
         <h2 className="text-sm font-semibold tracking-wide text-foreground">
           {group.title}
         </h2>
       </div>
 
-      <div className="grid gap-4 p-4 lg:grid-cols-[140px_minmax(0,1fr)] lg:items-start">
-        <div className="mx-auto w-full max-w-[140px] overflow-hidden rounded-md border border-border bg-muted/20 lg:mx-0">
+      <div className="grid gap-4 p-3 sm:p-4 md:grid-cols-[120px_minmax(0,1fr)] md:items-start lg:grid-cols-[140px_minmax(0,1fr)]">
+        <div className="mx-auto w-full max-w-[140px] overflow-hidden rounded-md border border-border bg-muted/20 md:mx-0">
           <img
             src={group.imageUrl}
             alt={group.title}
@@ -31,10 +31,10 @@ export function EventGroupCard({ group }: EventGroupCardProps) {
           {group.showtimes.map((showtime) => (
             <div
               key={showtime.id}
-              className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 lg:flex-row lg:items-center lg:justify-between"
+              className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <p className="text-sm font-medium text-foreground">
+                <p className="min-w-0 text-sm font-medium break-words text-foreground">
                   {showtime.showDateLabel}
                 </p>
                 <span className="inline-flex items-center rounded-full bg-teal-700 px-2.5 py-0.5 text-xs font-medium text-white">
@@ -50,14 +50,14 @@ export function EventGroupCard({ group }: EventGroupCardProps) {
                 ) : null}
               </div>
 
-              <div className="flex shrink-0 flex-wrap gap-2">
-                <Button type="button" size="sm" asChild>
+              <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
+                <Button type="button" size="sm" className="w-full sm:w-auto" asChild>
                   <Link to={ROUTES.reservations}>Show Reservations</Link>
                 </Button>
                 <Button
                   type="button"
                   size="sm"
-                  className="bg-green-600 text-white hover:bg-green-700"
+                  className="w-full bg-green-600 text-white hover:bg-green-700 sm:w-auto"
                   asChild
                 >
                   <Link to={ROUTES.reservations}>Add Reservation</Link>

@@ -3,6 +3,11 @@ import { useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { FormField } from "@/components/forms/form-fields"
+import {
+  AdminPageShell,
+  AdminPageTitle,
+  ADMIN_SPLIT_PANEL_2COL_CLASS,
+} from "@/components/layout/admin-page"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { UserSetupColumn } from "@/features/user-setup/user-setup-column"
@@ -60,13 +65,11 @@ export function CreateUser() {
   }
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">
-        Create User
-      </h1>
+    <AdminPageShell>
+      <AdminPageTitle>Create User</AdminPageTitle>
 
       <PanelCard>
-        <div className="grid lg:grid-cols-2 lg:divide-x">
+        <div className={ADMIN_SPLIT_PANEL_2COL_CLASS}>
           <UserSetupColumn title="Sign Up for Your New Account">
             <div className="mx-auto w-full max-w-sm space-y-4">
               <FormField label="User Name" htmlFor="create-user-name">
@@ -125,6 +128,6 @@ export function CreateUser() {
           <UserSetupFeedback message={message} variant={messageVariant} />
         ) : null}
       </PanelCard>
-    </div>
+    </AdminPageShell>
   )
 }

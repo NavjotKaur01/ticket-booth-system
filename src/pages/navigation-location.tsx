@@ -2,6 +2,14 @@ import { Save } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
+import {
+  AdminPageShell,
+  AdminPageTitle,
+  AdminPanelActions,
+  AdminPanelStats,
+  AdminPanelToolbar,
+  ADMIN_SPLIT_PANEL_NAV_CLASS,
+} from "@/components/layout/admin-page"
 import { Button } from "@/components/ui/button"
 import {
   navigationExcludedLocations,
@@ -71,14 +79,14 @@ export function NavigationLocation() {
   }
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">
+    <AdminPageShell>
+      <AdminPageTitle>
         Administration - Locations NOT to use Navigation Menu(s)
-      </h1>
+      </AdminPageTitle>
 
       <PanelCard>
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2">
-          <p className="text-xs text-muted-foreground">
+        <AdminPanelToolbar>
+          <AdminPanelStats>
             Menu:{" "}
             <span className="font-semibold text-foreground">{selectedMenuLabel}</span>
             {" · "}
@@ -91,9 +99,9 @@ export function NavigationLocation() {
             <span className="font-semibold tabular-nums text-foreground">
               {selectedLocations.length}
             </span>
-          </p>
+          </AdminPanelStats>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <AdminPanelActions>
             <Button type="button" variant="outline" size="sm" onClick={toggleAllLocations}>
               Toggle All Locations
             </Button>
@@ -101,10 +109,10 @@ export function NavigationLocation() {
               <Save className="size-3.5" />
               Update
             </Button>
-          </div>
-        </div>
+          </AdminPanelActions>
+        </AdminPanelToolbar>
 
-        <div className="grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:divide-x">
+        <div className={ADMIN_SPLIT_PANEL_NAV_CLASS}>
           <UserSetupColumn title="Navigation Menu" contentClassName="p-3">
             <NavigationMenuTree
               nodes={navigationMenuTree}
@@ -135,6 +143,6 @@ export function NavigationLocation() {
           <UserSetupFeedback message={message} variant={messageVariant} />
         ) : null}
       </PanelCard>
-    </div>
+    </AdminPageShell>
   )
 }

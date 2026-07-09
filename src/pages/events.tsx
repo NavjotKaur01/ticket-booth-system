@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
+import {
+  AdminPageShell,
+  AdminPageTitle,
+  AdminPanelStats,
+  AdminPanelToolbar,
+} from "@/components/layout/admin-page"
 import { adminEventGroups as initialGroups } from "@/data/admin-events"
 import { EventsFiltersBar } from "@/features/admin-events/events-filters-bar"
 import { EventsList } from "@/features/admin-events/events-list"
@@ -71,10 +77,8 @@ export function Events() {
   }
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">
-        All Events
-      </h1>
+    <AdminPageShell>
+      <AdminPageTitle>All Events</AdminPageTitle>
 
       <PanelCard>
         <EventsFiltersBar
@@ -83,17 +87,17 @@ export function Events() {
           onSearch={handleSearch}
         />
 
-        <div className="border-b px-3 py-2 text-center">
-          <p className="text-sm text-muted-foreground">
+        <AdminPanelToolbar className="py-2">
+          <AdminPanelStats className="sm:ml-auto sm:text-right">
             Total Records found:{" "}
             <span className="font-semibold tabular-nums text-foreground">
               {totalShowtimes}
             </span>
-          </p>
-        </div>
+          </AdminPanelStats>
+        </AdminPanelToolbar>
 
         <EventsList groups={filteredGroups} />
       </PanelCard>
-    </div>
+    </AdminPageShell>
   )
 }

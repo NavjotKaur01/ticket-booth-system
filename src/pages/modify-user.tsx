@@ -3,6 +3,10 @@ import { useEffect, useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { FormField } from "@/components/forms/form-fields"
+import {
+  AdminPageShell,
+  AdminPageTitle,
+} from "@/components/layout/admin-page"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -87,13 +91,11 @@ export function ModifyUser() {
   }
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">
-        Modify Users
-      </h1>
+    <AdminPageShell>
+      <AdminPageTitle>Modify Users</AdminPageTitle>
 
       <PanelCard>
-        <div className="border-b px-4 py-3">
+        <div className="border-b px-3 py-3 sm:px-4">
           <FormField label="Users" htmlFor="modify-user-select">
             <Select
               value={selectedUserId}
@@ -199,6 +201,6 @@ export function ModifyUser() {
           </Button>
         </UserSetupActionBar>
       </PanelCard>
-    </div>
+    </AdminPageShell>
   )
 }

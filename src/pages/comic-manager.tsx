@@ -6,6 +6,13 @@ import {
   FILTER_INPUT_CLASS,
   FILTER_ROW_INNER_CLASS,
 } from "@/components/forms/form-fields"
+import {
+  AdminPageShell,
+  AdminPageTitle,
+  AdminPanelActions,
+  AdminPanelStats,
+  AdminPanelToolbar,
+} from "@/components/layout/admin-page"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -117,14 +124,12 @@ export function ComicManager() {
   }
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">
-        Comic Manager
-      </h1>
+    <AdminPageShell>
+      <AdminPageTitle>Comic Manager</AdminPageTitle>
 
       <PanelCard>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-3 py-3">
-          <div className="flex flex-wrap items-center gap-2">
+        <AdminPanelToolbar className="py-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Button type="button" variant="outline" size="sm" onClick={selectAll}>
               Select All
             </Button>
@@ -149,14 +154,16 @@ export function ComicManager() {
             })}
           </div>
 
-          <Button type="button" size="sm" className="gap-1.5" onClick={handleUpdate}>
-            <Save className="size-3.5" />
-            Update
-          </Button>
-        </div>
+          <AdminPanelActions>
+            <Button type="button" size="sm" className="gap-1.5" onClick={handleUpdate}>
+              <Save className="size-3.5" />
+              Update
+            </Button>
+          </AdminPanelActions>
+        </AdminPanelToolbar>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/20 px-3 py-3">
-          <div className="flex flex-wrap items-center gap-3">
+        <AdminPanelToolbar className="border-t-0 bg-muted/20 py-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
             <p className="text-xs font-medium text-foreground">Filter</p>
             <label className={checklistLabelClass(filterByGenre)}>
               <Checkbox
@@ -174,16 +181,18 @@ export function ComicManager() {
             </label>
           </div>
 
-          <Button
-            type="button"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setAddOpen(true)}
-          >
-            <Plus className="size-3.5" />
-            Add New
-          </Button>
-        </div>
+          <AdminPanelActions>
+            <Button
+              type="button"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setAddOpen(true)}
+            >
+              <Plus className="size-3.5" />
+              Add New
+            </Button>
+          </AdminPanelActions>
+        </AdminPanelToolbar>
 
         <div className={`${FILTER_ROW_INNER_CLASS} border-b px-3 py-3`}>
           <Input
@@ -206,20 +215,20 @@ export function ComicManager() {
           />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-3 py-2">
-          <p className="text-xs text-muted-foreground">
+        <AdminPanelToolbar className="border-t-0 py-2">
+          <AdminPanelStats>
             Selected:{" "}
             <span className="font-semibold tabular-nums text-foreground">
               {selectedIds.length}
             </span>
-          </p>
-          <p className="text-xs text-muted-foreground">
+          </AdminPanelStats>
+          <AdminPanelStats className="sm:text-right">
             Records:{" "}
             <span className="font-semibold tabular-nums text-foreground">
               {filteredRows.length}
             </span>
-          </p>
-        </div>
+          </AdminPanelStats>
+        </AdminPanelToolbar>
 
         <ComicManagerDataTable
           data={filteredRows}
@@ -233,6 +242,6 @@ export function ComicManager() {
       </PanelCard>
 
       <AddPerformerDialog open={addOpen} onOpenChange={setAddOpen} />
-    </div>
+    </AdminPageShell>
   )
 }

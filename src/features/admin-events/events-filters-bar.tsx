@@ -56,7 +56,7 @@ export function EventsFiltersBar({
         value={draftFilters.search}
         onChange={(event) => onFilterChange("search", event.target.value)}
         onKeyDown={handleInputKeyDown}
-        className={`${FILTER_INPUT_CLASS} sm:min-w-56`}
+        className={`${FILTER_INPUT_CLASS} min-w-0 flex-1 sm:min-w-56`}
       />
 
       <IconActionButton

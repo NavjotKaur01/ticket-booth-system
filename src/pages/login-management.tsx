@@ -5,6 +5,12 @@ import {
   FILTER_INPUT_CLASS,
   FILTER_ROW_INNER_CLASS,
 } from "@/components/forms/form-fields"
+import {
+  AdminPageShell,
+  AdminPageTitle,
+  AdminPanelStats,
+  AdminPanelToolbar,
+} from "@/components/layout/admin-page"
 import { Input } from "@/components/ui/input"
 import { customerLogins as initialRecords } from "@/data/customer-logins"
 import { LoginManagementDataTable } from "@/features/login-management/login-management-data-table"
@@ -96,10 +102,8 @@ export function LoginManagement() {
   }
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">
-        Customer Login Management
-      </h1>
+    <AdminPageShell>
+      <AdminPageTitle>Customer Login Management</AdminPageTitle>
 
       <LoginManagementFiltersCard
         filters={draftSearch}
@@ -153,17 +157,17 @@ export function LoginManagement() {
           />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-3 py-2">
-          <p className="text-xs text-muted-foreground">
+        <AdminPanelToolbar className="py-2">
+          <p className="hidden text-xs text-muted-foreground sm:block">
             Drag a column header here to group by that column
           </p>
-          <p className="shrink-0 text-xs text-muted-foreground">
+          <AdminPanelStats className="sm:ml-auto sm:text-right">
             Records:{" "}
             <span className="font-semibold tabular-nums text-foreground">
               {filteredRows.length}
             </span>
-          </p>
-        </div>
+          </AdminPanelStats>
+        </AdminPanelToolbar>
 
         <LoginManagementDataTable data={filteredRows} onEdit={handleEdit} />
       </PanelCard>
@@ -174,6 +178,6 @@ export function LoginManagement() {
         record={editingRecord}
         onSaved={handleSave}
       />
-    </div>
+    </AdminPageShell>
   )
 }

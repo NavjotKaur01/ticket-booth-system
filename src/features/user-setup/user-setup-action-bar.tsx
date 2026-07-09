@@ -11,7 +11,7 @@ export function UserSetupActionBar({ children, className }: UserSetupActionBarPr
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-2 border-t px-3 py-2",
+        "flex flex-wrap items-center justify-end gap-2 border-t px-3 py-2",
         className
       )}
     >
