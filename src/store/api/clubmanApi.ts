@@ -103,6 +103,8 @@ import type { CustomerFormValues } from "@/types/customer-form"
 import type { BusinessContactFormValues } from "@/types/business-contact"
 import type { BusinessContactSearchFilters } from "@/types/business-contact"
 import type { PromotionFilters } from "@/types/promotion"
+import type { ReservationDetail } from "@/types/api/reservation-detail"
+import type { ReservationPrintProperties } from "@/types/api/reservation-print"
 
 export const clubmanApi = createApi({
   reducerPath: "clubmanApi",
@@ -132,6 +134,41 @@ export const clubmanApi = createApi({
         { type: "Location", id: clubSlug },
       ],
     }),
+
+    getReservationDetailById: builder.query<
+      ReservationDetail,
+      { connectionName: string; reservationId: string }
+    >({
+      query: ({ connectionName, reservationId }) => ({
+        url: reservationApiPath(
+          connectionName,
+          reservationId,
+          "GetReservationDetailById"
+        ),
+        headers: { Accept: "application/json" },
+      }),
+      transformResponse: (response: unknown) => mapReservationDetail(response),
+      providesTags: (_result, _error, arg) => [
+        { type: "Reservation", id: `detail:${arg.reservationId}` },
+      ],
+    }),
+
+    getReservationPrintProperties: builder.query<
+      ReservationPrintProperties,
+      { connectionName: string; reservationId: string }
+    >({
+      query: ({ connectionName, reservationId }) => ({
+        url: reservationApiPath(
+          connectionName,
+          reservationId,
+          "GetReservationPrintProperties"
+        ),
+        headers: { Accept: "application/json" },
+      }),
+      transformResponse: (response: { Data: ReservationPrintProperties } | ReservationPrintProperties) => 
+        'Data' in response ? response.Data : response,
+    }),
+
 
     accountLogin: builder.mutation<ApiUserCredentials, AccountLoginRequest>({
       async queryFn(request) {
@@ -681,26 +718,6 @@ export const clubmanApi = createApi({
       invalidatesTags: ["Reservation", "ShowDetails"],
     }),
 
-    getReservationDetailById: builder.query({
-      query: ({
-        connectionString,
-        reservationId,
-      }: {
-        connectionString: string
-        reservationId: string
-      }) => ({
-        url: reservationApiPath(
-          connectionString,
-          reservationId,
-          "GetReservationDetailById"
-        ),
-        headers: { Accept: "application/json" },
-      }),
-      transformResponse: (response: unknown) => mapReservationDetail(response),
-      providesTags: (_result, _error, arg) => [
-        { type: "Reservation", id: `detail:${arg.reservationId}` },
-      ],
-    }),
 
     getReservationHistoryById: builder.query({
       query: ({

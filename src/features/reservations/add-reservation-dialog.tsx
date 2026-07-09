@@ -622,6 +622,7 @@ function BookingOptionsBar({
   onShowTimeFocus,
   dinner,
   onDinnerChange,
+  dinnerDisabled,
   showsLoading
 }: {
   shows: typeof showOptions
@@ -635,6 +636,7 @@ function BookingOptionsBar({
   onShowTimeFocus: () => void
   dinner: boolean
   onDinnerChange: (value: boolean) => void
+  dinnerDisabled: boolean
   showsLoading: boolean
 }) {
   return (
@@ -660,12 +662,13 @@ function BookingOptionsBar({
           </span>
         )}
 
-        <label className='flex shrink-0 cursor-pointer items-center gap-2 text-sm whitespace-nowrap'>
+        <label className={cn('flex shrink-0 items-center gap-2 text-sm whitespace-nowrap', dinnerDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer')}>
           <Checkbox
             id='dinner'
             tabIndex={-1}
             checked={dinner}
             onCheckedChange={checked => onDinnerChange(Boolean(checked))}
+            disabled={dinnerDisabled}
           />
           Dinner
         </label>
@@ -964,6 +967,7 @@ function ShowMetaRow({
   onOpenComicInfo,
   dinner,
   onDinnerChange,
+  dinnerDisabled,
   showsLoading
 }: {
   comicName: string
@@ -983,6 +987,7 @@ function ShowMetaRow({
   onOpenComicInfo: () => void
   dinner: boolean
   onDinnerChange: (value: boolean) => void
+  dinnerDisabled: boolean
   showsLoading: boolean
 }) {
   return (
@@ -1020,6 +1025,7 @@ function ShowMetaRow({
         onShowTimeFocus={onShowTimeFocus}
         dinner={dinner}
         onDinnerChange={onDinnerChange}
+        dinnerDisabled={dinnerDisabled}
         showsLoading={showsLoading}
       />
     </div>
@@ -1060,6 +1066,7 @@ export function AddReservationDialog({
         section: string
         partyBySection: Record<string, number>
         promo: string
+        dinner: boolean
       }
     >
   >(new Map())
@@ -1184,6 +1191,7 @@ export function AddReservationDialog({
       )
       setPartyBySection(cachedForm.partyBySection)
       setPromo(cachedForm.promo)
+      setDinner(cachedForm.dinner)
       return
     }
 
@@ -1203,6 +1211,7 @@ export function AddReservationDialog({
         availableSections.map(option => [option.id, 0])
       ) as Record<string, number>
     )
+    setDinner(false)
   }, [open, activeShowTime, availableSections, isEditMode, sectionsLoading])
 
   useEffect(() => {
@@ -1501,6 +1510,16 @@ export function AddReservationDialog({
     dialogScrollRef.current?.scrollTo({ top: 0 })
   }
 
+  function changeSection(newSectionId: string) {
+    if (section !== newSectionId) {
+      setSection(newSectionId)
+      const matched = availableSections.find(s => s.id === newSectionId)
+      if (matched) {
+        setDinner(false)
+      }
+    }
+  }
+
   function handlePartyInputKeyDown(
     event: KeyboardEvent<HTMLInputElement>,
     sectionId: string
@@ -1516,7 +1535,7 @@ export function AddReservationDialog({
       return
     }
 
-    setSection(sectionId)
+    changeSection(sectionId)
     focusLastNameInput()
   }
 
@@ -1880,7 +1899,8 @@ export function AddReservationDialog({
     bookingFormCacheRef.current.set(showId, {
       section,
       partyBySection: { ...partyBySection },
-      promo
+      promo,
+      dinner
     })
   }
 
@@ -2013,7 +2033,7 @@ export function AddReservationDialog({
     setShowPartyRequiredError(false)
 
     if (value > 0) {
-      setSection(sectionId)
+      changeSection(sectionId)
     }
 
     setPartyBySection(current => ({
@@ -2143,6 +2163,7 @@ export function AddReservationDialog({
                     onOpenComicInfo={() => setComicInfoOpen(true)}
                     dinner={dinner}
                     onDinnerChange={setDinner}
+                    dinnerDisabled={availableSections.find(s => s.id === section)?.showDinner === 'N'}
                     showsLoading={showsLoading}
                   />
 
@@ -2152,7 +2173,7 @@ export function AddReservationDialog({
                     section={section}
                     onSectionChange={value => {
                       handleReservationInputChange()
-                      setSection(value)
+                      changeSection(value)
                     }}
                     partyBySection={partyBySection}
                     onPartyChange={setSectionParty}

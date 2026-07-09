@@ -27,6 +27,8 @@ export type TicketPrintReservation = {
   paymentType: string
   source: string
   section: string
+  tables: string | null
+  seatNumbers: string | null
 }
 
 export type TicketPrintText = {
@@ -58,6 +60,8 @@ export type CreateTicketPrintDataParams = {
   paymentType: string
   source: string
   section: string
+  tables?: string | null
+  seatNumbers?: string | null
   showDate: string
   showLabel?: string
   locationName?: string
