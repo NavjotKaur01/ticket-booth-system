@@ -1381,7 +1381,7 @@ export function AddReservationDialog({
 
         const matchedShow = availableShows.find(
           (show) =>
-            showTimeLabelsMatch(show.time, preferredShowTimeLabel) ||
+            (show.time && showTimeLabelsMatch(show.time, preferredShowTimeLabel)) ||
             show.label.toUpperCase().includes(normalizedPreferred)
         )
 
