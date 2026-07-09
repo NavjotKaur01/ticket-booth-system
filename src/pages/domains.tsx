@@ -33,6 +33,10 @@ export function Domains() {
     )
   }
 
+  function handleDelete(domain: Domain) {
+    setRecords((current) => current.filter((record) => record.id !== domain.id))
+  }
+
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-semibold tracking-tight text-foreground">
@@ -58,7 +62,11 @@ export function Domains() {
           </Button>
         </div>
 
-        <DomainDataTable data={records} onEdit={setEditingDomain} />
+        <DomainDataTable
+          data={records}
+          onEdit={setEditingDomain}
+          onDelete={handleDelete}
+        />
       </PanelCard>
 
       <AddDomainDialog

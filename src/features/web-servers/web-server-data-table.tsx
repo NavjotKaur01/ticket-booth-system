@@ -8,14 +8,19 @@ type WebServerDataTableProps = {
   data: WebServer[]
   loading?: boolean
   onEdit: (server: WebServer) => void
+  onDelete: (server: WebServer) => void
 }
 
 export function WebServerDataTable({
   data,
   loading = false,
   onEdit,
+  onDelete,
 }: WebServerDataTableProps) {
-  const columns = useMemo(() => getWebServerColumns({ onEdit }), [onEdit])
+  const columns = useMemo(
+    () => getWebServerColumns({ onEdit, onDelete }),
+    [onEdit, onDelete]
+  )
 
   return (
     <DataTable

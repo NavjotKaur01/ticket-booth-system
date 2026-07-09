@@ -24,6 +24,10 @@ export function WebServers() {
     )
   }
 
+  function handleDelete(server: WebServer) {
+    setRecords((current) => current.filter((record) => record.id !== server.id))
+  }
+
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-semibold tracking-tight text-foreground">
@@ -52,6 +56,7 @@ export function WebServers() {
         <WebServerDataTable
           data={records}
           onEdit={setEditingServer}
+          onDelete={handleDelete}
         />
       </PanelCard>
 

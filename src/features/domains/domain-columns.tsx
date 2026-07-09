@@ -1,32 +1,20 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
+import type { StandardRowAction } from "@/components/common/standard-row-actions-menu"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { Button } from "@/components/ui/button"
+import { dataTableActionsColumn } from "@/components/data-table/data-table-actions-column"
 import type { Domain } from "@/types/domain"
 
 type GetDomainColumnsParams = {
   onEdit: (domain: Domain) => void
+  onDelete: (domain: Domain) => void
 }
 
 export function getDomainColumns({
   onEdit,
+  onDelete,
 }: GetDomainColumnsParams): ColumnDef<Domain>[] {
   return [
-    {
-      id: "edit",
-      header: "#",
-      enableSorting: false,
-      cell: ({ row }) => (
-        <Button
-          type="button"
-          variant="link"
-          className="h-auto p-0 text-xs"
-          onClick={() => onEdit(row.original)}
-        >
-          Edit
-        </Button>
-      ),
-    },
     {
       accessorKey: "domainName",
       header: ({ column }) => (
@@ -62,5 +50,18 @@ export function getDomainColumns({
         <span className="tabular-nums">{row.original.processingOrder}</span>
       ),
     },
+    dataTableActionsColumn<Domain>({
+      ariaLabel: "Domain actions",
+      hiddenActions: ["Add"] satisfies readonly StandardRowAction[],
+      onAction: (record, action) => {
+        if (action === "Edit") {
+          onEdit(record)
+          return
+        }
+        if (action === "Delete") {
+          onDelete(record)
+        }
+      },
+    }),
   ]
 }
