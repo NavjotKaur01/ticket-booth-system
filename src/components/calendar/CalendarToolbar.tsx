@@ -1,4 +1,4 @@
-﻿import type { ToolbarProps, View } from "react-big-calendar"
+import type { ToolbarProps, View } from "react-big-calendar"
 import {
   CalendarDays,
   CalendarRange,
@@ -121,7 +121,7 @@ export default function CalendarToolbar({
               className={cn(
                 "h-7 flex-1 gap-1 rounded-sm border border-transparent px-2 text-muted-foreground hover:bg-background hover:text-foreground sm:flex-none",
                 view === value &&
-                  "border-border bg-background text-foreground shadow-xs hover:bg-background hover:text-foreground"
+                "border-border bg-background text-foreground shadow-xs hover:bg-background hover:text-foreground"
               )}
               aria-pressed={view === value}
             >
