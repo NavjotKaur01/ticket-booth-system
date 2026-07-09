@@ -23,6 +23,7 @@ export type ReservationDataItem = {
   PaidForFirstName: string | null
   EmailAddress: string | null
   SeatNumbers: string | null
+  Phone?: string | null
   AreaCode?: string | null
   Phone1?: string | null
   Phone2?: string | null
