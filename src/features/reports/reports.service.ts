@@ -278,7 +278,7 @@ const PERM_DESC_TO_REPORT_ID: Record<string, string> = {
   "ZipCode Breakdown": "zipcode-breakdown",
 }
 
-const EXCLUDED_PERM_DESCS = new Set(["ZipCode Sales"])
+const EXCLUDED_PERM_DESCS = new Set(["ZipCode Sales", "Ticket Price Breakdown"])
 
 function normalizePermDesc(desc: string): string {
   return desc.trim().replace(/\//g, "\\").replace(/\s+/g, " ").toLowerCase()
@@ -326,7 +326,6 @@ export const DEFAULT_REPORT_VIEWER_OPTIONS: ReportViewerOption[] = [
   { id: "sales-by-day", label: "Sales By Day" },
   { id: "sales-by-show", label: "Sales By Show" },
   { id: "today-sales", label: "Today Sales" },
-  { id: "ticket-price-breakdown", label: "Ticket Price Breakdown" },
   { id: "web-counts", label: "Web Counts" },
   { id: "web-gift-certificates", label: "Web Gift Certificates" },
   { id: "web-reservations-for-day", label: "Web Reservations for Day" },
@@ -342,9 +341,9 @@ function ensureTodaySalesOption(options: ReportViewerOption[]): ReportViewerOpti
   }
 
   const next = [...options]
-  const ticketPriceIdx = next.findIndex((option) => option.id === "ticket-price-breakdown")
-  if (ticketPriceIdx >= 0) {
-    next.splice(ticketPriceIdx, 0, TODAY_SALES_OPTION)
+  const insertIdx = next.findIndex((option) => option.id === "web-counts")
+  if (insertIdx >= 0) {
+    next.splice(insertIdx, 0, TODAY_SALES_OPTION)
   } else {
     next.push(TODAY_SALES_OPTION)
   }

@@ -1069,6 +1069,15 @@ export const clubmanApi = createApi({
       invalidatesTags: ["Calendar"],
     }),
 
+    unCancelShow: builder.mutation<unknown, ShowRequestModel>({
+      query: (body) => ({
+        url: calendarApiPath("UnCancelShow"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Calendar"],
+    }),
+
     getShowData: builder.query<
       ApiShowData[],
       { connectionName: string; showId: string }
@@ -1152,6 +1161,7 @@ export const {
   useUpdateComedianImageMutation,
   useDeleteComedianImageMutation,
   useCancelShowMutation,
+  useUnCancelShowMutation,
   useGetShowDataQuery,
   useLazyGetShowDataQuery,
   useGetShowPropertiesQuery,

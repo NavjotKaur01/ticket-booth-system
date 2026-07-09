@@ -242,16 +242,16 @@ function buildTicketMarkup(
   const footerText = isReprint ? ticket.text.reprintFooter : ticket.text.printFooter
   const tablesList = ticket.reservation.tables ? ticket.reservation.tables.split(",").map(s => s.trim()) : []
   const tableNo = ticketIndex !== undefined && tablesList.length > ticketIndex ? tablesList[ticketIndex] : ticket.reservation.tables || ""
-  
+
   const seatsList = ticket.reservation.seatNumbers ? ticket.reservation.seatNumbers.split(",").map(s => {
     const match = s.trim().match(/#\d+\$(\d+)/)
     return match ? match[1] : s.trim()
   }) : []
-  const ticketNo = ticketIndex !== undefined && seatsList.length > ticketIndex ? seatsList[ticketIndex] : (1001 + (ticketIndex || 0)).toString()
-  
+  const seatNo = ticketIndex !== undefined && seatsList.length > ticketIndex ? seatsList[ticketIndex] : (1001 + (ticketIndex || 0)).toString()
+
   const headerBox = ticketIndex !== undefined ? `
       <div class="ticket-header-box">
-        TABLE NO: ${escapeHtml(tableNo)} &nbsp;|&nbsp; TICKET NO: ${escapeHtml(ticketNo)}
+        TABLE NO: ${escapeHtml(tableNo)} &nbsp;|&nbsp; SEAT NO: ${escapeHtml(seatNo)}
       </div>` : ""
 
   return `

@@ -34,6 +34,7 @@ import {
 import { mapCalendarEventToRecurrenceState } from "@/lib/recurrence/map-calendar-event-to-recurrence"
 import type { CalendarEvent } from "@/types/calendar-event"
 import type { RecurrenceFormValue, RecurrenceState } from "@/types/recurrence"
+import { useUnCancelShowMutation } from "@/store/api/clubmanApi"
 
 const localizer = dayjsLocalizer(dayjs)
 const DEFAULT_REFRESH_SECONDS = 30
@@ -121,6 +122,7 @@ export default function EventCalendar() {
   const [isAddShowOpen, setIsAddShowOpen] = useState(false)
   const [isPastDateAlertOpen, setIsPastDateAlertOpen] = useState(false)
   const suppressNextSlotSelectionRef = useRef(false)
+  const [unCancelShow] = useUnCancelShowMutation()
 
   const { events, loading, error, refetch } = useCalendarEvents(
     connectionName,
@@ -177,6 +179,15 @@ export default function EventCalendar() {
 
       if (!isTodayOrFuture(actionDate) && shouldBlockPastDateAction(action)) {
         setIsPastDateAlertOpen(true)
+        return
+      }
+
+      if (action.id === "uncancel-show") {
+        unCancelShow({
+          ConnectionString: connectionName,
+          CalendarShowId: event.id,
+          LocationId: locationId,
+        })
         return
       }
 

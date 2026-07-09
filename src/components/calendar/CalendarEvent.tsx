@@ -32,12 +32,12 @@ export default function CalendarEventCard({ event, onActionSelect }: CalendarEve
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-0.5 sm:gap-1">
-          <span className="calendar-event-accent block h-2.5 w-0.5 rounded-lg bg-primary sm:h-3" />
-          <div className={`truncate font-semibold ${event.cancelled ? "text-muted-foreground line-through" : "text-primary"}`}>
+          <span className={`calendar-event-accent block h-2.5 w-0.5 rounded-lg sm:h-3 ${event.cancelled ? "bg-destructive" : "bg-primary"}`} />
+          <div className={`truncate font-semibold ${event.cancelled ? "text-destructive line-through" : "text-primary"}`}>
             {event.performer}
           </div>
         </div>
-        <div className="truncate text-muted-foreground">
+        <div className={`truncate ${event.cancelled ? "text-destructive" : "text-muted-foreground"}`}>
           <span className="hidden sm:inline">
             {event.seats.sold}/{event.seats.comp}/{event.seats.capacity}{" "}
           </span>
@@ -45,7 +45,7 @@ export default function CalendarEventCard({ event, onActionSelect }: CalendarEve
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-0.5">
-        <span className="hidden font-medium text-muted-foreground md:inline">
+        <span className={`hidden font-medium md:inline ${event.cancelled ? "text-destructive line-through" : "text-muted-foreground"}`}>
           {event.status}
         </span>
         <DropdownMenu>
@@ -74,18 +74,24 @@ export default function CalendarEventCard({ event, onActionSelect }: CalendarEve
               window.dispatchEvent(new CustomEvent(CALENDAR_ACTION_MENU_OUTSIDE_INTERACTION))
             }}
           >
-            {calendarEventActions.map((action) => (
-              <DropdownMenuItem
-                key={action.id}
-                className="items-center rounded-sm px-2 py-1 text-xs focus:bg-primary/10 focus:text-primary sm:py-1.5 sm:text-sm"
-                onSelect={(menuEvent) => {
-                  menuEvent.stopPropagation()
-                  onActionSelect?.(action.id, event)
-                }}
-              >
-                {action.label}
-              </DropdownMenuItem>
-            ))}
+            {calendarEventActions
+              .filter((action) => {
+                if (action.id === "cancel-show" && event.cancelled) return false
+                if (action.id === "uncancel-show" && !event.cancelled) return false
+                return true
+              })
+              .map((action) => (
+                <DropdownMenuItem
+                  key={action.id}
+                  className="items-center rounded-sm px-2 py-1 text-xs focus:bg-primary/10 focus:text-primary sm:py-1.5 sm:text-sm"
+                  onSelect={(menuEvent) => {
+                    menuEvent.stopPropagation()
+                    onActionSelect?.(action.id, event)
+                  }}
+                >
+                  {action.label}
+                </DropdownMenuItem>
+              ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
