@@ -5,7 +5,7 @@ import {
   createFilterSearchHandlers,
   FILTER_EMAIL_CLASS,
   FILTER_INPUT_CLASS,
-  FILTER_ROW_CLASS,
+  FILTER_ROW_INNER_CLASS,
   IconActionButton,
 } from "@/components/forms/form-fields"
 import { Input } from "@/components/ui/input"
@@ -26,7 +26,10 @@ export function TransactionLogFiltersCard({
 
   return (
     <PanelCard>
-      <form className={FILTER_ROW_CLASS} onSubmit={handleSubmit}>
+      <form
+        className={`${FILTER_ROW_INNER_CLASS} border-b px-3 py-3`}
+        onSubmit={handleSubmit}
+      >
         <Input
           placeholder="Customer Email"
           value={filters.email}
@@ -49,7 +52,7 @@ export function TransactionLogFiltersCard({
           className={FILTER_INPUT_CLASS}
         />
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 sm:ml-auto">
           <IconActionButton
             label="Search"
             icon={Search}

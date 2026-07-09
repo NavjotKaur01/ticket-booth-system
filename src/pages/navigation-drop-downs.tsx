@@ -1,6 +1,12 @@
 import { useCallback, useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
+import {
+  AdminPageShell,
+  AdminPageTitle,
+  AdminPanelStats,
+  AdminPanelToolbar,
+} from "@/components/layout/admin-page"
 import { navigationDropdownParents as initialParents } from "@/data/navigation-admin"
 import { NavigationDropDownItemDialog } from "@/features/navigation-admin/navigation-dropdown-item-dialog"
 import { NavigationDropdownList } from "@/features/navigation-admin/navigation-dropdown-list"
@@ -71,14 +77,12 @@ export function NavigationDropDowns() {
   }
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">
-        Drop Downs Management
-      </h1>
+    <AdminPageShell>
+      <AdminPageTitle>Drop Downs Management</AdminPageTitle>
 
       <PanelCard>
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2">
-          <p className="text-xs text-muted-foreground">
+        <AdminPanelToolbar>
+          <AdminPanelStats>
             Navigation items:{" "}
             <span className="font-semibold tabular-nums text-foreground">
               {parents.length}
@@ -88,8 +92,8 @@ export function NavigationDropDowns() {
             <span className="font-semibold tabular-nums text-foreground">
               {totalDropDowns}
             </span>
-          </p>
-        </div>
+          </AdminPanelStats>
+        </AdminPanelToolbar>
 
         <NavigationDropdownList
           parents={parents}
@@ -105,6 +109,6 @@ export function NavigationDropDowns() {
         item={editingItem}
         onSaved={handleSave}
       />
-    </div>
+    </AdminPageShell>
   )
 }

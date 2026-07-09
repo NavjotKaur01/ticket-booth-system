@@ -5,7 +5,7 @@ import {
   createFilterSearchHandlers,
   FILTER_EMAIL_CLASS,
   FILTER_INPUT_CLASS,
-  FormField,
+  FILTER_ROW_INNER_CLASS,
   IconActionButton,
 } from "@/components/forms/form-fields"
 import { Input } from "@/components/ui/input"
@@ -27,47 +27,37 @@ export function LoginManagementFiltersCard({
   return (
     <PanelCard>
       <form
-        className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-4"
+        className={`${FILTER_ROW_INNER_CLASS} border-b px-3 py-3`}
         onSubmit={handleSubmit}
       >
-        <FormField label="Customer Email" htmlFor="login-mgmt-email">
-          <Input
-            id="login-mgmt-email"
-            value={filters.email}
-            onChange={(event) => onFilterChange("email", event.target.value)}
-            onKeyDown={handleInputKeyDown}
-            className={FILTER_EMAIL_CLASS}
-          />
-        </FormField>
+        <Input
+          placeholder="Customer Email"
+          value={filters.email}
+          onChange={(event) => onFilterChange("email", event.target.value)}
+          onKeyDown={handleInputKeyDown}
+          className={FILTER_EMAIL_CLASS}
+        />
+        <Input
+          placeholder="Customer First Name"
+          value={filters.firstName}
+          onChange={(event) => onFilterChange("firstName", event.target.value)}
+          onKeyDown={handleInputKeyDown}
+          className={FILTER_INPUT_CLASS}
+        />
+        <Input
+          placeholder="Customer Last Name"
+          value={filters.lastName}
+          onChange={(event) => onFilterChange("lastName", event.target.value)}
+          onKeyDown={handleInputKeyDown}
+          className={FILTER_INPUT_CLASS}
+        />
 
-        <FormField label="Customer First Name" htmlFor="login-mgmt-first-name">
-          <Input
-            id="login-mgmt-first-name"
-            value={filters.firstName}
-            onChange={(event) => onFilterChange("firstName", event.target.value)}
-            onKeyDown={handleInputKeyDown}
-            className={FILTER_INPUT_CLASS}
-          />
-        </FormField>
-
-        <FormField label="Customer Last Name" htmlFor="login-mgmt-last-name">
-          <Input
-            id="login-mgmt-last-name"
-            value={filters.lastName}
-            onChange={(event) => onFilterChange("lastName", event.target.value)}
-            onKeyDown={handleInputKeyDown}
-            className={FILTER_INPUT_CLASS}
-          />
-        </FormField>
-
-        <div className="flex items-end">
-          <IconActionButton
-            label="Search"
-            icon={Search}
-            variant="default"
-            type="submit"
-          />
-        </div>
+        <IconActionButton
+          label="Search"
+          icon={Search}
+          variant="default"
+          type="submit"
+        />
       </form>
     </PanelCard>
   )

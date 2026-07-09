@@ -2,6 +2,13 @@ import { Plus } from "lucide-react"
 import { useCallback, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
+import {
+  AdminPageShell,
+  AdminPageTitle,
+  AdminPanelActions,
+  AdminPanelStats,
+  AdminPanelToolbar,
+} from "@/components/layout/admin-page"
 import { Button } from "@/components/ui/button"
 import { navigationManagementRecords as initialRecords } from "@/data/navigation-admin"
 import { NavigationManagementDataTable } from "@/features/navigation-admin/navigation-management-data-table"
@@ -38,29 +45,29 @@ export function NavigationManagement() {
   }
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">
-        Navigation Menu Management
-      </h1>
+    <AdminPageShell>
+      <AdminPageTitle>Navigation Menu Management</AdminPageTitle>
 
       <PanelCard>
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2">
-          <p className="text-xs text-muted-foreground">
+        <AdminPanelToolbar>
+          <AdminPanelStats>
             Records:{" "}
             <span className="font-semibold tabular-nums text-foreground">
               {records.length}
             </span>
-          </p>
-          <Button
-            type="button"
-            size="sm"
-            className="gap-1.5"
-            onClick={openCreate}
-          >
-            <Plus className="size-3.5" />
-            New
-          </Button>
-        </div>
+          </AdminPanelStats>
+          <AdminPanelActions>
+            <Button
+              type="button"
+              size="sm"
+              className="gap-1.5"
+              onClick={openCreate}
+            >
+              <Plus className="size-3.5" />
+              New
+            </Button>
+          </AdminPanelActions>
+        </AdminPanelToolbar>
 
         <NavigationManagementDataTable
           data={records}
@@ -75,6 +82,6 @@ export function NavigationManagement() {
         record={editingRecord}
         onSaved={handleSave}
       />
-    </div>
+    </AdminPageShell>
   )
 }

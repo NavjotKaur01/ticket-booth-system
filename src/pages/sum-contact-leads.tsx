@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
+import {
+  AdminPageShell,
+  AdminPageTitle,
+  AdminPanelStats,
+  AdminPanelToolbar,
+  ADMIN_SECTION_BANNER_CLASS,
+  ADMIN_SECTION_BANNER_TEXT_CLASS,
+} from "@/components/layout/admin-page"
 import { sumContactLeads as initialRecords } from "@/data/sum-contact-leads"
 import { SumContactLeadDataTable } from "@/features/sum-contact-leads/sum-contact-lead-data-table"
 import { useAppSession } from "@/hooks/use-app-session"
@@ -41,32 +49,28 @@ export function SumContactLeads() {
   }, [locationId, records])
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">
-        {pageTitle}
-      </h1>
+    <AdminPageShell>
+      <AdminPageTitle>{pageTitle}</AdminPageTitle>
 
       <PanelCard>
-        <div className="border-b bg-muted/30 px-3 py-2">
-          <p className="text-center text-xs font-semibold tracking-wide text-foreground uppercase">
-            {pageTitle}
-          </p>
+        <div className={ADMIN_SECTION_BANNER_CLASS}>
+          <p className={ADMIN_SECTION_BANNER_TEXT_CLASS}>{pageTitle}</p>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2">
-          <p className="text-xs text-muted-foreground">
+        <AdminPanelToolbar>
+          <p className="hidden text-xs text-muted-foreground sm:block">
             Drag a column header here to group by that column
           </p>
-          <p className="shrink-0 text-xs text-muted-foreground">
+          <AdminPanelStats className="sm:ml-auto sm:text-right">
             Records:{" "}
             <span className="font-semibold tabular-nums text-foreground">
               {filteredRecords.length}
             </span>
-          </p>
-        </div>
+          </AdminPanelStats>
+        </AdminPanelToolbar>
 
         <SumContactLeadDataTable data={filteredRecords} />
       </PanelCard>
-    </div>
+    </AdminPageShell>
   )
 }

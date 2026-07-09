@@ -67,8 +67,8 @@ function DropDownPanel({
 }: DropDownPanelProps) {
   return (
     <div className="w-full rounded-lg border border-border bg-background">
-      <div className="flex items-center justify-between gap-3 border-b px-4 py-2.5">
-        <p className="text-sm font-semibold text-foreground">
+      <div className="flex flex-col gap-3 border-b px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+        <p className="min-w-0 text-sm font-semibold text-foreground">
           Drop Downs
           <span className="ml-1.5 font-normal text-muted-foreground">
             ({parent.dropDowns.length})
@@ -77,7 +77,7 @@ function DropDownPanel({
         <Button
           type="button"
           size="sm"
-          className="gap-1.5"
+          className="w-full gap-1.5 sm:w-auto"
           onClick={() => onAddDropDown(parent.id)}
         >
           <Plus className="size-3.5" />
@@ -211,7 +211,7 @@ export function NavigationDropdownList({
         header: "Navigation URL",
         cell: ({ row }) => (
           <span
-            className="block text-sm text-muted-foreground"
+            className="block max-w-48 truncate text-sm text-muted-foreground sm:max-w-xs md:max-w-md lg:max-w-lg"
             title={row.original.navigationUrl || undefined}
           >
             {row.original.navigationUrl || "—"}
@@ -233,7 +233,7 @@ export function NavigationDropdownList({
   return (
     <div className="overflow-hidden bg-card">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] caption-bottom text-sm">
+        <table className="w-full min-w-[640px] caption-bottom text-sm sm:min-w-[720px]">
           <colgroup>
             <col className="w-14" />
             <col className="w-[22%]" />

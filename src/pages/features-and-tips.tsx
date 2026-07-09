@@ -2,6 +2,15 @@ import { Plus } from "lucide-react"
 import { useCallback, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
+import {
+  AdminPageShell,
+  AdminPageTitle,
+  AdminPanelActions,
+  AdminPanelStats,
+  AdminPanelToolbar,
+  ADMIN_SECTION_BANNER_CLASS,
+  ADMIN_SECTION_BANNER_TEXT_CLASS,
+} from "@/components/layout/admin-page"
 import { Button } from "@/components/ui/button"
 import { featureTips as initialRecords } from "@/data/feature-tips"
 import { FeatureTipDialog } from "@/features/features-and-tips/feature-tip-dialog"
@@ -38,35 +47,33 @@ export function FeaturesAndTips() {
   }
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">
-        News, Features, and Tips
-      </h1>
+    <AdminPageShell>
+      <AdminPageTitle>News, Features, and Tips</AdminPageTitle>
 
       <PanelCard>
-        <div className="border-b bg-muted/30 px-3 py-2">
-          <p className="text-center text-xs font-semibold tracking-wide text-foreground uppercase">
+        <div className={ADMIN_SECTION_BANNER_CLASS}>
+          <p className={ADMIN_SECTION_BANNER_TEXT_CLASS}>
             News, Features, and Tips for Dashboard Home Page
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2">
-          <p className="text-xs text-muted-foreground">
+        <AdminPanelToolbar>
+          <p className="hidden text-xs text-muted-foreground sm:block">
             Drag a column header here to group by that column
           </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs text-muted-foreground">
+          <AdminPanelActions className="sm:ml-auto">
+            <AdminPanelStats>
               Records:{" "}
               <span className="font-semibold tabular-nums text-foreground">
                 {records.length}
               </span>
-            </p>
+            </AdminPanelStats>
             <Button type="button" size="sm" className="gap-1.5" onClick={openCreate}>
               <Plus className="size-3.5" />
               New
             </Button>
-          </div>
-        </div>
+          </AdminPanelActions>
+        </AdminPanelToolbar>
 
         <FeatureTipsDataTable
           data={records}
@@ -82,6 +89,6 @@ export function FeaturesAndTips() {
         onSaved={handleSave}
         onDelete={handleDelete}
       />
-    </div>
+    </AdminPageShell>
   )
 }
