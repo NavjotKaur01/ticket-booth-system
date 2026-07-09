@@ -25,11 +25,8 @@ import {
   shouldBlockPastDateAction,
   type CalendarActionId,
 } from "./calendar-actions"
-import { useAuth } from "@/contexts/auth-context"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useCalendarEvents } from "@/hooks/use-calendar-events"
-import { useLocations } from "@/hooks/use-locations"
-import { findLocationById } from "@/lib/api/locations"
 import {
   mapRecurrenceFormToState,
   validateRecurrenceForm,
@@ -79,17 +76,13 @@ function buildTime(hour: number, minute = 0) {
 }
 
 export default function EventCalendar() {
-  const { switchLocation } = useAuth()
   const {
     connectionName,
     locationId,
     locationName,
-    clubSlug,
     username,
     isReady,
   } = useAppSession()
-  const { locations, loading: locationsLoading } = useLocations(clubSlug)
-
   const [showCancelled, setShowCancelled] = useState(false)
   const [refreshInterval, setRefreshInterval] = useState(DEFAULT_REFRESH_SECONDS)
   const [calendarDate, setCalendarDate] = useState(() => new Date())
@@ -171,15 +164,6 @@ export default function EventCalendar() {
     }
   }, [suppressNextSlotSelection])
 
-  const handleLocationChange = useCallback(
-    (nextLocationId: string) => {
-      const location = findLocationById(nextLocationId, locations)
-      if (location) {
-        switchLocation(location)
-      }
-    },
-    [locations, switchLocation]
-  )
 
   const handleCalendarActionSelect = useCallback(
     (actionId: CalendarActionId, event: CalendarEvent) => {
@@ -378,10 +362,6 @@ export default function EventCalendar() {
       toolbar: (props: ToolbarProps<CalendarEvent>) => (
         <CalendarToolbar
           {...props}
-          locationId={locationId}
-          onLocationChange={handleLocationChange}
-          locations={locations}
-          locationsLoading={locationsLoading}
           showCancelled={showCancelled}
           setShowCancelled={setShowCancelled}
           refreshInterval={refreshInterval}
@@ -408,10 +388,6 @@ export default function EventCalendar() {
       ),
     }),
     [
-      locationId,
-      handleLocationChange,
-      locations,
-      locationsLoading,
       showCancelled,
       refreshInterval,
       refetch,

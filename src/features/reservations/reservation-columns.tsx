@@ -96,12 +96,11 @@ export function createReservationColumns({
         }
 
         return (
-          <a
-            href={`mailto:${email}`}
-            className="cursor-pointer font-medium text-primary hover:underline"
+          <span
+            className="cursor-pointer font-normal text-sm"
           >
             {email}
-          </a>
+          </span>
         )
       },
     },

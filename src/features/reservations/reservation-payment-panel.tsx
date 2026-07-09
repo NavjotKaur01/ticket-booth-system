@@ -40,6 +40,14 @@ const PRIMARY_CARD_BRANDS: CardBrand[] = ['VISA', 'MASTERCARD', 'AMEX']
 const ERROR_FIELD_CLASS =
   'border border-destructive '
 const ERROR_TEXT_CLASS = 'text-[11px] leading-tight text-destructive'
+const GROUPED_INPUT_FOCUS = cn(
+  'h-10 rounded-none border-0 shadow-none px-3 text-sm outline-none',
+  'focus-visible:relative focus-visible:z-10',
+  'focus-visible:border focus-visible:border-ring',
+  'focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40',
+  'aria-invalid:border aria-invalid:border-destructive',
+  'aria-invalid:ring-2 aria-invalid:ring-inset aria-invalid:ring-destructive/20'
+)
 
 function getMonthNameFromNumber(month: string) {
   const monthIndex = Number(month) - 1
@@ -353,10 +361,11 @@ function CreditCardNumberField({
             onChange(formatCardNumber(rawValue, maxLength, nextBrand))
           }}
           className={cn(
-            'h-10 rounded-none border-0 px-3 text-sm tabular-nums shadow-none focus-visible:ring-0 rounded-t-lg',
-            error && ERROR_FIELD_CLASS,
+            GROUPED_INPUT_FOCUS,
+            'rounded-t-lg tabular-nums',
             effectiveBrand ? 'pr-16' : hasInvalidPrefix ? 'pr-3' : 'pr-36'
           )}
+          aria-invalid={error ? true : undefined}
           autoComplete='cc-number'
           inputMode='numeric'
           maxLength={getFormattedCardInputMaxLength(
@@ -476,23 +485,21 @@ function CreditCardInformationField({
         >
           Card information
         </label>
-        <div className='overflow-hidden rounded-lg border border-border/70 bg-background shadow-sm'>
+        <div className='overflow-hidden rounded-lg border border-input bg-background divide-y divide-input'>
           <CreditCardNumberField
             value={fields.cardNumber}
             onChange={value => onFieldChange('cardNumber', value)}
             error={validationErrors.cardNumber}
           />
 
-          <div className='grid grid-cols-2 border-t border-border/70'>
+          <div className='grid grid-cols-2 divide-x divide-input'>
             <div>
               <Input
                 id='payment-expiration'
                 value={getExpiryInputValue(fields.expMonth, fields.expYear)}
                 onChange={event => handleExpiryChange(event.target.value)}
-                className={cn(
-                  'h-10 rounded-none border-0 px-3 text-sm shadow-none focus-visible:ring-0',
-                  validationErrors.expiration && ERROR_FIELD_CLASS
-                )}
+                className={GROUPED_INPUT_FOCUS}
+                aria-invalid={validationErrors.expiration ? true : undefined}
                 autoComplete='cc-exp'
                 inputMode='numeric'
                 maxLength={7}
@@ -504,7 +511,7 @@ function CreditCardInformationField({
                 </p>
               ) : null}
             </div>
-            <div className='border-l border-border/70'>
+            <div>
               <Input
                 id='payment-cvv'
                 value={fields.cvv}
@@ -514,10 +521,8 @@ function CreditCardInformationField({
                     event.target.value.replace(/\D/g, '').slice(0, cvvMaxLength)
                   )
                 }
-                className={cn(
-                  'h-10 rounded-none border-0 px-3 text-sm shadow-none focus-visible:ring-0',
-                  validationErrors.cvv && ERROR_FIELD_CLASS
-                )}
+                className={GROUPED_INPUT_FOCUS}
+                aria-invalid={validationErrors.cvv ? true : undefined}
                 autoComplete='cc-csc'
                 inputMode='numeric'
                 maxLength={cvvMaxLength}
@@ -532,7 +537,7 @@ function CreditCardInformationField({
           </div>
 
           {showZip ? (
-            <div className='border-t border-border/70'>
+            <div>
               <Input
                 id='payment-zip'
                 value={fields.zipCode}
@@ -542,10 +547,8 @@ function CreditCardInformationField({
                     event.target.value.replace(/\D/g, '')
                   )
                 }
-                className={cn(
-                  'h-10 rounded-none border-0 px-3 text-sm shadow-none focus-visible:ring-0',
-                  validationErrors.zipCode && ERROR_FIELD_CLASS
-                )}
+                className={GROUPED_INPUT_FOCUS}
+                aria-invalid={validationErrors.zipCode ? true : undefined}
                 autoComplete='postal-code'
                 inputMode='numeric'
                 placeholder='ZIP / Postal code'
@@ -558,17 +561,15 @@ function CreditCardInformationField({
             </div>
           ) : null}
 
-          <div className='border-t border-border/70'>
+          <div>
             <Input
               id='payment-billing-address'
               value={fields.billingAddress}
               onChange={event =>
                 onFieldChange('billingAddress', event.target.value)
               }
-              className={cn(
-                'h-10 rounded-none border-0 px-3 text-sm shadow-none focus-visible:ring-0',
-                validationErrors.billingAddress && ERROR_FIELD_CLASS
-              )}
+              className={cn(GROUPED_INPUT_FOCUS, 'rounded-b-lg')}
+              aria-invalid={validationErrors.billingAddress ? true : undefined}
               autoComplete='street-address'
               placeholder='Billing address'
             />
