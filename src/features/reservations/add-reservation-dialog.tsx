@@ -1357,6 +1357,17 @@ export function AddReservationDialog({
   }, [open, section, sectionsLoading, availableSections.length])
 
   useEffect(() => {
+    if (!open || sectionsLoading || !section) {
+      return
+    }
+
+    const selectedSection = availableSections.find(option => option.id === section)
+    if (selectedSection?.showDinner !== 'Y' && dinner) {
+      setDinner(false)
+    }
+  }, [availableSections, dinner, open, section, sectionsLoading])
+
+  useEffect(() => {
     if (!open || showsLoading) {
       return
     }
@@ -1413,6 +1424,11 @@ export function AddReservationDialog({
         }),
       [availableSections, partyBySection, section]
     )
+
+  const dinnerDisabled =
+    sectionsLoading ||
+    !selectedSection ||
+    selectedSection.showDinner !== 'Y'
 
   const effectivePromo =
     promo !== 'none' && promoOptions.some(option => option.id === promo)
@@ -2193,7 +2209,7 @@ export function AddReservationDialog({
                     onOpenComicInfo={() => setComicInfoOpen(true)}
                     dinner={dinner}
                     onDinnerChange={setDinner}
-                    dinnerDisabled={availableSections.find(s => s.id === section)?.showDinner === 'N'}
+                    dinnerDisabled={dinnerDisabled}
                     showsLoading={showsLoading}
                   />
 

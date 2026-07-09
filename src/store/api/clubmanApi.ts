@@ -918,7 +918,7 @@ export const clubmanApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Calendar"],
+      invalidatesTags: ["Calendar", "ShowDetails"],
     }),
 
     getDailyTransactionData: builder.query({
@@ -1066,7 +1066,11 @@ export const clubmanApi = createApi({
         method: "PUT",
         body,
       }),
-      invalidatesTags: ["Calendar"],
+      invalidatesTags: (_result, _error, arg) => [
+        "Calendar",
+        "ShowDetails",
+        { type: "ShowDetails", id: `sections:${arg.CalendarShowId}` },
+      ],
     }),
 
     unCancelShow: builder.mutation<unknown, ShowRequestModel>({
@@ -1075,7 +1079,11 @@ export const clubmanApi = createApi({
         method: "PUT",
         body,
       }),
-      invalidatesTags: ["Calendar"],
+      invalidatesTags: (_result, _error, arg) => [
+        "Calendar",
+        "ShowDetails",
+        { type: "ShowDetails", id: `sections:${arg.CalendarShowId}` },
+      ],
     }),
 
     getShowData: builder.query<
@@ -1093,7 +1101,11 @@ export const clubmanApi = createApi({
         method: "PUT",
         body,
       }),
-      invalidatesTags: ["Calendar"],
+      invalidatesTags: (_result, _error, arg) => [
+        "Calendar",
+        "ShowDetails",
+        { type: "ShowDetails", id: `sections:${arg.ShowId}` },
+      ],
     }),
 
     getShowProperties: builder.query<
