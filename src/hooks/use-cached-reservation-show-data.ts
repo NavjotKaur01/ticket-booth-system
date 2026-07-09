@@ -64,15 +64,16 @@ export function useCachedReservationShowData ({
     }
   }, [enabled, showDate])
 
+  const shouldLoad = enabled && Boolean(showId)
   const cachedEntry = cacheRef.current.byShowId.get(showId)
-  const isCached = Boolean(cachedEntry)
-  const shouldFetch = enabled && Boolean(showId) && !isCached
+  const isPromosCached = Boolean(cachedEntry)
+  const shouldFetchPromos = shouldLoad && !isPromosCached
 
   const {
     sections: fetchedSections,
     loading: fetchedSectionsLoading,
     error: fetchedSectionsError
-  } = useShowSections(connectionName, showId, shouldFetch)
+  } = useShowSections(connectionName, showId, shouldLoad)
 
   const {
     promos: fetchedPromos,
@@ -83,22 +84,53 @@ export function useCachedReservationShowData ({
     locationId,
     showId,
     showDate,
-    enabled: shouldFetch
+    enabled: shouldFetchPromos
   })
 
   useEffect(() => {
-    if (!shouldFetch || !showId) {
+    if (!shouldLoad || !showId || fetchedSectionsLoading) {
       return
     }
 
-    if (fetchedSectionsLoading || fetchedPromosLoading) {
-      return
-    }
-
-    cacheRef.current.byShowId.set(showId, {
+    const existing = cacheRef.current.byShowId.get(showId)
+    const nextEntry: ShowDataCacheEntry = {
       sections: fetchedSections,
-      promos: fetchedPromos,
+      promos: existing?.promos ?? fetchedPromos,
       sectionsError: fetchedSectionsError,
+      promosError: existing?.promosError ?? fetchedPromosError
+    }
+
+    if (
+      existing?.sections === fetchedSections &&
+      existing.sectionsError === fetchedSectionsError
+    ) {
+      return
+    }
+
+    cacheRef.current.byShowId.set(showId, nextEntry)
+    bumpCacheVersion(version => version + 1)
+  }, [
+    fetchedSections,
+    fetchedSectionsError,
+    fetchedSectionsLoading,
+    shouldLoad,
+    showId
+  ])
+
+  useEffect(() => {
+    if (!shouldFetchPromos || !showId) {
+      return
+    }
+
+    if (fetchedPromosLoading) {
+      return
+    }
+
+    const existing = cacheRef.current.byShowId.get(showId)
+    cacheRef.current.byShowId.set(showId, {
+      sections: existing?.sections ?? fetchedSections,
+      promos: fetchedPromos,
+      sectionsError: existing?.sectionsError ?? fetchedSectionsError,
       promosError: fetchedPromosError
     })
     bumpCacheVersion(version => version + 1)
@@ -108,8 +140,7 @@ export function useCachedReservationShowData ({
     fetchedPromosLoading,
     fetchedSections,
     fetchedSectionsError,
-    fetchedSectionsLoading,
-    shouldFetch,
+    shouldFetchPromos,
     showId
   ])
 
@@ -121,7 +152,9 @@ export function useCachedReservationShowData ({
   const sectionsError = activeEntry?.sectionsError ?? fetchedSectionsError
   const promosError = activeEntry?.promosError ?? fetchedPromosError
   const loading =
-    shouldFetch && (fetchedSectionsLoading || fetchedPromosLoading)
+    shouldLoad &&
+    !activeEntry &&
+    (fetchedSectionsLoading || fetchedPromosLoading)
 
   const promoOptions = useMemo(
     () => mapReservationPromoOptions(promos),
