@@ -1,14 +1,16 @@
 import { EventGroupCard } from "@/features/admin-events/event-group-card"
-import type { AdminEventGroup } from "@/types/admin-event"
+import type { AdminEventGroup, AdminEventShowtime } from "@/types/admin-event"
 
 type EventsListProps = {
   groups: AdminEventGroup[]
   emptyMessage?: string
+  onAddReservation: (showtime: AdminEventShowtime) => void
 }
 
 export function EventsList({
   groups,
   emptyMessage = "No events match the current filters.",
+  onAddReservation,
 }: EventsListProps) {
   if (groups.length === 0) {
     return (
@@ -21,7 +23,11 @@ export function EventsList({
   return (
     <div>
       {groups.map((group) => (
-        <EventGroupCard key={group.id} group={group} />
+        <EventGroupCard
+          key={group.id}
+          group={group}
+          onAddReservation={onAddReservation}
+        />
       ))}
     </div>
   )

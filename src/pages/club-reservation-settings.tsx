@@ -19,6 +19,10 @@ export function ClubReservationSettings() {
     )
   }
 
+  function handleDelete(record: ClubReservationSetting) {
+    setRecords((current) => current.filter((item) => item.id !== record.id))
+  }
+
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-semibold tracking-tight text-foreground">
@@ -41,6 +45,7 @@ export function ClubReservationSettings() {
             setEditingRecord(record)
             setDialogOpen(true)
           }}
+          onDelete={handleDelete}
         />
       </PanelCard>
 

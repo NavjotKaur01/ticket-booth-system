@@ -6,6 +6,7 @@ type UserRoleChecklistProps = {
   selectedRoles: UserSetupRole[]
   onToggleRole: (role: UserSetupRole, checked: boolean) => void
   className?: string
+  columnsClassName?: string
   disabled?: boolean
 }
 
@@ -13,6 +14,7 @@ export function UserRoleChecklist({
   selectedRoles,
   onToggleRole,
   className,
+  columnsClassName = "grid gap-1 sm:grid-cols-2",
   disabled = false,
 }: UserRoleChecklistProps) {
   return (
@@ -27,7 +29,7 @@ export function UserRoleChecklist({
           disabled && "pointer-events-none"
         )}
       >
-        <div className="grid gap-1 sm:grid-cols-2">
+        <div className={cn(columnsClassName)}>
           {USER_SETUP_ROLES.map((role) => {
             const checked = selectedRoles.includes(role)
             const inputId = `role-${role}`

@@ -39,9 +39,49 @@ function isRouteMatch(pathname: string, item: NavSubItem) {
   return Boolean(item.href && isNavActive(pathname, item.href))
 }
 
-function isSubItemLinkActive(pathname: string, item: NavSubItem) {
+function findDeepestMatchingSubItem(
+  pathname: string,
+  items: NavSubItem[],
+  depth = 0
+): { id: string; depth: number } | null {
+  let best: { id: string; depth: number } | null = null
+
+  for (const item of items) {
+    if (item.href && isNavActive(pathname, item.href)) {
+      if (!best || depth > best.depth) {
+        best = { id: item.id, depth }
+      }
+    }
+
+    if (item.items?.length) {
+      const nested = findDeepestMatchingSubItem(pathname, item.items, depth + 1)
+      if (nested && (!best || nested.depth > best.depth)) {
+        best = nested
+      }
+    }
+  }
+
+  return best
+}
+
+function getDeepestMatchingSubItemId(
+  pathname: string,
+  items: NavSubItem[]
+): string | null {
+  return findDeepestMatchingSubItem(pathname, items)?.id ?? null
+}
+
+function isSubItemLinkActive(
+  pathname: string,
+  item: NavSubItem,
+  resolvedActiveId: string | null
+) {
   if (!isRouteMatch(pathname, item)) {
     return false
+  }
+
+  if (resolvedActiveId) {
+    return item.id === resolvedActiveId
   }
 
   const preferredId = ROUTE_PREFERRED_NAV_ITEM_IDS[item.href!]
@@ -148,12 +188,14 @@ function NavSubTreeList({
   items,
   pathname,
   depth,
+  resolvedActiveId,
   onNavigate,
   onSubMenuAction,
 }: {
   items: NavSubItem[]
   pathname: string
   depth: number
+  resolvedActiveId: string | null
   onNavigate?: () => void
   onSubMenuAction?: (action: NavSubItemAction) => void
 }) {
@@ -176,6 +218,7 @@ function NavSubTreeList({
           item={subItem}
           pathname={pathname}
           depth={depth}
+          resolvedActiveId={resolvedActiveId}
           openSubMenuId={openSubMenuId}
           onOpenSubMenuChange={setOpenSubMenuId}
           onNavigate={onNavigate}
@@ -190,6 +233,7 @@ function NavSubTreeItem({
   item,
   pathname,
   depth,
+  resolvedActiveId,
   openSubMenuId,
   onOpenSubMenuChange,
   onNavigate,
@@ -198,6 +242,7 @@ function NavSubTreeItem({
   item: NavSubItem
   pathname: string
   depth: number
+  resolvedActiveId: string | null
   openSubMenuId?: string | null
   onOpenSubMenuChange?: (id: string | null) => void
   onNavigate?: () => void
@@ -205,7 +250,7 @@ function NavSubTreeItem({
 }) {
   const hasChildren = Boolean(item.items?.length)
   const hasActiveChild = hasActiveSubItem(pathname, item)
-  const linkActive = isSubItemLinkActive(pathname, item)
+  const linkActive = isSubItemLinkActive(pathname, item, resolvedActiveId)
   const usesAccordion = hasChildren && onOpenSubMenuChange !== undefined
   const [isOpen, setIsOpen] = useState(hasActiveChild)
   const expanded = usesAccordion ? openSubMenuId === item.id : isOpen
@@ -259,6 +304,7 @@ function NavSubTreeItem({
               items={item.items ?? []}
               pathname={pathname}
               depth={depth + 1}
+              resolvedActiveId={resolvedActiveId}
               onNavigate={onNavigate}
               onSubMenuAction={onSubMenuAction}
             />
@@ -316,6 +362,7 @@ function NavCollapsibleItem({
   const Icon = item.icon
   const isOpen = openMenuId === item.id
   const hasActiveChild = item.items?.some((subItem) => hasActiveSubItem(pathname, subItem))
+  const resolvedActiveId = getDeepestMatchingSubItemId(pathname, item.items ?? [])
 
   if (collapsed) {
     return (
@@ -357,6 +404,7 @@ function NavCollapsibleItem({
             items={item.items ?? []}
             pathname={pathname}
             depth={0}
+            resolvedActiveId={resolvedActiveId}
             onNavigate={onNavigate}
             onSubMenuAction={onSubMenuAction}
           />

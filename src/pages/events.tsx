@@ -10,12 +10,18 @@ import {
 import { adminEventGroups as initialGroups } from "@/data/admin-events"
 import { EventsFiltersBar } from "@/features/admin-events/events-filters-bar"
 import { EventsList } from "@/features/admin-events/events-list"
+import { AddReservationDialog } from "@/features/reservations/add-reservation-dialog"
 import { useAppSession } from "@/hooks/use-app-session"
 import {
   countAdminEventShowtimes,
   filterAdminEventGroups,
 } from "@/lib/filter-admin-events"
-import type { AdminEventFilters, AdminEventGroup } from "@/types/admin-event"
+import { parseShowTimeFromAdminLabel } from "@/lib/parse-admin-event-show-time"
+import type {
+  AdminEventFilters,
+  AdminEventGroup,
+  AdminEventShowtime,
+} from "@/types/admin-event"
 import { EMPTY_ADMIN_EVENT_FILTERS } from "@/types/admin-event"
 
 function todayInputValue() {
@@ -37,6 +43,10 @@ export function Events() {
     ...EMPTY_ADMIN_EVENT_FILTERS,
     date: todayInputValue(),
   }))
+  const [addReservationOpen, setAddReservationOpen] = useState(false)
+  const [addReservationShowDate, setAddReservationShowDate] = useState<string>()
+  const [addReservationShowTimeLabel, setAddReservationShowTimeLabel] =
+    useState<string>()
 
   useEffect(() => {
     if (!locationId) {
@@ -76,6 +86,14 @@ export function Events() {
     setAppliedFilters(draftFilters)
   }
 
+  function handleAddReservation(showtime: AdminEventShowtime) {
+    setAddReservationShowDate(showtime.showDate)
+    setAddReservationShowTimeLabel(
+      parseShowTimeFromAdminLabel(showtime.showDateLabel)
+    )
+    setAddReservationOpen(true)
+  }
+
   return (
     <AdminPageShell>
       <AdminPageTitle>All Events</AdminPageTitle>
@@ -96,8 +114,18 @@ export function Events() {
           </AdminPanelStats>
         </AdminPanelToolbar>
 
-        <EventsList groups={filteredGroups} />
+        <EventsList
+          groups={filteredGroups}
+          onAddReservation={handleAddReservation}
+        />
       </PanelCard>
+
+      <AddReservationDialog
+        open={addReservationOpen}
+        onOpenChange={setAddReservationOpen}
+        showDate={addReservationShowDate}
+        preferredShowTimeLabel={addReservationShowTimeLabel}
+      />
     </AdminPageShell>
   )
 }

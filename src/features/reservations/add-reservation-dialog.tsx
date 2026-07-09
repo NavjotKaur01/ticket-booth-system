@@ -68,6 +68,7 @@ import {
   getReservationAmountDue,
   parseReservationMoney
 } from '@/lib/calculate-reservation-totals'
+import { showTimeLabelsMatch } from '@/lib/parse-admin-event-show-time'
 import {
   EMPTY_RESERVATION_CUSTOMER_SEARCH_CRITERIA,
   hasCompleteNewCustomerCriteria,
@@ -134,6 +135,7 @@ type AddReservationDialogProps = {
   reservation?: Reservation | null
   showDate?: string
   showTime?: string
+  preferredShowTimeLabel?: string
 }
 
 const COMPACT_INPUT = 'h-9 text-sm'
@@ -1038,7 +1040,8 @@ export function AddReservationDialog({
   onSaved,
   reservation = null,
   showDate: initialShowDate,
-  showTime: initialShowTime
+  showTime: initialShowTime,
+  preferredShowTimeLabel
 }: AddReservationDialogProps) {
   const isEditMode = Boolean(reservation)
   const { connectionName, locationId, locationName, username, userRight, isReady } =
@@ -1369,9 +1372,36 @@ export function AddReservationDialog({
         return
       }
 
+      if (preferredShowTimeLabel) {
+        const normalizedPreferred = preferredShowTimeLabel
+          .replace(/\s+/g, " ")
+          .trim()
+          .toUpperCase()
+          .replace(/^0(\d:)/, "$1")
+
+        const matchedShow = availableShows.find(
+          (show) =>
+            showTimeLabelsMatch(show.time, preferredShowTimeLabel) ||
+            show.label.toUpperCase().includes(normalizedPreferred)
+        )
+
+        if (matchedShow) {
+          setShowTime(matchedShow.id)
+          return
+        }
+      }
+
       setShowTime(availableShows[0].id)
     }
-  }, [availableShows, initialShowTime, isEditMode, open, showTime, showsLoading])
+  }, [
+    availableShows,
+    initialShowTime,
+    isEditMode,
+    open,
+    preferredShowTimeLabel,
+    showTime,
+    showsLoading,
+  ])
 
   const { selectedSection, partySize } =
     useMemo(

@@ -8,14 +8,19 @@ type DomainConfigurationDataTableProps = {
   data: DomainConfiguration[]
   loading?: boolean
   onEdit: (record: DomainConfiguration) => void
+  onDelete: (record: DomainConfiguration) => void
 }
 
 export function DomainConfigurationDataTable({
   data,
   loading = false,
   onEdit,
+  onDelete,
 }: DomainConfigurationDataTableProps) {
-  const columns = useMemo(() => getDomainConfigurationColumns({ onEdit }), [onEdit])
+  const columns = useMemo(
+    () => getDomainConfigurationColumns({ onEdit, onDelete }),
+    [onEdit, onDelete]
+  )
 
   return (
     <DataTable
