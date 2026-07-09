@@ -23,6 +23,7 @@ listenerMiddleware.startListening({
         "Reservation",
         "ShowDetails",
         "RecentSales",
+        "Dashboard",
       ])
     )
   },
