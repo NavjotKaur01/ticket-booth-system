@@ -8,14 +8,19 @@ type VenueGatewayDataTableProps = {
   data: VenueGateway[]
   loading?: boolean
   onEdit: (record: VenueGateway) => void
+  onDelete: (record: VenueGateway) => void
 }
 
 export function VenueGatewayDataTable({
   data,
   loading = false,
   onEdit,
+  onDelete,
 }: VenueGatewayDataTableProps) {
-  const columns = useMemo(() => getVenueGatewayColumns({ onEdit }), [onEdit])
+  const columns = useMemo(
+    () => getVenueGatewayColumns({ onEdit, onDelete }),
+    [onEdit, onDelete]
+  )
 
   return (
     <DataTable

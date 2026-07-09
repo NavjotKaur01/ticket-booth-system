@@ -1,32 +1,20 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
+import type { StandardRowAction } from "@/components/common/standard-row-actions-menu"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { Button } from "@/components/ui/button"
+import { dataTableActionsColumn } from "@/components/data-table/data-table-actions-column"
 import type { ReservationDefault } from "@/types/reservation-default"
 
 type GetReservationDefaultColumnsParams = {
   onEdit: (record: ReservationDefault) => void
+  onDelete: (record: ReservationDefault) => void
 }
 
 export function getReservationDefaultColumns({
   onEdit,
+  onDelete,
 }: GetReservationDefaultColumnsParams): ColumnDef<ReservationDefault>[] {
   return [
-    {
-      id: "edit",
-      header: "#",
-      enableSorting: false,
-      cell: ({ row }) => (
-        <Button
-          type="button"
-          variant="link"
-          className="h-auto p-0 text-xs"
-          onClick={() => onEdit(row.original)}
-        >
-          Edit
-        </Button>
-      ),
-    },
     {
       accessorKey: "defaultName",
       header: ({ column }) => (
@@ -96,5 +84,18 @@ export function getReservationDefaultColumns({
         <span className="whitespace-nowrap tabular-nums">{row.original.updatedDate}</span>
       ),
     },
+    dataTableActionsColumn<ReservationDefault>({
+      ariaLabel: "Reservation default actions",
+      hiddenActions: ["Add"] satisfies readonly StandardRowAction[],
+      onAction: (record, action) => {
+        if (action === "Edit") {
+          onEdit(record)
+          return
+        }
+        if (action === "Delete") {
+          onDelete(record)
+        }
+      },
+    }),
   ]
 }

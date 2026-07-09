@@ -3,13 +3,14 @@ import { Link } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/constants/routes"
-import type { AdminEventGroup } from "@/types/admin-event"
+import type { AdminEventGroup, AdminEventShowtime } from "@/types/admin-event"
 
 type EventGroupCardProps = {
   group: AdminEventGroup
+  onAddReservation: (showtime: AdminEventShowtime) => void
 }
 
-export function EventGroupCard({ group }: EventGroupCardProps) {
+export function EventGroupCard({ group, onAddReservation }: EventGroupCardProps) {
   return (
     <section className="border-b last:border-b-0">
       <div className="border-b bg-muted/30 px-3 py-2 text-center sm:text-left">
@@ -58,9 +59,9 @@ export function EventGroupCard({ group }: EventGroupCardProps) {
                   type="button"
                   size="sm"
                   className="w-full bg-green-600 text-white hover:bg-green-700 sm:w-auto"
-                  asChild
+                  onClick={() => onAddReservation(showtime)}
                 >
-                  <Link to={ROUTES.reservations}>Add Reservation</Link>
+                  Add Reservation
                 </Button>
               </div>
             </div>

@@ -1,32 +1,20 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
+import type { StandardRowAction } from "@/components/common/standard-row-actions-menu"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { Button } from "@/components/ui/button"
+import { dataTableActionsColumn } from "@/components/data-table/data-table-actions-column"
 import type { DomainConfiguration } from "@/types/domain-configuration"
 
 type GetDomainConfigurationColumnsParams = {
   onEdit: (record: DomainConfiguration) => void
+  onDelete: (record: DomainConfiguration) => void
 }
 
 export function getDomainConfigurationColumns({
   onEdit,
+  onDelete,
 }: GetDomainConfigurationColumnsParams): ColumnDef<DomainConfiguration>[] {
   return [
-    {
-      id: "edit",
-      header: "#",
-      enableSorting: false,
-      cell: ({ row }) => (
-        <Button
-          type="button"
-          variant="link"
-          className="h-auto p-0 text-xs"
-          onClick={() => onEdit(row.original)}
-        >
-          Edit
-        </Button>
-      ),
-    },
     {
       accessorKey: "serverIp",
       header: ({ column }) => (
@@ -50,5 +38,18 @@ export function getDomainConfigurationColumns({
         <DataTableColumnHeader label="Active Indicator" column={column} />
       ),
     },
+    dataTableActionsColumn<DomainConfiguration>({
+      ariaLabel: "Domain configuration actions",
+      hiddenActions: ["Add"] satisfies readonly StandardRowAction[],
+      onAction: (record, action) => {
+        if (action === "Edit") {
+          onEdit(record)
+          return
+        }
+        if (action === "Delete") {
+          onDelete(record)
+        }
+      },
+    }),
   ]
 }

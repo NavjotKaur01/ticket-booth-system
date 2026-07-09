@@ -1,32 +1,20 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
+import type { StandardRowAction } from "@/components/common/standard-row-actions-menu"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { Button } from "@/components/ui/button"
+import { dataTableActionsColumn } from "@/components/data-table/data-table-actions-column"
 import type { OnlineSetting } from "@/types/online-setting"
 
 type GetOnlineSettingColumnsParams = {
   onEdit: (record: OnlineSetting) => void
+  onDelete: (record: OnlineSetting) => void
 }
 
 export function getOnlineSettingColumns({
   onEdit,
+  onDelete,
 }: GetOnlineSettingColumnsParams): ColumnDef<OnlineSetting>[] {
   return [
-    {
-      id: "edit",
-      header: "#",
-      enableSorting: false,
-      cell: ({ row }) => (
-        <Button
-          type="button"
-          variant="link"
-          className="h-auto p-0 text-xs"
-          onClick={() => onEdit(row.original)}
-        >
-          Edit
-        </Button>
-      ),
-    },
     {
       accessorKey: "settingsName",
       header: ({ column }) => (
@@ -47,5 +35,18 @@ export function getOnlineSettingColumns({
         </span>
       ),
     },
+    dataTableActionsColumn<OnlineSetting>({
+      ariaLabel: "Online setting actions",
+      hiddenActions: ["Add"] satisfies readonly StandardRowAction[],
+      onAction: (record, action) => {
+        if (action === "Edit") {
+          onEdit(record)
+          return
+        }
+        if (action === "Delete") {
+          onDelete(record)
+        }
+      },
+    }),
   ]
 }

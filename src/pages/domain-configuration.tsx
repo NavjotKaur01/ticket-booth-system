@@ -26,6 +26,10 @@ export function DomainConfigurationPage() {
     )
   }
 
+  function handleDelete(record: DomainConfiguration) {
+    setRecords((current) => current.filter((item) => item.id !== record.id))
+  }
+
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-semibold tracking-tight text-foreground">
@@ -51,7 +55,11 @@ export function DomainConfigurationPage() {
           </Button>
         </div>
 
-        <DomainConfigurationDataTable data={records} onEdit={setEditingRecord} />
+        <DomainConfigurationDataTable
+          data={records}
+          onEdit={setEditingRecord}
+          onDelete={handleDelete}
+        />
       </PanelCard>
 
       <AddDomainConfigurationDialog

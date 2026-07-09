@@ -7,10 +7,18 @@ import type { OnlineSetting } from "@/types/online-setting"
 type OnlineSettingDataTableProps = {
   data: OnlineSetting[]
   onEdit: (record: OnlineSetting) => void
+  onDelete: (record: OnlineSetting) => void
 }
 
-export function OnlineSettingDataTable({ data, onEdit }: OnlineSettingDataTableProps) {
-  const columns = useMemo(() => getOnlineSettingColumns({ onEdit }), [onEdit])
+export function OnlineSettingDataTable({
+  data,
+  onEdit,
+  onDelete,
+}: OnlineSettingDataTableProps) {
+  const columns = useMemo(
+    () => getOnlineSettingColumns({ onEdit, onDelete }),
+    [onEdit, onDelete]
+  )
 
   return (
     <DataTable

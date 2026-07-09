@@ -7,13 +7,18 @@ import type { ClubReservationSetting } from "@/types/club-reservation-setting"
 type ClubReservationSettingDataTableProps = {
   data: ClubReservationSetting[]
   onEdit: (record: ClubReservationSetting) => void
+  onDelete: (record: ClubReservationSetting) => void
 }
 
 export function ClubReservationSettingDataTable({
   data,
   onEdit,
+  onDelete,
 }: ClubReservationSettingDataTableProps) {
-  const columns = useMemo(() => getClubReservationSettingColumns({ onEdit }), [onEdit])
+  const columns = useMemo(
+    () => getClubReservationSettingColumns({ onEdit, onDelete }),
+    [onEdit, onDelete]
+  )
 
   return (
     <DataTable

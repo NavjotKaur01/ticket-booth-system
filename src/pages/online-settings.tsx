@@ -23,6 +23,10 @@ export function OnlineSettings() {
     })
   }
 
+  function handleDelete(record: OnlineSetting) {
+    setRecords((current) => current.filter((item) => item.id !== record.id))
+  }
+
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-semibold tracking-tight text-foreground">
@@ -57,6 +61,7 @@ export function OnlineSettings() {
             setEditingRecord(record)
             setDialogOpen(true)
           }}
+          onDelete={handleDelete}
         />
       </PanelCard>
 

@@ -24,6 +24,10 @@ export function VenueGateway() {
     )
   }
 
+  function handleDelete(record: VenueGateway) {
+    setRecords((current) => current.filter((item) => item.id !== record.id))
+  }
+
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-semibold tracking-tight text-foreground">
@@ -49,7 +53,11 @@ export function VenueGateway() {
           </Button>
         </div>
 
-        <VenueGatewayDataTable data={records} onEdit={setEditingRecord} />
+        <VenueGatewayDataTable
+          data={records}
+          onEdit={setEditingRecord}
+          onDelete={handleDelete}
+        />
       </PanelCard>
 
       <AddVenueGatewayDialog

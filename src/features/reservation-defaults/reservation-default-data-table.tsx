@@ -7,13 +7,18 @@ import type { ReservationDefault } from "@/types/reservation-default"
 type ReservationDefaultDataTableProps = {
   data: ReservationDefault[]
   onEdit: (record: ReservationDefault) => void
+  onDelete: (record: ReservationDefault) => void
 }
 
 export function ReservationDefaultDataTable({
   data,
   onEdit,
+  onDelete,
 }: ReservationDefaultDataTableProps) {
-  const columns = useMemo(() => getReservationDefaultColumns({ onEdit }), [onEdit])
+  const columns = useMemo(
+    () => getReservationDefaultColumns({ onEdit, onDelete }),
+    [onEdit, onDelete]
+  )
 
   return (
     <DataTable

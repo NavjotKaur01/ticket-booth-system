@@ -1,32 +1,20 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
+import type { StandardRowAction } from "@/components/common/standard-row-actions-menu"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
-import { Button } from "@/components/ui/button"
+import { dataTableActionsColumn } from "@/components/data-table/data-table-actions-column"
 import type { ClubReservationSetting } from "@/types/club-reservation-setting"
 
 type GetClubReservationSettingColumnsParams = {
   onEdit: (record: ClubReservationSetting) => void
+  onDelete: (record: ClubReservationSetting) => void
 }
 
 export function getClubReservationSettingColumns({
   onEdit,
+  onDelete,
 }: GetClubReservationSettingColumnsParams): ColumnDef<ClubReservationSetting>[] {
   return [
-    {
-      id: "edit",
-      header: "#",
-      enableSorting: false,
-      cell: ({ row }) => (
-        <Button
-          type="button"
-          variant="link"
-          className="h-auto p-0 text-xs"
-          onClick={() => onEdit(row.original)}
-        >
-          Edit
-        </Button>
-      ),
-    },
     {
       accessorKey: "newReservation",
       header: ({ column }) => (
@@ -36,5 +24,18 @@ export function getClubReservationSettingColumns({
         <span className="font-medium text-foreground">{row.original.newReservation}</span>
       ),
     },
+    dataTableActionsColumn<ClubReservationSetting>({
+      ariaLabel: "Club reservation setting actions",
+      hiddenActions: ["Add"] satisfies readonly StandardRowAction[],
+      onAction: (record, action) => {
+        if (action === "Edit") {
+          onEdit(record)
+          return
+        }
+        if (action === "Delete") {
+          onDelete(record)
+        }
+      },
+    }),
   ]
 }

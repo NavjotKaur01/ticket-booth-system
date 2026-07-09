@@ -6,6 +6,7 @@ import { FormField } from "@/components/forms/form-fields"
 import {
   AdminPageShell,
   AdminPageTitle,
+  ADMIN_SPLIT_PANEL_2COL_CLASS,
 } from "@/components/layout/admin-page"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -104,7 +105,7 @@ export function ModifyUser() {
                 setMessage(null)
               }}
             >
-              <SelectTrigger id="modify-user-select" className="h-9 w-full max-w-md">
+              <SelectTrigger id="modify-user-select" className="h-9 w-full sm:max-w-md">
                 <SelectValue placeholder="Select user" />
               </SelectTrigger>
               <SelectContent>
@@ -118,71 +119,74 @@ export function ModifyUser() {
           </FormField>
         </div>
 
-        <UserSetupColumn title="Selected User Info">
-          <div className="mx-auto w-full max-w-2xl space-y-4">
-            <FormField label="Email Address" htmlFor="modify-user-email">
-              <Input
-                id="modify-user-email"
-                type="email"
-                value={form.email}
-                disabled={!selectedUser}
-                onChange={(event) => updateField("email", event.target.value)}
-              />
-            </FormField>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="Locked Out" htmlFor="modify-user-locked-out">
-                <Select
-                  value={form.lockedOut}
-                  onValueChange={(value) =>
-                    updateField("lockedOut", value as ModifyUserFormValues["lockedOut"])
-                  }
+        <div className={ADMIN_SPLIT_PANEL_2COL_CLASS}>
+          <UserSetupColumn title="Account Details">
+            <div className="space-y-4">
+              <FormField label="Email Address" htmlFor="modify-user-email">
+                <Input
+                  id="modify-user-email"
+                  type="email"
+                  value={form.email}
                   disabled={!selectedUser}
-                >
-                  <SelectTrigger id="modify-user-locked-out" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {YES_NO_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(event) => updateField("email", event.target.value)}
+                />
               </FormField>
 
-              <FormField label="Suspended" htmlFor="modify-user-suspended">
-                <Select
-                  value={form.suspended}
-                  onValueChange={(value) =>
-                    updateField("suspended", value as ModifyUserFormValues["suspended"])
-                  }
-                  disabled={!selectedUser}
-                >
-                  <SelectTrigger id="modify-user-suspended" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {YES_NO_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormField>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField label="Locked Out" htmlFor="modify-user-locked-out">
+                  <Select
+                    value={form.lockedOut}
+                    onValueChange={(value) =>
+                      updateField("lockedOut", value as ModifyUserFormValues["lockedOut"])
+                    }
+                    disabled={!selectedUser}
+                  >
+                    <SelectTrigger id="modify-user-locked-out" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {YES_NO_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
+
+                <FormField label="Suspended" htmlFor="modify-user-suspended">
+                  <Select
+                    value={form.suspended}
+                    onValueChange={(value) =>
+                      updateField("suspended", value as ModifyUserFormValues["suspended"])
+                    }
+                    disabled={!selectedUser}
+                  >
+                    <SelectTrigger id="modify-user-suspended" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {YES_NO_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
+              </div>
             </div>
+          </UserSetupColumn>
 
-            <FormField label="Roles">
-              <UserRoleChecklist
-                selectedRoles={form.roles}
-                onToggleRole={toggleRole}
-                disabled={!selectedUser}
-              />
-            </FormField>
-          </div>
-        </UserSetupColumn>
+          <UserSetupColumn title="Roles">
+            <UserRoleChecklist
+              selectedRoles={form.roles}
+              onToggleRole={toggleRole}
+              disabled={!selectedUser}
+              columnsClassName="grid gap-1 sm:grid-cols-2 xl:grid-cols-3"
+            />
+          </UserSetupColumn>
+        </div>
 
         {message ? (
           <UserSetupFeedback message={message} variant={messageVariant} />
