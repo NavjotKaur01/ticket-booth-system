@@ -1,4 +1,3 @@
-import { Save } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
@@ -8,9 +7,10 @@ import {
   AdminPanelActions,
   AdminPanelStats,
   AdminPanelToolbar,
-  ADMIN_SPLIT_PANEL_NAV_CLASS,
 } from "@/components/layout/admin-page"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { MultiSelect } from "@/components/forms/multi-select"
 import {
   navigationMenuTree,
   navigationRoleAssignments,
@@ -22,7 +22,6 @@ import {
 } from "@/features/navigation-admin/navigation-menu-tree"
 import { UserSetupColumn } from "@/features/user-setup/user-setup-column"
 import { UserSetupFeedback } from "@/features/user-setup/user-setup-feedback"
-import { UserRoleChecklist } from "@/features/user-setup/user-role-checklist"
 import type { UserSetupRole } from "@/data/user-setup"
 
 export function NavigationRoles() {
@@ -44,13 +43,6 @@ export function NavigationRoles() {
   function handleSelectMenu(id: string) {
     setSelectedMenuId(id)
     setSelectedRoles(roleMap[id] ?? [])
-    setMessage(null)
-  }
-
-  function toggleRole(role: UserSetupRole, checked: boolean) {
-    setSelectedRoles((current) =>
-      checked ? [...current, role] : current.filter((item) => item !== role)
-    )
     setMessage(null)
   }
 
@@ -92,38 +84,40 @@ export function NavigationRoles() {
             <Button type="button" variant="outline" size="sm" onClick={toggleAllRoles}>
               Toggle All Roles
             </Button>
-            <Button type="button" size="sm" className="gap-1.5" onClick={handleUpdate}>
-              <Save className="size-3.5" />
+            <Button type="button" size="sm" onClick={handleUpdate}>
               Update
             </Button>
           </AdminPanelActions>
         </AdminPanelToolbar>
 
-        <div className={ADMIN_SPLIT_PANEL_NAV_CLASS}>
-          <UserSetupColumn title="Navigation Menu" contentClassName="p-3">
-            <NavigationMenuTree
-              nodes={navigationMenuTree}
-              selectedId={selectedMenuId}
-              onSelect={handleSelectMenu}
+        <div className="border-b px-3 py-3 sm:px-4">
+          <div className="grid gap-2 sm:grid-cols-[8.5rem_minmax(0,24rem)] sm:items-center">
+            <Label htmlFor="navigation-roles" className="text-xs font-medium text-foreground">
+              Roles
+            </Label>
+            <MultiSelect
+              id="navigation-roles"
+              options={USER_SETUP_ROLES}
+              selected={selectedRoles}
+              onChange={(roles) => {
+                setSelectedRoles(roles as UserSetupRole[])
+                setMessage(null)
+              }}
+              placeholder="Select roles"
+              searchPlaceholder="Search roles..."
+              emptyMessage="No roles match your search."
+              itemNoun="roles"
             />
-          </UserSetupColumn>
-
-          <UserSetupColumn title="Roles" contentClassName="p-3">
-            <div className="overflow-hidden rounded-lg border border-border bg-background">
-              <div className="border-b bg-muted/50 px-3 py-2">
-                <span className="text-xs font-semibold tracking-wide text-foreground uppercase">
-                  Roles
-                </span>
-              </div>
-              <div className="p-3">
-                <UserRoleChecklist
-                  selectedRoles={selectedRoles}
-                  onToggleRole={toggleRole}
-                />
-              </div>
-            </div>
-          </UserSetupColumn>
+          </div>
         </div>
+
+        <UserSetupColumn title="Navigation Menu" contentClassName="p-3">
+          <NavigationMenuTree
+            nodes={navigationMenuTree}
+            selectedId={selectedMenuId}
+            onSelect={handleSelectMenu}
+          />
+        </UserSetupColumn>
 
         {message ? (
           <UserSetupFeedback message={message} variant={messageVariant} />

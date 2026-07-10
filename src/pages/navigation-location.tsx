@@ -1,4 +1,3 @@
-import { Save } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
@@ -8,9 +7,9 @@ import {
   AdminPanelActions,
   AdminPanelStats,
   AdminPanelToolbar,
-  ADMIN_SPLIT_PANEL_NAV_CLASS,
 } from "@/components/layout/admin-page"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
 import {
   navigationExcludedLocations,
   navigationMenuTree,
@@ -19,7 +18,7 @@ import {
   findNavigationMenuLabel,
   NavigationMenuTree,
 } from "@/features/navigation-admin/navigation-menu-tree"
-import { NavigationLocationChecklist } from "@/features/navigation-admin/navigation-location-checklist"
+import { MultiSelect } from "@/components/forms/multi-select"
 import { UserSetupColumn } from "@/features/user-setup/user-setup-column"
 import { UserSetupFeedback } from "@/features/user-setup/user-setup-feedback"
 
@@ -48,13 +47,6 @@ export function NavigationLocation() {
 
   function handleSelectMenu(id: string) {
     setSelectedMenuId(id)
-    setMessage(null)
-  }
-
-  function toggleLocation(location: string, checked: boolean) {
-    setSelectedLocations((current) =>
-      checked ? [...current, location] : current.filter((item) => item !== location)
-    )
     setMessage(null)
   }
 
@@ -105,39 +97,40 @@ export function NavigationLocation() {
             <Button type="button" variant="outline" size="sm" onClick={toggleAllLocations}>
               Toggle All Locations
             </Button>
-            <Button type="button" size="sm" className="gap-1.5" onClick={handleUpdate}>
-              <Save className="size-3.5" />
+            <Button type="button" size="sm" onClick={handleUpdate}>
               Update
             </Button>
           </AdminPanelActions>
         </AdminPanelToolbar>
 
-        <div className={ADMIN_SPLIT_PANEL_NAV_CLASS}>
-          <UserSetupColumn title="Navigation Menu" contentClassName="p-3">
-            <NavigationMenuTree
-              nodes={navigationMenuTree}
-              selectedId={selectedMenuId}
-              onSelect={handleSelectMenu}
+        <div className="border-b px-3 py-3 sm:px-4">
+          <div className="grid gap-2 sm:grid-cols-[8.5rem_minmax(0,24rem)] sm:items-center">
+            <Label htmlFor="navigation-locations" className="text-xs font-medium text-foreground">
+              Locations
+            </Label>
+            <MultiSelect
+              id="navigation-locations"
+              options={navigationExcludedLocations}
+              selected={selectedLocations}
+              onChange={(locations) => {
+                setSelectedLocations(locations)
+                setMessage(null)
+              }}
+              placeholder="Select locations"
+              searchPlaceholder="Search locations..."
+              emptyMessage="No locations match your search."
+              itemNoun="locations"
             />
-          </UserSetupColumn>
-
-          <UserSetupColumn title="Locations" contentClassName="p-3">
-            <div className="overflow-hidden rounded-lg border border-border bg-background">
-              <div className="border-b bg-muted/50 px-3 py-2">
-                <span className="text-xs font-semibold tracking-wide text-foreground uppercase">
-                  Locations
-                </span>
-              </div>
-              <div className="p-3">
-                <NavigationLocationChecklist
-                  locations={navigationExcludedLocations}
-                  selectedLocations={selectedLocations}
-                  onToggleLocation={toggleLocation}
-                />
-              </div>
-            </div>
-          </UserSetupColumn>
+          </div>
         </div>
+
+        <UserSetupColumn title="Navigation Menu" contentClassName="p-3">
+          <NavigationMenuTree
+            nodes={navigationMenuTree}
+            selectedId={selectedMenuId}
+            onSelect={handleSelectMenu}
+          />
+        </UserSetupColumn>
 
         {message ? (
           <UserSetupFeedback message={message} variant={messageVariant} />
