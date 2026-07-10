@@ -1,4 +1,10 @@
+export type YesNo = "yes" | "no"
+
 export type LimitPerPassType = "dollar" | "tickets"
+
+export type DiscountType = "amount" | "free-tickets" | "set-price"
+
+export type AmountDiscountKind = "dollar" | "percentage"
 
 export type PromotionFormValues = {
   promotionName: string
@@ -8,19 +14,26 @@ export type PromotionFormValues = {
   web: boolean
   managerComp: boolean
   validDays: Record<string, boolean>
-  ccRequired: string
+  ccRequired: YesNo
   startDate: string
   endDate: string
-  showFees: boolean
+  overrideShowFees: YesNo
   dayOfShowFee: string
   walkupFee: string
   phoneFee: string
   webFee: string
-  overrideCcFee: boolean
-  discountOption: string
+  overrideCcFee: YesNo
+  discountType: DiscountType
+  amountDiscountKind: AmountDiscountKind
+  dollarOff: string
+  percOff: string
+  buyTix: string
+  buyTixFree: string
+  setPrice: string
   minimumTickets: string
   limitPerPassType: LimitPerPassType
   maximumDiscount: string
+  maximumTickets: string
 }
 
 function todayDateValue() {
@@ -48,19 +61,26 @@ export const EMPTY_PROMOTION_FORM: PromotionFormValues = {
   web: true,
   managerComp: false,
   validDays: { ...EMPTY_VALID_DAYS },
-  ccRequired: "cc-required",
+  ccRequired: "yes",
   startDate: todayDateValue(),
   endDate: "",
-  showFees: true,
+  overrideShowFees: "yes",
   dayOfShowFee: "1.00",
   walkupFee: "0.00",
   phoneFee: "0.00",
   webFee: "0.00",
-  overrideCcFee: false,
-  discountOption: "",
+  overrideCcFee: "no",
+  discountType: "amount",
+  amountDiscountKind: "dollar",
+  dollarOff: "",
+  percOff: "",
+  buyTix: "",
+  buyTixFree: "",
+  setPrice: "",
   minimumTickets: "",
   limitPerPassType: "dollar",
   maximumDiscount: "",
+  maximumTickets: "",
 }
 
 export function createEmptyPromotionForm(): PromotionFormValues {
