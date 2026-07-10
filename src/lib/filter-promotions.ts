@@ -1,32 +1,27 @@
 import type { Promotion, PromotionFilters } from "@/types/promotion"
 
-function matches(value: string, query: string) {
-  if (!query.trim()) return true
-  return value.toLowerCase().includes(query.trim().toLowerCase())
-}
-
-function matchesScope(row: Promotion, scope: string) {
-  switch (scope) {
-    case "web":
-      return row.web === "Y"
-    case "phone-in":
-      return row.phoneIn === "Y"
-    case "walkup":
-      return row.walkup === "Y"
-    default:
-      return true
-  }
-}
-
+/**
+ * Desktop relies on SearchPromotion API filtering.
+ * Keep a light client pass-through for name/code only as a safety net.
+ */
 export function filterPromotions(
   rows: Promotion[],
   filters: PromotionFilters
 ): Promotion[] {
+  const nameQuery = filters.promotionName.trim().toLowerCase()
+  const codeQuery = filters.promotionCode.trim().toLowerCase()
+
+  if (!nameQuery && !codeQuery) {
+    return rows
+  }
+
   return rows.filter((row) => {
-    if (!filters.displayExpired && row.expired) return false
-    if (!matches(row.promotionName, filters.promotionName)) return false
-    if (!matches(row.promotionCode, filters.promotionCode)) return false
-    if (!matchesScope(row, filters.promoScope)) return false
+    if (nameQuery && !row.promotionName.toLowerCase().includes(nameQuery)) {
+      return false
+    }
+    if (codeQuery && !row.promotionCode.toLowerCase().includes(codeQuery)) {
+      return false
+    }
     return true
   })
 }

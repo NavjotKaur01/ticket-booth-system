@@ -33,7 +33,10 @@ export default function CalendarEventCard({ event, onActionSelect }: CalendarEve
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-0.5 sm:gap-1">
           <span className={`calendar-event-accent block h-2.5 w-0.5 rounded-lg sm:h-3 ${event.cancelled ? "bg-destructive" : "bg-primary"}`} />
-          <div className={`truncate font-semibold ${event.cancelled ? "text-destructive line-through" : "text-primary"}`}>
+          <div
+            className={`truncate font-semibold ${event.cancelled ? "text-destructive line-through" : !event.buttonColor ? "text-primary" : ""}`}
+            style={!event.cancelled && event.buttonColor ? { color: event.buttonColor } : undefined}
+          >
             {event.performer}
           </div>
         </div>

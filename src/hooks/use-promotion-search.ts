@@ -9,6 +9,7 @@ import type { Promotion, PromotionFilters } from "@/types/promotion"
 type UsePromotionSearchParams = {
   connectionName: string
   locationId: string
+  lastUpdateId?: string
   enabled?: boolean
 }
 
@@ -24,6 +25,7 @@ type UsePromotionSearchResult = {
 export function usePromotionSearch({
   connectionName,
   locationId,
+  lastUpdateId = "",
   enabled = true,
 }: UsePromotionSearchParams): UsePromotionSearchResult {
   const [promotions, setPromotions] = useState<Promotion[]>([])
@@ -45,6 +47,7 @@ export function usePromotionSearch({
         const data = await searchPromotions({
           connectionName,
           locationId,
+          lastUpdateId,
           filters,
         }).unwrap()
         const mapped = mapPromotionSearchResults(data)
@@ -53,7 +56,7 @@ export function usePromotionSearch({
         setPromotions([])
       }
     },
-    [connectionName, locationId, enabled, searchPromotions]
+    [connectionName, locationId, lastUpdateId, enabled, searchPromotions]
   )
 
   const clear = useCallback(() => {

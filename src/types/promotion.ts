@@ -22,13 +22,14 @@ export type Promotion = {
 export type PromotionFilters = {
   promotionName: string
   promotionCode: string
-  promoScope: string
+  /** Discount category filter — matches desktop DiscountType dropdown */
+  discountType: string
   displayExpired: boolean
 }
 
 export const DEFAULT_PROMOTION_FILTERS: PromotionFilters = {
   promotionName: "",
   promotionCode: "",
-  promoScope: "all-promos",
+  discountType: "all-promos",
   displayExpired: false,
 }
