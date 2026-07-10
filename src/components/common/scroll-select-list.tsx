@@ -118,7 +118,7 @@ export function ScrollSelectList({
   return (
     <div
       ref={listRef}
-      className="calendar-thin-scrollbar max-h-44 touch-pan-y overscroll-contain overflow-y-auto pr-1 [-webkit-overflow-scrolling:touch]"
+      className="calendar-thin-scrollbar max-h-50 touch-pan-y overscroll-contain overflow-y-auto pr-1 [-webkit-overflow-scrolling:touch]"
       onKeyDown={handleKeyDown}
       onWheel={handleWheel}
       onTouchMove={handleTouchMove}
