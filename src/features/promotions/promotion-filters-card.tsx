@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { promotionScopeOptions } from "@/data/promotions"
+import { promotionDiscountOptions } from "@/data/promotions"
 import type { PromotionFilters } from "@/types/promotion"
 
 type PromotionFiltersCardProps = {
@@ -63,14 +63,14 @@ export function PromotionFiltersCard({
             className={FILTER_INPUT_CLASS}
           />
           <Select
-            value={filters.promoScope}
-            onValueChange={(value) => onFilterChange("promoScope", value)}
+            value={filters.discountType}
+            onValueChange={(value) => onFilterChange("discountType", value)}
           >
             <SelectTrigger className={FILTER_SELECT_CLASS}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {promotionScopeOptions.map((option) => (
+              {promotionDiscountOptions.map((option) => (
                 <SelectItem key={option.id} value={option.id}>
                   {option.label}
                 </SelectItem>

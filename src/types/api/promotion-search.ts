@@ -1,10 +1,13 @@
 export type SearchPromotionRequest = {
   Connection: string
   LocationID: string
+  LastUpdateID?: string
+  LastUpdateDt?: string
   DiscountType: string
   IsShowExpired: boolean
   PromotionName: string
   PromotionCode: string
+  EndDt?: string
 }
 
 export type ApiPromotionSearchItem = {

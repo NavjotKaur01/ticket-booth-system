@@ -15,7 +15,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { weekDayOptions, yesNoOptions } from "@/data/promotion-form-options"
+import { useAppSession } from "@/hooks/use-app-session"
+import {
+  getPromotionDetails,
+  savePromotion,
+  updatePromotion,
+} from "@/lib/api/promotions"
+import { mapPromotionDetailsToForm } from "@/lib/map-promotion-details-to-form"
 import { cn } from "@/lib/utils"
+import type { Promotion } from "@/types/promotion"
 import {
   createEmptyPromotionForm,
   type PromotionFormValues,
@@ -25,6 +33,8 @@ import {
 type AddPromotionDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  promotion?: Promotion | null
+  onSaved?: () => void | Promise<void>
 }
 
 const FORM_GRID = "grid grid-cols-1 gap-x-6 gap-y-4 lg:grid-cols-12"
@@ -48,16 +58,19 @@ function YesNoRadio({
   name,
   value,
   onChange,
+  disabled = false,
 }: {
   name: string
   value: YesNo
   onChange: (value: YesNo) => void
+  disabled?: boolean
 }) {
   return (
     <RadioGroup
       value={value}
       onValueChange={(next) => onChange(next as YesNo)}
       className="flex h-9 items-center gap-x-5"
+      disabled={disabled}
     >
       {yesNoOptions.map((option) => (
         <label
@@ -78,17 +91,24 @@ function YesNoRow({
   value,
   onChange,
   className,
+  disabled = false,
 }: {
   label: string
   name: string
   value: YesNo
   onChange: (value: YesNo) => void
   className?: string
+  disabled?: boolean
 }) {
   return (
     <div className={cn("grid grid-cols-1 items-center gap-2 sm:grid-cols-[10rem_1fr]", className)}>
       <Label className="text-xs font-medium">{label}</Label>
-      <YesNoRadio name={name} value={value} onChange={onChange} />
+      <YesNoRadio
+        name={name}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+      />
     </div>
   )
 }
@@ -99,12 +119,14 @@ function MoneyInput({
   onChange,
   suffix,
   className,
+  disabled = false,
 }: {
   id: string
   value: string
   onChange: (value: string) => void
   suffix?: string
   className?: string
+  disabled?: boolean
 }) {
   return (
     <div className={cn("relative", className)}>
@@ -114,6 +136,7 @@ function MoneyInput({
       <Input
         id={id}
         value={value}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         className={cn("h-9 pl-6 tabular-nums", suffix && "pr-14")}
       />
@@ -131,17 +154,20 @@ function PercentInput({
   value,
   onChange,
   className,
+  disabled = false,
 }: {
   id: string
   value: string
   onChange: (value: string) => void
   className?: string
+  disabled?: boolean
 }) {
   return (
     <div className={cn("relative", className)}>
       <Input
         id={id}
         value={value}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         className="h-9 pr-12 tabular-nums"
       />
@@ -163,14 +189,71 @@ function DiscountSubRow({ children }: { children: ReactNode }) {
 export function AddPromotionDialog({
   open,
   onOpenChange,
+  promotion = null,
+  onSaved,
 }: AddPromotionDialogProps) {
+  const { connectionName, locationId, username, isReady } = useAppSession()
+  const isEditMode = promotion != null
   const [form, setForm] = useState<PromotionFormValues>(createEmptyPromotionForm())
+  const [loadingDetails, setLoadingDetails] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) {
       setForm(createEmptyPromotionForm())
+      setError(null)
+      setSaving(false)
+      setLoadingDetails(false)
+      return
     }
-  }, [open])
+
+    if (!promotion) {
+      setForm(createEmptyPromotionForm())
+      setError(null)
+      return
+    }
+
+    const promotionId = promotion.id
+    let cancelled = false
+
+    async function loadPromotionDetails() {
+      if (!connectionName) {
+        setError("Connection is required before loading a promotion.")
+        return
+      }
+
+      setLoadingDetails(true)
+      setError(null)
+
+      try {
+        const details = await getPromotionDetails({
+          connectionName,
+          promotionId,
+        })
+        if (cancelled) return
+        setForm(mapPromotionDetailsToForm(details))
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to load promotion details."
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingDetails(false)
+        }
+      }
+    }
+
+    void loadPromotionDetails()
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, promotion, connectionName])
 
   function updateField<K extends keyof PromotionFormValues>(
     field: K,
@@ -197,9 +280,92 @@ export function AddPromotionDialog({
 
   const allDaysSelected = weekDayOptions.every((day) => form.validDays[day.id])
   const showFeeInputs = form.overrideShowFees === "yes"
+  const formDisabled = loadingDetails || saving
 
-  function handleSave() {
-    onOpenChange(false)
+  function validateForm() {
+    if (!form.promotionName.trim()) {
+      return "Promotion name is required."
+    }
+    if (!form.promotionCode.trim()) {
+      return "Promotion code is required."
+    }
+    if (!form.startDate.trim()) {
+      return "Start date is required."
+    }
+    if (!form.walkUp && !form.phoneIn && !form.web && !form.managerComp) {
+      return "Select at least one of Walk-Up, Phone-In, Web, or Manager Comp."
+    }
+    if (form.discountType === "amount") {
+      if (
+        form.amountDiscountKind === "dollar" &&
+        !form.dollarOff.trim()
+      ) {
+        return "Dollar off amount is required."
+      }
+      if (
+        form.amountDiscountKind === "percentage" &&
+        !form.percOff.trim()
+      ) {
+        return "Percentage off is required."
+      }
+    }
+    if (form.discountType === "free-tickets") {
+      if (!form.buyTix.trim() || !form.buyTixFree.trim()) {
+        return "Buy and free ticket counts are required."
+      }
+    }
+    if (form.discountType === "set-price" && !form.setPrice.trim()) {
+      return "Set price is required."
+    }
+    if (!isReady || !connectionName || !locationId) {
+      return "Location is required before saving a promotion."
+    }
+    if (isEditMode && !promotion?.id) {
+      return "Promotion id is required before updating."
+    }
+    return null
+  }
+
+  async function handleSave() {
+    const validationError = validateForm()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+
+    try {
+      if (isEditMode && promotion) {
+        await updatePromotion({
+          connectionName,
+          locationId,
+          lastUpdateId: username,
+          form,
+          promotionId: promotion.id,
+        })
+      } else {
+        await savePromotion({
+          connectionName,
+          locationId,
+          lastUpdateId: username,
+          form,
+        })
+      }
+      await onSaved?.()
+      onOpenChange(false)
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : isEditMode
+            ? "Failed to update promotion"
+            : "Failed to save promotion"
+      )
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -209,10 +375,18 @@ export function AddPromotionDialog({
         className="flex max-h-[92vh] max-w-4xl flex-col overflow-hidden p-0 sm:max-w-4xl"
       >
         <DialogHeader className="shrink-0 border-b px-6 py-4 pr-12">
-          <DialogTitle>Add Promotion</DialogTitle>
+          <DialogTitle>
+            {isEditMode ? "Edit Promotion" : "Add Promotion"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="divide-y overflow-y-auto">
+          {loadingDetails ? (
+            <p className="px-6 py-5 text-sm text-muted-foreground">
+              Loading promotion details...
+            </p>
+          ) : null}
+
           {/* Promotion Details */}
           <div className={SECTION_PAD}>
             <FormSection title="Promotion Details">
@@ -225,6 +399,7 @@ export function AddPromotionDialog({
                   <Input
                     id="add-promo-name"
                     value={form.promotionName}
+                    disabled={formDisabled}
                     onChange={(event) =>
                       updateField("promotionName", event.target.value)
                     }
@@ -238,6 +413,7 @@ export function AddPromotionDialog({
                   <Input
                     id="add-promo-code"
                     value={form.promotionCode}
+                    disabled={formDisabled}
                     onChange={(event) =>
                       updateField("promotionCode", event.target.value)
                     }
@@ -255,11 +431,13 @@ export function AddPromotionDialog({
                     key={field}
                     className={cn(
                       "flex h-9 cursor-pointer items-center gap-2 text-sm",
-                      SPAN_QUARTER
+                      SPAN_QUARTER,
+                      formDisabled && "pointer-events-none opacity-60"
                     )}
                   >
                     <Checkbox
                       checked={form[field]}
+                      disabled={formDisabled}
                       onCheckedChange={(value) =>
                         updateField(field, value === true)
                       }
@@ -280,6 +458,7 @@ export function AddPromotionDialog({
                     label="Override Show Fees"
                     name="override-show-fees"
                     value={form.overrideShowFees}
+                    disabled={formDisabled}
                     onChange={(value) => updateField("overrideShowFees", value)}
                   />
                 </div>
@@ -288,6 +467,7 @@ export function AddPromotionDialog({
                     label="Over-ride CC Fee to $0"
                     name="override-cc-fee"
                     value={form.overrideCcFee}
+                    disabled={formDisabled}
                     onChange={(value) => updateField("overrideCcFee", value)}
                   />
                 </div>
@@ -302,6 +482,7 @@ export function AddPromotionDialog({
                       <Input
                         id="add-promo-dos-fee"
                         value={form.dayOfShowFee}
+                        disabled={formDisabled}
                         onChange={(event) =>
                           updateField("dayOfShowFee", event.target.value)
                         }
@@ -316,6 +497,7 @@ export function AddPromotionDialog({
                       <Input
                         id="add-promo-walkup-fee"
                         value={form.walkupFee}
+                        disabled={formDisabled}
                         onChange={(event) =>
                           updateField("walkupFee", event.target.value)
                         }
@@ -330,6 +512,7 @@ export function AddPromotionDialog({
                       <Input
                         id="add-promo-phone-fee"
                         value={form.phoneFee}
+                        disabled={formDisabled}
                         onChange={(event) =>
                           updateField("phoneFee", event.target.value)
                         }
@@ -344,6 +527,7 @@ export function AddPromotionDialog({
                       <Input
                         id="add-promo-web-fee"
                         value={form.webFee}
+                        disabled={formDisabled}
                         onChange={(event) =>
                           updateField("webFee", event.target.value)
                         }
@@ -363,10 +547,14 @@ export function AddPromotionDialog({
                 {weekDayOptions.map((day) => (
                   <label
                     key={day.id}
-                    className="flex cursor-pointer items-center gap-2 text-sm"
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2 text-sm",
+                      formDisabled && "pointer-events-none opacity-60"
+                    )}
                   >
                     <Checkbox
                       checked={form.validDays[day.id] ?? false}
+                      disabled={formDisabled}
                       onCheckedChange={(value) =>
                         toggleValidDay(day.id, value === true)
                       }
@@ -374,9 +562,15 @@ export function AddPromotionDialog({
                     {day.label}
                   </label>
                 ))}
-                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <label
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2 text-sm",
+                    formDisabled && "pointer-events-none opacity-60"
+                  )}
+                >
                   <Checkbox
                     checked={allDaysSelected}
+                    disabled={formDisabled}
                     onCheckedChange={(value) =>
                       toggleSelectAllDays(value === true)
                     }
@@ -399,6 +593,7 @@ export function AddPromotionDialog({
                     label="CC Required to hold reservation"
                     name="cc-required"
                     value={form.ccRequired}
+                    disabled={formDisabled}
                     onChange={(value) => updateField("ccRequired", value)}
                   />
                 </div>
@@ -442,6 +637,7 @@ export function AddPromotionDialog({
                   )
                 }
                 className="space-y-4"
+                disabled={formDisabled}
               >
                 {/* Amount Discount */}
                 <div className="space-y-3">
@@ -460,6 +656,7 @@ export function AddPromotionDialog({
                           )
                         }
                         className="flex items-center gap-x-5 lg:col-span-5"
+                        disabled={formDisabled}
                       >
                         <label className="flex cursor-pointer items-center gap-2 text-sm">
                           <RadioGroupItem value="dollar" id="amount-dollar" />
@@ -476,12 +673,14 @@ export function AddPromotionDialog({
                             id="add-promo-dollar-off"
                             suffix="Off"
                             value={form.dollarOff}
+                            disabled={formDisabled}
                             onChange={(value) => updateField("dollarOff", value)}
                           />
                         ) : (
                           <PercentInput
                             id="add-promo-perc-off"
                             value={form.percOff}
+                            disabled={formDisabled}
                             onChange={(value) => updateField("percOff", value)}
                           />
                         )}
@@ -508,6 +707,7 @@ export function AddPromotionDialog({
                           type="number"
                           min={0}
                           value={form.buyTix}
+                          disabled={formDisabled}
                           onChange={(event) =>
                             updateField("buyTix", event.target.value)
                           }
@@ -524,6 +724,7 @@ export function AddPromotionDialog({
                           type="number"
                           min={0}
                           value={form.buyTixFree}
+                          disabled={formDisabled}
                           onChange={(event) =>
                             updateField("buyTixFree", event.target.value)
                           }
@@ -546,6 +747,7 @@ export function AddPromotionDialog({
                         <MoneyInput
                           id="add-promo-set-price"
                           value={form.setPrice}
+                          disabled={formDisabled}
                           onChange={(value) => updateField("setPrice", value)}
                         />
                       </div>
@@ -570,6 +772,7 @@ export function AddPromotionDialog({
                     type="number"
                     min={0}
                     value={form.minimumTickets}
+                    disabled={formDisabled}
                     onChange={(event) =>
                       updateField("minimumTickets", event.target.value)
                     }
@@ -587,6 +790,7 @@ export function AddPromotionDialog({
                       )
                     }
                     className="flex h-9 flex-row flex-wrap items-center gap-x-5"
+                    disabled={formDisabled}
                   >
                     <label className="flex cursor-pointer items-center gap-2 text-sm">
                       <RadioGroupItem value="dollar" id="limit-dollar" />
@@ -608,6 +812,7 @@ export function AddPromotionDialog({
                     <MoneyInput
                       id="add-promo-max-discount"
                       value={form.maximumDiscount}
+                      disabled={formDisabled}
                       onChange={(value) => updateField("maximumDiscount", value)}
                     />
                   </FormField>
@@ -622,6 +827,7 @@ export function AddPromotionDialog({
                       type="number"
                       min={0}
                       value={form.maximumTickets}
+                      disabled={formDisabled}
                       onChange={(event) =>
                         updateField("maximumTickets", event.target.value)
                       }
@@ -635,15 +841,29 @@ export function AddPromotionDialog({
         </div>
 
         <DialogFooter className="shrink-0 border-t px-6 py-4">
+          {error ? (
+            <p className="mr-auto max-w-md text-sm text-destructive">{error}</p>
+          ) : null}
           <Button
             type="button"
             variant="outline"
+            disabled={saving}
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
-          <Button type="button" onClick={handleSave}>
-            Save
+          <Button
+            type="button"
+            disabled={formDisabled}
+            onClick={() => void handleSave()}
+          >
+            {saving
+              ? isEditMode
+                ? "Updating..."
+                : "Saving..."
+              : isEditMode
+                ? "Update"
+                : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>
