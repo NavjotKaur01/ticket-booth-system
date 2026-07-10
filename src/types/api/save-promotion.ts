@@ -36,3 +36,8 @@ export type SavePromotionRequest = {
   SpecialReq?: string | null
   Price?: number | null
 }
+
+/** Matches desktop `PromotionsRequestModel` for `UpdatePromotion` (includes PromotionId). */
+export type UpdatePromotionRequest = SavePromotionRequest & {
+  PromotionId: string
+}

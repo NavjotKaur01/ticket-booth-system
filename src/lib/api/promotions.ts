@@ -41,3 +41,35 @@ export function savePromotion({
     { connectionName, locationId, lastUpdateId, form }
   )
 }
+
+type GetPromotionDetailsParams = {
+  connectionName: string
+  promotionId: string
+}
+
+export function getPromotionDetails({
+  connectionName,
+  promotionId,
+}: GetPromotionDetailsParams) {
+  return dispatchEndpoint<ApiPromotionSearchItem, GetPromotionDetailsParams>(
+    clubmanApi.endpoints.getPromotionDetails,
+    { connectionName, promotionId }
+  )
+}
+
+type UpdatePromotionParams = SavePromotionParams & {
+  promotionId: string
+}
+
+export function updatePromotion({
+  connectionName,
+  locationId,
+  lastUpdateId,
+  form,
+  promotionId,
+}: UpdatePromotionParams) {
+  return dispatchEndpoint<boolean, UpdatePromotionParams>(
+    clubmanApi.endpoints.updatePromotion,
+    { connectionName, locationId, lastUpdateId, form, promotionId }
+  )
+}

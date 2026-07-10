@@ -11,6 +11,7 @@ import { buildReservationDayRange } from "@/lib/reservation-date-range"
 import { buildGetReservationPromotionsRequest } from "@/lib/build-get-reservation-promotions-request"
 import { buildSearchPromotionRequest } from "@/lib/build-search-promotion-request"
 import { buildSavePromotionRequest } from "@/lib/build-save-promotion-request"
+import { buildUpdatePromotionRequest } from "@/lib/build-update-promotion-request"
 import { buildCalendarFetchRange } from "@/lib/build-calendar-fetch-range"
 import { coerceApiArray } from "@/lib/coerce-api-array"
 import { formatRouteBoolean } from "@/lib/format-route-boolean"
@@ -631,6 +632,54 @@ export const clubmanApi = createApi({
       ],
     }),
 
+    getPromotionDetails: builder.mutation({
+      query: ({
+        connectionName,
+        promotionId,
+      }: {
+        connectionName: string
+        promotionId: string
+      }) => ({
+        url: administratorApiPath(
+          connectionName,
+          promotionId,
+          "GetPromotionDetails"
+        ),
+        method: "GET",
+      }),
+      transformResponse: (response: ApiPromotionSearchItem) => response,
+    }),
+
+    updatePromotion: builder.mutation({
+      query: ({
+        connectionName,
+        locationId,
+        lastUpdateId,
+        form,
+        promotionId,
+      }: {
+        connectionName: string
+        locationId: string
+        lastUpdateId: string
+        form: PromotionFormValues
+        promotionId: string
+      }) => ({
+        url: administratorApiPath("UpdatePromotion"),
+        method: "PUT",
+        body: buildUpdatePromotionRequest({
+          connectionName,
+          locationId,
+          lastUpdateId,
+          promotionId,
+          form,
+        }),
+      }),
+      transformResponse: (response: boolean) => response,
+      invalidatesTags: (_result, _error, arg) => [
+        { type: "Promotion", id: arg.locationId },
+      ],
+    }),
+
     getReservationData: builder.query({
       query: ({
         connectionString,
@@ -1175,6 +1224,8 @@ export const {
   useUpdateSystemUserMutation,
   useSearchPromotionsMutation,
   useSavePromotionMutation,
+  useGetPromotionDetailsMutation,
+  useUpdatePromotionMutation,
   useGetReservationPromotionsMutation,
   useGetReservationDataQuery,
   useGetReservationDetailByIdQuery,

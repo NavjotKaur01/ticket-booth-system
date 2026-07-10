@@ -10,6 +10,7 @@ import { useAppSession } from "@/hooks/use-app-session"
 import { usePromotionSearch } from "@/hooks/use-promotion-search"
 import {
   DEFAULT_PROMOTION_FILTERS,
+  type Promotion,
   type PromotionFilters,
 } from "@/types/promotion"
 
@@ -28,6 +29,9 @@ export function Promotions() {
     DEFAULT_PROMOTION_FILTERS
   )
   const [addOpen, setAddOpen] = useState(false)
+  const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(
+    null
+  )
 
   function updateDraftField<K extends keyof PromotionFilters>(
     key: K,
@@ -47,6 +51,10 @@ export function Promotions() {
 
   async function handlePromotionSaved() {
     await search(draftFilters)
+  }
+
+  function handleEditPromotion(promotion: Promotion) {
+    setEditingPromotion(promotion)
   }
 
   const tableLoading = loading
@@ -96,12 +104,24 @@ export function Promotions() {
           data={promotions}
           loading={tableLoading}
           emptyMessage={emptyMessage}
+          onEdit={handleEditPromotion}
         />
       </PanelCard>
 
       <AddPromotionDialog
         open={addOpen}
         onOpenChange={setAddOpen}
+        onSaved={handlePromotionSaved}
+      />
+
+      <AddPromotionDialog
+        open={editingPromotion != null}
+        promotion={editingPromotion}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingPromotion(null)
+          }
+        }}
         onSaved={handlePromotionSaved}
       />
     </div>
