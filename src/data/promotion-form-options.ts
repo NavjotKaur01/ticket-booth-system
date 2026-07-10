@@ -1,21 +1,6 @@
-export const ccRequiredOptions = [
-  {
-    id: "cc-required",
-    label: "Credit Card Required to hold reservation",
-  },
-  {
-    id: "cc-not-required",
-    label: "Credit Card Not Required",
-  },
-] as const
-
-export const discountOptions = [
-  { id: "select", label: "Discount options" },
-  { id: "percent-10", label: "10% Off" },
-  { id: "percent-20", label: "20% Off" },
-  { id: "fixed-5", label: "$5 Off" },
-  { id: "bogo", label: "Buy One Get One" },
-  { id: "comp", label: "Complimentary" },
+export const yesNoOptions = [
+  { id: "yes", label: "Yes" },
+  { id: "no", label: "No" },
 ] as const
 
 export const weekDayOptions = [
