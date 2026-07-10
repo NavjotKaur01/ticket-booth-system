@@ -14,12 +14,13 @@ import {
 } from "@/types/promotion"
 
 export function Promotions() {
-  const { connectionName, locationId, isReady } = useAppSession()
+  const { connectionName, locationId, username, isReady } = useAppSession()
 
   const { promotions, loading, error, hasSearched, search, clear } =
     usePromotionSearch({
       connectionName,
       locationId,
+      lastUpdateId: username,
       enabled: isReady,
     })
 
@@ -42,6 +43,10 @@ export function Promotions() {
   function handleClear() {
     setDraftFilters(DEFAULT_PROMOTION_FILTERS)
     clear()
+  }
+
+  async function handlePromotionSaved() {
+    await search(draftFilters)
   }
 
   const tableLoading = loading
@@ -94,7 +99,11 @@ export function Promotions() {
         />
       </PanelCard>
 
-      <AddPromotionDialog open={addOpen} onOpenChange={setAddOpen} />
+      <AddPromotionDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onSaved={handlePromotionSaved}
+      />
     </div>
   )
 }
