@@ -11,6 +11,7 @@ export type NavSubItem = {
   href?: string
   action?: NavSubItemAction
   items?: NavSubItem[]
+  hidden?: boolean
 }
 
 export type NavItem = {
