@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react"
 
 import CalendarDatePickerControl from "@/components/calendar/controls/CalendarDatePickerControl"
+import { ScrollSelectControl } from "@/components/common/scroll-select-control"
 import { FormField, FormSection } from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -301,23 +302,19 @@ export function AddPromotionDialog({
           <div className="rounded-md border p-2.5">
             <div className="space-y-2">
               <FormSection title="Discount Options">
-                <Select
-                  value={form.discountOption || undefined}
-                  onValueChange={(value) =>
-                    updateField("discountOption", value)
-                  }
-                >
-                  <SelectTrigger className="w-full sm:max-w-md">
-                    <SelectValue placeholder="Discount options" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {discountOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ScrollSelectControl
+                  id="add-promo-discount-option"
+                  value={form.discountOption}
+                  onChange={(value) => updateField("discountOption", value)}
+                  placeholder="Discount options"
+                  className="w-full sm:max-w-md"
+                  options={discountOptions
+                    .filter((option) => option.id !== "select")
+                    .map((option) => ({
+                      value: option.id,
+                      label: option.label,
+                    }))}
+                />
               </FormSection>
 
               <FormSection title="Additional Options">
