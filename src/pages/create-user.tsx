@@ -1,23 +1,25 @@
-import { UserPlus } from "lucide-react"
 import { useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
-import { FormField } from "@/components/forms/form-fields"
-import {
-  AdminPageShell,
-  AdminPageTitle,
-  ADMIN_SPLIT_PANEL_2COL_CLASS,
-} from "@/components/layout/admin-page"
+import { MultiSelect } from "@/components/forms/multi-select"
+import { AdminPageShell, AdminPageTitle } from "@/components/layout/admin-page"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { UserSetupColumn } from "@/features/user-setup/user-setup-column"
+import { Label } from "@/components/ui/label"
 import { UserSetupFeedback } from "@/features/user-setup/user-setup-feedback"
-import { UserRoleChecklist } from "@/features/user-setup/user-role-checklist"
-import type { UserSetupRole } from "@/data/user-setup"
+import { USER_SETUP_ROLES, type UserSetupRole } from "@/data/user-setup"
+import { cn } from "@/lib/utils"
 import {
   EMPTY_CREATE_USER_FORM,
   type CreateUserFormValues,
 } from "@/types/user-setup"
+
+const CREATE_USER_FIELD_ROW_CLASS =
+  "grid gap-2 sm:grid-cols-[8.5rem_24rem] sm:items-center"
+
+const CREATE_USER_FORM_CLASS = "w-full sm:w-[33rem]"
+
+const CREATE_USER_LABEL_CLASS = "text-xs font-medium text-foreground"
 
 export function CreateUser() {
   const [form, setForm] = useState<CreateUserFormValues>(EMPTY_CREATE_USER_FORM)
@@ -29,16 +31,6 @@ export function CreateUser() {
     value: CreateUserFormValues[K]
   ) {
     setForm((current) => ({ ...current, [field]: value }))
-    setMessage(null)
-  }
-
-  function toggleRole(role: UserSetupRole, checked: boolean) {
-    setForm((current) => ({
-      ...current,
-      roles: checked
-        ? [...current.roles, role]
-        : current.roles.filter((item) => item !== role),
-    }))
     setMessage(null)
   }
 
@@ -68,65 +60,102 @@ export function CreateUser() {
     <AdminPageShell>
       <AdminPageTitle>Create User</AdminPageTitle>
 
-      <PanelCard>
-        <div className={ADMIN_SPLIT_PANEL_2COL_CLASS}>
-          <UserSetupColumn title="Sign Up for Your New Account">
-            <div className="mx-auto w-full max-w-sm space-y-4">
-              <FormField label="User Name" htmlFor="create-user-name">
-                <Input
-                  id="create-user-name"
-                  value={form.userName}
-                  onChange={(event) => updateField("userName", event.target.value)}
-                />
-              </FormField>
-
-              <FormField label="Password" htmlFor="create-user-password">
-                <Input
-                  id="create-user-password"
-                  type="password"
-                  value={form.password}
-                  onChange={(event) => updateField("password", event.target.value)}
-                />
-              </FormField>
-
-              <FormField label="Confirm Password" htmlFor="create-user-confirm-password">
-                <Input
-                  id="create-user-confirm-password"
-                  type="password"
-                  value={form.confirmPassword}
-                  onChange={(event) =>
-                    updateField("confirmPassword", event.target.value)
-                  }
-                />
-              </FormField>
-
-              <FormField label="E-mail" htmlFor="create-user-email">
-                <Input
-                  id="create-user-email"
-                  type="email"
-                  value={form.email}
-                  onChange={(event) => updateField("email", event.target.value)}
-                />
-              </FormField>
-
-              <Button type="button" className="gap-1.5" onClick={handleCreate}>
-                <UserPlus className="size-4" />
-                Create User
-              </Button>
+      <PanelCard className="w-fit max-w-full">
+        <div className="p-3 sm:p-4">
+          <div className={cn("space-y-4", CREATE_USER_FORM_CLASS)}>
+            <div className={CREATE_USER_FIELD_ROW_CLASS}>
+              <Label htmlFor="create-user-name" className={CREATE_USER_LABEL_CLASS}>
+                User Name
+              </Label>
+              <Input
+                id="create-user-name"
+                className="h-9"
+                value={form.userName}
+                onChange={(event) => updateField("userName", event.target.value)}
+              />
             </div>
-          </UserSetupColumn>
 
-          <UserSetupColumn title="Select roles for this user">
-            <UserRoleChecklist
-              selectedRoles={form.roles}
-              onToggleRole={toggleRole}
-            />
-          </UserSetupColumn>
+            <div className={CREATE_USER_FIELD_ROW_CLASS}>
+              <Label htmlFor="create-user-password" className={CREATE_USER_LABEL_CLASS}>
+                Password
+              </Label>
+              <Input
+                id="create-user-password"
+                type="password"
+                className="h-9"
+                value={form.password}
+                onChange={(event) => updateField("password", event.target.value)}
+              />
+            </div>
+
+            <div className={CREATE_USER_FIELD_ROW_CLASS}>
+              <Label
+                htmlFor="create-user-confirm-password"
+                className={CREATE_USER_LABEL_CLASS}
+              >
+                Confirm Password
+              </Label>
+              <Input
+                id="create-user-confirm-password"
+                type="password"
+                className="h-9"
+                value={form.confirmPassword}
+                onChange={(event) =>
+                  updateField("confirmPassword", event.target.value)
+                }
+              />
+            </div>
+
+            <div className={CREATE_USER_FIELD_ROW_CLASS}>
+              <Label htmlFor="create-user-email" className={CREATE_USER_LABEL_CLASS}>
+                E-mail
+              </Label>
+              <Input
+                id="create-user-email"
+                type="email"
+                className="h-9"
+                value={form.email}
+                onChange={(event) => updateField("email", event.target.value)}
+              />
+            </div>
+
+            <div className={CREATE_USER_FIELD_ROW_CLASS}>
+              <Label htmlFor="create-user-roles" className={CREATE_USER_LABEL_CLASS}>
+                Roles
+              </Label>
+              <MultiSelect
+                id="create-user-roles"
+                options={USER_SETUP_ROLES}
+                selected={form.roles}
+                onChange={(roles) => updateField("roles", roles as UserSetupRole[])}
+                placeholder="Select roles"
+                searchPlaceholder="Search roles..."
+                emptyMessage="No roles match your search."
+                itemNoun="roles"
+              />
+            </div>
+
+            {message ? (
+              <div className={CREATE_USER_FIELD_ROW_CLASS}>
+                <div className="hidden sm:block" />
+                <UserSetupFeedback
+                  message={message}
+                  variant={messageVariant}
+                  className="rounded-md border px-3 py-2"
+                />
+              </div>
+            ) : null}
+
+            <div className={cn(CREATE_USER_FIELD_ROW_CLASS, "pt-1")}>
+              <div className="hidden sm:block" />
+              <div className="flex justify-end">
+                <Button type="button" size="sm" onClick={handleCreate}>
+                  Create User
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
-
-        {message ? (
-          <UserSetupFeedback message={message} variant={messageVariant} />
-        ) : null}
       </PanelCard>
     </AdminPageShell>
   )

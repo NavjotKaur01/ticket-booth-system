@@ -1,15 +1,11 @@
-import { Save } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
-import { FormField } from "@/components/forms/form-fields"
-import {
-  AdminPageShell,
-  AdminPageTitle,
-  ADMIN_SPLIT_PANEL_2COL_CLASS,
-} from "@/components/layout/admin-page"
+import { MultiSelect } from "@/components/forms/multi-select"
+import { AdminPageShell, AdminPageTitle } from "@/components/layout/admin-page"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -17,19 +13,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { UserSetupActionBar } from "@/features/user-setup/user-setup-action-bar"
-import { UserSetupColumn } from "@/features/user-setup/user-setup-column"
 import { UserSetupFeedback } from "@/features/user-setup/user-setup-feedback"
-import { UserRoleChecklist } from "@/features/user-setup/user-role-checklist"
-import {
-  modifyUserOptions,
-  YES_NO_OPTIONS,
-  type UserSetupRole,
-} from "@/data/user-setup"
+import { modifyUserOptions, USER_SETUP_ROLES, YES_NO_OPTIONS, type UserSetupRole } from "@/data/user-setup"
+import { cn } from "@/lib/utils"
 import {
   EMPTY_MODIFY_USER_FORM,
   type ModifyUserFormValues,
 } from "@/types/user-setup"
+
+const MODIFY_USER_FIELD_ROW_CLASS =
+  "grid gap-2 sm:grid-cols-[8.5rem_24rem] sm:items-center"
+
+const MODIFY_USER_FORM_CLASS = "w-full sm:w-[33rem]"
+
+const MODIFY_USER_LABEL_CLASS = "text-xs font-medium text-foreground"
 
 export function ModifyUser() {
   const [selectedUserId, setSelectedUserId] = useState<string>("")
@@ -65,16 +62,6 @@ export function ModifyUser() {
     setMessage(null)
   }
 
-  function toggleRole(role: UserSetupRole, checked: boolean) {
-    setForm((current) => ({
-      ...current,
-      roles: checked
-        ? [...current.roles, role]
-        : current.roles.filter((item) => item !== role),
-    }))
-    setMessage(null)
-  }
-
   function handleUpdate() {
     if (!selectedUser) {
       setMessageVariant("error")
@@ -95,115 +82,138 @@ export function ModifyUser() {
     <AdminPageShell>
       <AdminPageTitle>Modify Users</AdminPageTitle>
 
-      <PanelCard>
-        <div className="border-b px-3 py-3 sm:px-4">
-          <FormField label="Users" htmlFor="modify-user-select">
-            <Select
-              value={selectedUserId}
-              onValueChange={(value) => {
-                setSelectedUserId(value)
-                setMessage(null)
-              }}
-            >
-              <SelectTrigger id="modify-user-select" className="h-9 w-full sm:max-w-md">
-                <SelectValue placeholder="Select user" />
-              </SelectTrigger>
-              <SelectContent>
-                {modifyUserOptions.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-        </div>
+      <PanelCard className="w-fit max-w-full">
+        <div className="p-3 sm:p-4">
+          <div className={cn("space-y-4", MODIFY_USER_FORM_CLASS)}>
+            <div className={MODIFY_USER_FIELD_ROW_CLASS}>
+              <Label htmlFor="modify-user-select" className={MODIFY_USER_LABEL_CLASS}>
+                Users
+              </Label>
+              <Select
+                value={selectedUserId}
+                onValueChange={(value) => {
+                  setSelectedUserId(value)
+                  setMessage(null)
+                }}
+              >
+                <SelectTrigger id="modify-user-select" className="h-9 w-full">
+                  <SelectValue placeholder="Select user" />
+                </SelectTrigger>
+                <SelectContent>
+                  {modifyUserOptions.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className={ADMIN_SPLIT_PANEL_2COL_CLASS}>
-          <UserSetupColumn title="Account Details">
-            <div className="space-y-4">
-              <FormField label="Email Address" htmlFor="modify-user-email">
-                <Input
-                  id="modify-user-email"
-                  type="email"
-                  value={form.email}
-                  disabled={!selectedUser}
-                  onChange={(event) => updateField("email", event.target.value)}
+            <div className={MODIFY_USER_FIELD_ROW_CLASS}>
+              <Label htmlFor="modify-user-email" className={MODIFY_USER_LABEL_CLASS}>
+                Email Address
+              </Label>
+              <Input
+                id="modify-user-email"
+                type="email"
+                className="h-9"
+                value={form.email}
+                disabled={!selectedUser}
+                onChange={(event) => updateField("email", event.target.value)}
+              />
+            </div>
+
+            <div className={MODIFY_USER_FIELD_ROW_CLASS}>
+              <Label htmlFor="modify-user-locked-out" className={MODIFY_USER_LABEL_CLASS}>
+                Locked Out
+              </Label>
+              <Select
+                value={form.lockedOut}
+                onValueChange={(value) =>
+                  updateField("lockedOut", value as ModifyUserFormValues["lockedOut"])
+                }
+                disabled={!selectedUser}
+              >
+                <SelectTrigger id="modify-user-locked-out" className="h-9 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {YES_NO_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className={MODIFY_USER_FIELD_ROW_CLASS}>
+              <Label htmlFor="modify-user-suspended" className={MODIFY_USER_LABEL_CLASS}>
+                Suspended
+              </Label>
+              <Select
+                value={form.suspended}
+                onValueChange={(value) =>
+                  updateField("suspended", value as ModifyUserFormValues["suspended"])
+                }
+                disabled={!selectedUser}
+              >
+                <SelectTrigger id="modify-user-suspended" className="h-9 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {YES_NO_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className={MODIFY_USER_FIELD_ROW_CLASS}>
+              <Label htmlFor="modify-user-roles" className={MODIFY_USER_LABEL_CLASS}>
+                Roles
+              </Label>
+              <MultiSelect
+                id="modify-user-roles"
+                options={USER_SETUP_ROLES}
+                selected={form.roles}
+                onChange={(roles) => updateField("roles", roles as UserSetupRole[])}
+                placeholder="Select roles"
+                searchPlaceholder="Search roles..."
+                emptyMessage="No roles match your search."
+                itemNoun="roles"
+                disabled={!selectedUser}
+              />
+            </div>
+
+            {message ? (
+              <div className={MODIFY_USER_FIELD_ROW_CLASS}>
+                <div className="hidden sm:block" />
+                <UserSetupFeedback
+                  message={message}
+                  variant={messageVariant}
+                  className="rounded-md border px-3 py-2"
                 />
-              </FormField>
+              </div>
+            ) : null}
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField label="Locked Out" htmlFor="modify-user-locked-out">
-                  <Select
-                    value={form.lockedOut}
-                    onValueChange={(value) =>
-                      updateField("lockedOut", value as ModifyUserFormValues["lockedOut"])
-                    }
-                    disabled={!selectedUser}
-                  >
-                    <SelectTrigger id="modify-user-locked-out" className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {YES_NO_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormField>
-
-                <FormField label="Suspended" htmlFor="modify-user-suspended">
-                  <Select
-                    value={form.suspended}
-                    onValueChange={(value) =>
-                      updateField("suspended", value as ModifyUserFormValues["suspended"])
-                    }
-                    disabled={!selectedUser}
-                  >
-                    <SelectTrigger id="modify-user-suspended" className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {YES_NO_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormField>
+            <div className={cn(MODIFY_USER_FIELD_ROW_CLASS, "pt-1")}>
+              <div className="hidden sm:block" />
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!selectedUser}
+                  onClick={handleUpdate}
+                >
+                  Update
+                </Button>
               </div>
             </div>
-          </UserSetupColumn>
-
-          <UserSetupColumn title="Roles">
-            <UserRoleChecklist
-              selectedRoles={form.roles}
-              onToggleRole={toggleRole}
-              disabled={!selectedUser}
-              columnsClassName="grid gap-1 sm:grid-cols-2 xl:grid-cols-3"
-            />
-          </UserSetupColumn>
+          </div>
         </div>
-
-        {message ? (
-          <UserSetupFeedback message={message} variant={messageVariant} />
-        ) : null}
-
-        <UserSetupActionBar>
-          <Button
-            type="button"
-            size="sm"
-            className="gap-1.5"
-            disabled={!selectedUser}
-            onClick={handleUpdate}
-          >
-            <Save className="size-4" />
-            Update
-          </Button>
-        </UserSetupActionBar>
       </PanelCard>
     </AdminPageShell>
   )

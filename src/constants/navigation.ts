@@ -26,6 +26,7 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
       {
         id: "domain-setup",
         label: "Domain Setup",
+        hidden: true,
         items: [
           { id: "web-servers", label: "Web Servers", href: ROUTES.webServers },
           { id: "domains", label: "Domains", href: ROUTES.domains },
@@ -49,6 +50,7 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
       {
         id: "user-setup",
         label: "User Setup",
+        hidden: true,
         items: [
           { id: "create-user", label: "Create User", href: ROUTES.createUser },
           { id: "modify-user", label: "Modify User", href: ROUTES.modifyUser },
@@ -62,6 +64,7 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
       {
         id: "navigation",
         label: "Navigation",
+        hidden: true,
         items: [
           { id: "navigation-management", label: "Navigation Management", href: ROUTES.navigationManagement },
           { id: "navigation-drop-downs", label: "Navigation Drop Downs", href: ROUTES.navigationDropDowns },
@@ -69,20 +72,21 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
           { id: "navigation-location", label: "Navigation Location", href: ROUTES.navigationLocation },
         ],
       },
-      { id: "news", label: "News", href: ROUTES.news },
-      { id: "roles", label: "Roles", href: ROUTES.roles },
+      { id: "news", label: "News", href: ROUTES.news, hidden: true },
+      { id: "roles", label: "Roles", href: ROUTES.roles, hidden: true },
       {
         id: "customers",
         label: "Customers",
+        hidden: true,
         items: [
           { id: "log-in-management", label: "Log In Management", href: ROUTES.logInManagement },
           { id: "transaction-log-viewer", label: "Transaction Log Viewer", href: ROUTES.transactionLogViewer },
         ],
       },
-      { id: "comic-manager", label: "Comic Manager", href: ROUTES.comicManager },
-      { id: "features-and-tips", label: "Features And Tips", href: ROUTES.featuresAndTips },
-      { id: "sum-contact-leads", label: "SUM Contact Leads", href: ROUTES.sumContactLeads },
-      { id: "events", label: "Events", href: ROUTES.events },
+      { id: "comic-manager", label: "Comic Manager", href: ROUTES.comicManager, hidden: true },
+      { id: "features-and-tips", label: "Features And Tips", href: ROUTES.featuresAndTips, hidden: true },
+      { id: "sum-contact-leads", label: "SUM Contact Leads", href: ROUTES.sumContactLeads, hidden: true },
+      { id: "events", label: "Events", href: ROUTES.events, hidden: true },
       // { id: "clubman-log", label: "Clubman Log" },
       { id: "adjust-fees", label: "Adjust Fees", action: "adjust-fees" },
       { id: "comedians", label: "Comedians", href: ROUTES.performers },

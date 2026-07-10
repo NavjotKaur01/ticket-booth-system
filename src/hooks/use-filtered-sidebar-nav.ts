@@ -18,6 +18,10 @@ function filterNavSubItems(
 ): NavSubItem[] {
   return items
     .filter((item) => {
+      if (item.hidden) {
+        return false
+      }
+
       if (item.id === GIFT_CARD_NAV_ID) {
         return visibility.giftCards
       }

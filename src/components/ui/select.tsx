@@ -2,13 +2,32 @@ import * as React from "react"
 import { Select as SelectPrimitive } from "radix-ui"
 
 import { useDialogLayer } from "@/components/ui/dialog"
+import { useCloseWhenDialogOpens } from "@/lib/overlay-events"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
 function Select({
+  open,
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      onOpenChange?.(nextOpen)
+    },
+    [onOpenChange]
+  )
+
+  useCloseWhenDialogOpens(open, () => handleOpenChange(false))
+
+  return (
+    <SelectPrimitive.Root
+      data-slot="select"
+      open={open}
+      onOpenChange={handleOpenChange}
+      {...props}
+    />
+  )
 }
 
 function SelectGroup({

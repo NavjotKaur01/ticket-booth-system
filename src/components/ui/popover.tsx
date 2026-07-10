@@ -4,10 +4,31 @@ import * as React from "react"
 import { Popover as PopoverPrimitive } from "radix-ui"
 
 import { useDialogLayer } from "@/components/ui/dialog"
+import { useCloseWhenDialogOpens } from "@/lib/overlay-events"
 import { cn } from "@/lib/utils"
 
-function Popover(props: React.ComponentProps<typeof PopoverPrimitive.Root>) {
-  return <PopoverPrimitive.Root data-slot="popover" {...props} />
+function Popover({
+  open,
+  onOpenChange,
+  ...props
+}: React.ComponentProps<typeof PopoverPrimitive.Root>) {
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      onOpenChange?.(nextOpen)
+    },
+    [onOpenChange]
+  )
+
+  useCloseWhenDialogOpens(open, () => handleOpenChange(false))
+
+  return (
+    <PopoverPrimitive.Root
+      data-slot="popover"
+      open={open}
+      onOpenChange={handleOpenChange}
+      {...props}
+    />
+  )
 }
 
 function PopoverTrigger(

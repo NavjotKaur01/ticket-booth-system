@@ -2,6 +2,7 @@ import * as React from "react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 import { XIcon } from "lucide-react"
 
+import { dispatchDialogOpenEvent } from "@/lib/overlay-events"
 import { cn } from "@/lib/utils"
 
 type DialogLayer = "base" | "nested"
@@ -44,7 +45,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-black/55 backdrop-blur-sm data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 dark:bg-white/20",
+        "fixed inset-0 z-[80] bg-black/55 backdrop-blur-sm data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 dark:bg-white/20",
         className
       )}
       {...props}
@@ -121,7 +122,11 @@ function DialogContent({
   nested?: boolean
 }) {
   const dialogLayer: DialogLayer = nested ? "nested" : "base"
-  const stackClass = nested ? "z-[90]" : "z-50"
+  const stackClass = nested ? "z-[90]" : "z-[80]"
+
+  React.useLayoutEffect(() => {
+    dispatchDialogOpenEvent()
+  }, [])
 
   const handleOutsideEvent = <T extends OutsideDismissEvent>(
     event: T,
@@ -137,7 +142,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-[50%] left-[50%] z-50 grid w-fit max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-0 rounded-lg border border-border/80 bg-background p-0 shadow-xl ring-1 ring-background/40 duration-200 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 sm:max-w-lg",
+          "fixed top-[50%] left-[50%] z-[80] grid w-fit max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-0 rounded-lg border border-border/80 bg-background p-0 shadow-xl ring-1 ring-background/40 duration-200 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 sm:max-w-lg",
           stackClass,
           className
         )}

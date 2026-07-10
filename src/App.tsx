@@ -61,9 +61,13 @@ import { VenueShowTimes } from "@/pages/venue-show-times"
 import { VenueSocials } from "@/pages/venue-socials"
 import { WebpagesText } from "@/pages/webpages-text"
 import EventCalendar from "./components/calendar/EventCalendar"
+import { useIOSInputZoomFix } from "./hooks/use-ios-input-zoom-fix"
 
 /** Root router - login is public; app routes require auth. */
 function App() {
+  // Called the hook to avoid IOS input zooms
+  useIOSInputZoomFix();
+
   return (
     <BrowserRouter>
       <Routes>
