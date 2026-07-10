@@ -15,6 +15,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { weekDayOptions, yesNoOptions } from "@/data/promotion-form-options"
+import { useAppSession } from "@/hooks/use-app-session"
+import { savePromotion } from "@/lib/api/promotions"
 import { cn } from "@/lib/utils"
 import {
   createEmptyPromotionForm,
@@ -25,6 +27,7 @@ import {
 type AddPromotionDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onSaved?: () => void | Promise<void>
 }
 
 const FORM_GRID = "grid grid-cols-1 gap-x-6 gap-y-4 lg:grid-cols-12"
@@ -163,12 +166,18 @@ function DiscountSubRow({ children }: { children: ReactNode }) {
 export function AddPromotionDialog({
   open,
   onOpenChange,
+  onSaved,
 }: AddPromotionDialogProps) {
+  const { connectionName, locationId, username, isReady } = useAppSession()
   const [form, setForm] = useState<PromotionFormValues>(createEmptyPromotionForm())
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) {
       setForm(createEmptyPromotionForm())
+      setError(null)
+      setSaving(false)
     }
   }, [open])
 
@@ -198,8 +207,75 @@ export function AddPromotionDialog({
   const allDaysSelected = weekDayOptions.every((day) => form.validDays[day.id])
   const showFeeInputs = form.overrideShowFees === "yes"
 
-  function handleSave() {
-    onOpenChange(false)
+  function validateForm() {
+    if (!form.promotionName.trim()) {
+      return "Promotion name is required."
+    }
+    if (!form.promotionCode.trim()) {
+      return "Promotion code is required."
+    }
+    if (!form.startDate.trim()) {
+      return "Start date is required."
+    }
+    if (!form.walkUp && !form.phoneIn && !form.web && !form.managerComp) {
+      return "Select at least one of Walk-Up, Phone-In, Web, or Manager Comp."
+    }
+    if (form.discountType === "amount") {
+      if (
+        form.amountDiscountKind === "dollar" &&
+        !form.dollarOff.trim()
+      ) {
+        return "Dollar off amount is required."
+      }
+      if (
+        form.amountDiscountKind === "percentage" &&
+        !form.percOff.trim()
+      ) {
+        return "Percentage off is required."
+      }
+    }
+    if (form.discountType === "free-tickets") {
+      if (!form.buyTix.trim() || !form.buyTixFree.trim()) {
+        return "Buy and free ticket counts are required."
+      }
+    }
+    if (form.discountType === "set-price" && !form.setPrice.trim()) {
+      return "Set price is required."
+    }
+    if (!isReady || !connectionName || !locationId) {
+      return "Location is required before saving a promotion."
+    }
+    return null
+  }
+
+  async function handleSave() {
+    const validationError = validateForm()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+
+    try {
+      await savePromotion({
+        connectionName,
+        locationId,
+        lastUpdateId: username,
+        form,
+      })
+      await onSaved?.()
+      onOpenChange(false)
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Failed to save promotion"
+      )
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -635,15 +711,19 @@ export function AddPromotionDialog({
         </div>
 
         <DialogFooter className="shrink-0 border-t px-6 py-4">
+          {error ? (
+            <p className="mr-auto max-w-md text-sm text-destructive">{error}</p>
+          ) : null}
           <Button
             type="button"
             variant="outline"
+            disabled={saving}
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
-          <Button type="button" onClick={handleSave}>
-            Save
+          <Button type="button" disabled={saving} onClick={() => void handleSave()}>
+            {saving ? "Saving..." : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>

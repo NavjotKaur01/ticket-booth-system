@@ -10,6 +10,7 @@ import { buildSaveCustomerRequest, buildUpdateCustomerRequest } from "@/lib/buil
 import { buildReservationDayRange } from "@/lib/reservation-date-range"
 import { buildGetReservationPromotionsRequest } from "@/lib/build-get-reservation-promotions-request"
 import { buildSearchPromotionRequest } from "@/lib/build-search-promotion-request"
+import { buildSavePromotionRequest } from "@/lib/build-save-promotion-request"
 import { buildCalendarFetchRange } from "@/lib/build-calendar-fetch-range"
 import { coerceApiArray } from "@/lib/coerce-api-array"
 import { formatRouteBoolean } from "@/lib/format-route-boolean"
@@ -111,6 +112,7 @@ import type { CustomerFormValues } from "@/types/customer-form"
 import type { BusinessContactFormValues } from "@/types/business-contact"
 import type { BusinessContactSearchFilters } from "@/types/business-contact"
 import type { PromotionFilters } from "@/types/promotion"
+import type { PromotionFormValues } from "@/types/promotion-form"
 import type { ReservationDetail } from "@/types/api/reservation-detail"
 import type { ReservationPrintProperties } from "@/types/api/reservation-print"
 import type {
@@ -611,10 +613,12 @@ export const clubmanApi = createApi({
       query: ({
         connectionName,
         locationId,
+        lastUpdateId,
         filters,
       }: {
         connectionName: string
         locationId: string
+        lastUpdateId?: string
         filters: PromotionFilters
       }) => ({
         url: administratorApiPath("SearchPromotion"),
@@ -622,10 +626,38 @@ export const clubmanApi = createApi({
         body: buildSearchPromotionRequest({
           connectionName,
           locationId,
+          lastUpdateId,
           filters,
         }),
       }),
       transformResponse: (response: ApiPromotionSearchItem[]) => response,
+      invalidatesTags: (_result, _error, arg) => [
+        { type: "Promotion", id: arg.locationId },
+      ],
+    }),
+
+    savePromotion: builder.mutation({
+      query: ({
+        connectionName,
+        locationId,
+        lastUpdateId,
+        form,
+      }: {
+        connectionName: string
+        locationId: string
+        lastUpdateId: string
+        form: PromotionFormValues
+      }) => ({
+        url: administratorApiPath("SavePromotion"),
+        method: "POST",
+        body: buildSavePromotionRequest({
+          connectionName,
+          locationId,
+          lastUpdateId,
+          form,
+        }),
+      }),
+      transformResponse: (response: boolean) => response,
       invalidatesTags: (_result, _error, arg) => [
         { type: "Promotion", id: arg.locationId },
       ],
@@ -1582,6 +1614,7 @@ export const {
   useSaveSystemUserMutation,
   useUpdateSystemUserMutation,
   useSearchPromotionsMutation,
+  useSavePromotionMutation,
   useGetReservationPromotionsMutation,
   useGetReservationDataQuery,
   useGetReservationDetailByIdQuery,
