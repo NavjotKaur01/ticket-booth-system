@@ -48,6 +48,7 @@ import {
   updateEmploymentOpening,
 } from "@/features/employment-openings/employment-openings.service"
 import { useAppSession } from "@/hooks/use-app-session"
+import { useGetEmploymentPositionsQuery } from "@/store/api/clubmanApi"
 import type { EmploymentOpeningRecord } from "@/types/employment-opening"
 
 const ACTIVE_OPTIONS = [
@@ -128,9 +129,36 @@ export function EmploymentOpeningsScreen() {
 
   const canSave = titleInput.trim().length > 0
 
+  const { data: apiPositions, isLoading: isQueryLoading, error: queryError } = useGetEmploymentPositionsQuery(
+    { connectionString: "demo_prod", locationId: locationId ?? "" },
+    { skip: !locationId }
+  )
+
+  useEffect(() => {
+    if (queryError) {
+      setError("Unable to load employment openings.")
+    } else {
+      setError(null)
+    }
+  }, [queryError])
+
+  useEffect(() => {
+    if (apiPositions) {
+      setRows(
+        apiPositions.map((pos) => ({
+          id: pos.PositionID,
+          locationId: pos.LocationId,
+          title: pos.PositionText,
+          active: pos.ActiveIndicator === "Y",
+        }))
+      )
+    } else {
+      setRows([])
+    }
+  }, [apiPositions])
+
   useEffect(() => {
     if (!locationId) {
-      setRows([])
       setEditorMode(null)
       setEditingOpeningId(null)
       setTitleInput("")
@@ -138,47 +166,12 @@ export function EmploymentOpeningsScreen() {
       setLoading(false)
       setError(null)
       setStatusMessage(null)
-      return
     }
+  }, [locationId])
 
-    let isActive = true
-    setLoading(true)
-    setError(null)
-    setStatusMessage(null)
-    setRows([])
-    setEditorMode(null)
-    setEditingOpeningId(null)
-    setTitleInput("")
-    setActiveInput("Y")
-
-    getEmploymentOpeningsByLocation({
-      locationId: locationId,
-      locationLabel: locationName,
-    })
-      .then((result) => {
-        if (isActive) {
-          setRows(result)
-        }
-      })
-      .catch((requestError: unknown) => {
-        if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load employment openings."
-          )
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      isActive = false
-    }
-  }, [locationId, locationName])
+  useEffect(() => {
+    setLoading(isQueryLoading)
+  }, [isQueryLoading])
 
   function openCreateEditor() {
     setEditorMode("create")

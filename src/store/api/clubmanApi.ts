@@ -46,6 +46,8 @@ import type {
   MarketingComedianSearchRequest,
 } from "@/types/api/marketing-filter-search"
 import type { ComicInfo } from "@/data/comedian-info"
+import type { EmploymentPosition, AddUpdateEmploymentPositionRequest, DeleteEmploymentPositionRequest, AddUpdateEmploymentPositionResponse } from "@/types/api/employment-position"
+
 
 // import type { ComedianRequestModel } from "@/types/api/comedian-info"
 import { buildUpdateComedianRequest } from "@/lib/build-update-comedian-request"
@@ -106,6 +108,7 @@ import type { BusinessContactSearchFilters } from "@/types/business-contact"
 import type { PromotionFilters } from "@/types/promotion"
 import type { ReservationDetail } from "@/types/api/reservation-detail"
 import type { ReservationPrintProperties } from "@/types/api/reservation-print"
+import type { EmploymentQuestion } from "@/types/api/employment-question"
 
 export const clubmanApi = createApi({
   reducerPath: "clubmanApi",
@@ -167,7 +170,7 @@ export const clubmanApi = createApi({
         ),
         headers: { Accept: "application/json" },
       }),
-      transformResponse: (response: { Data: ReservationPrintProperties } | ReservationPrintProperties) => 
+      transformResponse: (response: { Data: ReservationPrintProperties } | ReservationPrintProperties) =>
         'Data' in response ? response.Data : response,
     }),
 
@@ -1086,6 +1089,42 @@ export const clubmanApi = createApi({
       ],
     }),
 
+    getEmploymentPositions: builder.query<
+      EmploymentPosition[],
+      { connectionString: string; locationId: string }
+    >({
+      query: ({ connectionString, locationId }) =>
+        systemApiPath(connectionString, locationId, "GetEmploymentPosition"),
+      transformResponse: (response: { Data: EmploymentPosition[] } | EmploymentPosition[]) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    addUpdateEmploymentPosition: builder.mutation<AddUpdateEmploymentPositionResponse, AddUpdateEmploymentPositionRequest>({
+      query: (body) => ({
+        url: `/clubman/api/AddUpdateEmploymentPosition`,
+        method: "POST",
+        body,
+      }),
+    }),
+
+    getEmploymentQuestions: builder.query<
+      EmploymentQuestion[],
+      { connectionString: string; locationId: string }
+    >({
+      query: ({ connectionString, locationId }) =>
+        systemApiPath(connectionString, locationId, "GetEmploymentQuestion"),
+      transformResponse: (response: { Data: EmploymentQuestion[] } | EmploymentQuestion[]) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    deleteEmploymentPosition: builder.mutation<unknown, DeleteEmploymentPositionRequest>({
+      query: (body) => ({
+        url: `/clubman/api/DeleteEmploymentPosition`,
+        method: "POST",
+        body,
+      }),
+    }),
+
     getShowData: builder.query<
       ApiShowData[],
       { connectionName: string; showId: string }
@@ -1179,4 +1218,8 @@ export const {
   useGetShowPropertiesQuery,
   useLazyGetShowPropertiesQuery,
   useUpdateShowMutation,
+  useGetEmploymentPositionsQuery,
+  useAddUpdateEmploymentPositionMutation,
+  useDeleteEmploymentPositionMutation,
+  useGetEmploymentQuestionsQuery,
 } = clubmanApi
