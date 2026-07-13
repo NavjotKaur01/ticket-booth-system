@@ -104,4 +104,9 @@ export type ApiComedianSearchItem = {
   LastName: string | null
   FirstName: string | null
   StageName: string | null
+  GlobalBio?: string | null
+  LocalBio?: string | null
+  IsGlobalPic?: string | null
+  IsLocalPic?: string | null
+  Active?: string | null
 }

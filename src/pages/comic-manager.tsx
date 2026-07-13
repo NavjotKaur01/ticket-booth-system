@@ -54,7 +54,6 @@ export function ComicManager() {
     firstName: "",
     lastName: "",
     stageName: "",
-    locationId: "",
     showInactive: false,
   })
   const [filterByGenre, setFilterByGenre] = useState(false)
