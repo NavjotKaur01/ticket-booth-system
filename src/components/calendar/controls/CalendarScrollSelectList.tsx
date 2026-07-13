@@ -51,16 +51,18 @@ export function CalendarScrollSelectList({
   const displayOptions = getCalendarSelectOptions(value, options, clearOptionLabel)
 
   useEffect(() => {
-    if (!isOpen || !listRef.current) {
+    if (!isOpen || !listRef.current || !value) {
       return
     }
 
-    const selectedOption =
-      listRef.current.querySelector<HTMLButtonElement>("[data-selected='true']") ??
-      listRef.current.querySelector<HTMLButtonElement>("[data-scroll-select-option='true']")
+    const selectedOption = listRef.current.querySelector<HTMLButtonElement>(
+      "[data-selected='true']"
+    )
 
     selectedOption?.scrollIntoView({ block: "center" })
-    requestAnimationFrame(() => selectedOption?.focus({ preventScroll: true }))
+    if (selectedOption) {
+      requestAnimationFrame(() => selectedOption.focus({ preventScroll: true }))
+    }
   }, [isOpen, value, displayOptions.length])
 
   function getOptionButtons() {
@@ -85,21 +87,20 @@ export function CalendarScrollSelectList({
     }
 
     const activeIndex = buttons.findIndex((button) => button === document.activeElement)
-    const selectedIndex = Math.max(
-      0,
-      buttons.findIndex((button) => button.dataset.selected === "true")
-    )
+    const selectedIndex = buttons.findIndex((button) => button.dataset.selected === "true")
     const currentIndex = activeIndex >= 0 ? activeIndex : selectedIndex
 
     if (event.key === "ArrowDown") {
       event.preventDefault()
-      focusOption(Math.min(currentIndex + 1, buttons.length - 1))
+      focusOption(currentIndex < 0 ? 0 : Math.min(currentIndex + 1, buttons.length - 1))
       return
     }
 
     if (event.key === "ArrowUp") {
       event.preventDefault()
-      focusOption(Math.max(currentIndex - 1, 0))
+      focusOption(
+        currentIndex < 0 ? buttons.length - 1 : Math.max(currentIndex - 1, 0)
+      )
       return
     }
 
