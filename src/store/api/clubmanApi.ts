@@ -70,6 +70,10 @@ import type {
 import type { UpdateShowAndPromotionFeeRequest } from "@/types/api/adjust-fees"
 import type { RecentSalesReportData } from "@/types/api/recent-sales"
 import type { ReportPermissionAccess } from "@/types/api/report-permission-access"
+import type {
+  ApiUserAccessItem,
+  UserAccessRequestModel,
+} from "@/types/api/user-access"
 import type { ReportRequestModel } from "@/types/api/report-request"
 
 export type ApiReportComedian = {
@@ -137,6 +141,7 @@ export const clubmanApi = createApi({
     "Comedians",
     "ShowDefs",
     "PrivateShowLinks",
+    "UserAccess",
   ],
   endpoints: (builder) => ({
     getLocations: builder.query({
@@ -806,6 +811,45 @@ export const clubmanApi = createApi({
       ],
     }),
 
+    /** ClubMan UserAcessVM.GetPermDescList → GET Adminstrator/{conn}/{loc}/GetUserPremissionData */
+    getUserPermissionData: builder.query({
+      query: ({
+        connectionName,
+        locationId,
+      }: {
+        connectionName: string
+        locationId: string
+      }) => ({
+        url: administratorApiPath(
+          connectionName,
+          locationId,
+          "GetUserPremissionData"
+        ),
+        method: "GET",
+      }),
+      transformResponse: (response: unknown) =>
+        coerceApiArray<ApiUserAccessItem>(response),
+      providesTags: (_result, _error, arg) => [
+        { type: "UserAccess", id: `${arg.connectionName}:${arg.locationId}` },
+      ],
+    }),
+
+    /** ClubMan UserAcessVM.SaveUserAccess → PUT Adminstrator/SaveUserAccessbility */
+    saveUserAccessibility: builder.mutation({
+      query: (body: UserAccessRequestModel) => ({
+        url: administratorApiPath("SaveUserAccessbility"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: (_result, _error, arg) => [
+        {
+          type: "UserAccess",
+          id: `${arg.ConnectionString}:${arg.LocationID}`,
+        },
+      ],
+    }),
+
     /** ClubMan AdjustFeesVM → PUT Adminstrator/UpdateShowAndPromotionFee */
     updateShowAndPromotionFee: builder.mutation({
       query: (request: UpdateShowAndPromotionFeeRequest) => ({
@@ -1376,6 +1420,8 @@ export const {
   useGetShowSectionsQuery,
   useGetSystemDefaultsQuery,
   useUpdateSystemDefaultMutation,
+  useGetUserPermissionDataQuery,
+  useSaveUserAccessibilityMutation,
   useGetSystemLookupQuery,
   useUpdateShowAndPromotionFeeMutation,
   useLoadDashboardQuery,
