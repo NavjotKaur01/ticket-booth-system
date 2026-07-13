@@ -109,6 +109,12 @@ import type { PromotionFilters } from "@/types/promotion"
 import type { ReservationDetail } from "@/types/api/reservation-detail"
 import type { ReservationPrintProperties } from "@/types/api/reservation-print"
 import type { EmploymentQuestion } from "@/types/api/employment-question"
+import type {
+  AddUpdateFormEmailRequest,
+  ApiFormEmailReference,
+  DeleteFormEmailRequest,
+} from "@/features/form-emails/form-emails-types"
+import type { FormEmailRecord } from "@/types/form-email"
 
 export const clubmanApi = createApi({
   reducerPath: "clubmanApi",
@@ -126,7 +132,8 @@ export const clubmanApi = createApi({
     "DailyTransaction",
     "Dashboard",
     "SystemDefault",
-    "Comedians"
+    "Comedians",
+    "FormEmail",
   ],
   endpoints: (builder) => ({
     getLocations: builder.query({
@@ -1125,6 +1132,44 @@ export const clubmanApi = createApi({
       }),
     }),
 
+    getFormEmails: builder.query<
+      FormEmailRecord[],
+      { connectionString: string; locationId: string }
+    >({
+      query: ({ connectionString, locationId }) =>
+        systemApiPath(connectionString, locationId, "GetFormEmails"),
+      transformResponse: (rows: ApiFormEmailReference[]) =>
+        rows.map((row) => ({
+          id: row.EmailReferenceId,
+          locationId: row.LocationId,
+          formId: row.ItemId,
+          emailAddress: row.EmailAddress,
+        })),
+      providesTags: (_result, _error, arg) => [
+        { type: "FormEmail", id: arg.locationId },
+      ],
+    }),
+
+    addUpdateFormEmail: builder.mutation<unknown, AddUpdateFormEmailRequest>({
+      query: (body) => ({
+        url: `/clubman/api/AddUpdateFormEmail`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, body) => [
+        { type: "FormEmail", id: body.LocationId },
+      ],
+    }),
+
+    deleteFormEmail: builder.mutation<unknown, DeleteFormEmailRequest>({
+      query: (body) => ({
+        url: `/clubman/api/DeleteFormEmail`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["FormEmail"],
+    }),
+
     getShowData: builder.query<
       ApiShowData[],
       { connectionName: string; showId: string }
@@ -1222,4 +1267,7 @@ export const {
   useAddUpdateEmploymentPositionMutation,
   useDeleteEmploymentPositionMutation,
   useGetEmploymentQuestionsQuery,
+  useGetFormEmailsQuery,
+  useAddUpdateFormEmailMutation,
+  useDeleteFormEmailMutation,
 } = clubmanApi
