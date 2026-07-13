@@ -15,8 +15,19 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { mapPerformerToUpdateForm } from "@/lib/map-performer-form"
+import { useAppSession } from "@/hooks/use-app-session"
+import {
+  mapComedianInfoToUpdateForm,
+  mapPerformerToUpdateForm,
+  mapUpdateFormToComicInfo,
+} from "@/lib/map-performer-form"
 import { cn } from "@/lib/utils"
+import { getClubmanErrorMessage } from "@/store/api/baseQuery"
+import {
+  useGetComedianInfoQuery,
+  useUpdateComedianMutation,
+} from "@/store/api/clubmanApi"
+import type { ApiComedianInfo } from "@/types/api/comedian-info"
 import type { Performer } from "@/types/performer"
 import {
   EMPTY_UPDATE_PERFORMER_FORM,
@@ -46,7 +57,7 @@ type UpdatePerformerDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   performer: Performer | null
-  onUpdate?: (performer: Performer, form: UpdatePerformerFormValues) => void
+  onSaved?: () => void | Promise<void>
 }
 
 function PerformerTabs({
@@ -460,17 +471,43 @@ export function UpdatePerformerDialog({
   open,
   onOpenChange,
   performer,
-  onUpdate,
+  onSaved,
 }: UpdatePerformerDialogProps) {
+  const { connectionName, locationId, username, isReady } = useAppSession()
   const [activeTab, setActiveTab] = useState<PerformerTab>("basic")
   const [form, setForm] = useState<UpdatePerformerFormValues>(
     EMPTY_UPDATE_PERFORMER_FORM
   )
+  const [details, setDetails] = useState<ApiComedianInfo | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  const {
+    data: comedianInfo,
+    isLoading: loadingDetails,
+    isFetching: fetchingDetails,
+    error: detailsError,
+  } = useGetComedianInfoQuery(
+    { connectionName, comicId: performer?.id ?? "" },
+    { skip: !open || !performer?.id || !connectionName }
+  )
+
+  const [updateComedian] = useUpdateComedianMutation()
 
   useEffect(() => {
     if (!open) {
       setActiveTab("basic")
       setForm(EMPTY_UPDATE_PERFORMER_FORM)
+      setDetails(null)
+      setError(null)
+      setSaving(false)
+      return
+    }
+
+    if (comedianInfo) {
+      setDetails(comedianInfo)
+      setForm(mapComedianInfoToUpdateForm(comedianInfo))
+      setActiveTab("basic")
       return
     }
 
@@ -478,7 +515,7 @@ export function UpdatePerformerDialog({
       setForm(mapPerformerToUpdateForm(performer))
       setActiveTab("basic")
     }
-  }, [open, performer])
+  }, [open, performer, comedianInfo])
 
   function updateField<K extends keyof UpdatePerformerFormValues>(
     field: K,
@@ -487,15 +524,34 @@ export function UpdatePerformerDialog({
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  function handleUpdate() {
-    if (!performer) {
+  async function handleUpdate() {
+    if (!performer) return
+    if (!isReady || !connectionName || !locationId) {
+      setError("Location is required before updating a comedian.")
       return
     }
 
-    onUpdate?.(performer, form)
-    onOpenChange(false)
+    setSaving(true)
+    setError(null)
+
+    try {
+      await updateComedian({
+        connectionName,
+        locationId,
+        username,
+        comicId: performer.id,
+        form: mapUpdateFormToComicInfo(form, details),
+      }).unwrap()
+      await onSaved?.()
+      onOpenChange(false)
+    } catch (saveError) {
+      setError(getClubmanErrorMessage(saveError))
+    } finally {
+      setSaving(false)
+    }
   }
 
+  const formDisabled = saving || loadingDetails || fetchingDetails
   const displayName =
     [form.firstName, form.lastName].filter(Boolean).join(" ") ||
     form.stageName ||
@@ -521,6 +577,18 @@ export function UpdatePerformerDialog({
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 flex-col px-4 py-3">
+          {detailsError ? (
+            <p className="mb-2 text-sm text-destructive">
+              Unable to load comedian details.
+            </p>
+          ) : null}
+          {error ? <p className="mb-2 text-sm text-destructive">{error}</p> : null}
+          {loadingDetails || fetchingDetails ? (
+            <p className="mb-2 text-sm text-muted-foreground">
+              Loading comedian details...
+            </p>
+          ) : null}
+
           <div className="shrink-0 pb-3">
             <PerformerTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -580,12 +648,17 @@ export function UpdatePerformerDialog({
           <Button
             type="button"
             variant="outline"
+            disabled={saving}
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
-          <Button type="button" onClick={handleUpdate}>
-            Update
+          <Button
+            type="button"
+            disabled={formDisabled}
+            onClick={() => void handleUpdate()}
+          >
+            {saving ? "Saving..." : "Update"}
           </Button>
         </DialogFooter>
       </DialogContent>

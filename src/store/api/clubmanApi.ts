@@ -41,7 +41,7 @@ import type {
 import type { UpdateShowRequestModel } from "@/types/api/update-show"
 import type { ApiShowData, ApiShowProperties } from "@/types/api/get-show-data"
 import type { ApiCustomerSearchItem } from "@/types/api/customer-search"
-import type { ApiComedianInfo } from "@/types/api/comedian-info"
+import type { ApiComedianInfo, ComedianRequestModel } from "@/types/api/comedian-info"
 import type {
   ApiMarketingComedianSearchItem,
   ApiMarketingFilterCustomer,
@@ -56,7 +56,6 @@ import type { SectionDetailItem, GetSectionDetailsRequest, AddUpdateSectionDetai
 import type { MenuItem, AddUpdateMenuRequest, DeleteMenuRequest, MenuItemDetail, AddUpdateMenuItemRequest, DeleteMenuItemRequest, MenuPdfItem, AddUpdateMenuPdfRequest, UploadMenuPdfRequest, UploadMenuImageRequest } from "@/types/api/menu"
 
 
-// import type { ComedianRequestModel } from "@/types/api/comedian-info"
 import { buildUpdateComedianRequest } from "@/lib/build-update-comedian-request"
 import { buildUpdateComedianImageRequest } from "@/lib/build-update-comedian-image-request"
 import { buildMarketingFilterSearchRequest } from "@/lib/build-marketing-filter-search-request"
@@ -1027,6 +1026,22 @@ export const clubmanApi = createApi({
       transformResponse: (response: ApiComedianSearchItem[]) => response,
     }),
 
+    /** ClubMan ComedianVM.SaveComedian → POST Adminstrator/SaveComedian */
+    saveComedian: builder.mutation({
+      query: (
+        body: ComedianRequestModel & {
+          Image?: string | null
+          ImageFileName?: string
+        }
+      ) => ({
+        url: administratorApiPath("SaveComedian"),
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["Comedians"],
+    }),
+
     getDefaultShowSections: builder.mutation({
       query: (body: SaveShowRequestModel) => ({
         url: calendarApiPath("GetDefaultShowSections"),
@@ -1699,6 +1714,7 @@ export const {
   useGetRecentSalesReportQuery,
   useGetCalendarDataQuery,
   useSearchComediansMutation,
+  useSaveComedianMutation,
   useGetDefaultShowSectionsMutation,
   useSaveShowMutation,
   useGenerateReportMutation,

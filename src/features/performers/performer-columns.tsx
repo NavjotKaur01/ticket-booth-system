@@ -1,6 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
+import { createSelectColumn } from "@/components/data-table/data-table-select-column"
 import { PerformerRowActionsMenu } from "@/features/performers/performer-row-actions-menu"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { Performer } from "@/types/performer"
@@ -8,33 +9,27 @@ import type { Performer } from "@/types/performer"
 type GetPerformerColumnsParams = {
   onEdit: (performer: Performer) => void
   onDelete: (performer: Performer) => void
+  onToggleHidden: (performer: Performer, hidden: boolean) => void
 }
 
 export function getPerformerColumns({
   onEdit,
   onDelete,
+  onToggleHidden,
 }: GetPerformerColumnsParams): ColumnDef<Performer>[] {
   return [
-    {
-      id: "select",
-      header: () => <span className="sr-only">Selected</span>,
-      cell: ({ row, table }) => (
-        <input
-          type="radio"
-          name="performer-row-select"
-          checked={row.getIsSelected()}
-          onChange={() => table.setRowSelection({ [row.id]: true })}
-          className="size-4 cursor-pointer accent-primary"
-          aria-label={`Select ${row.original.stageName || "performer"}`}
-        />
-      ),
-      enableSorting: false,
-    },
+    createSelectColumn<Performer>(),
     {
       accessorKey: "hidden",
       header: "Disable/Hide",
       cell: ({ row }) => (
-        <Checkbox checked={row.original.hidden} aria-label="Disable or hide" />
+        <Checkbox
+          checked={row.original.hidden}
+          onCheckedChange={(value) =>
+            onToggleHidden(row.original, value === true)
+          }
+          aria-label={`Disable or hide ${row.original.stageName || "performer"}`}
+        />
       ),
       enableSorting: false,
     },
@@ -67,7 +62,7 @@ export function getPerformerColumns({
       ),
       cell: ({ row }) => (
         <span className="font-medium text-foreground">
-          {row.original.stageName}
+          {row.original.stageName || row.original.comicName || "\u00A0"}
         </span>
       ),
     },

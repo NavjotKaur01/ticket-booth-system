@@ -11,6 +11,8 @@ type PerformerDataTableProps = {
   onRowSelectionChange: OnChangeFn<RowSelectionState>
   onEdit: (performer: Performer) => void
   onDelete: (performer: Performer) => void
+  onToggleHidden: (performer: Performer, hidden: boolean) => void
+  emptyMessage?: string
 }
 
 export function PerformerDataTable({
@@ -19,21 +21,23 @@ export function PerformerDataTable({
   onRowSelectionChange,
   onEdit,
   onDelete,
+  onToggleHidden,
+  emptyMessage = "No data to display",
 }: PerformerDataTableProps) {
   const columns = useMemo(
-    () => getPerformerColumns({ onEdit, onDelete }),
-    [onEdit, onDelete]
+    () => getPerformerColumns({ onEdit, onDelete, onToggleHidden }),
+    [onEdit, onDelete, onToggleHidden]
   )
 
   return (
     <DataTable
       columns={columns}
       data={data}
-      emptyMessage="No data to display"
+      emptyMessage={emptyMessage}
       entityLabel="performers"
       pageSize={10}
       enableRowSelection
-      enableMultiRowSelection={false}
+      enableMultiRowSelection
       rowSelection={rowSelection}
       onRowSelectionChange={onRowSelectionChange}
       getRowId={(row) => row.id}
