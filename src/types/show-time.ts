@@ -22,7 +22,7 @@ export type ShowTimeFilters = {
 }
 
 export const DEFAULT_SHOW_TIME_FILTERS: ShowTimeFilters = {
-  dayOfWeek: "all",
+  dayOfWeek: "mon",
   showTime: "",
   arrivalTime: "",
 }
