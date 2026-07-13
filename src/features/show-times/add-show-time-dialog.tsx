@@ -362,126 +362,103 @@ export function AddShowTimeDialog({
 
           <div className="rounded-md border p-2.5">
             <FormSection title="Show Details">
-              <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:gap-3">
-                <FormField label="Day Of Week" className="shrink-0 sm:w-40">
-                  <Select
-                    value={form.dayOfWeek}
-                    onValueChange={(value) => updateField("dayOfWeek", value)}
-                    disabled={formDisabled}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dayOfWeekOptions.map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormField>
+              <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-[11rem_minmax(0,1fr)] sm:items-start">
+                  <FormField label="Day Of Week">
+                    <Select
+                      value={form.dayOfWeek}
+                      onValueChange={(value) => updateField("dayOfWeek", value)}
+                      disabled={formDisabled}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dayOfWeekOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
 
-                <div className="min-w-0 flex-1 space-y-1">
-                  <p className="text-xs font-medium text-foreground">
-                    Also Applies to
-                  </p>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                    {weekDayCheckboxOptions.map((day) => (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-foreground">
+                      Also Applies to
+                    </p>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                      {weekDayCheckboxOptions.map((day) => (
+                        <label
+                          key={day.id}
+                          className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground"
+                        >
+                          <Checkbox
+                            checked={form.alsoAppliesTo[day.id] ?? false}
+                            disabled={formDisabled}
+                            onCheckedChange={(value) =>
+                              toggleAlsoAppliesTo(day.id, value === true)
+                            }
+                          />
+                          {day.label.slice(0, 3)}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <FormField label="Show Time" htmlFor="add-show-time">
+                    <Input
+                      id="add-show-time"
+                      type="time"
+                      value={form.showTime}
+                      disabled={formDisabled}
+                      onChange={(event) =>
+                        updateField("showTime", event.target.value)
+                      }
+                    />
+                  </FormField>
+                  <FormField label="Arrival Time" htmlFor="add-arrival-time">
+                    <Input
+                      id="add-arrival-time"
+                      type="time"
+                      value={form.arrivalTime}
+                      disabled={formDisabled}
+                      onChange={(event) =>
+                        updateField("arrivalTime", event.target.value)
+                      }
+                    />
+                  </FormField>
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-foreground">Options</p>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    {(
+                      [
+                        ["dinner", "Dinner"],
+                        ["noPasses", "No Passes"],
+                        ["vipSeating", "VIP Seating"],
+                        ["age21Plus", "21 and Over"],
+                        ["hub", "Hub"],
+                      ] as const
+                    ).map(([field, label]) => (
                       <label
-                        key={day.id}
-                        className="flex cursor-pointer items-center gap-1.5 text-xs"
+                        key={field}
+                        className="flex cursor-pointer items-center gap-1.5 text-xs text-foreground"
                       >
                         <Checkbox
-                          checked={form.alsoAppliesTo[day.id] ?? false}
+                          checked={form[field]}
                           disabled={formDisabled}
                           onCheckedChange={(value) =>
-                            toggleAlsoAppliesTo(day.id, value === true)
+                            updateField(field, value === true)
                           }
                         />
-                        {day.label.slice(0, 3)}
+                        {label}
                       </label>
                     ))}
                   </div>
-                </div>
-              </div>
-
-              <div className="mt-2 flex flex-wrap items-end gap-3">
-                <FormField label="Show Time" htmlFor="add-show-time">
-                  <Input
-                    id="add-show-time"
-                    type="time"
-                    value={form.showTime}
-                    disabled={formDisabled}
-                    onChange={(event) =>
-                      updateField("showTime", event.target.value)
-                    }
-                    className="w-[8.5rem]"
-                  />
-                </FormField>
-                <FormField label="Arrival Time" htmlFor="add-arrival-time">
-                  <Input
-                    id="add-arrival-time"
-                    type="time"
-                    value={form.arrivalTime}
-                    disabled={formDisabled}
-                    onChange={(event) =>
-                      updateField("arrivalTime", event.target.value)
-                    }
-                    className="w-[8.5rem]"
-                  />
-                </FormField>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pb-2">
-                  <label className="flex cursor-pointer items-center gap-2 text-xs">
-                    <Checkbox
-                      checked={form.dinner}
-                      disabled={formDisabled}
-                      onCheckedChange={(value) =>
-                        updateField("dinner", value === true)
-                      }
-                    />
-                    Dinner
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-2 text-xs">
-                    <Checkbox
-                      checked={form.noPasses}
-                      disabled={formDisabled}
-                      onCheckedChange={(value) =>
-                        updateField("noPasses", value === true)
-                      }
-                    />
-                    No Passes
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-2 text-xs">
-                    <Checkbox
-                      checked={form.vipSeating}
-                      disabled={formDisabled}
-                      onCheckedChange={(value) =>
-                        updateField("vipSeating", value === true)
-                      }
-                    />
-                    VIP Seating
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-2 text-xs">
-                    <Checkbox
-                      checked={form.age21Plus}
-                      disabled={formDisabled}
-                      onCheckedChange={(value) =>
-                        updateField("age21Plus", value === true)
-                      }
-                    />
-                    21 and Over
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-2 text-xs">
-                    <Checkbox
-                      checked={form.hub}
-                      disabled={formDisabled}
-                      onCheckedChange={(value) =>
-                        updateField("hub", value === true)
-                      }
-                    />
-                    Hub
-                  </label>
                 </div>
               </div>
             </FormSection>
