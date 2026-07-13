@@ -52,7 +52,8 @@ export default function CalendarSelectControl({
       return placeholder
     }
 
-    return options.find((option) => option.value === value)?.label ?? placeholder
+    const matchedLabel = options.find((option) => option.value === value)?.label
+    return matchedLabel?.trim() ? matchedLabel : placeholder
   }, [options, placeholder, value])
 
   function handleSelect(nextValue: string) {
