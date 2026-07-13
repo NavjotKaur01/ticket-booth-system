@@ -63,7 +63,10 @@ import type { ApiLocation } from "@/types/api/locations"
 import type { ApiPromotionSearchItem } from "@/types/api/promotion-search"
 import type { ApiSystemLookupItem } from "@/types/api/system-lookup"
 import type { ApiDashboardData } from "@/types/api/dashboard-data"
-import type { ApiSystemDefaultItem } from "@/types/api/system-defaults"
+import type {
+  ApiSystemDefaultItem,
+  SystemDefaultRequestModel,
+} from "@/types/api/system-defaults"
 import type { UpdateShowAndPromotionFeeRequest } from "@/types/api/adjust-fees"
 import type { RecentSalesReportData } from "@/types/api/recent-sales"
 import type { ReportPermissionAccess } from "@/types/api/report-permission-access"
@@ -87,6 +90,10 @@ import type {
   UpcomingShowDetailsRequest,
 } from "@/types/api/move-reservation"
 import type { ShowRequestModel } from "@/types/api/cancel-show"
+import type {
+  ApiPrivateShowLink,
+  PrivateShowLinkRequestModel,
+} from "@/types/api/private-show-link"
 import type { ReservationNoteRequest } from "@/types/api/reservation-note"
 import { mapReservationDetail } from "@/lib/map-reservation-detail"
 import { mapUpcomingShowDetails } from "@/lib/map-upcoming-show-details"
@@ -129,6 +136,7 @@ export const clubmanApi = createApi({
     "SystemDefault",
     "Comedians",
     "ShowDefs",
+    "PrivateShowLinks",
   ],
   endpoints: (builder) => ({
     getLocations: builder.query({
@@ -785,6 +793,19 @@ export const clubmanApi = createApi({
       ],
     }),
 
+    /** ClubMan SystemDefaultsVM.UpdateDefaults → PUT Adminstrator/UpdateSystemDefault */
+    updateSystemDefault: builder.mutation({
+      query: (body: SystemDefaultRequestModel) => ({
+        url: administratorApiPath("UpdateSystemDefault"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: (_result, _error, arg) => [
+        { type: "SystemDefault", id: `${arg.Connection}:${arg.LocationId}` },
+      ],
+    }),
+
     /** ClubMan AdjustFeesVM → PUT Adminstrator/UpdateShowAndPromotionFee */
     updateShowAndPromotionFee: builder.mutation({
       query: (request: UpdateShowAndPromotionFeeRequest) => ({
@@ -1071,6 +1092,38 @@ export const clubmanApi = createApi({
       providesTags: ["ShowDefs"],
     }),
 
+    /** ClubMan ShowTimesVM.GetPrivateShowLinksList → PUT Adminstrator/GetPrivateShowLinks */
+    getPrivateShowLinks: builder.mutation({
+      query: (body: PrivateShowLinkRequestModel) => ({
+        url: administratorApiPath("GetPrivateShowLinks"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: ApiPrivateShowLink[]) => response ?? [],
+    }),
+
+    /** ClubMan ShowTimesVM.SavePrePrivateSetupLink → POST Adminstrator/SavePrePrivateSetupLink */
+    savePrePrivateSetupLink: builder.mutation({
+      query: (body: PrivateShowLinkRequestModel) => ({
+        url: administratorApiPath("SavePrePrivateSetupLink"),
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["PrivateShowLinks"],
+    }),
+
+    /** ClubMan ShowTimesVM.DeletePrivateShowLink → PUT Adminstrator/DeletePrivateShowLink */
+    deletePrivateShowLink: builder.mutation({
+      query: (body: PrivateShowLinkRequestModel) => ({
+        url: administratorApiPath("DeletePrivateShowLink"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["PrivateShowLinks"],
+    }),
+
     getDefaultShowSections: builder.mutation({
       query: (body: SaveShowRequestModel) => ({
         url: calendarApiPath("GetDefaultShowSections"),
@@ -1322,6 +1375,7 @@ export const {
   useGetShowDetailsByDateQuery,
   useGetShowSectionsQuery,
   useGetSystemDefaultsQuery,
+  useUpdateSystemDefaultMutation,
   useGetSystemLookupQuery,
   useUpdateShowAndPromotionFeeMutation,
   useLoadDashboardQuery,
@@ -1343,6 +1397,9 @@ export const {
   useDeleteShowDefsMutation,
   useGetDefShowInfoQuery,
   useLazyGetDefShowInfoQuery,
+  useGetPrivateShowLinksMutation,
+  useSavePrePrivateSetupLinkMutation,
+  useDeletePrivateShowLinkMutation,
   useGetDefaultShowSectionsMutation,
   useSaveShowMutation,
   useGenerateReportMutation,

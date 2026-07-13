@@ -8,9 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-const PRE_SALE_ACTIONS = ["Delete"] as const
-
-export function PreSaleRowActionsMenu() {
+export function PreSaleRowActionsMenu({ onDelete }: { onDelete: () => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -25,15 +23,19 @@ export function PreSaleRowActionsMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[8rem]">
-        {PRE_SALE_ACTIONS.map((action) => (
-          <DropdownMenuItem key={action}>{action}</DropdownMenuItem>
-        ))}
+        <DropdownMenuItem onClick={onDelete}>Delete</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
 
-export function PreSaleCopyLinkButton({ accessCode }: { accessCode: string }) {
+export function PreSaleCopyLinkButton({
+  accessCode,
+  onCopy,
+}: {
+  accessCode: string
+  onCopy: () => void
+}) {
   return (
     <Button
       type="button"
@@ -41,6 +43,7 @@ export function PreSaleCopyLinkButton({ accessCode }: { accessCode: string }) {
       size="icon-sm"
       className="text-muted-foreground hover:text-foreground"
       aria-label={`Copy link for ${accessCode}`}
+      onClick={onCopy}
     >
       <Copy className="size-4" />
     </Button>
