@@ -48,9 +48,7 @@ type AddPromotionDialogProps = {
 const FORM_GRID =
   "grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2 lg:grid-cols-12"
 const SPAN_HALF = "lg:col-span-6"
-const SPAN_THIRD = "lg:col-span-4"
 const SPAN_QUARTER = "lg:col-span-3"
-const SPAN_FULL = "lg:col-span-12"
 
 function FormGrid({
   children,
@@ -75,11 +73,6 @@ function SectionPanel({
       <FormSection title={title}>{children}</FormSection>
     </div>
   )
-}
-
-/** Nested detail panel for option-dependent fields (discount, fees, limits). */
-function DetailCard({ children }: { children: ReactNode }) {
-  return <div className="mt-2 rounded-md border p-2.5">{children}</div>
 }
 
 function YesNoRadio({
@@ -327,7 +320,8 @@ export function AddPromotionDialog({
   }
 
   const allDaysSelected = weekDayOptions.every((day) => form.validDays[day.id])
-  const showFeeInputs = form.overrideShowFees === "yes"
+  // Desktop IsShowFees / "Show Fees" checked → fee inputs disabled.
+  const feeInputsDisabled = form.overrideShowFees === "yes"
   const formDisabled = loadingDetails || saving
 
   function validateForm() {
@@ -441,7 +435,7 @@ export function AddPromotionDialog({
             </p>
           ) : null}
 
-          <SectionPanel title="Promotion Details">
+          <div className="rounded-md border p-2.5">
             <FormGrid>
               <FormField
                 label="Promotion Name"
@@ -490,129 +484,13 @@ export function AddPromotionDialog({
                 />
               ))}
             </div>
-          </SectionPanel>
+          </div>
 
-          <SectionPanel title="Fee Overrides">
-            <div className="flex flex-wrap gap-x-8 gap-y-2">
-              <YesNoField
-                label="Override Show Fees"
-                name="override-show-fees"
-                value={form.overrideShowFees}
-                disabled={formDisabled}
-                onChange={(value) => updateField("overrideShowFees", value)}
-              />
-              <YesNoField
-                label="Over-ride CC Fee to $0"
-                name="override-cc-fee"
-                value={form.overrideCcFee}
-                disabled={formDisabled}
-                onChange={(value) => updateField("overrideCcFee", value)}
-              />
-            </div>
-            {showFeeInputs ? (
-              <DetailCard>
-                <FormGrid>
-                  <FormField
-                    label="Day Of Show"
-                    htmlFor="add-promo-dos-fee"
-                    className={SPAN_QUARTER}
-                  >
-                    <Input
-                      id="add-promo-dos-fee"
-                      value={form.dayOfShowFee}
-                      disabled={formDisabled}
-                      onChange={(event) =>
-                        updateField("dayOfShowFee", event.target.value)
-                      }
-                      className="h-9 tabular-nums"
-                    />
-                  </FormField>
-                  <FormField
-                    label="Walkup"
-                    htmlFor="add-promo-walkup-fee"
-                    className={SPAN_QUARTER}
-                  >
-                    <Input
-                      id="add-promo-walkup-fee"
-                      value={form.walkupFee}
-                      disabled={formDisabled}
-                      onChange={(event) =>
-                        updateField("walkupFee", event.target.value)
-                      }
-                      className="h-9 tabular-nums"
-                    />
-                  </FormField>
-                  <FormField
-                    label="Phone"
-                    htmlFor="add-promo-phone-fee"
-                    className={SPAN_QUARTER}
-                  >
-                    <Input
-                      id="add-promo-phone-fee"
-                      value={form.phoneFee}
-                      disabled={formDisabled}
-                      onChange={(event) =>
-                        updateField("phoneFee", event.target.value)
-                      }
-                      className="h-9 tabular-nums"
-                    />
-                  </FormField>
-                  <FormField
-                    label="Web"
-                    htmlFor="add-promo-web-fee"
-                    className={SPAN_QUARTER}
-                  >
-                    <Input
-                      id="add-promo-web-fee"
-                      value={form.webFee}
-                      disabled={formDisabled}
-                      onChange={(event) =>
-                        updateField("webFee", event.target.value)
-                      }
-                      className="h-9 tabular-nums"
-                    />
-                  </FormField>
-                </FormGrid>
-              </DetailCard>
-            ) : null}
-          </SectionPanel>
-
-          <SectionPanel title="Valid Days">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              {weekDayOptions.map((day) => (
-                <CheckboxOption
-                  key={day.id}
-                  label={day.label}
-                  checked={form.validDays[day.id] ?? false}
-                  disabled={formDisabled}
-                  onCheckedChange={(checked) =>
-                    toggleValidDay(day.id, checked)
-                  }
-                />
-              ))}
-              <CheckboxOption
-                label="Select All"
-                checked={allDaysSelected}
-                disabled={formDisabled}
-                onCheckedChange={(checked) => toggleSelectAllDays(checked)}
-              />
-            </div>
-          </SectionPanel>
-
-          <SectionPanel title="Promotion Period">
+          <div className="rounded-md border p-2.5">
             <p className="mb-2 text-xs text-muted-foreground">
               Leave end date empty for permanent discount.
             </p>
             <FormGrid className="items-end">
-              <div className={SPAN_HALF}>
-                <YesNoField
-                  label="CC Required to hold reservation"
-                  name="cc-required"
-                  value={form.ccRequired}
-                  disabled={formDisabled}
-                  onChange={(value) => updateField("ccRequired", value)}
-                />
-              </div>
               <FormField
                 label="Start Date"
                 htmlFor="add-promo-start-date"
@@ -637,7 +515,123 @@ export function AddPromotionDialog({
                   className="w-full"
                 />
               </FormField>
+              <div className={SPAN_HALF}>
+                <YesNoField
+                  label="CC Required to hold reservation"
+                  name="cc-required"
+                  value={form.ccRequired}
+                  disabled={formDisabled}
+                  onChange={(value) => updateField("ccRequired", value)}
+                />
+              </div>
             </FormGrid>
+            <div className="mt-2 space-y-1">
+              <Label className="text-xs font-medium">Valid Days</Label>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                {weekDayOptions.map((day) => (
+                  <CheckboxOption
+                    key={day.id}
+                    label={day.label}
+                    checked={form.validDays[day.id] ?? false}
+                    disabled={formDisabled}
+                    onCheckedChange={(checked) =>
+                      toggleValidDay(day.id, checked)
+                    }
+                  />
+                ))}
+                <CheckboxOption
+                  label="Select All"
+                  checked={allDaysSelected}
+                  disabled={formDisabled}
+                  onCheckedChange={(checked) => toggleSelectAllDays(checked)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <SectionPanel title="Show Fees">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <CheckboxOption
+                label="Show Fees"
+                checked={form.overrideShowFees === "yes"}
+                disabled={formDisabled}
+                onCheckedChange={(checked) =>
+                  updateField("overrideShowFees", checked ? "yes" : "no")
+                }
+              />
+              <CheckboxOption
+                label="Over-ride CC Fee to $0"
+                checked={form.overrideCcFee === "yes"}
+                disabled={formDisabled}
+                onCheckedChange={(checked) =>
+                  updateField("overrideCcFee", checked ? "yes" : "no")
+                }
+              />
+            </div>
+            <div className="mt-2 rounded-md border p-2.5">
+              <FormGrid>
+                <FormField
+                  label="Day of Show Fee"
+                  htmlFor="add-promo-dos-fee"
+                  className={SPAN_QUARTER}
+                >
+                  <Input
+                    id="add-promo-dos-fee"
+                    value={form.dayOfShowFee}
+                    disabled={formDisabled || feeInputsDisabled}
+                    onChange={(event) =>
+                      updateField("dayOfShowFee", event.target.value)
+                    }
+                    className="h-9 tabular-nums"
+                  />
+                </FormField>
+                <FormField
+                  label="Walk-Up Fee"
+                  htmlFor="add-promo-walkup-fee"
+                  className={SPAN_QUARTER}
+                >
+                  <Input
+                    id="add-promo-walkup-fee"
+                    value={form.walkupFee}
+                    disabled={formDisabled || feeInputsDisabled}
+                    onChange={(event) =>
+                      updateField("walkupFee", event.target.value)
+                    }
+                    className="h-9 tabular-nums"
+                  />
+                </FormField>
+                <FormField
+                  label="Phone-In Fee"
+                  htmlFor="add-promo-phone-fee"
+                  className={SPAN_QUARTER}
+                >
+                  <Input
+                    id="add-promo-phone-fee"
+                    value={form.phoneFee}
+                    disabled={formDisabled || feeInputsDisabled}
+                    onChange={(event) =>
+                      updateField("phoneFee", event.target.value)
+                    }
+                    className="h-9 tabular-nums"
+                  />
+                </FormField>
+                <FormField
+                  label="Web Fee"
+                  htmlFor="add-promo-web-fee"
+                  className={SPAN_QUARTER}
+                >
+                  <Input
+                    id="add-promo-web-fee"
+                    value={form.webFee}
+                    disabled={formDisabled || feeInputsDisabled}
+                    onChange={(event) =>
+                      updateField("webFee", event.target.value)
+                    }
+                    className="h-9 tabular-nums"
+                  />
+                </FormField>
+              </FormGrid>
+            </div>
           </SectionPanel>
 
           <SectionPanel title="Discount Options">
@@ -665,115 +659,109 @@ export function AddPromotionDialog({
               </Select>
 
               {form.discountType === "amount" ? (
-                <DetailCard>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                    <RadioGroup
-                      value={form.amountDiscountKind}
-                      onValueChange={(value) =>
-                        updateField(
-                          "amountDiscountKind",
-                          value as PromotionFormValues["amountDiscountKind"]
-                        )
-                      }
-                      className="flex flex-wrap items-center gap-x-4"
-                      disabled={formDisabled}
-                    >
-                      <label className="flex cursor-pointer items-center gap-2 text-xs">
-                        <RadioGroupItem value="dollar" id="amount-dollar" />
-                        Dollar Amount
-                      </label>
-                      <label className="flex cursor-pointer items-center gap-2 text-xs">
-                        <RadioGroupItem
-                          value="percentage"
-                          id="amount-percent"
-                        />
-                        Percentage
-                      </label>
-                    </RadioGroup>
-                    <div className="w-36">
-                      {form.amountDiscountKind === "dollar" ? (
-                        <MoneyInput
-                          id="add-promo-dollar-off"
-                          suffix="Off"
-                          value={form.dollarOff}
-                          disabled={formDisabled}
-                          onChange={(value) => updateField("dollarOff", value)}
-                        />
-                      ) : (
-                        <PercentInput
-                          id="add-promo-perc-off"
-                          value={form.percOff}
-                          disabled={formDisabled}
-                          onChange={(value) => updateField("percOff", value)}
-                        />
-                      )}
-                    </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <RadioGroup
+                    value={form.amountDiscountKind}
+                    onValueChange={(value) =>
+                      updateField(
+                        "amountDiscountKind",
+                        value as PromotionFormValues["amountDiscountKind"]
+                      )
+                    }
+                    className="flex flex-wrap items-center gap-x-4"
+                    disabled={formDisabled}
+                  >
+                    <label className="flex cursor-pointer items-center gap-2 text-xs">
+                      <RadioGroupItem value="dollar" id="amount-dollar" />
+                      Dollar Amount
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 text-xs">
+                      <RadioGroupItem
+                        value="percentage"
+                        id="amount-percent"
+                      />
+                      Percentage
+                    </label>
+                  </RadioGroup>
+                  <div className="w-36">
+                    {form.amountDiscountKind === "dollar" ? (
+                      <MoneyInput
+                        id="add-promo-dollar-off"
+                        suffix="Off"
+                        value={form.dollarOff}
+                        disabled={formDisabled}
+                        onChange={(value) => updateField("dollarOff", value)}
+                      />
+                    ) : (
+                      <PercentInput
+                        id="add-promo-perc-off"
+                        value={form.percOff}
+                        disabled={formDisabled}
+                        onChange={(value) => updateField("percOff", value)}
+                      />
+                    )}
                   </div>
-                </DetailCard>
+                </div>
               ) : null}
 
               {form.discountType === "free-tickets" ? (
-                <DetailCard>
-                  <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-                    <FormField
-                      label="Buy"
-                      htmlFor="add-promo-buy-tix"
-                      className="w-28"
-                    >
-                      <Input
-                        id="add-promo-buy-tix"
-                        type="number"
-                        min={0}
-                        value={form.buyTix}
-                        disabled={formDisabled}
-                        onChange={(event) =>
-                          updateField("buyTix", event.target.value)
-                        }
-                        className="h-9 tabular-nums"
-                      />
-                    </FormField>
-                    <FormField
-                      label="Get Free"
-                      htmlFor="add-promo-buy-tix-free"
-                      className="w-28"
-                    >
-                      <Input
-                        id="add-promo-buy-tix-free"
-                        type="number"
-                        min={0}
-                        value={form.buyTixFree}
-                        disabled={formDisabled}
-                        onChange={(event) =>
-                          updateField("buyTixFree", event.target.value)
-                        }
-                        className="h-9 tabular-nums"
-                      />
-                    </FormField>
-                  </div>
-                </DetailCard>
+                <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+                  <FormField
+                    label="Buy"
+                    htmlFor="add-promo-buy-tix"
+                    className="w-28"
+                  >
+                    <Input
+                      id="add-promo-buy-tix"
+                      type="number"
+                      min={0}
+                      value={form.buyTix}
+                      disabled={formDisabled}
+                      onChange={(event) =>
+                        updateField("buyTix", event.target.value)
+                      }
+                      className="h-9 tabular-nums"
+                    />
+                  </FormField>
+                  <FormField
+                    label="Get Free"
+                    htmlFor="add-promo-buy-tix-free"
+                    className="w-28"
+                  >
+                    <Input
+                      id="add-promo-buy-tix-free"
+                      type="number"
+                      min={0}
+                      value={form.buyTixFree}
+                      disabled={formDisabled}
+                      onChange={(event) =>
+                        updateField("buyTixFree", event.target.value)
+                      }
+                      className="h-9 tabular-nums"
+                    />
+                  </FormField>
+                </div>
               ) : null}
 
               {form.discountType === "set-price" ? (
-                <DetailCard>
-                  <div className="w-36">
-                    <MoneyInput
-                      id="add-promo-set-price"
-                      value={form.setPrice}
-                      disabled={formDisabled}
-                      onChange={(value) => updateField("setPrice", value)}
-                    />
-                  </div>
-                </DetailCard>
+                <div className="w-36">
+                  <MoneyInput
+                    id="add-promo-set-price"
+                    value={form.setPrice}
+                    disabled={formDisabled}
+                    onChange={(value) => updateField("setPrice", value)}
+                  />
+                </div>
               ) : null}
             </div>
           </SectionPanel>
 
           <SectionPanel title="Additional Options">
-            <FormGrid className="items-end">
+            <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
               <FormField
                 label="Minimum Tickets"
                 htmlFor="add-promo-min-tickets"
-                className={SPAN_THIRD}
+                className="w-28"
               >
                 <Input
                   id="add-promo-min-tickets"
@@ -788,9 +776,9 @@ export function AddPromotionDialog({
                 />
               </FormField>
 
-              <div className={cn("space-y-2", SPAN_FULL, "lg:col-span-8")}>
-                <div className="space-y-1">
-                  <Label className="text-xs font-medium">Limit per Pass</Label>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Limit per Pass</Label>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <RadioGroup
                     value={form.limitPerPassType}
                     onValueChange={(value) =>
@@ -799,42 +787,37 @@ export function AddPromotionDialog({
                         value as PromotionFormValues["limitPerPassType"]
                       )
                     }
-                    className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                    className="flex flex-wrap items-center gap-x-4"
                     disabled={formDisabled}
                   >
-                    <label className="flex cursor-pointer items-center gap-2 text-xs font-medium">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs">
                       <RadioGroupItem value="dollar" id="limit-dollar" />
                       Dollar Amount
                     </label>
-                    <label className="flex cursor-pointer items-center gap-2 text-xs font-medium">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs">
                       <RadioGroupItem value="tickets" id="limit-tickets" />
                       Tickets
                     </label>
                   </RadioGroup>
-                </div>
 
-                <DetailCard>
                   {form.limitPerPassType === "dollar" ? (
-                    <FormField
-                      label="Maximum Discount"
-                      htmlFor="add-promo-max-discount"
-                      className="w-36"
-                    >
-                      <MoneyInput
-                        id="add-promo-max-discount"
-                        value={form.maximumDiscount}
-                        disabled={formDisabled}
-                        onChange={(value) =>
-                          updateField("maximumDiscount", value)
-                        }
-                      />
-                    </FormField>
+                    <div className="flex items-center gap-2">
+                      <div className="w-28">
+                        <MoneyInput
+                          id="add-promo-max-discount"
+                          value={form.maximumDiscount}
+                          disabled={formDisabled}
+                          onChange={(value) =>
+                            updateField("maximumDiscount", value)
+                          }
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        Maximum Discount
+                      </span>
+                    </div>
                   ) : (
-                    <FormField
-                      label="Maximum Tickets"
-                      htmlFor="add-promo-max-tickets"
-                      className="w-36"
-                    >
+                    <div className="flex items-center gap-2">
                       <Input
                         id="add-promo-max-tickets"
                         type="number"
@@ -844,13 +827,16 @@ export function AddPromotionDialog({
                         onChange={(event) =>
                           updateField("maximumTickets", event.target.value)
                         }
-                        className="h-9 tabular-nums"
+                        className="h-9 w-20 tabular-nums"
                       />
-                    </FormField>
+                      <span className="text-xs text-muted-foreground">
+                        Maximum Tickets
+                      </span>
+                    </div>
                   )}
-                </DetailCard>
+                </div>
               </div>
-            </FormGrid>
+            </div>
           </SectionPanel>
         </div>
 
