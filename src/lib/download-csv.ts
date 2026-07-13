@@ -17,13 +17,26 @@ export function downloadCsv(
     ...rows.map((row) => row.map(escapeCsvValue).join(",")),
   ]
 
-  const blob = new Blob([lines.join("\n")], {
+  // Add BOM for UTF-8 compatibility
+  const blob = new Blob(["\ufeff", lines.join("\n")], {
     type: "text/csv;charset=utf-8;",
   })
+  
+  if (typeof (navigator as any).msSaveOrOpenBlob === "function") {
+    ;(navigator as any).msSaveOrOpenBlob(blob, filename)
+    return
+  }
+
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
   link.href = url
   link.download = filename
+  
+  document.body.appendChild(link)
   link.click()
-  URL.revokeObjectURL(url)
+  link.remove()
+  
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url)
+  }, 100)
 }
