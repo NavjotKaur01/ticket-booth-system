@@ -14,6 +14,14 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { promotionFormDiscountSelectOptions } from "@/data/promotions"
 import { weekDayOptions, yesNoOptions } from "@/data/promotion-form-options"
 import { useAppSession } from "@/hooks/use-app-session"
 import {
@@ -335,6 +343,10 @@ export function AddPromotionDialog({
     if (!form.walkUp && !form.phoneIn && !form.web && !form.managerComp) {
       return "Select at least one of Walk-Up, Phone-In, Web, or Manager Comp."
     }
+    // ClubMan IsValid: DiscountType == "Discount options" → invalid
+    if (form.discountType === "discount-options") {
+      return "Select a discount option."
+    }
     if (form.discountType === "amount") {
       if (
         form.amountDiscountKind === "dollar" &&
@@ -629,34 +641,28 @@ export function AddPromotionDialog({
           </SectionPanel>
 
           <SectionPanel title="Discount Options">
-            <RadioGroup
-              value={form.discountType}
-              onValueChange={(value) =>
-                updateField(
-                  "discountType",
-                  value as PromotionFormValues["discountType"]
-                )
-              }
-              className="space-y-2"
-              disabled={formDisabled}
-            >
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                <label className="flex cursor-pointer items-center gap-2 text-xs font-medium">
-                  <RadioGroupItem value="amount" id="discount-amount" />
-                  Amount Discount
-                </label>
-                <label className="flex cursor-pointer items-center gap-2 text-xs font-medium">
-                  <RadioGroupItem
-                    value="free-tickets"
-                    id="discount-free-tickets"
-                  />
-                  Free Tickets
-                </label>
-                <label className="flex cursor-pointer items-center gap-2 text-xs font-medium">
-                  <RadioGroupItem value="set-price" id="discount-set-price" />
-                  Set Price
-                </label>
-              </div>
+            <div className="space-y-2">
+              <Select
+                value={form.discountType}
+                onValueChange={(value) =>
+                  updateField(
+                    "discountType",
+                    value as PromotionFormValues["discountType"]
+                  )
+                }
+                disabled={formDisabled}
+              >
+                <SelectTrigger id="add-promo-discount-type" className="w-full max-w-xs">
+                  <SelectValue placeholder="Discount options" />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  {promotionFormDiscountSelectOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               {form.discountType === "amount" ? (
                 <DetailCard>
@@ -759,7 +765,7 @@ export function AddPromotionDialog({
                   </div>
                 </DetailCard>
               ) : null}
-            </RadioGroup>
+            </div>
           </SectionPanel>
 
           <SectionPanel title="Additional Options">

@@ -30,6 +30,7 @@ export type PromotionFilters = {
 export const DEFAULT_PROMOTION_FILTERS: PromotionFilters = {
   promotionName: "",
   promotionCode: "",
-  discountType: "all-promos",
+  /** Matches ClubMan: DiscountType = "Discount options" */
+  discountType: "discount-options",
   displayExpired: false,
 }
