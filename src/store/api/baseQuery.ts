@@ -18,7 +18,10 @@ const rawBaseQuery = fetchBaseQuery({
     if (!headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json")
     }
-
+    // temporary-for-tunnel
+    if (import.meta.env.DEV && import.meta.env.VITE_TUNNEL_URL) {
+      headers.set("ngrok-skip-browser-warning", "true")
+    }
     return headers
   },
 })
