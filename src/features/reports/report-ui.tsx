@@ -9,7 +9,7 @@ export const REPORT_CARD_CLASS =
 
 export const REPORT_DRILL_DIALOG_CLASS =
   "flex max-h-[85vh] w-[calc(100%-2rem)] max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 sm:max-w-6xl"
-export const REPORT_DRILL_HEADER_CLASS = "shrink-0 border-b px-5 py-4 pr-12"
+export const REPORT_DRILL_HEADER_CLASS = "shrink-0 border-b px-5 py-4"
 export const REPORT_DRILL_BODY_CLASS = "min-h-0 flex-1 overflow-auto px-5 py-4"
 export const REPORT_DRILL_FOOTER_CLASS =
   "shrink-0 border-t px-5 py-3 text-right text-xs text-muted-foreground"

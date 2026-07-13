@@ -41,7 +41,8 @@ import type {
 import type { UpdateShowRequestModel } from "@/types/api/update-show"
 import type { ApiShowData, ApiShowProperties } from "@/types/api/get-show-data"
 import type { ApiCustomerSearchItem } from "@/types/api/customer-search"
-import type { ApiComedianInfo } from "@/types/api/comedian-info"
+import type { ApiComedianInfo, ComedianRequestModel } from "@/types/api/comedian-info"
+import type { ApiDefShowItem, ShowDefRequestModel } from "@/types/api/show-def"
 import type {
   ApiMarketingComedianSearchItem,
   ApiMarketingFilterCustomer,
@@ -49,7 +50,6 @@ import type {
 } from "@/types/api/marketing-filter-search"
 import type { ComicInfo } from "@/data/comedian-info"
 
-// import type { ComedianRequestModel } from "@/types/api/comedian-info"
 import { buildUpdateComedianRequest } from "@/lib/build-update-comedian-request"
 import { buildUpdateComedianImageRequest } from "@/lib/build-update-comedian-image-request"
 import { buildMarketingFilterSearchRequest } from "@/lib/build-marketing-filter-search-request"
@@ -127,7 +127,8 @@ export const clubmanApi = createApi({
     "DailyTransaction",
     "Dashboard",
     "SystemDefault",
-    "Comedians"
+    "Comedians",
+    "ShowDefs",
   ],
   endpoints: (builder) => ({
     getLocations: builder.query({
@@ -995,6 +996,81 @@ export const clubmanApi = createApi({
       transformResponse: (response: ApiComedianSearchItem[]) => response,
     }),
 
+    /** ClubMan ComedianVM.SaveComedian → POST Adminstrator/SaveComedian */
+    saveComedian: builder.mutation({
+      query: (
+        body: ComedianRequestModel & {
+          Image?: string | null
+          ImageFileName?: string
+        }
+      ) => ({
+        url: administratorApiPath("SaveComedian"),
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["Comedians"],
+    }),
+
+    /** ClubMan ShowTimesVM.Search → PUT Adminstrator/SearchDefShow */
+    searchDefShow: builder.mutation({
+      query: (body: ShowDefRequestModel) => ({
+        url: administratorApiPath("SearchDefShow"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: ApiDefShowItem[]) => response ?? [],
+    }),
+
+    /** ClubMan ShowTimesVM.AddSowTimes → POST Adminstrator/SaveShowDef */
+    saveShowDef: builder.mutation({
+      query: (body: ShowDefRequestModel) => ({
+        url: administratorApiPath("SaveShowDef"),
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["ShowDefs"],
+    }),
+
+    /** ClubMan ShowTimesVM.UpdateSowTimes → PUT Adminstrator/UpdateShowDef */
+    updateShowDef: builder.mutation({
+      query: (body: ShowDefRequestModel) => ({
+        url: administratorApiPath("UpdateShowDef"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["ShowDefs"],
+    }),
+
+    /** ClubMan ShowTimesVM.DeleteShowTime → PUT Adminstrator/DeleteShowDefs */
+    deleteShowDefs: builder.mutation({
+      query: (body: ShowDefRequestModel) => ({
+        url: administratorApiPath("DeleteShowDefs"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["ShowDefs"],
+    }),
+
+    /** ClubMan ShowTimesVM.GetShowTimesInfo → GET Adminstrator/{conn}/{id}/GetDefShowInfo */
+    getDefShowInfo: builder.query({
+      query: ({
+        connectionName,
+        showDefId,
+      }: {
+        connectionName: string
+        showDefId: string
+      }) => ({
+        url: administratorApiPath(connectionName, showDefId, "GetDefShowInfo"),
+        method: "GET",
+      }),
+      transformResponse: (response: ApiDefShowItem[]) => response ?? [],
+      providesTags: ["ShowDefs"],
+    }),
+
     getDefaultShowSections: builder.mutation({
       query: (body: SaveShowRequestModel) => ({
         url: calendarApiPath("GetDefaultShowSections"),
@@ -1247,6 +1323,7 @@ export const {
   useGetShowDetailsByDateQuery,
   useGetShowSectionsQuery,
   useGetSystemDefaultsQuery,
+  useGetSystemLookupQuery,
   useUpdateShowAndPromotionFeeMutation,
   useLoadDashboardQuery,
   useSaveReservationMutation,
@@ -1260,6 +1337,13 @@ export const {
   useGetRecentSalesReportQuery,
   useGetCalendarDataQuery,
   useSearchComediansMutation,
+  useSaveComedianMutation,
+  useSearchDefShowMutation,
+  useSaveShowDefMutation,
+  useUpdateShowDefMutation,
+  useDeleteShowDefsMutation,
+  useGetDefShowInfoQuery,
+  useLazyGetDefShowInfoQuery,
   useGetDefaultShowSectionsMutation,
   useSaveShowMutation,
   useGenerateReportMutation,
