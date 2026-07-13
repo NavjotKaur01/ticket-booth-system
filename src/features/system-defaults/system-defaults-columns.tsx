@@ -27,7 +27,11 @@ export function createSystemDefaultColumns({
   onCancelEdit,
   onSaveValue,
 }: SystemDefaultColumnsOptions = {}): ColumnDef<SystemDefault>[] {
-  return [
+  const hidden = new Set(hiddenActions ?? [])
+  const showActionsColumn =
+    !hidden.has("Add") || !hidden.has("Edit") || !hidden.has("Delete")
+
+  const columns: ColumnDef<SystemDefault>[] = [
     {
       accessorKey: "screen",
       header: ({ column }) => (
@@ -88,14 +92,21 @@ export function createSystemDefaultColumns({
         </span>
       ),
     },
-    dataTableActionsColumn<SystemDefault>({
-      ariaLabel: "System default actions",
-      hiddenActions,
-      onAction: (record, action) => {
-        if (action === "Edit") {
-          onEdit?.(record)
-        }
-      },
-    }),
   ]
+
+  if (showActionsColumn) {
+    columns.push(
+      dataTableActionsColumn<SystemDefault>({
+        ariaLabel: "System default actions",
+        hiddenActions,
+        onAction: (record, action) => {
+          if (action === "Edit") {
+            onEdit?.(record)
+          }
+        },
+      })
+    )
+  }
+
+  return columns
 }

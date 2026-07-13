@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { countryOptions, usStateOptions } from "@/data/customer-form-options"
+import { getSystemDefaultDropdownOptions } from "@/data/system-default-options"
 import type { SystemDefault } from "@/types/system-default"
 
 type SystemDefaultValuePopoverProps = {
@@ -42,31 +42,6 @@ function toBooleanValue(value: string) {
   return value === "Yes" ? "Y" : "N"
 }
 
-function isNumericDefault(value: string) {
-  return /^\d+(?:\.\d+)?$/.test(value.trim())
-}
-
-function acceptsNumericInput(value: string, allowDecimal: boolean) {
-  return allowDecimal ? /^\d*(?:\.\d*)?$/.test(value) : /^\d*$/.test(value)
-}
-
-function dropdownOptionsFor(record: SystemDefault) {
-  const desc = record.description.trim()
-  if (desc === "Country") {
-    return countryOptions.map((option) => ({
-      id: option.id,
-      label: option.label,
-    }))
-  }
-  if (desc === "State") {
-    return usStateOptions.map((option) => ({
-      id: option.id,
-      label: option.label,
-    }))
-  }
-  return null
-}
-
 export function SystemDefaultValuePopover({
   record,
   open,
@@ -77,36 +52,46 @@ export function SystemDefaultValuePopover({
   const [value, setValue] = useState("")
   const [description, setDescription] = useState("")
   const isBooleanValue = isYesNoType(record.type)
-  const dropdownOptions =
-    isDropdownType(record.type) ? dropdownOptionsFor(record) : null
-  const isNumericValue =
-    !isBooleanValue && !dropdownOptions && isNumericDefault(record.defaultValue)
-  const allowsDecimal = record.defaultValue.includes(".")
+  const dropdownOptions = isDropdownType(record.type)
+    ? getSystemDefaultDropdownOptions(record.description)
+    : null
+  const isCountryDropdown = record.description.trim() === "Country"
 
   useEffect(() => {
     if (!open) return
-    setValue(
-      isBooleanValue ? toBooleanLabel(record.defaultValue) : record.defaultValue
-    )
+
+    if (isBooleanValue) {
+      setValue(toBooleanLabel(record.defaultValue))
+    } else if (isCountryDropdown && !record.defaultValue.trim()) {
+      setValue("Select country")
+    } else {
+      setValue(record.defaultValue)
+    }
     setDescription(record.description)
-  }, [isBooleanValue, open, record.defaultValue, record.description])
+  }, [
+    isBooleanValue,
+    isCountryDropdown,
+    open,
+    record.defaultValue,
+    record.description,
+  ])
 
   function handleSave() {
+    // Desktop ShowCountry: selecting "Select country" closes without saving.
+    if (isCountryDropdown && value.trim() === "Select country") {
+      onOpenChange(false)
+      return
+    }
+
     const nextValue = isBooleanValue ? toBooleanValue(value) : value.trim()
     if (!nextValue) return
+
     onSave(
       record,
       nextValue,
-      canEditDescription ? description.trim() : undefined
+      canEditDescription ? description.trim() : ""
     )
     onOpenChange(false)
-  }
-
-  function handleInputChange(nextValue: string) {
-    if (isNumericValue && !acceptsNumericInput(nextValue, allowsDecimal)) {
-      return
-    }
-    setValue(nextValue)
   }
 
   return (
@@ -162,8 +147,7 @@ export function SystemDefaultValuePopover({
               ) : (
                 <Input
                   value={value}
-                  onChange={(event) => handleInputChange(event.target.value)}
-                  inputMode={isNumericValue ? "decimal" : undefined}
+                  onChange={(event) => setValue(event.target.value)}
                   className="h-8 bg-background"
                   autoFocus
                 />

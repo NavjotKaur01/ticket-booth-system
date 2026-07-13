@@ -48,24 +48,31 @@ export function dedupeSystemDefaults(
 export function mapSystemDefaults(
   items: ApiSystemDefaultItem[]
 ): SystemDefault[] {
-  return dedupeSystemDefaults(items).map((item, index) => ({
-    id: text(item.DefaultID) || `system-default-${index}`,
-    screen: text(item.Screen),
-    field: text(item.Field),
-    description: text(item.SDesc),
-    defaultValue: text(item.DefValue),
-    type: text(item.Type),
-    lookupType: text(item.LookupType),
-    lastUpdateId: text(item.LastUpdateID),
-    lastUpdateDt: item.LastUpdateDt
-      ? formatUsDateTimeFromValue(item.LastUpdateDt, text(item.LastUpdateDt))
-      : "",
-  }))
+  return dedupeSystemDefaults(items)
+    .map((item, index) => ({
+      id: text(item.DefaultID) || `system-default-${index}`,
+      screen: text(item.Screen),
+      field: text(item.Field),
+      description: text(item.SDesc),
+      defaultValue: text(item.DefValue),
+      type: text(item.Type),
+      lookupType: text(item.LookupType),
+      lastUpdateId: text(item.LastUpdateID),
+      lastUpdateDt: item.LastUpdateDt
+        ? formatUsDateTimeFromValue(item.LastUpdateDt, text(item.LastUpdateDt))
+        : "",
+    }))
+    .sort((a, b) => {
+      const screenCompare = a.screen.localeCompare(b.screen)
+      if (screenCompare !== 0) return screenCompare
+      return a.field.localeCompare(b.field)
+    })
 }
 
 /**
- * Visibility rules from SystemDefaultsVM.GetDefaultsByName /
- * GetSystemDefauts (exclude GiftCert; non-SEC09 hide AddComic / PaymentTestGetway / Touch screens).
+ * Row visibility from SystemDefaultsVM.GetDefaultsByName.
+ * GiftCert always hidden; non-SEC09 also hides AddComic + PaymentTestGetway.
+ * Touch remains visible in the "all" list for non-SEC09 (desktop behavior).
  */
 export function filterVisibleSystemDefaultItems(
   items: ApiSystemDefaultItem[],
@@ -79,23 +86,44 @@ export function filterVisibleSystemDefaultItems(
     if (screen.toLowerCase() === "giftcert") return false
     if (isSystemUser) return true
     if (screen.toLowerCase() === "addcomic") return false
-    if (screen === "Touch") return false
     if (field === "PaymentTestGetway") return false
     return true
   })
 }
 
+/**
+ * Screen combo options from SystemDefaultsVM.GetSystemDefauts.
+ * Non-SEC09 also omits Touch from the dropdown (even though Touch rows can appear in "Select"/all).
+ */
 export function buildSystemDefaultScreenOptions(
-  records: SystemDefault[]
+  records: SystemDefault[],
+  userRight: string
 ): string[] {
-  return [...new Set(records.map((record) => record.screen).filter(Boolean))].sort(
-    (a, b) => a.localeCompare(b)
-  )
+  const isSystemUser = userRight.trim().toUpperCase() === "SEC09"
+
+  return [
+    ...new Set(
+      records
+        .filter((record) => {
+          if (!record.screen) return false
+          if (isSystemUser) return true
+          return record.screen !== "Touch"
+        })
+        .map((record) => record.screen)
+    ),
+  ].sort((a, b) => a.localeCompare(b))
 }
 
+/** SystemDefaults.xaml.cs — FTP Location for Pictures cannot be edited. */
 export function isSystemDefaultEditBlocked(record: SystemDefault) {
   return (
     record.screen === "AddComic" &&
     record.description === "FTP Location for Pictures"
   )
+}
+
+/** Desktop cancels BeginningEdit when Type is null/empty. */
+export function canOpenSystemDefaultEditor(record: SystemDefault) {
+  if (isSystemDefaultEditBlocked(record)) return false
+  return Boolean(record.type.trim())
 }

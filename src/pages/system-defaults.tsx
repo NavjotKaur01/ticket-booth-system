@@ -9,6 +9,7 @@ import { buildUpdateSystemDefaultRequest } from "@/lib/build-update-system-defau
 import { filterSystemDefaults } from "@/lib/filter-system-defaults"
 import {
   buildSystemDefaultScreenOptions,
+  canOpenSystemDefaultEditor,
   filterVisibleSystemDefaultItems,
   isSystemDefaultEditBlocked,
   mapSystemDefaults,
@@ -21,7 +22,8 @@ import {
   type SystemDefault,
 } from "@/types/system-default"
 
-const SYSTEM_DEFAULT_HIDDEN_ACTIONS = ["Delete", "Add"] as const
+/** Desktop has no Add/Edit/Delete menu — double-click edits only. */
+const SYSTEM_DEFAULT_HIDDEN_ACTIONS = ["Delete", "Add", "Edit"] as const
 
 export function SystemDefaults() {
   const { connectionName, locationId, username, userRight, isReady } =
@@ -51,8 +53,8 @@ export function SystemDefaults() {
   )
 
   const screenOptions = useMemo(
-    () => buildSystemDefaultScreenOptions(records),
-    [records]
+    () => buildSystemDefaultScreenOptions(records, userRight),
+    [records, userRight]
   )
 
   const filteredRecords = useMemo(
@@ -65,7 +67,9 @@ export function SystemDefaults() {
 
   function handleOpenEdit(record: SystemDefault) {
     if (isSystemDefaultEditBlocked(record)) {
-      setActionError("This system default cannot be edited.")
+      return
+    }
+    if (!canOpenSystemDefaultEditor(record)) {
       return
     }
     setActionError(null)
@@ -78,7 +82,6 @@ export function SystemDefaults() {
     description?: string
   ) {
     if (isSystemDefaultEditBlocked(record)) {
-      setActionError("This system default cannot be edited.")
       setEditingRecordId(null)
       return
     }
@@ -102,7 +105,7 @@ export function SystemDefaults() {
           lastUpdateId: username,
           defaultId: record.id,
           defaultValue: value.trim(),
-          description: description ?? record.description,
+          description: canEditDescription ? (description ?? "") : "",
         })
       )
       if (!updated) {
