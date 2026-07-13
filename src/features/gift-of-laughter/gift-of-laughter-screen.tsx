@@ -131,13 +131,26 @@ function downloadWorkbook(
   mimeType: string
 ) {
   const content = [headers.join("\t"), ...rows.map((row) => row.join("\t"))].join("\n")
-  const blob = new Blob([content], { type: mimeType })
+  // Add BOM for UTF-8 compatibility
+  const blob = new Blob(["\ufeff", content], { type: mimeType })
+  
+  if (typeof (navigator as any).msSaveOrOpenBlob === "function") {
+    ;(navigator as any).msSaveOrOpenBlob(blob, filename)
+    return
+  }
+
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
   link.href = url
   link.download = filename
+  
+  document.body.appendChild(link)
   link.click()
-  URL.revokeObjectURL(url)
+  link.remove()
+  
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url)
+  }, 100)
 }
 
 function EmptyState({
