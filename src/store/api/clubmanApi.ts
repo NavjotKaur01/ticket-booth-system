@@ -71,6 +71,7 @@ import type { ApiPromotionSearchItem } from "@/types/api/promotion-search"
 import type { ApiSystemLookupItem } from "@/types/api/system-lookup"
 import type { ApiDashboardData } from "@/types/api/dashboard-data"
 import type { ApiSystemDefaultItem } from "@/types/api/system-defaults"
+import type { UpdateShowAndPromotionFeeRequest } from "@/types/api/adjust-fees"
 import type { RecentSalesReportData } from "@/types/api/recent-sales"
 import type { ReportPermissionAccess } from "@/types/api/report-permission-access"
 import type { ReportRequestModel } from "@/types/api/report-request"
@@ -813,6 +814,16 @@ export const clubmanApi = createApi({
       providesTags: (_result, _error, arg) => [
         { type: "SystemDefault", id: `${arg.connectionName}:${arg.locationId}` },
       ],
+    }),
+
+    /** ClubMan AdjustFeesVM → PUT Adminstrator/UpdateShowAndPromotionFee */
+    updateShowAndPromotionFee: builder.mutation({
+      query: (request: UpdateShowAndPromotionFeeRequest) => ({
+        url: administratorApiPath("UpdateShowAndPromotionFee"),
+        method: "PUT",
+        body: request,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
     }),
 
     loadDashboard: builder.query({
@@ -1675,6 +1686,7 @@ export const {
   useGetShowDetailsByDateQuery,
   useGetShowSectionsQuery,
   useGetSystemDefaultsQuery,
+  useUpdateShowAndPromotionFeeMutation,
   useLoadDashboardQuery,
   useSaveReservationMutation,
   useUpdateReservationMutation,
