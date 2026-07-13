@@ -50,8 +50,8 @@ export function buildSavePromotionRequest({
   const startDate = parseDateInput(form.startDate) ?? now
   const endDate = parseDateInput(form.endDate)
 
-  // Desktop IsShowFees=true → use show fees (inputs disabled). React overrideShowFees=yes → custom fees.
-  const isShowFees = form.overrideShowFees === "no"
+  // Desktop "Show Fees" / IsShowFees=true → fee inputs disabled; values omitted from save.
+  const isShowFees = form.overrideShowFees === "yes"
   const discountType =
     form.discountType === "discount-options" ? "amount" : form.discountType
   const isAmount = discountType === "amount"

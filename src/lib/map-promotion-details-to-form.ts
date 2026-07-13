@@ -126,8 +126,8 @@ export function mapPromotionDetailsToForm(
     ccRequired: toYesNo(isYesFlag(item.CCReq)),
     startDate: toDateInput(item.StartDt),
     endDate: toDateInput(item.EndDt),
-    // Desktop IsShowFees=true → use show fees. Form overrideShowFees=yes → custom fees.
-    overrideShowFees: toYesNo(!useShowFees),
+    // Desktop UseShowFees=Y → IsShowFees checked → fee inputs disabled.
+    overrideShowFees: toYesNo(useShowFees),
     dayOfShowFee: toMoneyString(item.DayOfShowFee) || "1.00",
     walkupFee: toMoneyString(item.WalkUpFee) || "0.00",
     phoneFee: toMoneyString(item.PhoneInFee) || "0.00",

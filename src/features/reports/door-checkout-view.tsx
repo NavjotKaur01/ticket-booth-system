@@ -164,7 +164,7 @@ function DrillDownDialog({
             "h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-2rem)]"
         )}
       >
-        <DialogHeader className={cn(REPORT_DRILL_HEADER_CLASS, "pr-24")}>
+        <DialogHeader className={cn(REPORT_DRILL_HEADER_CLASS, "relative")}>
           <DialogTitle className="text-base flex flex-col lg:flex-row">
             Door CheckOut Drill Down Report
             {target.label && (
@@ -173,7 +173,7 @@ function DrillDownDialog({
           </DialogTitle>
           <button
             type="button"
-            className="absolute top-2 right-14 flex size-8 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+            className="absolute top-1/2 right-14 z-10 flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
             aria-label={isExpanded ? "Restore dialog size" : "Expand dialog"}
             title={isExpanded ? "Restore" : "Expand"}
             onClick={() => setIsExpanded((current) => !current)}

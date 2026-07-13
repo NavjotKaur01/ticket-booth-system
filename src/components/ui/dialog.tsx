@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 type DialogLayer = "base" | "nested"
 
 const DialogLayerContext = React.createContext<DialogLayer>("base")
+const DialogShowCloseContext = React.createContext(true)
 
 export function useDialogLayer() {
   return React.useContext(DialogLayerContext)
@@ -104,6 +105,9 @@ function shouldPreventOutsideDismiss(
   }
 }
 
+const dialogCloseButtonClassName =
+  "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none disabled:pointer-events-none"
+
 function DialogContent({
   className,
   children,
@@ -166,29 +170,40 @@ function DialogContent({
         {...props}
       >
         <DialogLayerContext.Provider value={dialogLayer}>
-          {children}
-          {showCloseButton && (
-            <DialogPrimitive.Close
-              data-slot="dialog-close"
-              className="absolute top-4 right-4 flex size-8 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none disabled:pointer-events-none"
-            >
-              <XIcon className="size-4" />
-              <span className="sr-only">Close</span>
-            </DialogPrimitive.Close>
-          )}
+          <DialogShowCloseContext.Provider value={showCloseButton}>
+            {children}
+          </DialogShowCloseContext.Provider>
         </DialogLayerContext.Provider>
       </DialogPrimitive.Content>
     </DialogPortal>
   )
 }
 
-function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
+function DialogHeader({ className, children, ...props }: React.ComponentProps<"div">) {
+  const showCloseButton = React.useContext(DialogShowCloseContext)
+
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-1.5 text-left", className)}
+      className={cn(
+        "flex flex-row items-center gap-3 text-left",
+        className,
+        // Drop legacy absolute-close gutters (pr-12/pr-14/pr-24) now that close lives in-flow.
+        showCloseButton && "pr-4"
+      )}
       {...props}
-    />
+    >
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">{children}</div>
+      {showCloseButton ? (
+        <DialogPrimitive.Close
+          data-slot="dialog-close"
+          className={dialogCloseButtonClassName}
+        >
+          <XIcon className="size-4" />
+          <span className="sr-only">Close</span>
+        </DialogPrimitive.Close>
+      ) : null}
+    </div>
   )
 }
 
