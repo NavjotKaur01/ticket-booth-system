@@ -275,7 +275,7 @@ export function ReportFiltersToolbar({
                   id="report-viewer-comic"
                   value={filters.headlinerId}
                   onChange={(value) => onFilterChange("headlinerId", value)}
-                  placeholder="Select a comedian..."
+                  placeholder="Select a comedian"
                   className="h-9 w-full bg-background"
                   options={comedianOptions.map((option) => ({
                     value: option.id,
