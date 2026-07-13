@@ -52,9 +52,11 @@ export function buildSavePromotionRequest({
 
   // Desktop IsShowFees=true → use show fees (inputs disabled). React overrideShowFees=yes → custom fees.
   const isShowFees = form.overrideShowFees === "no"
-  const isAmount = form.discountType === "amount"
-  const isFreeTickets = form.discountType === "free-tickets"
-  const isSetPrice = form.discountType === "set-price"
+  const discountType =
+    form.discountType === "discount-options" ? "amount" : form.discountType
+  const isAmount = discountType === "amount"
+  const isFreeTickets = discountType === "free-tickets"
+  const isSetPrice = discountType === "set-price"
   const isDollarOff = isAmount && form.amountDiscountKind === "dollar"
   const isPercOff = isAmount && form.amountDiscountKind === "percentage"
   const isLimitDollar = form.limitPerPassType === "dollar"
@@ -86,7 +88,7 @@ export function buildSavePromotionRequest({
       ? parseOptionalNumber(form.maximumDiscount)
       : null,
     TixMax: !isLimitDollar ? parseOptionalNumber(form.maximumTickets) : null,
-    DiscountType: getPromotionFormDiscountApiCode(form.discountType),
+    DiscountType: getPromotionFormDiscountApiCode(discountType),
     IsOverrideCCFee: form.overrideCcFee === "yes",
     IsDiscountAmountDoller: isDollarOff,
     IsDiscountAmountPercentage: isPercOff,

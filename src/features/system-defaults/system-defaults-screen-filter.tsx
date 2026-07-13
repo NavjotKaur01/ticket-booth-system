@@ -30,7 +30,7 @@ export function SystemDefaultsScreenFilter({
         <SelectTrigger id="system-defaults-screen" className="w-full sm:w-52">
           <SelectValue placeholder="Select" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent position="popper">
           <SelectItem value="all">All Screens</SelectItem>
           {systemDefaultScreenOptions.map((screen) => (
             <SelectItem key={screen} value={screen}>

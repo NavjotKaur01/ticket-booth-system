@@ -2,7 +2,11 @@ export type YesNo = "yes" | "no"
 
 export type LimitPerPassType = "dollar" | "tickets"
 
-export type DiscountType = "amount" | "free-tickets" | "set-price"
+export type DiscountType =
+  | "discount-options"
+  | "amount"
+  | "free-tickets"
+  | "set-price"
 
 export type AmountDiscountKind = "dollar" | "percentage"
 
@@ -70,7 +74,7 @@ export const EMPTY_PROMOTION_FORM: PromotionFormValues = {
   phoneFee: "0.00",
   webFee: "0.00",
   overrideCcFee: "no",
-  discountType: "amount",
+  discountType: "discount-options",
   amountDiscountKind: "dollar",
   dollarOff: "",
   percOff: "",
