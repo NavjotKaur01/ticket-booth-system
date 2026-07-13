@@ -12,6 +12,7 @@ type PrefixedInputProps = {
   inputClassName?: string
   type?: HTMLInputTypeAttribute
   min?: number
+  disabled?: boolean
 }
 
 export function PrefixedInput({
@@ -23,6 +24,7 @@ export function PrefixedInput({
   inputClassName,
   type = "text",
   min,
+  disabled,
 }: PrefixedInputProps) {
   return (
     <div className={cn("relative", className)}>
@@ -34,6 +36,7 @@ export function PrefixedInput({
         type={type}
         min={min}
         value={value}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         className={cn("h-9 w-full pl-6 tabular-nums", inputClassName)}
       />

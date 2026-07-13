@@ -8,9 +8,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-const SHOW_TIME_ACTIONS = ["Edit", "Delete"] as const
-
-export function ShowTimeRowActionsMenu() {
+export function ShowTimeRowActionsMenu({
+  onEdit,
+  onDelete,
+}: {
+  onEdit: () => void
+  onDelete: () => void
+}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -25,9 +29,8 @@ export function ShowTimeRowActionsMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[8rem]">
-        {SHOW_TIME_ACTIONS.map((action) => (
-          <DropdownMenuItem key={action}>{action}</DropdownMenuItem>
-        ))}
+        <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem>
+        <DropdownMenuItem onClick={onDelete}>Delete</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

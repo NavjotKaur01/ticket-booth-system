@@ -1,9 +1,9 @@
 import type { ShowTimeFilters, ShowTimeRow } from "@/types/show-time"
 import { formatShowTime } from "@/lib/format-show-time"
 
-function matches(value: string, query: string) {
+function matchesTime(value: string, query: string) {
   if (!query.trim()) return true
-  return value.toLowerCase().includes(query.trim().toLowerCase())
+  return formatShowTime(value) === formatShowTime(query)
 }
 
 export function filterShowTimes(
@@ -14,10 +14,8 @@ export function filterShowTimes(
     if (filters.dayOfWeek !== "all" && row.dayOfWeek !== filters.dayOfWeek) {
       return false
     }
-    if (!matches(formatShowTime(row.startTime), filters.showTime)) return false
-    if (!matches(formatShowTime(row.arrivalTime), filters.arrivalTime)) {
-      return false
-    }
+    if (!matchesTime(row.startTime, filters.showTime)) return false
+    if (!matchesTime(row.arrivalTime, filters.arrivalTime)) return false
     return true
   })
 }

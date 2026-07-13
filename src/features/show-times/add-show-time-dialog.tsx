@@ -1,6 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import { Plus } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { DataTable } from "@/components/data-table/data-table"
 import { FormField, FormSection } from "@/components/forms/form-fields"
@@ -24,13 +24,25 @@ import {
 } from "@/components/ui/select"
 import {
   dayOfWeekOptions,
-  getSectionLabel,
-  showSectionOptions,
   weekDayCheckboxOptions,
 } from "@/data/show-time-form-options"
 import { ShowTimeSectionActionsMenu } from "@/features/show-times/show-time-row-actions-menu"
+import { useAppSession } from "@/hooks/use-app-session"
+import {
+  getDefShowInfo,
+  saveShowDef,
+  updateShowDef,
+} from "@/lib/api/show-times"
+import {
+  buildSaveShowDefRequests,
+  buildUpdateShowDefRequests,
+} from "@/lib/build-show-def-request"
+import { mapDefShowInfoToForm } from "@/lib/map-def-show-info"
+import { mapSystemLookupsToSectionItems } from "@/lib/section-lookup"
+import { useGetSystemLookupQuery } from "@/store/api/clubmanApi"
 import {
   createEmptyShowTimeForm,
+  EMPTY_ALSO_APPLIES_TO,
   type ShowTimeFormValues,
   type ShowTimeSectionDraft,
 } from "@/types/show-time"
@@ -38,16 +50,22 @@ import {
 type AddShowTimeDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  editingShowDefId?: string | null
+  defaultDayOfWeek?: string
+  onSaved?: () => void | Promise<void>
 }
 
 function createSectionColumns(
+  sectionLabelByCode: Map<string, string>,
   onRemove: (id: string) => void
 ): ColumnDef<ShowTimeSectionDraft>[] {
   return [
     {
       accessorKey: "sectionId",
       header: "Section",
-      cell: ({ row }) => getSectionLabel(row.original.sectionId),
+      cell: ({ row }) =>
+        sectionLabelByCode.get(row.original.sectionId) ??
+        row.original.sectionId,
     },
     {
       accessorKey: "price",
@@ -106,23 +124,106 @@ function createSectionColumns(
   ]
 }
 
+function buildInitialForm(defaultDayOfWeek?: string): ShowTimeFormValues {
+  const form = createEmptyShowTimeForm()
+  if (!defaultDayOfWeek || defaultDayOfWeek === "all") return form
+
+  form.dayOfWeek = defaultDayOfWeek
+  form.alsoAppliesTo = {
+    ...EMPTY_ALSO_APPLIES_TO,
+    mon: false,
+    [defaultDayOfWeek]: true,
+  }
+  return form
+}
+
 export function AddShowTimeDialog({
   open,
   onOpenChange,
+  editingShowDefId = null,
+  defaultDayOfWeek,
+  onSaved,
 }: AddShowTimeDialogProps) {
-  const [form, setForm] = useState<ShowTimeFormValues>(createEmptyShowTimeForm())
+  const { connectionName, locationId, username, isReady } = useAppSession()
+  const isEdit = Boolean(editingShowDefId)
+  const [form, setForm] = useState<ShowTimeFormValues>(() =>
+    buildInitialForm(defaultDayOfWeek)
+  )
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [loadingDetails, setLoadingDetails] = useState(false)
+
+  const { data: systemLookups = [] } = useGetSystemLookupQuery(connectionName, {
+    skip: !open || !connectionName,
+  })
+  const sectionLookups = useMemo(
+    () => mapSystemLookupsToSectionItems(systemLookups),
+    [systemLookups]
+  )
+  const sectionLabelByCode = useMemo(
+    () =>
+      new Map(sectionLookups.map((item) => [item.code, item.description])),
+    [sectionLookups]
+  )
 
   useEffect(() => {
     if (!open) {
-      setForm(createEmptyShowTimeForm())
+      setForm(buildInitialForm(defaultDayOfWeek))
+      setError(null)
+      setSaving(false)
+      setLoadingDetails(false)
+      return
     }
-  }, [open])
+
+    if (!editingShowDefId || !connectionName) {
+      setForm(buildInitialForm(defaultDayOfWeek))
+      return
+    }
+
+    let cancelled = false
+    setLoadingDetails(true)
+    setError(null)
+
+    void getDefShowInfo(connectionName, editingShowDefId)
+      .then((items) => {
+        if (cancelled) return
+        setForm(mapDefShowInfoToForm(items ?? [], sectionLookups))
+      })
+      .catch((loadError) => {
+        if (cancelled) return
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Unable to load show time details."
+        )
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDetails(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, editingShowDefId, connectionName, defaultDayOfWeek, sectionLookups])
 
   function updateField<K extends keyof ShowTimeFormValues>(
     field: K,
     value: ShowTimeFormValues[K]
   ) {
-    setForm((current) => ({ ...current, [field]: value }))
+    setForm((current) => {
+      if (field === "dayOfWeek" && typeof value === "string") {
+        return {
+          ...current,
+          dayOfWeek: value,
+          alsoAppliesTo: {
+            ...EMPTY_ALSO_APPLIES_TO,
+            mon: false,
+            [value]: true,
+          },
+        }
+      }
+      return { ...current, [field]: value }
+    })
   }
 
   function toggleAlsoAppliesTo(dayId: string, checked: boolean) {
@@ -133,6 +234,11 @@ export function AddShowTimeDialog({
   }
 
   function handleAddSection() {
+    if (!form.sectionId) {
+      setError("Select a section before adding.")
+      return
+    }
+
     const section: ShowTimeSectionDraft = {
       id: crypto.randomUUID(),
       sectionId: form.sectionId,
@@ -145,6 +251,7 @@ export function AddShowTimeDialog({
       restrictShowPromo: form.restrictShowPromo,
     }
 
+    setError(null)
     setForm((current) => ({
       ...current,
       sections: [...current.sections, section],
@@ -166,11 +273,70 @@ export function AddShowTimeDialog({
     }))
   }
 
-  function handleSave() {
-    onOpenChange(false)
+  async function handleSave() {
+    if (!isReady || !connectionName || !locationId) {
+      setError("Location is required before saving a show time.")
+      return
+    }
+    if (form.sections.length === 0) {
+      setError("Add at least one section before saving.")
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+
+    try {
+      if (isEdit && editingShowDefId) {
+        const { updates, creates } = buildUpdateShowDefRequests({
+          connectionName,
+          locationId,
+          lastUpdateId: username,
+          form,
+          sectionLookups,
+          showDefId: editingShowDefId,
+        })
+        for (const request of updates) {
+          await updateShowDef(request)
+        }
+        for (const request of creates) {
+          await saveShowDef(request)
+        }
+      } else {
+        const requests = buildSaveShowDefRequests({
+          connectionName,
+          locationId,
+          lastUpdateId: username,
+          form,
+          sectionLookups,
+        })
+        if (requests.length === 0) {
+          setError("Select at least one day before saving.")
+          return
+        }
+        for (const request of requests) {
+          await saveShowDef(request)
+        }
+      }
+
+      await onSaved?.()
+      onOpenChange(false)
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Unable to save show time."
+      )
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const sectionColumns = createSectionColumns(handleRemoveSection)
+  const sectionColumns = createSectionColumns(
+    sectionLabelByCode,
+    handleRemoveSection
+  )
+  const formDisabled = saving || loadingDetails
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -180,11 +346,20 @@ export function AddShowTimeDialog({
       >
         <DialogHeader className="shrink-0 gap-0 border-b px-4 py-3 pr-12">
           <DialogTitle className="text-lg leading-snug font-normal">
-            <span className="font-semibold text-foreground">Add Show Times</span>
+            <span className="font-semibold text-foreground">
+              {isEdit ? "Edit Show Times" : "Add Show Times"}
+            </span>
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-2 overflow-y-auto px-4 py-2">
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {loadingDetails ? (
+            <p className="text-sm text-muted-foreground">
+              Loading show time details...
+            </p>
+          ) : null}
+
           <div className="rounded-md border p-2.5">
             <FormSection title="Show Details">
               <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:gap-3">
@@ -192,6 +367,7 @@ export function AddShowTimeDialog({
                   <Select
                     value={form.dayOfWeek}
                     onValueChange={(value) => updateField("dayOfWeek", value)}
+                    disabled={formDisabled}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />
@@ -218,6 +394,7 @@ export function AddShowTimeDialog({
                       >
                         <Checkbox
                           checked={form.alsoAppliesTo[day.id] ?? false}
+                          disabled={formDisabled}
                           onCheckedChange={(value) =>
                             toggleAlsoAppliesTo(day.id, value === true)
                           }
@@ -235,6 +412,7 @@ export function AddShowTimeDialog({
                     id="add-show-time"
                     type="time"
                     value={form.showTime}
+                    disabled={formDisabled}
                     onChange={(event) =>
                       updateField("showTime", event.target.value)
                     }
@@ -246,6 +424,7 @@ export function AddShowTimeDialog({
                     id="add-arrival-time"
                     type="time"
                     value={form.arrivalTime}
+                    disabled={formDisabled}
                     onChange={(event) =>
                       updateField("arrivalTime", event.target.value)
                     }
@@ -256,6 +435,7 @@ export function AddShowTimeDialog({
                   <label className="flex cursor-pointer items-center gap-2 text-xs">
                     <Checkbox
                       checked={form.dinner}
+                      disabled={formDisabled}
                       onCheckedChange={(value) =>
                         updateField("dinner", value === true)
                       }
@@ -265,6 +445,7 @@ export function AddShowTimeDialog({
                   <label className="flex cursor-pointer items-center gap-2 text-xs">
                     <Checkbox
                       checked={form.noPasses}
+                      disabled={formDisabled}
                       onCheckedChange={(value) =>
                         updateField("noPasses", value === true)
                       }
@@ -274,6 +455,7 @@ export function AddShowTimeDialog({
                   <label className="flex cursor-pointer items-center gap-2 text-xs">
                     <Checkbox
                       checked={form.vipSeating}
+                      disabled={formDisabled}
                       onCheckedChange={(value) =>
                         updateField("vipSeating", value === true)
                       }
@@ -283,6 +465,7 @@ export function AddShowTimeDialog({
                   <label className="flex cursor-pointer items-center gap-2 text-xs">
                     <Checkbox
                       checked={form.age21Plus}
+                      disabled={formDisabled}
                       onCheckedChange={(value) =>
                         updateField("age21Plus", value === true)
                       }
@@ -292,6 +475,7 @@ export function AddShowTimeDialog({
                   <label className="flex cursor-pointer items-center gap-2 text-xs">
                     <Checkbox
                       checked={form.hub}
+                      disabled={formDisabled}
                       onCheckedChange={(value) =>
                         updateField("hub", value === true)
                       }
@@ -310,14 +494,15 @@ export function AddShowTimeDialog({
                   <Select
                     value={form.sectionId || undefined}
                     onValueChange={(value) => updateField("sectionId", value)}
+                    disabled={formDisabled}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select Section" />
                     </SelectTrigger>
                     <SelectContent>
-                      {showSectionOptions.map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.label}
+                      {sectionLookups.map((option) => (
+                        <SelectItem key={option.code} value={option.code}>
+                          {option.description}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -327,6 +512,7 @@ export function AddShowTimeDialog({
                   <PrefixedInput
                     value={form.price}
                     onChange={(value) => updateField("price", value)}
+                    disabled={formDisabled}
                   />
                 </FormField>
                 <FormField label="Number of Seats">
@@ -334,6 +520,7 @@ export function AddShowTimeDialog({
                     type="number"
                     min={0}
                     value={form.seats}
+                    disabled={formDisabled}
                     onChange={(event) =>
                       updateField("seats", event.target.value)
                     }
@@ -344,18 +531,21 @@ export function AddShowTimeDialog({
                   <PrefixedInput
                     value={form.walkupFee}
                     onChange={(value) => updateField("walkupFee", value)}
+                    disabled={formDisabled}
                   />
                 </FormField>
                 <FormField label="Phone Fee">
                   <PrefixedInput
                     value={form.phoneFee}
                     onChange={(value) => updateField("phoneFee", value)}
+                    disabled={formDisabled}
                   />
                 </FormField>
                 <FormField label="Web Fee">
                   <PrefixedInput
                     value={form.webFee}
                     onChange={(value) => updateField("webFee", value)}
+                    disabled={formDisabled}
                   />
                 </FormField>
               </div>
@@ -365,6 +555,7 @@ export function AddShowTimeDialog({
                   <label className="flex cursor-pointer items-center gap-2 text-xs">
                     <Checkbox
                       checked={form.showOnWeb}
+                      disabled={formDisabled}
                       onCheckedChange={(value) =>
                         updateField("showOnWeb", value === true)
                       }
@@ -374,6 +565,7 @@ export function AddShowTimeDialog({
                   <label className="flex cursor-pointer items-center gap-2 text-xs">
                     <Checkbox
                       checked={form.restrictShowPromo}
+                      disabled={formDisabled}
                       onCheckedChange={(value) =>
                         updateField("restrictShowPromo", value === true)
                       }
@@ -385,6 +577,7 @@ export function AddShowTimeDialog({
                   type="button"
                   size="sm"
                   className="gap-1.5"
+                  disabled={formDisabled}
                   onClick={handleAddSection}
                 >
                   <Plus className="size-3.5" />
@@ -410,12 +603,17 @@ export function AddShowTimeDialog({
           <Button
             type="button"
             variant="outline"
+            disabled={saving}
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
-          <Button type="button" onClick={handleSave}>
-            Save
+          <Button
+            type="button"
+            disabled={formDisabled}
+            onClick={() => void handleSave()}
+          >
+            {saving ? "Saving..." : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>
