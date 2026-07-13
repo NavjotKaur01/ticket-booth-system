@@ -63,13 +63,13 @@ export function PromotionFiltersCard({
             className={FILTER_INPUT_CLASS}
           />
           <Select
-            value={filters.discountType}
+            value={filters.discountType || "discount-options"}
             onValueChange={(value) => onFilterChange("discountType", value)}
           >
             <SelectTrigger className={FILTER_SELECT_CLASS}>
-              <SelectValue />
+              <SelectValue placeholder="Discount options" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper">
               {promotionDiscountOptions.map((option) => (
                 <SelectItem key={option.id} value={option.id}>
                   {option.label}
