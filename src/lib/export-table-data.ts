@@ -5,7 +5,7 @@ export type ExportColumn<T> = {
   value: (row: T) => string | number
 }
 
-export type ExportFormat = "clipboard" | "excel" | "html"
+export type ExportFormat = "clipboard" | "excel" | "html" | "csv"
 
 export function buildExportMatrix<T>(
   rows: T[],
