@@ -110,6 +110,7 @@ function DialogContent({
   showCloseButton = true,
   disableOutsideDismiss = false,
   nested = false,
+  suppressPresentation = false,
   onInteractOutside,
   onPointerDownOutside,
   onFocusOutside,
@@ -120,6 +121,8 @@ function DialogContent({
   showCloseButton?: boolean
   disableOutsideDismiss?: boolean
   nested?: boolean
+  /** Hides overlay + content while a nested child dialog is shown on top. */
+  suppressPresentation?: boolean
 }) {
   const dialogLayer: DialogLayer = nested ? "nested" : "base"
   const stackClass = nested ? "z-[90]" : "z-50"
@@ -138,12 +141,18 @@ function DialogContent({
 
   return (
     <DialogPortal>
-      <DialogOverlay className={stackClass} />
+      <DialogOverlay
+        className={cn(
+          stackClass,
+          suppressPresentation && 'pointer-events-none opacity-0'
+        )}
+      />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
           "fixed top-[50%] left-[50%] z-50 grid w-fit max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-0 rounded-lg border border-border/80 bg-background p-0 shadow-xl ring-1 ring-background/40 duration-200 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 sm:max-w-lg",
           stackClass,
+          suppressPresentation && 'invisible pointer-events-none',
           className
         )}
         onInteractOutside={(event) => handleOutsideEvent(event, onInteractOutside)}
@@ -170,7 +179,7 @@ function DialogContent({
           {showCloseButton && (
             <DialogPrimitive.Close
               data-slot="dialog-close"
-              className="absolute top-4 right-4 flex size-8 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none disabled:pointer-events-none"
+              className="absolute top-2 right-4 flex size-8 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none disabled:pointer-events-none"
             >
               <XIcon className="size-4" />
               <span className="sr-only">Close</span>

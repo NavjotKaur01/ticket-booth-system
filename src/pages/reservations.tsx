@@ -9,12 +9,14 @@ import { Input } from "@/components/ui/input"
 import { AddReservationDialog } from "@/features/reservations/add-reservation-dialog"
 import { CancelReservationDialog } from "@/features/reservations/cancel-reservation-dialog"
 import { MoveReservationDialog } from "@/features/reservations/move-reservation-dialog"
+import { ReservationAlreadyPaidAlert } from "@/features/reservations/reservation-already-paid-alert"
 import { ReservationCheckInPromoDialog } from "@/features/reservations/reservation-check-in-promo-dialog"
 import { ReservationNoteDialog } from "@/features/reservations/reservation-note-dialog"
 import { ReservationDataTable } from "@/features/reservations/reservation-data-table"
 import { ReservationHistoryDialog } from "@/features/reservations/reservation-history-dialog"
 import { ReservationFiltersCard } from "@/features/reservations/reservation-filters-card"
 import { exportReservations } from "@/features/reservations/reservation-export"
+import { SplitReservationDialog } from "@/features/reservations/split-reservation-dialog"
 import { getMockTicketPrintData, printReservationTicket, printSignatureTicket } from "@/services/ticket-print.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useReservationData } from "@/hooks/use-reservation-data"
@@ -77,6 +79,8 @@ export function Reservations() {
   const [editOpen, setEditOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
+  const [splitOpen, setSplitOpen] = useState(false)
+  const [alreadyPaidAlertOpen, setAlreadyPaidAlertOpen] = useState(false)
   const [checkInPromoOpen, setCheckInPromoOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [noteOpen, setNoteOpen] = useState(false)
@@ -241,6 +245,7 @@ export function Reservations() {
       return
     }
 
+    setAddOpen(false)
     setSelectedReservation(reservation)
     setEditOpen(true)
   }
@@ -283,6 +288,26 @@ export function Reservations() {
   }
 
   async function handleReservationMoved() {
+    await refreshReservations()
+  }
+
+  function handleOpenSplitReservation(reservation: Reservation) {
+    setSelectedReservation(reservation)
+    setSplitOpen(true)
+  }
+
+  function handleSplitDialogOpenChange(open: boolean) {
+    setSplitOpen(open)
+    if (!open) {
+      setSelectedReservation(null)
+    }
+  }
+
+  function handleOpenAlreadyPaidAlert() {
+    setAlreadyPaidAlertOpen(true)
+  }
+
+  async function handleReservationSplit() {
     await refreshReservations()
   }
 
@@ -797,6 +822,14 @@ export function Reservations() {
         reservation={editOpen ? selectedReservation : null}
         showDate={showDate}
         showTime={showTime}
+        onSplitReservation={handleOpenSplitReservation}
+        onAlreadyPaidAlert={handleOpenAlreadyPaidAlert}
+        onReprintTicket={(reservation) =>
+          void handlePrintReservation(reservation, {
+            layout: "combined",
+            includeQr: true,
+          })
+        }
       />
       <CancelReservationDialog
         open={cancelOpen}
@@ -820,6 +853,23 @@ export function Reservations() {
         username={username}
         currentShowId={showTime}
         onMoved={handleReservationMoved}
+      />
+      <SplitReservationDialog
+        open={splitOpen}
+        onOpenChange={handleSplitDialogOpenChange}
+        reservation={selectedReservation}
+        connectionName={connectionName}
+        locationId={locationId}
+        username={username}
+        showDate={showDate}
+        currentShowId={showTime}
+        onSplit={handleReservationSplit}
+        nested={editOpen}
+      />
+      <ReservationAlreadyPaidAlert
+        open={alreadyPaidAlertOpen}
+        onOpenChange={setAlreadyPaidAlertOpen}
+        nested={editOpen}
       />
       <ReservationCheckInPromoDialog
         open={checkInPromoOpen}

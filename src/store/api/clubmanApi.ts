@@ -1229,6 +1229,7 @@ export const {
   useGetReservationPromotionsMutation,
   useGetReservationDataQuery,
   useGetReservationDetailByIdQuery,
+  useGetReservationPrintPropertiesQuery,
   useGetReservationHistoryByIdQuery,
   useGetReservationNoteByIdQuery,
   useSaveReservationNoteMutation,

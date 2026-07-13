@@ -46,6 +46,12 @@ const EXPORT_OPTIONS: Array<{
     description: "Download a standalone HTML table file.",
     icon: FileText,
   },
+  {
+    value: "csv",
+    label: "Export to CSV",
+    description: "Download a CSV file.",
+    icon: FileText,
+  },
 ]
 
 export function ExportDataDialog({
@@ -93,7 +99,7 @@ export function ExportDataDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton
-        className="flex max-h-[92vh] max-w-md flex-col overflow-hidden p-0 sm:max-w-md"
+        className="flex max-h-[82vh] w-[min(calc(100vw-2rem),84rem)] max-w-[84rem] flex-col overflow-hidden sm:max-w-[25rem]"
       >
         <DialogHeader className="shrink-0 gap-0 border-b px-4 py-3 pr-12">
           <DialogTitle className="text-lg leading-snug font-normal">
@@ -161,7 +167,7 @@ export function ExportDataDialog({
         </div>
 
         <DialogFooter className="shrink-0 border-t px-4 py-3 sm:justify-end">
-          <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+          <div className="grid grid-cols-2 gap-2">
             <Button
               type="button"
               variant="outline"
@@ -175,7 +181,7 @@ export function ExportDataDialog({
               disabled={saving}
               onClick={() => void handleSave()}
             >
-              {saving ? "Exporting..." : "Save"}
+              {saving ? "Exporting..." : "Export"}
             </Button>
           </div>
         </DialogFooter>

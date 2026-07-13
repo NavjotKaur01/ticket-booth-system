@@ -8,6 +8,10 @@ export type ReservationPaymentFields = {
   billingAddress: string
   zipCode: string
   accountNumber: string
+  /** Authorization code returned by the payment gateway/terminal. */
+  authorization: string
+  /** Payment gateway reference number (PNREF). */
+  pnref: string
 }
 
 export type ReservationPaymentState = {
@@ -23,7 +27,9 @@ export function createEmptyReservationPaymentFields (): ReservationPaymentFields
     expYear: '',
     billingAddress: '',
     zipCode: '',
-    accountNumber: ''
+    accountNumber: '',
+    authorization: '',
+    pnref: ''
   }
 }
 

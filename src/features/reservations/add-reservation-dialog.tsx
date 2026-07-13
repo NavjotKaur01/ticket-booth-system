@@ -1,6 +1,8 @@
 import {
   Calendar,
   Info,
+  LoaderCircle,
+  Pencil,
   Search,
   UserPlus,
   X,
@@ -15,6 +17,7 @@ import {
   FormField,
   IconActionButton
 } from '@/components/forms/form-fields'
+import { ReservationTotalsCard } from '@/components/reservation/reservation-totals-card'
 import { PhoneInputGroup } from '@/components/forms/phone-input-group'
 import { ShowTimePicker } from '@/components/common/show-time-picker'
 import { Button } from '@/components/ui/button'
@@ -58,9 +61,12 @@ import {
   ReservationPaymentPanel,
 } from '@/features/reservations/reservation-payment-panel'
 import { ReservationSearchResultsTable } from '@/features/reservations/reservation-search-results-table'
+import { ReservationTransactionsTable } from '@/features/reservations/reservation-transactions-table'
 import { useCachedReservationShowData } from '@/hooks/use-cached-reservation-show-data'
 import { useReservationCustomerSearch } from '@/hooks/use-reservation-customer-search'
 import { useReservationDetail } from '@/hooks/use-reservation-detail'
+import { useReservationPrintProperties } from '@/hooks/use-reservation-print-properties'
+import { useReservationTransactions } from '@/hooks/use-reservation-transactions'
 import { useShowDetailsByDate } from '@/hooks/use-show-details-by-date'
 import {
   calculateReservationTotals,
@@ -76,6 +82,12 @@ import {
   type ReservationCustomerSearchCriteria
 } from '@/lib/reservation-customer-search-criteria'
 import { saveCustomer } from '@/lib/api/customers'
+import {
+  assignReservationSeat,
+  openCashDrawer,
+  refundReservationPayment,
+  voidReservationPayment
+} from '@/lib/api/reservation-pos-actions'
 import {
   createNewReservation,
   saveReservationNote,
@@ -112,6 +124,7 @@ import { cn } from '@/lib/utils'
 import { useAppSession } from '@/hooks/use-app-session'
 import { createTicketPrintData } from '@/services/ticket-print.service'
 import type { CustomerFormValues } from '@/types/customer-form'
+import type { Customer } from '@/types/customer'
 import {
   RESERVATION_PAYMENT_TYPES,
   type ReservationPaymentType
@@ -123,6 +136,7 @@ import {
 import type { ReservationPromoOption } from '@/types/reservation-promo'
 import type { ReservationSectionOption, SectionOption } from '@/types/reservation'
 import type { Reservation } from '@/types/reservation'
+import type { ReservationTransactionRow } from '@/types/reservation-transaction'
 import type { TicketPrintData } from '@/types/ticket-print'
 
 type AddReservationDialogProps = {
@@ -136,6 +150,12 @@ type AddReservationDialogProps = {
   showDate?: string
   showTime?: string
   preferredShowTimeLabel?: string
+  /** Edit mode only — opens SplitReservationDialog (lifted to the page) for this reservation. */
+  onSplitReservation?: (reservation: Reservation) => void
+  /** Edit mode only — the reservation is already fully paid, so splitting isn't possible. */
+  onAlreadyPaidAlert?: () => void
+  /** Edit mode only — reprints the reservation ticket using the existing print pipeline. */
+  onReprintTicket?: (reservation: Reservation) => void
 }
 
 const COMPACT_INPUT = 'h-9 text-sm'
@@ -144,12 +164,14 @@ const COMPACT_NUMBER = `h-9 w-14 px-1 text-center text-sm tabular-nums ${COMPACT
 const COMPACT_SELECT = 'h-9 w-44 min-w-0 text-sm'
 const INLINE_LABEL = 'mb-1.5 block text-xs font-medium text-muted-foreground'
 
-const RESERVATION_LINE_META = [
-  { key: 'sub', label: 'Subtotal', info: null },
-  { key: 'svc', label: 'Service Charge', info: 'Service charge applied per ticket' },
-  { key: 'disc', label: 'Discount', info: null },
-  { key: 'tax', label: 'Tax', info: 'Sales tax on this reservation' }
-] as const
+function mapPaymentLabelToType (label: string): ReservationPaymentType {
+  const normalized = label.trim().toLowerCase()
+  const match = RESERVATION_PAYMENT_TYPES.find(
+    option => option.label.trim().toLowerCase() === normalized
+  )
+
+  return match?.id ?? 'credit-card'
+}
 
 const ORIGIN_OPTIONS = [
   { id: 'walkup', label: 'Walk-in' },
@@ -463,93 +485,6 @@ function formatDateInputValue(date: Date) {
   return `${year}-${month}-${day}`
 }
 
-function TotalsBreakdown({
-  selectedSection,
-  partySize,
-  totals,
-  amountDue
-}: {
-  selectedSection: ReservationSectionOption | null
-  partySize: number
-  totals: ReturnType<typeof calculateReservationTotals>
-  amountDue: string
-}) {
-  const lineValues: Record<
-    (typeof RESERVATION_LINE_META)[number]['key'],
-    string
-  > = {
-    sub: formatReservationMoney(totals.subtotal),
-    svc: formatReservationMoney(totals.serviceCharge),
-    disc: formatReservationMoney(totals.discount),
-    tax: formatReservationMoney(totals.taxes)
-  }
-
-  return (
-    <div className='space-y-2.5 text-sm'>
-      {selectedSection ? (
-        <div className='flex items-center justify-between gap-6'>
-          <span className='text-muted-foreground'>
-            Tickets ({selectedSection.name} x {partySize})
-          </span>
-          <span className='shrink-0 font-medium tabular-nums'>
-            {formatReservationMoney(
-              parseReservationMoney(selectedSection.price) * partySize
-            )}
-          </span>
-        </div>
-      ) : (
-        <div className='flex items-center justify-between gap-6'>
-          <span className='text-muted-foreground'>Tickets</span>
-          <span className='shrink-0 font-medium tabular-nums'>$0.00</span>
-        </div>
-      )}
-
-      {RESERVATION_LINE_META.slice(1).map(line => (
-        <div
-          key={line.key}
-          className='flex items-center justify-between gap-6'
-        >
-          <span className='inline-flex items-center gap-1 text-muted-foreground'>
-            {line.label}
-            {line.info ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type='button'
-                    className='text-muted-foreground/60 hover:text-foreground'
-                    aria-label={`About ${line.label}`}
-                  >
-                    <Info className='size-3.5' />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side='top'>{line.info}</TooltipContent>
-              </Tooltip>
-            ) : null}
-          </span>
-          <span className='shrink-0 font-medium tabular-nums'>
-            {lineValues[line.key]}
-          </span>
-        </div>
-      ))}
-
-      <div className='space-y-2 border-t border-border/50 pt-2'>
-        <div className='flex items-center justify-between gap-4'>
-          <span className='text-sm font-medium text-red-600'>Amount Due</span>
-          <span className='shrink-0 text-sm font-bold tabular-nums text-red-600'>
-            {amountDue}
-          </span>
-        </div>
-        <div className='flex items-center justify-between gap-4'>
-          <span className='font-semibold'>Total</span>
-          <span className='shrink-0 text-base font-bold tabular-nums'>
-            {formatReservationMoney(totals.total)}
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function InlineRadioGroup({
   value,
   onChange,
@@ -675,6 +610,171 @@ function BookingOptionsBar({
           Dinner
         </label>
       </div>
+    </div>
+  )
+}
+
+function CustomerDetailsFields({
+  lastName,
+  firstName,
+  onEditCustomer,
+  canEditCustomer = false
+}: {
+  lastName: string
+  firstName: string
+  onEditCustomer?: () => void
+  canEditCustomer?: boolean
+}) {
+  return (
+    <div className='space-y-1.5'>
+      <h3 className='text-sm font-semibold text-foreground'>Customer Details</h3>
+      <div className='flex items-end gap-2'>
+        <FormField
+          label='Last Name'
+          htmlFor='edit-customer-last-name'
+          className='min-w-0 flex-1'
+        >
+          <Input
+            id='edit-customer-last-name'
+            value={lastName}
+            readOnly
+            className={COMPACT_INPUT}
+          />
+        </FormField>
+        <FormField
+          label='First Name'
+          htmlFor='edit-customer-first-name'
+          className='min-w-0 flex-1'
+        >
+          <Input
+            id='edit-customer-first-name'
+            value={firstName}
+            readOnly
+            className={COMPACT_INPUT}
+          />
+        </FormField>
+        {canEditCustomer ? (
+          <IconActionButton
+            label='Edit Customer'
+            icon={Pencil}
+            tabIndex={-1}
+            onClick={onEditCustomer}
+          />
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function TableAssignmentRow({
+  tableNums,
+  onAssignSeat,
+  isAssigning,
+  error
+}: {
+  tableNums: string
+  onAssignSeat: () => void
+  isAssigning: boolean
+  error: string | null
+}) {
+  return (
+    <div className='space-y-1'>
+      <div className='flex items-end gap-2'>
+        <div className='min-w-0 flex-1 space-y-1'>
+          <span className={INLINE_LABEL}>Table Nums</span>
+          <Input
+            value={tableNums}
+            readOnly
+            disabled
+            className={COMPACT_INPUT}
+            placeholder='e.g. 12, 13'
+          />
+        </div>
+        <Button
+          type='button'
+          size='sm'
+          variant='outline'
+          onClick={onAssignSeat}
+          disabled={isAssigning}
+        >
+          {isAssigning ? (
+            <>
+              <LoaderCircle className='size-3.5 animate-spin' />
+              Assigning...
+            </>
+          ) : (
+            'Assign Seat'
+          )}
+        </Button>
+      </div>
+      {error ? <p className='text-xs text-destructive'>{error}</p> : null}
+    </div>
+  )
+}
+
+function PaymentMetadataField({
+  label,
+  value
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <div className='min-w-0 space-y-1'>
+      <span className='text-xs font-medium text-muted-foreground'>
+        {label}
+      </span>
+      <p className='truncate text-sm font-medium text-foreground'>
+        {value || '—'}
+      </p>
+    </div>
+  )
+}
+
+function PaymentMetadataBlock({
+  createdBy,
+  status,
+  createDate,
+  authorization,
+  pnref,
+  busyAction,
+  error,
+  onRefund,
+  onVoid,
+  onClear
+}: {
+  createdBy: string
+  status: string
+  createDate: string
+  authorization: string
+  pnref: string
+  busyAction: 'refund' | 'void' | 'clear' | 'cash-drawer' | null
+  error: string | null
+  onRefund: () => void
+  onVoid: () => void
+  onClear: () => void
+}) {
+  return (
+    <div className='space-y-2 rounded-lg border border-border/60 p-2.5'>
+      <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
+        <PaymentMetadataField label='Created By' value={createdBy} />
+        <PaymentMetadataField label='Status' value={status} />
+        <PaymentMetadataField label='Create Date' value={createDate} />
+        <PaymentMetadataField label='Authorization' value={authorization} />
+        <PaymentMetadataField label='PNREF' value={pnref} />
+      </div>
+      <div className='flex flex-wrap items-center gap-2 border-t border-border/50 pt-2'>
+        <Button type='button' size='sm' variant='outline' onClick={onRefund} disabled={busyAction === 'refund'}>
+          Refund
+        </Button>
+        <Button type='button' size='sm' variant='outline' onClick={onVoid} disabled={busyAction === 'void'}>
+          Void
+        </Button>
+        <Button type='button' size='sm' variant='outline' onClick={onClear} disabled={busyAction === 'clear'}>
+          Clear
+        </Button>
+      </div>
+      {error ? <p className='text-xs text-destructive'>{error}</p> : null}
     </div>
   )
 }
@@ -1041,7 +1141,10 @@ export function AddReservationDialog({
   reservation = null,
   showDate: initialShowDate,
   showTime: initialShowTime,
-  preferredShowTimeLabel
+  preferredShowTimeLabel,
+  onSplitReservation,
+  onAlreadyPaidAlert,
+  onReprintTicket
 }: AddReservationDialogProps) {
   const isEditMode = Boolean(reservation)
   const { connectionName, locationId, locationName, username, userRight, isReady } =
@@ -1119,6 +1222,20 @@ export function AddReservationDialog({
     EMPTY_CUSTOMER_SEARCH_CRITERIA
   )
   const [editCustomerId, setEditCustomerId] = useState<string | null>(null)
+  const [tableNums, setTableNums] = useState('')
+  const [isAssigningSeat, setIsAssigningSeat] = useState(false)
+  const [assignSeatError, setAssignSeatError] = useState<string | null>(null)
+  const [paymentActionBusy, setPaymentActionBusy] = useState<
+    'refund' | 'void' | 'clear' | 'cash-drawer' | null
+  >(null)
+  const [paymentActionError, setPaymentActionError] = useState<string | null>(
+    null
+  )
+  const [isSavingNote, setIsSavingNote] = useState(false)
+  const [saveNoteError, setSaveNoteError] = useState<string | null>(null)
+  const [saveNoteSuccess, setSaveNoteSuccess] = useState(false)
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<ReservationTransactionRow | null>(null)
 
   const { detail: reservationDetail } = useReservationDetail(
     connectionName,
@@ -1146,6 +1263,18 @@ export function AddReservationDialog({
     false,
     open && isReady
   )
+
+  const { properties: printProperties } = useReservationPrintProperties(
+    connectionName,
+    reservation?.id ?? '',
+    open && isEditMode
+  )
+
+  const transactionRows = useReservationTransactions({
+    reservation,
+    paymentList: reservationDetail?.PaymentList,
+    printProperties
+  })
 
   const availableShows = apiShows
 
@@ -1233,6 +1362,7 @@ export function AddReservationDialog({
     setNotes(reservation.notes)
     setDinner(reservation.din.trim().toUpperCase() === 'Y')
     setOrigin(mapReservationSourceToOrigin(reservation.source))
+    setTableNums(reservation.tables)
 
     const { searchType: nextSearchType, criteria } =
       buildReservationEditSearchCriteria(reservation)
@@ -1513,6 +1643,15 @@ export function AddReservationDialog({
     searchType === 'customer' &&
     hasCompleteNewCustomerCriteria(searchCriteria)
 
+  const editCustomerLastName = searchCriteria.lastName.trim() || reservation?.lastName.trim() || ''
+  const editCustomerFirstName = searchCriteria.firstName.trim() || reservation?.firstName.trim() || ''
+  const displayLastName = selectedTransaction?.lastName ?? editCustomerLastName
+  const displayFirstName = selectedTransaction?.firstName ?? editCustomerFirstName
+  const isViewingTransaction = Boolean(selectedTransaction)
+  const dialogTitle = isEditMode
+    ? `Payment :- ${[editCustomerLastName, editCustomerFirstName].filter(Boolean).join(',') || 'Guest'}  ${formatShowDate(showDate)}`
+    : 'Add Reservation'
+
   function focusSelectedPartyInput(sectionId = section) {
     const targetSectionId =
       sectionId || availableSections[0]?.id || selectedSection?.id || ''
@@ -1588,6 +1727,170 @@ export function AddReservationDialog({
   function openAddCustomerDialog(initialValues: CustomerFormValues | null = null) {
     setAddCustomerInitialValues(initialValues)
     setIsAddCustomerOpen(true)
+  }
+
+  function handleOpenEditCustomerDialog() {
+    if (!resolvedEditCustomerId) {
+      return
+    }
+
+    setAddCustomerInitialValues(null)
+    setIsAddCustomerOpen(true)
+  }
+
+  async function handleAssignSeat() {
+    if (!reservation) {
+      return
+    }
+
+    setIsAssigningSeat(true)
+    setAssignSeatError(null)
+
+    try {
+      await assignReservationSeat({
+        connectionName,
+        locationId,
+        reservationId: reservation.id,
+        tableNums,
+        lastUpdateId: username
+      })
+    } catch (requestError) {
+      setAssignSeatError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Failed to assign seat'
+      )
+    } finally {
+      setIsAssigningSeat(false)
+    }
+  }
+
+  async function runPaymentAction(
+    action: 'refund' | 'void' | 'clear',
+    handler: (params: {
+      connectionName: string
+      locationId: string
+      reservationId: string
+      lastUpdateId: string
+    }) => Promise<never>
+  ) {
+    if (!reservation) {
+      return
+    }
+
+    setPaymentActionBusy(action)
+    setPaymentActionError(null)
+
+    try {
+      await handler({
+        connectionName,
+        locationId,
+        reservationId: reservation.id,
+        lastUpdateId: username
+      })
+    } catch (requestError) {
+      setPaymentActionError(
+        requestError instanceof Error
+          ? requestError.message
+          : `Failed to ${action} payment`
+      )
+    } finally {
+      setPaymentActionBusy(null)
+    }
+  }
+
+  function handleRefundClick() {
+    void runPaymentAction('refund', refundReservationPayment)
+  }
+
+  function handleVoidClick() {
+    void runPaymentAction('void', voidReservationPayment)
+  }
+
+  function handleClearTransactionSelection() {
+    setSelectedTransaction(null)
+    setPaymentAmountOverride(null)
+    setPaymentType('credit-card')
+    setPaymentFields(createEmptyReservationPaymentFields())
+    setPaymentValidationErrors({})
+    setPaymentActionError(null)
+  }
+
+  function handleTransactionSelect(row: ReservationTransactionRow) {
+    setSelectedTransaction(row)
+    setPaymentAmountOverride(formatReservationMoney(row.amount))
+    setPaymentType(mapPaymentLabelToType(row.payment))
+    setPaymentFields({
+      ...createEmptyReservationPaymentFields(),
+      cardNumber: row.cardNumber,
+      authorization: row.authorization,
+      pnref: row.pnref
+    })
+    setPaymentValidationErrors({})
+    setPaymentActionError(null)
+  }
+
+  async function handleCashDrawerClick() {
+    setPaymentActionBusy('cash-drawer')
+    setPaymentActionError(null)
+
+    try {
+      await openCashDrawer()
+    } catch (requestError) {
+      setPaymentActionError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Failed to open cash drawer'
+      )
+    } finally {
+      setPaymentActionBusy(null)
+    }
+  }
+
+  function handleSplitReservationClick() {
+    if (!reservation) {
+      return
+    }
+
+    const isFullyPaid = alreadyPaid >= totals.total && totals.total > 0
+
+    if (isFullyPaid) {
+      onAlreadyPaidAlert?.()
+      return
+    }
+
+    onSplitReservation?.(reservation)
+  }
+
+  async function handleSaveNoteClick() {
+    if (!reservation || !isReady) {
+      return
+    }
+
+    setIsSavingNote(true)
+    setSaveNoteError(null)
+    setSaveNoteSuccess(false)
+
+    try {
+      await saveReservationNote(
+        buildReservationNoteRequest({
+          connectionName,
+          locationId,
+          reservationId: reservation.id,
+          lastUpdateId: username,
+          reservationNote: notes
+        })
+      )
+      setSaveNoteSuccess(true)
+    } catch (requestError) {
+      setSaveNoteError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Failed to save note'
+      )
+    } finally {
+      setIsSavingNote(false)
+    }
   }
 
   async function handleAddNewCustomer() {
@@ -2048,6 +2351,15 @@ export function AddReservationDialog({
       setPaymentValidationErrors({})
       setShowPartyRequiredError(false)
       setEditCustomerId(null)
+      setTableNums('')
+      setIsAssigningSeat(false)
+      setAssignSeatError(null)
+      setPaymentActionBusy(null)
+      setPaymentActionError(null)
+      setIsSavingNote(false)
+      setSaveNoteError(null)
+      setSaveNoteSuccess(false)
+      setSelectedTransaction(null)
       origPartyRef.current = 0
       origShowIdRef.current = ''
       origSectionIdRef.current = ''
@@ -2140,13 +2452,39 @@ export function AddReservationDialog({
       firstName: selectedCustomerSearchResult.firstName,
       email: selectedCustomerSearchResult.email,
       phoneNo: selectedCustomerSearchResult.phoneNo,
-      // Fill other required fields with defaults to satisfy the Customer type
       password: '',
       address: '',
       city: '',
       status: ''
-    } as any)
+    } satisfies Customer)
     : null
+
+  const resolvedEditCustomerId =
+    editCustomerId?.trim() ||
+    reservationDetail?.CustomerID?.trim() ||
+    null
+
+  const customerForEditDialog = useMemo((): Customer | null => {
+    if (customerToEdit) {
+      return customerToEdit
+    }
+
+    if (!isEditMode || !resolvedEditCustomerId || !reservation) {
+      return null
+    }
+
+    return {
+      id: resolvedEditCustomerId,
+      lastName: reservation.lastName,
+      firstName: reservation.firstName,
+      email: reservation.email,
+      phoneNo: reservation.phoneNo,
+      password: '',
+      address: '',
+      city: '',
+      status: ''
+    }
+  }, [customerToEdit, isEditMode, reservation, resolvedEditCustomerId])
 
   return (
     <>
@@ -2164,14 +2502,15 @@ export function AddReservationDialog({
             ref={dialogContentRef}
             disableOutsideDismiss
             showCloseButton={false}
+            suppressPresentation={isAddCustomerOpen}
             className='flex max-h-[82vh] w-[min(calc(100vw-2rem),84rem)] max-w-[84rem] flex-col overflow-hidden sm:max-w-[84rem]'
             onOpenAutoFocus={event => {
               event.preventDefault()
             }}
           >
             <DialogHeader className='shrink-0 flex-row items-center justify-between gap-4 border-b px-4 py-3'>
-              <DialogTitle className='text-base font-semibold text-foreground'>
-                Add Reservation
+              <DialogTitle className='truncate text-base font-semibold text-foreground'>
+                {dialogTitle}
               </DialogTitle>
               <DialogClose
                 tabIndex={-1}
@@ -2247,72 +2586,118 @@ export function AddReservationDialog({
                         {sectionsError ?? promosError}
                       </p>
                     ) : null}
-                    <TotalsBreakdown
+                    <ReservationTotalsCard
                       selectedSection={selectedSection}
                       partySize={partySize}
                       totals={totals}
                       amountDue={amountDue}
                     />
                   </div>
+
+                  {isEditMode ? (
+                    <>
+                    <div className='shrink-0'>
+                      <Button
+                        type='button'
+                        size='sm'
+                        variant='outline'
+                        onClick={handleSplitReservationClick}
+                      >
+                        Split Payment
+                      </Button>
+                    </div>
+                    <div className='mt-3 border-t border-border/50 pt-3'>
+                      <ReservationTransactionsTable
+                        data={transactionRows}
+                        selectedTransactionId={selectedTransaction?.id}
+                        onTransactionSelect={handleTransactionSelect}
+                      />
+                    </div>
+                    </>
+                  ) : null}
                 </div>
 
                 <div className='flex min-w-0 flex-col gap-3 border-t border-border/50 pt-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4'>
                   <div className='flex flex-col gap-2.5'>
-                    <div className='shrink-0'>
-                      <CustomerSearchHeader
-                        searchType={searchType}
-                        onSearchTypeChange={value =>
-                          setSearchType(value as 'customer' | 'business')
-                        }
-                        onSearch={handleCustomerSearch}
-                        onClear={clearCustomerSearch}
-                        hasSelectedCustomer={!!customerToEdit}
-                        onAddCustomer={() =>
-                          openAddCustomerDialog(
-                            mapReservationSearchCriteriaToCustomerForm(searchCriteria)
-                          )
-                        }
-                      />
-                    </div>
+                    {isEditMode ? (
+                      <>
+                        <div className='shrink-0'>
+                          <CustomerDetailsFields
+                            lastName={displayLastName}
+                            firstName={displayFirstName}
+                            canEditCustomer={Boolean(resolvedEditCustomerId)}
+                            onEditCustomer={handleOpenEditCustomerDialog}
+                          />
+                        </div>
 
-                    <div className='shrink-0'>
-                      <CustomerSearchFields
-                        searchType={searchType}
-                        criteria={searchCriteria}
-                        onCriteriaChange={setSearchCriteria}
-                        // onFieldBlur={handleCustomerSearch}
-                        onFieldEnter={handleCustomerSearch}
-                        lastNameInputRef={lastNameInputRef}
-                      />
-                    </div>
+                        <div className='shrink-0'>
+                          <TableAssignmentRow
+                            tableNums={tableNums}
+                            onAssignSeat={() => void handleAssignSeat()}
+                            isAssigning={isAssigningSeat}
+                            error={assignSeatError}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className='shrink-0'>
+                          <CustomerSearchHeader
+                            searchType={searchType}
+                            onSearchTypeChange={value =>
+                              setSearchType(value as 'customer' | 'business')
+                            }
+                            onSearch={handleCustomerSearch}
+                            onClear={clearCustomerSearch}
+                            hasSelectedCustomer={!!customerToEdit}
+                            onAddCustomer={() =>
+                              openAddCustomerDialog(
+                                mapReservationSearchCriteriaToCustomerForm(searchCriteria)
+                              )
+                            }
+                          />
+                        </div>
 
-                    {customerSearchError || createCustomerError ? (
-                      <p className='text-xs text-destructive'>
-                        {customerSearchError ?? createCustomerError}
-                      </p>
-                    ) : null}
+                        <div className='shrink-0'>
+                          <CustomerSearchFields
+                            searchType={searchType}
+                            criteria={searchCriteria}
+                            onCriteriaChange={setSearchCriteria}
+                            // onFieldBlur={handleCustomerSearch}
+                            onFieldEnter={handleCustomerSearch}
+                            lastNameInputRef={lastNameInputRef}
+                          />
+                        </div>
 
-                    {hasSearched ? (
-                      <div className='shrink-0'>
-                        <ReservationSearchResultsTable
-                          searchType={searchType}
-                          customerResults={customerSearchResults}
-                          businessResults={businessSearchResults}
-                          hasSearched={hasSearched}
-                          loading={customerSearchLoading}
-                          canAddNewCustomer={canAddNewCustomer}
-                          creatingCustomer={isCreatingCustomer}
-                          onAddNewCustomer={() => void handleAddNewCustomer()}
-                          onFillMoreDetails={handleFillMoreDetails}
-                          rowSelection={searchRowSelection}
-                          onRowSelectionChange={setSearchRowSelection}
-                          onResultSelect={handleSearchResultSelect}
-                        />
-                      </div>
-                    ) : null}
+                        {customerSearchError || createCustomerError ? (
+                          <p className='text-xs text-destructive'>
+                            {customerSearchError ?? createCustomerError}
+                          </p>
+                        ) : null}
+
+                        {hasSearched ? (
+                          <div className='shrink-0'>
+                            <ReservationSearchResultsTable
+                              searchType={searchType}
+                              customerResults={customerSearchResults}
+                              businessResults={businessSearchResults}
+                              hasSearched={hasSearched}
+                              loading={customerSearchLoading}
+                              canAddNewCustomer={canAddNewCustomer}
+                              creatingCustomer={isCreatingCustomer}
+                              onAddNewCustomer={() => void handleAddNewCustomer()}
+                              onFillMoreDetails={handleFillMoreDetails}
+                              rowSelection={searchRowSelection}
+                              onRowSelectionChange={setSearchRowSelection}
+                              onResultSelect={handleSearchResultSelect}
+                            />
+                          </div>
+                        ) : null}
+                      </>
+                    )}
 
                     <div className='w-full shrink-0 space-y-2'>
-                      <div className='flex justify-end'>
+                      <div className='flex items-center justify-between gap-2'>
                         <Button
                           type='button'
                           variant='link'
@@ -2324,16 +2709,38 @@ export function AddReservationDialog({
                         >
                           Special Notes
                         </Button>
+
+                        {isEditMode && specialNotesOpen ? (
+                          <Button
+                            type='button'
+                            size='sm'
+                            variant='outline'
+                            onClick={() => void handleSaveNoteClick()}
+                            disabled={isSavingNote}
+                          >
+                            {isSavingNote ? 'Saving...' : 'Save Note'}
+                          </Button>
+                        ) : null}
                       </div>
 
                       {specialNotesOpen ? (
                         <Textarea
                           ref={notesInputRef}
                           value={notes}
-                          onChange={event => setNotes(event.target.value)}
+                          onChange={event => {
+                            setNotes(event.target.value)
+                            setSaveNoteSuccess(false)
+                          }}
                           placeholder='Enter notes or special requests...'
                           className='min-h-20 w-full resize-y text-sm shadow-xs'
                         />
+                      ) : null}
+
+                      {saveNoteError ? (
+                        <p className='text-xs text-destructive'>{saveNoteError}</p>
+                      ) : null}
+                      {saveNoteSuccess ? (
+                        <p className='text-xs text-emerald-600'>Note saved.</p>
                       ) : null}
                     </div>
 
@@ -2345,7 +2752,8 @@ export function AddReservationDialog({
                         onPaymentAmountChange={handlePaymentAmountChange}
                         fields={paymentFields}
                         onFieldChange={updatePaymentField}
-                        paymentDisabled={!paymentRequired}
+                        paymentDisabled={isViewingTransaction}
+                        showAuthFields={isViewingTransaction}
                         validationErrors={paymentValidationErrors}
                       />
                       {saveReservationError ? (
@@ -2354,6 +2762,23 @@ export function AddReservationDialog({
                         </p>
                       ) : null}
                     </div>
+
+                    {isEditMode && selectedTransaction ? (
+                      <div className='shrink-0'>
+                        <PaymentMetadataBlock
+                          createdBy={reservation?.createdBy ?? ''}
+                          status={reservation?.resStatus ?? ''}
+                          createDate={reservation?.createdDt ?? ''}
+                          authorization={selectedTransaction.authorization}
+                          pnref={selectedTransaction.pnref}
+                          busyAction={paymentActionBusy}
+                          error={paymentActionError}
+                          onRefund={handleRefundClick}
+                          onVoid={handleVoidClick}
+                          onClear={handleClearTransactionSelection}
+                        />
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className='shrink-0 border-t border-border/50 pt-3 pb-1'>
@@ -2362,10 +2787,46 @@ export function AddReservationDialog({
                       onSave={() => void handleSaveReservation()}
                       saveDisabled={!canSave}
                       saving={isSavingReservation}
+                      extraActions={
+                        isEditMode ? (
+                          <>
+                            <Button
+                              type='button'
+                              size='sm'
+                              variant='outline'
+                              onClick={handleSplitReservationClick}
+                            >
+                              Split Party
+                            </Button>
+                            <Button
+                              type='button'
+                              size='sm'
+                              variant='outline'
+                              onClick={() =>
+                                reservation ? onReprintTicket?.(reservation) : undefined
+                              }
+                              disabled={!reservation}
+                            >
+                              Re Print Ticket
+                            </Button>
+                            <Button
+                              type='button'
+                              size='sm'
+                              variant='outline'
+                              onClick={() => void handleCashDrawerClick()}
+                              disabled={paymentActionBusy === 'cash-drawer'}
+                            >
+                              Cash Drawer
+                            </Button>
+                          </>
+                        ) : undefined
+                      }
                     />
                   </div>
                 </div>
               </div>
+
+              
             </div>
           </DialogContent>
         </TooltipProvider>
@@ -2394,7 +2855,7 @@ export function AddReservationDialog({
         connectionName={connectionName}
         locationId={locationId}
         lastUpdateId={username}
-        customer={customerToEdit}
+        customer={customerForEditDialog}
         initialValues={addCustomerInitialValues}
         onSaved={applySavedCustomer}
       />
