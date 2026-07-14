@@ -119,7 +119,20 @@ import type {
   DeleteFormEmailRequest,
 } from "@/features/form-emails/form-emails-types"
 import type { FormEmailRecord } from "@/types/form-email"
-import type { EmploymentQuestion, AddUpdateEmploymentQuestionRequest, AddUpdateEmploymentQuestionResponse, DeleteEmploymentQuestionRequest } from "@/types/api/employment-question"
+import type {
+  EmploymentQuestion,
+  AddUpdateEmploymentQuestionRequest,
+  AddUpdateEmploymentQuestionResponse,
+  DeleteEmploymentQuestionRequest,
+} from "@/types/api/employment-question"
+import type {
+  GetGiftCertificatesRequest,
+  ExportGiftCertificatesRequest,
+  UpdateGiftCertificateRequest,
+  ResendGiftCertificateRequest,
+  LocationGiftStatusResponse,
+} from "@/types/api/gift-certificates"
+import type { GiftCertificate } from "@/types/gift-certificate"
 
 export const clubmanApi = createApi({
   reducerPath: "clubmanApi",
@@ -138,7 +151,11 @@ export const clubmanApi = createApi({
     "Dashboard",
     "SystemDefault",
     "Comedians",
+    "ShowDefs",
+    "PrivateShowLinks",
+    "UserAccess",
     "FormEmail",
+    "GiftCertificates",
   ],
   endpoints: (builder) => ({
     getLocations: builder.query({
@@ -1106,7 +1123,7 @@ export const clubmanApi = createApi({
       { connectionString: string; locationId: string }
     >({
       query: ({ connectionString, locationId }) =>
-        systemApiPath("demo_prod", locationId, "GetEmploymentPosition"),
+        systemApiPath(connectionString, locationId, "GetEmploymentPosition"),
       extraOptions: { useNewApi: true },
       transformResponse: (response: { Data: EmploymentPosition[] } | EmploymentPosition[]) =>
         'Data' in response ? response.Data : response,
@@ -1493,6 +1510,52 @@ export const clubmanApi = createApi({
         calendarApiPath(connectionName, showId, "GetShowProperties"),
       providesTags: ["Calendar"],
     }),
+
+    getGiftCertificates: builder.mutation<GiftCertificate[], GetGiftCertificatesRequest>({
+      query: (body) => ({
+        url: "/clubman/api/GetGiftCertificates",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["GiftCertificates"],
+    }),
+
+    exportGiftCertificates: builder.mutation<unknown, ExportGiftCertificatesRequest>({
+      query: (body) => ({
+        url: "/clubman/api/ExportGiftCertificates",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    updateGiftCertificate: builder.mutation<unknown, UpdateGiftCertificateRequest>({
+      query: (body) => ({
+        url: "/clubman/api/UpdateGiftCertificate",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["GiftCertificates"],
+    }),
+
+    resendGiftCertificate: builder.mutation<unknown, ResendGiftCertificateRequest>({
+      query: (body) => ({
+        url: "/clubman/api/ResendGiftCertificate",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    getLocationGiftStatus: builder.query<LocationGiftStatusResponse, string>({
+      query: (connectionString) => `/clubman/api/${connectionString}/LocationGiftStatus`,
+    }),
+
+    getGiftLocations: builder.query<ApiLocation[], void>({
+      query: () => "/clubman/api/GetLocations",
+    }),
+
+    getLocationsForLoggedInUser: builder.query<ApiLocation[], string>({
+      query: (userId) => `/clubman/api/${userId}/GetLocationsForLoggedInUser`,
+    }),
   }),
 })
 
@@ -1595,4 +1658,11 @@ export const {
   useDeleteFreeFormMutation,
   useAddUpdateEmploymentQuestionMutation,
   useDeleteEmploymentQuestionMutation,
+  useGetGiftCertificatesMutation,
+  useExportGiftCertificatesMutation,
+  useUpdateGiftCertificateMutation,
+  useResendGiftCertificateMutation,
+  useGetLocationGiftStatusQuery,
+  useGetGiftLocationsQuery,
+  useGetLocationsForLoggedInUserQuery,
 } = clubmanApi
