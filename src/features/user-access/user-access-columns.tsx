@@ -2,15 +2,19 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { Checkbox } from "@/components/ui/checkbox"
-import type { ReportPermission } from "@/types/user-access"
-
-type PermissionRole = "user" | "manager" | "admin"
+import type {
+  PermissionRole,
+  ReportPermission,
+  UserAccessEditableRoles,
+} from "@/types/user-access"
 
 type UserAccessColumnsOptions = {
+  editableRoles: UserAccessEditableRoles
   onToggle: (id: string, role: PermissionRole, checked: boolean) => void
 }
 
 export function createUserAccessColumns({
+  editableRoles,
   onToggle,
 }: UserAccessColumnsOptions): ColumnDef<ReportPermission>[] {
   const roleColumn = (
@@ -23,17 +27,22 @@ export function createUserAccessColumns({
         <DataTableColumnHeader label={label} column={column} />
       </div>
     ),
-    cell: ({ row }) => (
-      <div className="flex justify-center">
-        <Checkbox
-          checked={row.original[role]}
-          onCheckedChange={(value) =>
-            onToggle(row.original.id, role, value === true)
-          }
-          aria-label={`${label} access for ${row.original.name}`}
-        />
-      </div>
-    ),
+    cell: ({ row }) => {
+      const enabled = editableRoles[role]
+      return (
+        <div className="flex justify-center">
+          <Checkbox
+            checked={row.original[role]}
+            disabled={!enabled}
+            onCheckedChange={(value) => {
+              if (!enabled) return
+              onToggle(row.original.id, role, value === true)
+            }}
+            aria-label={`${label} access for ${row.original.name}`}
+          />
+        </div>
+      )
+    },
   })
 
   return [

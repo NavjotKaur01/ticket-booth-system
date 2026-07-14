@@ -57,6 +57,31 @@ function formatMoney(value: number): string {
   return `$${value.toFixed(2)}`
 }
 
+function parseDateAndTimeToMs(dateStr: string, timeStr: string): number {
+  const dateParts = dateStr.split("/")
+  if (dateParts.length !== 3) return 0
+  const month = parseInt(dateParts[0], 10) - 1
+  const day = parseInt(dateParts[1], 10)
+  const year = parseInt(dateParts[2], 10)
+
+  const timeRegex = /(\d+):(\d+)\s*(AM|PM)/i
+  const match = timeStr.match(timeRegex)
+  let hours = 0
+  let minutes = 0
+  if (match) {
+    hours = parseInt(match[1], 10)
+    minutes = parseInt(match[2], 10)
+    const ampm = match[3].toUpperCase()
+    if (ampm === "PM" && hours < 12) {
+      hours += 12
+    } else if (ampm === "AM" && hours === 12) {
+      hours = 0
+    }
+  }
+
+  return new Date(year, month, day, hours, minutes).getTime()
+}
+
 /** Mirrors WPF ReportVM.GetComicTicketRevenuReport grouping by ShowId. */
 export function buildComicTicketRevenueDocument(rawData: unknown): ComicTicketRevenueDocument | null {
   const apiRows = Array.isArray(rawData) ? (rawData as ComicTicketRevenueApiRow[]) : []
@@ -87,6 +112,10 @@ export function buildComicTicketRevenueDocument(rawData: unknown): ComicTicketRe
     current.comped += n(row.Comped)
     current.revenue += n(row.Revenue)
   }
+
+  shows.sort((a, b) => {
+    return parseDateAndTimeToMs(a.showDate, a.showTime) - parseDateAndTimeToMs(b.showDate, b.showTime)
+  })
 
   return {
     comicName: shows[0]?.comicName ?? safeStr(apiRows[0]?.ComicName),

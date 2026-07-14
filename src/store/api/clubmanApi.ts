@@ -49,6 +49,13 @@ import type {
   MarketingComedianSearchRequest,
 } from "@/types/api/marketing-filter-search"
 import type { ComicInfo } from "@/data/comedian-info"
+import type { EmploymentPosition, AddUpdateEmploymentPositionRequest, DeleteEmploymentPositionRequest, AddUpdateEmploymentPositionResponse } from "@/types/api/employment-position"
+import type { EmploymentApplication, EmploymentApplicationBio, EmploymentApplicationOpening, EmploymentApplicationQuestion, EmploymentApplicationReview, UpdateEmploymentApplicationReviewRequest } from "@/types/api/employment-application"
+import type { FreeFormItem, AddUpdateFreeFormRequest, DeleteFreeFormRequest } from "@/types/api/free-form"
+import type { SocialItem, AddUpdateSocialRequest, DeleteSocialRequest } from "@/types/api/social"
+import type { SectionDetailItem, GetSectionDetailsRequest, AddUpdateSectionDetailRequest } from "@/types/api/section-details"
+import type { MenuItem, AddUpdateMenuRequest, DeleteMenuRequest, MenuItemDetail, AddUpdateMenuItemRequest, DeleteMenuItemRequest, MenuPdfItem, AddUpdateMenuPdfRequest, UploadMenuPdfRequest, UploadMenuImageRequest } from "@/types/api/menu"
+
 
 import { buildUpdateComedianRequest } from "@/lib/build-update-comedian-request"
 import { buildUpdateComedianImageRequest } from "@/lib/build-update-comedian-image-request"
@@ -63,10 +70,17 @@ import type { ApiLocation } from "@/types/api/locations"
 import type { ApiPromotionSearchItem } from "@/types/api/promotion-search"
 import type { ApiSystemLookupItem } from "@/types/api/system-lookup"
 import type { ApiDashboardData } from "@/types/api/dashboard-data"
-import type { ApiSystemDefaultItem } from "@/types/api/system-defaults"
+import type {
+  ApiSystemDefaultItem,
+  SystemDefaultRequestModel,
+} from "@/types/api/system-defaults"
 import type { UpdateShowAndPromotionFeeRequest } from "@/types/api/adjust-fees"
 import type { RecentSalesReportData } from "@/types/api/recent-sales"
 import type { ReportPermissionAccess } from "@/types/api/report-permission-access"
+import type {
+  ApiUserAccessItem,
+  UserAccessRequestModel,
+} from "@/types/api/user-access"
 import type { ReportRequestModel } from "@/types/api/report-request"
 
 export type ApiReportComedian = {
@@ -87,6 +101,10 @@ import type {
   UpcomingShowDetailsRequest,
 } from "@/types/api/move-reservation"
 import type { ShowRequestModel } from "@/types/api/cancel-show"
+import type {
+  ApiPrivateShowLink,
+  PrivateShowLinkRequestModel,
+} from "@/types/api/private-show-link"
 import type { ReservationNoteRequest } from "@/types/api/reservation-note"
 import { mapReservationDetail } from "@/lib/map-reservation-detail"
 import { mapUpcomingShowDetails } from "@/lib/map-upcoming-show-details"
@@ -110,6 +128,26 @@ import type { PromotionFilters } from "@/types/promotion"
 import type { PromotionFormValues } from "@/types/promotion-form"
 import type { ReservationDetail } from "@/types/api/reservation-detail"
 import type { ReservationPrintProperties } from "@/types/api/reservation-print"
+import type {
+  AddUpdateFormEmailRequest,
+  ApiFormEmailReference,
+  DeleteFormEmailRequest,
+} from "@/features/form-emails/form-emails-types"
+import type { FormEmailRecord } from "@/types/form-email"
+import type {
+  EmploymentQuestion,
+  AddUpdateEmploymentQuestionRequest,
+  AddUpdateEmploymentQuestionResponse,
+  DeleteEmploymentQuestionRequest,
+} from "@/types/api/employment-question"
+import type {
+  GetGiftCertificatesRequest,
+  ExportGiftCertificatesRequest,
+  UpdateGiftCertificateRequest,
+  ResendGiftCertificateRequest,
+  LocationGiftStatusResponse,
+} from "@/types/api/gift-certificates"
+import type { GiftCertificate } from "@/types/gift-certificate"
 
 export const clubmanApi = createApi({
   reducerPath: "clubmanApi",
@@ -129,6 +167,10 @@ export const clubmanApi = createApi({
     "SystemDefault",
     "Comedians",
     "ShowDefs",
+    "PrivateShowLinks",
+    "UserAccess",
+    "FormEmail",
+    "GiftCertificates",
   ],
   endpoints: (builder) => ({
     getLocations: builder.query({
@@ -172,7 +214,7 @@ export const clubmanApi = createApi({
         ),
         headers: { Accept: "application/json" },
       }),
-      transformResponse: (response: { Data: ReservationPrintProperties } | ReservationPrintProperties) => 
+      transformResponse: (response: { Data: ReservationPrintProperties } | ReservationPrintProperties) =>
         'Data' in response ? response.Data : response,
     }),
 
@@ -785,6 +827,58 @@ export const clubmanApi = createApi({
       ],
     }),
 
+    /** ClubMan SystemDefaultsVM.UpdateDefaults → PUT Adminstrator/UpdateSystemDefault */
+    updateSystemDefault: builder.mutation({
+      query: (body: SystemDefaultRequestModel) => ({
+        url: administratorApiPath("UpdateSystemDefault"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: (_result, _error, arg) => [
+        { type: "SystemDefault", id: `${arg.Connection}:${arg.LocationId}` },
+      ],
+    }),
+
+    /** ClubMan UserAcessVM.GetPermDescList → GET Adminstrator/{conn}/{loc}/GetUserPremissionData */
+    getUserPermissionData: builder.query({
+      query: ({
+        connectionName,
+        locationId,
+      }: {
+        connectionName: string
+        locationId: string
+      }) => ({
+        url: administratorApiPath(
+          connectionName,
+          locationId,
+          "GetUserPremissionData"
+        ),
+        method: "GET",
+      }),
+      transformResponse: (response: unknown) =>
+        coerceApiArray<ApiUserAccessItem>(response),
+      providesTags: (_result, _error, arg) => [
+        { type: "UserAccess", id: `${arg.connectionName}:${arg.locationId}` },
+      ],
+    }),
+
+    /** ClubMan UserAcessVM.SaveUserAccess → PUT Adminstrator/SaveUserAccessbility */
+    saveUserAccessibility: builder.mutation({
+      query: (body: UserAccessRequestModel) => ({
+        url: administratorApiPath("SaveUserAccessbility"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: (_result, _error, arg) => [
+        {
+          type: "UserAccess",
+          id: `${arg.ConnectionString}:${arg.LocationID}`,
+        },
+      ],
+    }),
+
     /** ClubMan AdjustFeesVM → PUT Adminstrator/UpdateShowAndPromotionFee */
     updateShowAndPromotionFee: builder.mutation({
       query: (request: UpdateShowAndPromotionFeeRequest) => ({
@@ -1071,6 +1165,38 @@ export const clubmanApi = createApi({
       providesTags: ["ShowDefs"],
     }),
 
+    /** ClubMan ShowTimesVM.GetPrivateShowLinksList → PUT Adminstrator/GetPrivateShowLinks */
+    getPrivateShowLinks: builder.mutation({
+      query: (body: PrivateShowLinkRequestModel) => ({
+        url: administratorApiPath("GetPrivateShowLinks"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: ApiPrivateShowLink[]) => response ?? [],
+    }),
+
+    /** ClubMan ShowTimesVM.SavePrePrivateSetupLink → POST Adminstrator/SavePrePrivateSetupLink */
+    savePrePrivateSetupLink: builder.mutation({
+      query: (body: PrivateShowLinkRequestModel) => ({
+        url: administratorApiPath("SavePrePrivateSetupLink"),
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["PrivateShowLinks"],
+    }),
+
+    /** ClubMan ShowTimesVM.DeletePrivateShowLink → PUT Adminstrator/DeletePrivateShowLink */
+    deletePrivateShowLink: builder.mutation({
+      query: (body: PrivateShowLinkRequestModel) => ({
+        url: administratorApiPath("DeletePrivateShowLink"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["PrivateShowLinks"],
+    }),
+
     getDefaultShowSections: builder.mutation({
       query: (body: SaveShowRequestModel) => ({
         url: calendarApiPath("GetDefaultShowSections"),
@@ -1254,6 +1380,368 @@ export const clubmanApi = createApi({
       ],
     }),
 
+    getEmploymentPositions: builder.query<
+      EmploymentPosition[],
+      { connectionString: string; locationId: string }
+    >({
+      query: ({ connectionString, locationId }) =>
+        systemApiPath(connectionString, locationId, "GetEmploymentPosition"),
+      extraOptions: { useNewApi: true },
+      transformResponse: (response: { Data: EmploymentPosition[] } | EmploymentPosition[]) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    addUpdateEmploymentPosition: builder.mutation<AddUpdateEmploymentPositionResponse, AddUpdateEmploymentPositionRequest>({
+      query: (body) => ({
+        url: systemApiPath("AddUpdateEmploymentPosition"),
+        method: "POST",
+        body,
+
+
+      }),
+      extraOptions: { useNewApi: true },
+    }),
+
+    getEmploymentQuestions: builder.query<
+      EmploymentQuestion[],
+      { connectionString: string; locationId: string }
+    >({
+      query: ({ connectionString, locationId }) =>
+        systemApiPath(connectionString, locationId, "GetEmploymentQuestion"),
+      transformResponse: (response: { Data: EmploymentQuestion[] } | EmploymentQuestion[]) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    addUpdateEmploymentQuestion: builder.mutation<AddUpdateEmploymentQuestionResponse, AddUpdateEmploymentQuestionRequest>({
+      query: (body) => ({
+        url: systemApiPath(body.ConnectionString, "AddUpdateEmploymentQuestion"),
+        method: "POST",
+        body,
+      }),
+    }),
+
+    deleteEmploymentQuestion: builder.mutation<unknown, DeleteEmploymentQuestionRequest>({
+      query: (body) => ({
+        url: systemApiPath(body.ConnectionString, "DeleteEmploymentQuestion"),
+        method: "POST",
+        body,
+      }),
+    }),
+
+    getEmploymentApplications: builder.query<
+      EmploymentApplication[],
+      { connectionString: string; locationId: string }
+    >({
+      query: ({ connectionString, locationId }) =>
+        systemApiPath(connectionString, locationId, "GetEmploymentApplications"),
+      transformResponse: (response: { Data: EmploymentApplication[] } | EmploymentApplication[]) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    getEmploymentApplicationBio: builder.query<
+      EmploymentApplicationBio,
+      { connectionString: string; entryId: string }
+    >({
+      query: ({ connectionString, entryId }) =>
+        systemApiPath(connectionString, entryId, "GetEmploymentApplicationBio"),
+      transformResponse: (response: { Data: EmploymentApplicationBio } | EmploymentApplicationBio) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    getEmploymentApplicationOpening: builder.query<
+      EmploymentApplicationOpening,
+      { connectionString: string; entryId: string }
+    >({
+      query: ({ connectionString, entryId }) =>
+        systemApiPath(connectionString, entryId, "GetEmploymentApplicationOpening"),
+      transformResponse: (response: { Data: EmploymentApplicationOpening } | EmploymentApplicationOpening) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    getEmploymentApplicationQuestions: builder.query<
+      EmploymentApplicationQuestion[],
+      { connectionString: string; entryId: string }
+    >({
+      query: ({ connectionString, entryId }) =>
+        systemApiPath(connectionString, entryId, "GetEmploymentApplicationQuestions"),
+      transformResponse: (response: { Data: EmploymentApplicationQuestion[] } | EmploymentApplicationQuestion[]) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    getEmploymentApplicationReview: builder.query<
+      EmploymentApplicationReview,
+      { connectionString: string; entryId: string }
+    >({
+      query: ({ connectionString, entryId }) =>
+        systemApiPath(connectionString, entryId, "GetEmploymentApplicationReview"),
+      transformResponse: (response: { Data: EmploymentApplicationReview } | EmploymentApplicationReview) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    updateEmploymentApplicationReview: builder.mutation<unknown, UpdateEmploymentApplicationReviewRequest>({
+      query: (body) => ({
+        url: systemApiPath(body.ConnectionString, "UpdateEmploymentApplicationReview"),
+        method: "POST",
+        body,
+      }),
+    }),
+
+    downloadEmploymentApplicationPdf: builder.mutation<
+      Blob,
+      { connectionString: string; entryId: string }
+    >({
+      query: ({ connectionString, entryId }) => ({
+        url: systemApiPath(connectionString, entryId, "DownloadEmploymentApplicationPdf"),
+        method: "GET",
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
+
+    getFreeForms: builder.query<
+      FreeFormItem[],
+      { connectionString: string; locationId: string }
+    >({
+      query: ({ connectionString, locationId }) =>
+        systemApiPath(connectionString, locationId, "GetFreeForms"),
+      transformResponse: (response: { Data: FreeFormItem[] } | FreeFormItem[]) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    getSocials: builder.query<
+      SocialItem[],
+      { connectionString: string; locationId: string }
+    >({
+      query: ({ connectionString, locationId }) =>
+        systemApiPath(connectionString, locationId, "GetSocials"),
+      transformResponse: (response: { Data: SocialItem[] } | SocialItem[]) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    getSectionDetails: builder.query<SectionDetailItem[], GetSectionDetailsRequest>({
+      query: (body) => ({
+        url: systemApiPath(body.ConnectionString, "GetSectionDetails"),
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: { Data: SectionDetailItem[] } | SectionDetailItem[]) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    addUpdateSectionDetail: builder.mutation<SectionDetailItem, AddUpdateSectionDetailRequest>({
+      query: (body) => ({
+        url: systemApiPath(body.ConnectionString, "AddUpdateSectionDetail"),
+        method: "POST",
+        body,
+      }),
+    }),
+
+    searchSectionDetails: builder.query<
+      SectionDetailItem[],
+      { connectionString: string; searchTerm: string }
+    >({
+      query: ({ connectionString, searchTerm }) =>
+        systemApiPath(connectionString, searchTerm, "SearchSectionDetails"),
+      transformResponse: (response: { Data: SectionDetailItem[] } | SectionDetailItem[]) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    getMenus: builder.query<
+      MenuItem[],
+      { connectionString: string; locationId: string }
+    >({
+      query: ({ connectionString, locationId }) =>
+        systemApiPath(connectionString, locationId, "GetMenus"),
+      transformResponse: (response: { Data: MenuItem[] } | MenuItem[]) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    addUpdateMenu: builder.mutation<unknown, AddUpdateMenuRequest>({
+      query: (body) => ({
+        url: systemApiPath(body.ConnectionString, "AddUpdateMenu"),
+        method: "POST",
+        body,
+      }),
+    }),
+
+    deleteMenu: builder.mutation<unknown, DeleteMenuRequest>({
+      query: (body) => ({
+        url: systemApiPath(body.ConnectionString, "DeleteMenu"),
+        method: "POST",
+        body,
+      }),
+    }),
+
+    getMenuItems: builder.query<
+      MenuItemDetail[],
+      { connectionString: string; menuId: string }
+    >({
+      query: ({ connectionString, menuId }) =>
+        clubApiPath(menuId, connectionString, "GetMenuItems"),
+      transformResponse: (response: { Data: MenuItemDetail[] } | MenuItemDetail[]) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    addUpdateMenuItem: builder.mutation<unknown, AddUpdateMenuItemRequest>({
+      query: (body) => ({
+        url: systemApiPath(body.ConnectionString, "AddUpdateMenuItem"),
+        method: "POST",
+        body,
+      }),
+    }),
+
+    deleteMenuItem: builder.mutation<unknown, DeleteMenuItemRequest>({
+      query: (body) => ({
+        url: systemApiPath(body.ConnectionString, "DeleteMenuItem"),
+        method: "POST",
+        body,
+      }),
+    }),
+
+    getMenuPdfList: builder.query<
+      MenuPdfItem[],
+      { locationId: string }
+    >({
+      query: ({ locationId }) =>
+        clubApiPath(locationId, "GetMenuPdfList"),
+      transformResponse: (response: { Data: MenuPdfItem[] } | MenuPdfItem[]) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    addUpdateMenuPdf: builder.mutation<MenuPdfItem, AddUpdateMenuPdfRequest>({
+      query: (body) => ({
+        url: `/clubman/api/AddUpdateMenuPdf`,
+        method: "POST",
+        body,
+      }),
+    }),
+
+    deleteMenuPdf: builder.mutation<unknown, { fileGuid: string }>({
+      query: ({ fileGuid }) => ({
+        url: clubApiPath(fileGuid, "DeletMenuPdf"),
+        method: "POST",
+      }),
+    }),
+
+    uploadMenuPdf: builder.mutation<unknown, UploadMenuPdfRequest>({
+      query: (body) => ({
+        url: `/clubman/api/UploadMenuPdf`,
+        method: "POST",
+        body,
+      }),
+    }),
+
+    uploadMenuImage: builder.mutation<unknown, UploadMenuImageRequest>({
+      query: (body) => ({
+        url: `/clubman/api/UploadMenuImage`,
+        method: "POST",
+        body,
+      }),
+    }),
+
+    getMenuPdf: builder.mutation<Blob, { fileGuid: string }>({
+      query: ({ fileGuid }) => ({
+        url: clubApiPath(fileGuid, "GetMenuPdf"),
+        method: "GET",
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
+
+    getMenuImage: builder.mutation<Blob, { fileGuid: string }>({
+      query: ({ fileGuid }) => ({
+        url: clubApiPath(fileGuid, "GetMenuImage"),
+        method: "GET",
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
+
+    searchSocials: builder.query<
+      SocialItem[],
+      { connectionString: string; locationId: string; searchTerm: string }
+    >({
+      query: ({ connectionString, locationId, searchTerm }) =>
+        systemApiPath(connectionString, locationId, searchTerm, "SearchSocials"),
+      transformResponse: (response: { Data: SocialItem[] } | SocialItem[]) =>
+        'Data' in response ? response.Data : response,
+    }),
+
+    addUpdateSocial: builder.mutation<unknown, AddUpdateSocialRequest>({
+      query: (body) => ({
+        url: systemApiPath(body.ConnectionString, "AddUpdateSocial"),
+        method: "POST",
+        body,
+      }),
+    }),
+
+    deleteSocial: builder.mutation<unknown, DeleteSocialRequest>({
+      query: (body) => ({
+        url: systemApiPath(body.ConnectionString, "DeleteSocial"),
+        method: "POST",
+        body,
+      }),
+    }),
+
+    addUpdateFreeForm: builder.mutation<FreeFormItem, AddUpdateFreeFormRequest>({
+      query: (body) => ({
+        url: systemApiPath(body.ConnectionString, "AddUpdateFreeForms"),
+        method: "POST",
+        body,
+      }),
+    }),
+
+    deleteFreeForm: builder.mutation<unknown, DeleteFreeFormRequest>({
+      query: (body) => ({
+        url: systemApiPath(body.ConnectionString, "DeleteFreeForms"),
+        method: "POST",
+        body,
+      }),
+    }),
+
+    deleteEmploymentPosition: builder.mutation<unknown, DeleteEmploymentPositionRequest>({
+      query: (body) => ({
+        url: systemApiPath(body.ConnectionString, "DeleteEmploymentPosition"),
+        method: "POST",
+        body,
+      }),
+    }),
+
+    getFormEmails: builder.query<
+      FormEmailRecord[],
+      { connectionString: string; locationId: string }
+    >({
+      query: ({ connectionString, locationId }) =>
+        systemApiPath(connectionString, locationId, "GetFormEmails"),
+      transformResponse: (rows: ApiFormEmailReference[]) =>
+        rows.map((row) => ({
+          id: row.EmailReferenceId,
+          locationId: row.LocationId,
+          formId: row.ItemId,
+          emailAddress: row.EmailAddress,
+        })),
+      providesTags: (_result, _error, arg) => [
+        { type: "FormEmail", id: arg.locationId },
+      ],
+    }),
+
+    addUpdateFormEmail: builder.mutation<unknown, AddUpdateFormEmailRequest>({
+      query: (body) => ({
+        url: `/clubman/api/AddUpdateFormEmail`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, body) => [
+        { type: "FormEmail", id: body.LocationId },
+      ],
+    }),
+
+    deleteFormEmail: builder.mutation<unknown, DeleteFormEmailRequest>({
+      query: (body) => ({
+        url: `/clubman/api/DeleteFormEmail`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["FormEmail"],
+    }),
+
     getShowData: builder.query<
       ApiShowData[],
       { connectionName: string; showId: string }
@@ -1283,6 +1771,52 @@ export const clubmanApi = createApi({
       query: ({ connectionName, showId }) =>
         calendarApiPath(connectionName, showId, "GetShowProperties"),
       providesTags: ["Calendar"],
+    }),
+
+    getGiftCertificates: builder.mutation<GiftCertificate[], GetGiftCertificatesRequest>({
+      query: (body) => ({
+        url: "/clubman/api/GetGiftCertificates",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["GiftCertificates"],
+    }),
+
+    exportGiftCertificates: builder.mutation<unknown, ExportGiftCertificatesRequest>({
+      query: (body) => ({
+        url: "/clubman/api/ExportGiftCertificates",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    updateGiftCertificate: builder.mutation<unknown, UpdateGiftCertificateRequest>({
+      query: (body) => ({
+        url: "/clubman/api/UpdateGiftCertificate",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["GiftCertificates"],
+    }),
+
+    resendGiftCertificate: builder.mutation<unknown, ResendGiftCertificateRequest>({
+      query: (body) => ({
+        url: "/clubman/api/ResendGiftCertificate",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    getLocationGiftStatus: builder.query<LocationGiftStatusResponse, string>({
+      query: (connectionString) => `/clubman/api/${connectionString}/LocationGiftStatus`,
+    }),
+
+    getGiftLocations: builder.query<ApiLocation[], void>({
+      query: () => "/clubman/api/GetLocations",
+    }),
+
+    getLocationsForLoggedInUser: builder.query<ApiLocation[], string>({
+      query: (userId) => `/clubman/api/${userId}/GetLocationsForLoggedInUser`,
     }),
   }),
 })
@@ -1323,6 +1857,9 @@ export const {
   useGetShowDetailsByDateQuery,
   useGetShowSectionsQuery,
   useGetSystemDefaultsQuery,
+  useUpdateSystemDefaultMutation,
+  useGetUserPermissionDataQuery,
+  useSaveUserAccessibilityMutation,
   useGetSystemLookupQuery,
   useUpdateShowAndPromotionFeeMutation,
   useLoadDashboardQuery,
@@ -1344,6 +1881,9 @@ export const {
   useDeleteShowDefsMutation,
   useGetDefShowInfoQuery,
   useLazyGetDefShowInfoQuery,
+  useGetPrivateShowLinksMutation,
+  useSavePrePrivateSetupLinkMutation,
+  useDeletePrivateShowLinkMutation,
   useGetDefaultShowSectionsMutation,
   useSaveShowMutation,
   useGenerateReportMutation,
@@ -1360,4 +1900,50 @@ export const {
   useGetShowPropertiesQuery,
   useLazyGetShowPropertiesQuery,
   useUpdateShowMutation,
+  useGetEmploymentPositionsQuery,
+  useAddUpdateEmploymentPositionMutation,
+  useDeleteEmploymentPositionMutation,
+  useGetEmploymentQuestionsQuery,
+  useGetFormEmailsQuery,
+  useAddUpdateFormEmailMutation,
+  useDeleteFormEmailMutation,
+  useGetEmploymentApplicationsQuery,
+  useGetEmploymentApplicationBioQuery,
+  useGetEmploymentApplicationOpeningQuery,
+  useGetEmploymentApplicationQuestionsQuery,
+  useGetEmploymentApplicationReviewQuery,
+  useUpdateEmploymentApplicationReviewMutation,
+  useDownloadEmploymentApplicationPdfMutation,
+  useGetFreeFormsQuery,
+  useGetSocialsQuery,
+  useGetSectionDetailsQuery,
+  useSearchSectionDetailsQuery,
+  useGetMenusQuery,
+  useGetMenuItemsQuery,
+  useAddUpdateMenuMutation,
+  useAddUpdateMenuItemMutation,
+  useDeleteMenuItemMutation,
+  useDeleteMenuMutation,
+  useGetMenuPdfListQuery,
+  useAddUpdateMenuPdfMutation,
+  useDeleteMenuPdfMutation,
+  useUploadMenuPdfMutation,
+  useGetMenuPdfMutation,
+  useUploadMenuImageMutation,
+  useGetMenuImageMutation,
+  useSearchSocialsQuery,
+  useAddUpdateSocialMutation,
+  useDeleteSocialMutation,
+  useAddUpdateFreeFormMutation,
+  useAddUpdateSectionDetailMutation,
+  useDeleteFreeFormMutation,
+  useAddUpdateEmploymentQuestionMutation,
+  useDeleteEmploymentQuestionMutation,
+  useGetGiftCertificatesMutation,
+  useExportGiftCertificatesMutation,
+  useUpdateGiftCertificateMutation,
+  useResendGiftCertificateMutation,
+  useGetLocationGiftStatusQuery,
+  useGetGiftLocationsQuery,
+  useGetLocationsForLoggedInUserQuery,
 } = clubmanApi

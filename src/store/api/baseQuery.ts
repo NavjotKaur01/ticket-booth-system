@@ -18,7 +18,24 @@ const rawBaseQuery = fetchBaseQuery({
     if (!headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json")
     }
+    // temporary-for-tunnel
+    if (import.meta.env.DEV && import.meta.env.VITE_TUNNEL_URL) {
+      headers.set("ngrok-skip-browser-warning", "true")
+    }
+    return headers
+  },
+})
 
+const newRawBaseQuery = fetchBaseQuery({
+  baseUrl: appConfig.newApiBaseUrl.replace(/\/$/, ""),
+  prepareHeaders: (headers) => {
+    if (!headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json")
+    }
+    // temporary-for-tunnel
+    if (import.meta.env.DEV && import.meta.env.VITE_NEW_API_BASE_URL) {
+      headers.set("ngrok-skip-browser-warning", "true")
+    }
     return headers
   },
 })
@@ -35,9 +52,11 @@ function isApiEnvelope(value: unknown): value is ApiResponse<unknown> {
 export const clubmanBaseQuery: BaseQueryFn<
   string | FetchArgs,
   unknown,
-  ClubmanQueryError
+  ClubmanQueryError,
+  { useNewApi?: boolean }
 > = async (args, api, extraOptions) => {
-  const result = await rawBaseQuery(args, api, extraOptions)
+  const queryFn = extraOptions?.useNewApi ? newRawBaseQuery : rawBaseQuery
+  const result = await queryFn(args, api, extraOptions)
 
   if (result.error) {
     return { error: result.error }

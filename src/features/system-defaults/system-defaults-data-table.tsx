@@ -7,17 +7,25 @@ import type { SystemDefault } from "@/types/system-default"
 
 type SystemDefaultsDataTableProps = {
   data: SystemDefault[]
+  emptyMessage?: string
   hiddenActions?: readonly StandardRowAction[]
   editingRecordId?: string | null
+  canEditDescription?: boolean
   onEdit?: (record: SystemDefault) => void
   onCancelEdit?: () => void
-  onSaveValue?: (record: SystemDefault, value: string) => void
+  onSaveValue?: (
+    record: SystemDefault,
+    value: string,
+    description?: string
+  ) => void
 }
 
 export function SystemDefaultsDataTable({
   data,
+  emptyMessage = "No record found",
   hiddenActions,
   editingRecordId = null,
+  canEditDescription = false,
   onEdit,
   onCancelEdit,
   onSaveValue,
@@ -27,18 +35,26 @@ export function SystemDefaultsDataTable({
       createSystemDefaultColumns({
         hiddenActions,
         editingRecordId,
+        canEditDescription,
         onEdit,
         onCancelEdit,
         onSaveValue,
       }),
-    [editingRecordId, hiddenActions, onCancelEdit, onEdit, onSaveValue]
+    [
+      canEditDescription,
+      editingRecordId,
+      hiddenActions,
+      onCancelEdit,
+      onEdit,
+      onSaveValue,
+    ]
   )
 
   return (
     <DataTable
       columns={columns}
       data={data}
-      emptyMessage="No record found"
+      emptyMessage={emptyMessage}
       entityLabel="records"
       pageSize={10}
       onRowDoubleClick={(row) => onEdit?.(row.original)}

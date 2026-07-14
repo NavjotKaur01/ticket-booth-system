@@ -24,7 +24,6 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle
@@ -164,7 +163,7 @@ const COMPACT_NUMBER = `h-9 w-14 px-1 text-center text-sm tabular-nums ${COMPACT
 const COMPACT_SELECT = 'h-9 w-44 min-w-0 text-sm'
 const INLINE_LABEL = 'mb-1.5 block text-xs font-medium text-muted-foreground'
 
-function mapPaymentLabelToType (label: string): ReservationPaymentType {
+function mapPaymentLabelToType(label: string): ReservationPaymentType {
   const normalized = label.trim().toLowerCase()
   const match = RESERVATION_PAYMENT_TYPES.find(
     option => option.label.trim().toLowerCase() === normalized
@@ -2501,24 +2500,16 @@ export function AddReservationDialog({
           <DialogContent
             ref={dialogContentRef}
             disableOutsideDismiss
-            showCloseButton={false}
-            suppressPresentation={isAddCustomerOpen}
+            showCloseButton
             className='flex max-h-[82vh] w-[min(calc(100vw-2rem),84rem)] max-w-[84rem] flex-col overflow-hidden sm:max-w-[84rem]'
             onOpenAutoFocus={event => {
               event.preventDefault()
             }}
           >
-            <DialogHeader className='shrink-0 flex-row items-center justify-between gap-4 border-b px-4 py-3'>
-              <DialogTitle className='truncate text-base font-semibold text-foreground'>
-                {dialogTitle}
+            <DialogHeader className='shrink-0 border-b px-4 py-3'>
+              <DialogTitle className='text-base font-semibold text-foreground'>
+                Add Reservation
               </DialogTitle>
-              <DialogClose
-                tabIndex={-1}
-                className='flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none'
-              >
-                <X className='size-4' />
-                <span className='sr-only'>Close</span>
-              </DialogClose>
             </DialogHeader>
 
             <div
@@ -2596,23 +2587,23 @@ export function AddReservationDialog({
 
                   {isEditMode ? (
                     <>
-                    <div className='shrink-0'>
-                      <Button
-                        type='button'
-                        size='sm'
-                        variant='outline'
-                        onClick={handleSplitReservationClick}
-                      >
-                        Split Payment
-                      </Button>
-                    </div>
-                    <div className='mt-3 border-t border-border/50 pt-3'>
-                      <ReservationTransactionsTable
-                        data={transactionRows}
-                        selectedTransactionId={selectedTransaction?.id}
-                        onTransactionSelect={handleTransactionSelect}
-                      />
-                    </div>
+                      <div className='shrink-0'>
+                        <Button
+                          type='button'
+                          size='sm'
+                          variant='outline'
+                          onClick={handleSplitReservationClick}
+                        >
+                          Split Payment
+                        </Button>
+                      </div>
+                      <div className='mt-3 border-t border-border/50 pt-3'>
+                        <ReservationTransactionsTable
+                          data={transactionRows}
+                          selectedTransactionId={selectedTransaction?.id}
+                          onTransactionSelect={handleTransactionSelect}
+                        />
+                      </div>
                     </>
                   ) : null}
                 </div>
@@ -2826,7 +2817,7 @@ export function AddReservationDialog({
                 </div>
               </div>
 
-              
+
             </div>
           </DialogContent>
         </TooltipProvider>

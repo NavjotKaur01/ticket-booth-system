@@ -54,7 +54,7 @@ function formatCcLabel(cc: string): string {
   return cc.trim()
 }
 
-function resolvePaymentDisplayName(row: DoorCheckoutApiRow): string {
+export function resolvePaymentDisplayName(row: DoorCheckoutApiRow): string {
   const pymt = (row.PymtType ?? "").trim().toLowerCase()
   const cc = (row.CCType ?? "").trim().toLowerCase()
 

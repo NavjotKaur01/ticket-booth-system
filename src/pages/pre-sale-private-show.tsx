@@ -3,12 +3,77 @@ import { useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
-import { preSaleRecords } from "@/data/pre-sale"
 import { AddPreSaleDialog } from "@/features/pre-sale/add-pre-sale-dialog"
 import { PreSaleDataTable } from "@/features/pre-sale/pre-sale-data-table"
+import { useAppSession } from "@/hooks/use-app-session"
+import { usePrivateShowLinks } from "@/hooks/use-private-show-links"
+import { deletePrivateShowLink } from "@/lib/api/private-show-links"
+import { buildDeletePrivateShowLinkRequest } from "@/lib/build-private-show-link-request"
+import { copyTextToClipboard } from "@/lib/export-table-data"
+import type { PreSaleRecord } from "@/types/pre-sale"
 
 export function PreSalePrivateShow() {
+  const { connectionName, locationId, isReady } = useAppSession()
+  const { records, loading, error, refresh } = usePrivateShowLinks({
+    connectionName,
+    locationId,
+    enabled: isReady,
+  })
+
   const [addOpen, setAddOpen] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  async function handleSaved() {
+    setActionError(null)
+    await refresh()
+  }
+
+  async function handleCopy(record: PreSaleRecord) {
+    const link = record.privateLink.trim()
+    if (!link) {
+      setActionError("No private link available to copy.")
+      return
+    }
+
+    try {
+      await copyTextToClipboard(link)
+      setActionError(null)
+    } catch (copyError) {
+      setActionError(
+        copyError instanceof Error
+          ? copyError.message
+          : "Unable to copy private link."
+      )
+    }
+  }
+
+  async function handleDelete(record: PreSaleRecord) {
+    if (!isReady || !connectionName || !locationId) {
+      setActionError("Location is required before deleting a private show link.")
+      return
+    }
+
+    const confirmed = window.confirm("Are you sure you want to delete?")
+    if (!confirmed) return
+
+    setActionError(null)
+    try {
+      await deletePrivateShowLink(
+        buildDeletePrivateShowLinkRequest({
+          connectionName,
+          locationId,
+          privateKeyId: record.id,
+        })
+      )
+      await refresh()
+    } catch (deleteError) {
+      setActionError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Unable to delete private show link."
+      )
+    }
+  }
 
   return (
     <div className="space-y-3">
@@ -21,7 +86,7 @@ export function PreSalePrivateShow() {
           <p className="text-xs text-muted-foreground">
             Records:{" "}
             <span className="font-semibold tabular-nums text-foreground">
-              {preSaleRecords.length}
+              {records.length}
             </span>
           </p>
           <Button
@@ -35,10 +100,25 @@ export function PreSalePrivateShow() {
           </Button>
         </div>
 
-        <PreSaleDataTable data={preSaleRecords} />
+        {error || actionError ? (
+          <p className="px-3 py-2 text-sm text-destructive">
+            {error || actionError}
+          </p>
+        ) : null}
+
+        <PreSaleDataTable
+          data={records}
+          emptyMessage={loading ? "Loading private show links..." : "No record found"}
+          onCopy={(record) => void handleCopy(record)}
+          onDelete={(record) => void handleDelete(record)}
+        />
       </PanelCard>
 
-      <AddPreSaleDialog open={addOpen} onOpenChange={setAddOpen} />
+      <AddPreSaleDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onSaved={handleSaved}
+      />
     </div>
   )
 }

@@ -15,18 +15,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { getSystemDefaultDropdownOptions } from "@/data/system-default-options"
 import type { SystemDefault } from "@/types/system-default"
 
 type SystemDefaultValuePopoverProps = {
   record: SystemDefault
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSave: (record: SystemDefault, value: string) => void
+  onSave: (record: SystemDefault, value: string, description?: string) => void
+  canEditDescription?: boolean
 }
 
-function isBooleanDefault(value: string) {
-  const normalized = value.trim().toUpperCase()
-  return normalized === "Y" || normalized === "N"
+function isYesNoType(type: string) {
+  return type.trim() === "YesNo"
+}
+
+function isDropdownType(type: string) {
+  return type.trim().toLowerCase() === "dropdown"
 }
 
 function toBooleanLabel(value: string) {
@@ -37,54 +42,62 @@ function toBooleanValue(value: string) {
   return value === "Yes" ? "Y" : "N"
 }
 
-function isNumericDefault(value: string) {
-  return /^\d+(?:\.\d+)?$/.test(value.trim())
-}
-
-function acceptsNumericInput(value: string, allowDecimal: boolean) {
-  return allowDecimal ? /^\d*(?:\.\d*)?$/.test(value) : /^\d*$/.test(value)
-}
-
 export function SystemDefaultValuePopover({
   record,
   open,
   onOpenChange,
   onSave,
+  canEditDescription = false,
 }: SystemDefaultValuePopoverProps) {
   const [value, setValue] = useState("")
-  const isBooleanValue = isBooleanDefault(record.defaultValue)
-  const isNumericValue = isNumericDefault(record.defaultValue)
-  const allowsDecimal = record.defaultValue.includes(".")
+  const [description, setDescription] = useState("")
+  const isBooleanValue = isYesNoType(record.type)
+  const dropdownOptions = isDropdownType(record.type)
+    ? getSystemDefaultDropdownOptions(record.description)
+    : null
+  const isCountryDropdown = record.description.trim() === "Country"
 
   useEffect(() => {
-    if (!open) {
-      return
-    }
+    if (!open) return
 
-    setValue(
-      isBooleanValue ? toBooleanLabel(record.defaultValue) : record.defaultValue
-    )
-  }, [isBooleanValue, open, record.defaultValue])
+    if (isBooleanValue) {
+      setValue(toBooleanLabel(record.defaultValue))
+    } else if (isCountryDropdown && !record.defaultValue.trim()) {
+      setValue("Select country")
+    } else {
+      setValue(record.defaultValue)
+    }
+    setDescription(record.description)
+  }, [
+    isBooleanValue,
+    isCountryDropdown,
+    open,
+    record.defaultValue,
+    record.description,
+  ])
 
   function handleSave() {
-    onSave(record, isBooleanValue ? toBooleanValue(value) : value)
-    onOpenChange(false)
-  }
-
-  function handleInputChange(nextValue: string) {
-    if (isNumericValue && !acceptsNumericInput(nextValue, allowsDecimal)) {
+    // Desktop ShowCountry: selecting "Select country" closes without saving.
+    if (isCountryDropdown && value.trim() === "Select country") {
+      onOpenChange(false)
       return
     }
 
-    setValue(nextValue)
+    const nextValue = isBooleanValue ? toBooleanValue(value) : value.trim()
+    if (!nextValue) return
+
+    onSave(
+      record,
+      nextValue,
+      canEditDescription ? description.trim() : ""
+    )
+    onOpenChange(false)
   }
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverAnchor asChild>
-        <span
-          className="block w-full cursor-default select-none rounded-sm text-center tabular-nums"
-        >
+        <span className="block w-full cursor-default select-none rounded-sm text-center tabular-nums">
           {record.defaultValue}
         </span>
       </PopoverAnchor>
@@ -97,45 +110,67 @@ export function SystemDefaultValuePopover({
         <div className="rounded-t-md border-b bg-background px-2.5 py-1 text-xs font-semibold text-foreground dark:bg-background">
           Value
         </div>
-        <div className="flex items-center gap-1.5 p-2">
-          <div className="min-w-0 flex-1">
-            {isBooleanValue ? (
-              <Select value={value} onValueChange={setValue}>
-                <SelectTrigger className="h-8 w-full rounded-md bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Yes">Yes</SelectItem>
-                  <SelectItem value="No">No</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                value={value}
-                onChange={(event) => handleInputChange(event.target.value)}
-                inputMode={isNumericValue ? "decimal" : undefined}
-                className="h-8 bg-background"
-                autoFocus
-              />
-            )}
+        <div className="space-y-2 p-2">
+          {canEditDescription ? (
+            <Input
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Description"
+              className="h-8 bg-background"
+            />
+          ) : null}
+          <div className="flex items-center gap-1.5">
+            <div className="min-w-0 flex-1">
+              {isBooleanValue ? (
+                <Select value={value} onValueChange={setValue}>
+                  <SelectTrigger className="h-8 w-full rounded-md bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Yes">Yes</SelectItem>
+                    <SelectItem value="No">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : dropdownOptions ? (
+                <Select value={value || undefined} onValueChange={setValue}>
+                  <SelectTrigger className="h-8 w-full rounded-md bg-background">
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dropdownOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  value={value}
+                  onChange={(event) => setValue(event.target.value)}
+                  className="h-8 bg-background"
+                  autoFocus
+                />
+              )}
+            </div>
+            <Button
+              type="button"
+              size="icon-xs"
+              aria-label="Save value"
+              onClick={handleSave}
+            >
+              <Check className="size-3.5" />
+            </Button>
+            <Button
+              type="button"
+              size="icon-xs"
+              variant="destructive"
+              aria-label="Cancel edit"
+              onClick={() => onOpenChange(false)}
+            >
+              <X className="size-3.5" />
+            </Button>
           </div>
-          <Button
-            type="button"
-            size="icon-xs"
-            aria-label="Save value"
-            onClick={handleSave}
-          >
-            <Check className="size-3.5" />
-          </Button>
-          <Button
-            type="button"
-            size="icon-xs"
-            variant="destructive"
-            aria-label="Cancel edit"
-            onClick={() => onOpenChange(false)}
-          >
-            <X className="size-3.5" />
-          </Button>
         </div>
         <span className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 border-r border-b bg-popover" />
       </PopoverContent>

@@ -34,15 +34,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {
-  createFormEmail,
-  deleteFormEmail,
-  getFormEmailFormsByLocation,
-  getFormEmailsByLocation,
-  updateFormEmail,
-} from "@/features/form-emails/form-emails.service"
 import { useAppSession } from "@/hooks/use-app-session"
-import type { FormEmailDefinition, FormEmailRecord } from "@/types/form-email"
+import { getClubmanErrorMessage } from "@/store/api/baseQuery"
+import {
+  useAddUpdateFormEmailMutation,
+  useDeleteFormEmailMutation,
+  useGetFormEmailsQuery,
+} from "@/store/api/clubmanApi"
+import type { FormEmailRecord } from "@/types/form-email"
 
 function EmptyState({
   title,
@@ -104,21 +103,57 @@ function isValidEmailAddress(value: string) {
 }
 
 export function FormEmailsScreen() {
-  const { locationId, locationName } = useAppSession()
+  const { connectionName, locationId, locationName, username } = useAppSession()
 
-  const [formDefinitions, setFormDefinitions] = useState<FormEmailDefinition[]>([])
   const [selectedFormId, setSelectedFormId] = useState("")
-  const [rows, setRows] = useState<FormEmailRecord[]>([])
   const [editorMode, setEditorMode] = useState<"create" | "edit" | null>(null)
   const [editingEmailId, setEditingEmailId] = useState<string | null>(null)
   const [emailAddressInput, setEmailAddressInput] = useState("")
-  const [loadingForms, setLoadingForms] = useState(false)
-  const [loadingRows, setLoadingRows] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deletingRow, setDeletingRow] = useState<FormEmailRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
+
+  const canQuery = Boolean(connectionName && locationId)
+
+  const {
+    data: allEmails = [],
+    isLoading,
+    isFetching,
+    error: queryError,
+  } = useGetFormEmailsQuery(
+    { connectionString: connectionName, locationId: locationId ?? "" },
+    { skip: !canQuery }
+  )
+
+  const [addUpdateFormEmail, { isLoading: isSaving }] = useAddUpdateFormEmailMutation()
+  const [deleteFormEmail] = useDeleteFormEmailMutation()
+
+  const loading = isLoading || isFetching
+
+  const formDefinitions = useMemo(() => {
+    const seen = new Set<string>()
+
+    return allEmails
+      .filter((email) => {
+        if (seen.has(email.formId)) {
+          return false
+        }
+
+        seen.add(email.formId)
+        return true
+      })
+      .map((email) => ({
+        id: email.formId,
+        locationId: email.locationId,
+        name: email.formId,
+      }))
+  }, [allEmails])
+
+  const rows = useMemo(
+    () => allEmails.filter((email) => email.formId === selectedFormId),
+    [allEmails, selectedFormId]
+  )
 
   const formOptions = useMemo(
     () =>
@@ -140,108 +175,40 @@ export function FormEmailsScreen() {
   }, [emailAddressInput])
 
   useEffect(() => {
+    if (queryError) {
+      setError(getClubmanErrorMessage(queryError))
+      return
+    }
+
+    setError(null)
+  }, [queryError])
+
+  useEffect(() => {
     if (!locationId) {
-      setFormDefinitions([])
       setSelectedFormId("")
-      setRows([])
       setEditorMode(null)
       setEditingEmailId(null)
       setEmailAddressInput("")
-      setLoadingForms(false)
-      setLoadingRows(false)
       setError(null)
       setStatusMessage(null)
       return
     }
 
-    let isActive = true
-    setLoadingForms(true)
-    setError(null)
-    setStatusMessage(null)
-    setFormDefinitions([])
     setSelectedFormId("")
-    setRows([])
-    setEditorMode(null)
-    setEditingEmailId(null)
-    setEmailAddressInput("")
-
-    getFormEmailFormsByLocation({
-      locationId: locationId,
-      locationLabel: locationName,
-    })
-      .then((result) => {
-        if (isActive) {
-          setFormDefinitions(result)
-        }
-      })
-      .catch((requestError: unknown) => {
-        if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load available forms."
-          )
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoadingForms(false)
-        }
-      })
-
-    return () => {
-      isActive = false
-    }
-  }, [locationId, locationName])
+    setStatusMessage(null)
+  }, [locationId])
 
   useEffect(() => {
-    if (!locationId || !selectedFormId) {
-      setRows([])
-      setEditorMode(null)
-      setEditingEmailId(null)
-      setEmailAddressInput("")
-      setLoadingRows(false)
-      return
+    if (formDefinitions.length > 0 && !selectedFormId) {
+      setSelectedFormId(formDefinitions[0].id)
     }
+  }, [formDefinitions, selectedFormId])
 
-    let isActive = true
-    setLoadingRows(true)
-    setError(null)
-    setStatusMessage(null)
-    setRows([])
+  useEffect(() => {
     setEditorMode(null)
     setEditingEmailId(null)
     setEmailAddressInput("")
-
-    getFormEmailsByLocation({
-      locationId: locationId,
-      formId: selectedFormId,
-      locationLabel: locationName,
-    })
-      .then((result) => {
-        if (isActive) {
-          setRows(result)
-        }
-      })
-      .catch((requestError: unknown) => {
-        if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load form email addresses."
-          )
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoadingRows(false)
-        }
-      })
-
-    return () => {
-      isActive = false
-    }
-  }, [locationId, selectedFormId, locationName])
+  }, [selectedFormId])
 
   function openCreateEditor() {
     setEditorMode("create")
@@ -267,7 +234,7 @@ export function FormEmailsScreen() {
   async function handleSave() {
     const normalized = normalizeEmailAddress(emailAddressInput)
 
-    if (!locationId || !selectedFormId || !canSave || saving) {
+    if (!connectionName || !locationId || !username || !selectedFormId || !canSave || isSaving) {
       return
     }
 
@@ -279,49 +246,31 @@ export function FormEmailsScreen() {
       return
     }
 
-    setSaving(true)
     setError(null)
 
     try {
-      if (editorMode === "edit" && editingEmailId) {
-        const updatedRow = await updateFormEmail({
-          locationId: locationId,
-          formId: selectedFormId,
-          locationLabel: locationName,
-          emailId: editingEmailId,
-          emailAddress: normalized,
-        })
+      await addUpdateFormEmail({
+        EmailReferenceId: editingEmailId ?? "",
+        LocationId: locationId,
+        ItemId: selectedFormId,
+        EmailAddress: normalized,
+        ConnectionString: connectionName,
+        Username: username,
+      }).unwrap()
 
-        setRows((current) =>
-          current.map((row) => (row.id === updatedRow.id ? updatedRow : row))
-        )
-        setStatusMessage(`Updated ${selectedFormLabel} email address for ${locationName}.`)
-      } else {
-        const createdRow = await createFormEmail({
-          locationId: locationId,
-          formId: selectedFormId,
-          locationLabel: locationName,
-          emailAddress: normalized,
-        })
-
-        setRows((current) => [createdRow, ...current])
-        setStatusMessage(`Added a new ${selectedFormLabel} email address for ${locationName}.`)
-      }
-
+      setStatusMessage(
+        editorMode === "edit"
+          ? `Updated ${selectedFormLabel} email address for ${locationName}.`
+          : `Added a new ${selectedFormLabel} email address for ${locationName}.`
+      )
       closeEditor()
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to save the form email address."
-      )
-    } finally {
-      setSaving(false)
+      setError(getClubmanErrorMessage(requestError))
     }
   }
 
   async function confirmDelete() {
-    if (!locationId || !selectedFormId || !deletingRow || deletingId) {
+    if (!connectionName || !deletingRow || deletingId) {
       return
     }
 
@@ -330,25 +279,17 @@ export function FormEmailsScreen() {
 
     try {
       await deleteFormEmail({
-        locationId: locationId,
-        formId: selectedFormId,
-        locationLabel: locationName,
-        emailId: deletingRow.id,
-      })
+        EmailReferenceId: deletingRow.id,
+        ConnectionString: connectionName,
+      }).unwrap()
 
-      const nextRows = rows.filter((currentRow) => currentRow.id !== deletingRow.id)
-      setRows(nextRows)
       if (editingEmailId === deletingRow.id) {
         closeEditor()
       }
       setStatusMessage(`Removed ${deletingRow.emailAddress} from ${selectedFormLabel}.`)
       setDeletingRow(null)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to delete the form email address."
-      )
+      setError(getClubmanErrorMessage(requestError))
     } finally {
       setDeletingId(null)
     }
@@ -375,7 +316,7 @@ export function FormEmailsScreen() {
                 type="button"
                 variant="outline"
                 onClick={closeEditor}
-                disabled={saving}
+                disabled={isSaving}
               >
                 Cancel
               </Button>
@@ -383,9 +324,9 @@ export function FormEmailsScreen() {
                 type="button"
                 className="gap-2"
                 onClick={() => void handleSave()}
-                disabled={!canSave || saving}
+                disabled={!canSave || isSaving}
               >
-                {saving ? (
+                {isSaving ? (
                   <LoaderCircle className="size-4 animate-spin" />
                 ) : (
                   <Mail className="size-4" />
@@ -407,8 +348,8 @@ export function FormEmailsScreen() {
             Form Emails
           </h1>
           <p className="text-sm text-muted-foreground">
-            Manage which email addresses receive submissions for each venue form,
-            using mock service data until the backend API is connected.
+            Manage which email addresses receive submissions for each venue form.
+            Form options are derived from ItemId values returned by GetFormEmails.
           </p>
         </div>
 
@@ -421,8 +362,8 @@ export function FormEmailsScreen() {
                 value={selectedFormId}
                 onChange={setSelectedFormId}
                 options={formOptions}
-                placeholder={loadingForms ? "Loading forms..." : "Select form"}
-                disabled={!locationId || loadingForms || formOptions.length === 0}
+                placeholder={loading ? "Loading forms..." : "Select form"}
+                disabled={!locationId || loading || formOptions.length === 0}
               />
             </div>
 
@@ -462,10 +403,10 @@ export function FormEmailsScreen() {
               <div className="p-4">
                 <VenueNoLocationState featureLabel="Form emails" />
               </div>
-            ) : loadingForms ? (
+            ) : loading ? (
               <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
                 <LoaderCircle className="size-4 animate-spin" />
-                Loading forms...
+                Loading form emails...
               </div>
             ) : !selectedFormId ? (
               <div className="p-4">
@@ -473,11 +414,6 @@ export function FormEmailsScreen() {
                   title="Select a form to view its recipients."
                   description="Choose one of the available forms to manage the email addresses tied to it."
                 />
-              </div>
-            ) : loadingRows ? (
-              <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
-                <LoaderCircle className="size-4 animate-spin" />
-                Loading email addresses...
               </div>
             ) : rows.length === 0 && editorMode !== "create" ? (
               <div className="p-4">

@@ -17,10 +17,11 @@ import {
 } from "@/components/ui/dialog"
 import {
   buildPaymentSummary,
-  buildShowDetails,
   fmtAmount,
   groupDoorCheckoutByDate,
+  isRefund,
   normalizeDoorCheckoutRows,
+  resolvePaymentDisplayName,
   type DoorCheckoutApiRow,
 } from "@/features/reports/door-checkout-data"
 import {
@@ -63,14 +64,29 @@ type DrillTarget = {
   showId: string
   showdt: string
   pymtType?: string
-  ccType?: string
   label: string
+}
+
+// One line per raw API row within a payment-type block
+type ShowLineInGroup = {
+  showId: string
+  showdt: string
+  comicName: string
+  payments: number   // positive, or 0 if refund
+  refunds: number    // negative, or 0 if payment
+  total: number      // row.Total (negative for refunds)
+}
+
+type PaymentTypeGroup = {
+  type: string
+  lines: ShowLineInGroup[]
+  totalPayments: number
+  totalRefunds: number
+  total: number
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// Map payment display names to API lookup codes (PAYTYPE / CCTYPE)
-// The main report returns display names; the drill-down API expects these codes.
 const PYMT_CODE_MAP: Record<string, { PymtType: string; CCType: string }> = {
   "Cash":               { PymtType: "PYMT05", CCType: "" },
   "Gift Card":          { PymtType: "PYMT03", CCType: "" },
@@ -101,6 +117,72 @@ function fmtShowLabel(showdt: string, comicName: string): string {
   return comicName !== "—" ? `${formattedShow} – ${comicName}` : formattedShow
 }
 
+/**
+ * Groups raw API rows by resolved payment display name.
+ * Each API row becomes its own line — nothing is collapsed.
+ * This means a show with both a Cash payment and a Cash refund
+ * will produce TWO separate Cash lines (3 Cash rows instead of 2).
+ */
+function buildPaymentTypeGroupsFromRows(rows: DoorCheckoutApiRow[]): PaymentTypeGroup[] {
+  const map = new Map<string, ShowLineInGroup[]>()
+
+  for (const row of rows) {
+    const type = resolvePaymentDisplayName(row)
+    const total = row.Total ?? 0
+    const ref = isRefund(row)
+
+    const line: ShowLineInGroup = {
+      showId: row.ShowId ?? "",
+      showdt: row.Showdt ?? "",
+      comicName: row.ComicName ?? "",
+      payments: ref ? 0 : total,
+      refunds: ref ? total : 0,
+      total,
+    }
+
+    if (!map.has(type)) map.set(type, [])
+    map.get(type)!.push(line)
+  }
+
+  return Array.from(map.entries()).map(([type, lines]) => ({
+    type,
+    lines,
+    totalPayments: lines.reduce((s, l) => s + l.payments, 0),
+    totalRefunds: lines.reduce((s, l) => s + l.refunds, 0),
+    total: lines.reduce((s, l) => s + l.total, 0),
+  }))
+}
+
+// ─── Clickable blue drill cell (show details only) ────────────────────────────
+
+function DrillCell({
+  children,
+  onClick,
+  right,
+  canDrill,
+  className,
+}: {
+  children: React.ReactNode
+  onClick?: () => void
+  right?: boolean
+  canDrill: boolean
+  className?: string
+}) {
+  return (
+    <td
+      onClick={canDrill ? onClick : undefined}
+      className={cn(
+        "border border-border px-3 py-2 text-xs whitespace-nowrap font-medium text-blue-600",
+        right && "text-right tabular-nums",
+        canDrill && "cursor-pointer hover:text-blue-800 transition-colors",
+        className
+      )}
+    >
+      {children}
+    </td>
+  )
+}
+
 // ─── Drill-down Dialog ─────────────────────────────────────────────────────────
 
 function DrillDownDialog({
@@ -118,13 +200,14 @@ function DrillDownDialog({
   const [error, setError] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
 
-  // Fetch on mount
   useEffect(() => {
     async function load() {
       setIsLoading(true)
       setError(null)
       try {
-        const codes = target.pymtType ? resolvePaymentCodes(target.pymtType) : { PymtType: "", CCType: "" }
+        const codes = target.pymtType
+          ? resolvePaymentCodes(target.pymtType)
+          : { PymtType: "", CCType: "" }
         const data = await generateReport({
           endpoint: "GetDoorCheckOutTotalData",
           body: {
@@ -150,7 +233,7 @@ function DrillDownDialog({
       }
     }
     load()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const total = (drillRows ?? []).reduce((s, r) => s + (r.Amount ?? 0), 0)
@@ -166,23 +249,16 @@ function DrillDownDialog({
       >
         <DialogHeader className={cn(REPORT_DRILL_HEADER_CLASS, "relative")}>
           <DialogTitle className="text-base flex flex-col lg:flex-row">
-            Door CheckOut Drill Down Report
-            {target.label && (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">— {target.label}</span>
-            )}
+            Door CheckOut Drill Down Report :
           </DialogTitle>
           <button
             type="button"
             className="absolute top-1/2 right-14 z-10 flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
             aria-label={isExpanded ? "Restore dialog size" : "Expand dialog"}
             title={isExpanded ? "Restore" : "Expand"}
-            onClick={() => setIsExpanded((current) => !current)}
+            onClick={() => setIsExpanded((v) => !v)}
           >
-            {isExpanded ? (
-              <Minimize2 className="size-4" />
-            ) : (
-              <Maximize2 className="size-4" />
-            )}
+            {isExpanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
           </button>
         </DialogHeader>
 
@@ -229,7 +305,7 @@ function DrillDownDialog({
                       <tr key={i} className={reportRowClass(i)}>
                         <ReportTd>{fmtDatetime(row.Showdt)}</ReportTd>
                         <ReportTd>{row.PymtStatus ?? "—"}</ReportTd>
-                        <ReportTd blue>{row.PymtType ?? "—"}</ReportTd>
+                        <ReportTd>{row.PymtType ?? "—"}</ReportTd>
                         <ReportTd>{row.CCType ?? "—"}</ReportTd>
                         <ReportTd>{row.Source ?? "—"}</ReportTd>
                         <ReportTd>{row.Promo ?? "—"}</ReportTd>
@@ -250,7 +326,12 @@ function DrillDownDialog({
         )}
 
         {!isLoading && drillRows && drillRows.length > 0 && (
-          <div className={cn(REPORT_DRILL_FOOTER_CLASS, "flex items-center justify-between text-left")}>
+          <div
+            className={cn(
+              REPORT_DRILL_FOOTER_CLASS,
+              "flex items-center justify-between text-left"
+            )}
+          >
             <span className="text-xs text-muted-foreground">
               {drillRows.length} record{drillRows.length !== 1 ? "s" : ""}
             </span>
@@ -277,30 +358,45 @@ function DateSection({
 }) {
   const [drillTarget, setDrillTarget] = useState<DrillTarget | null>(null)
 
+  // Payment summary (top table) — aggregated by payment type
   const paymentSummary = buildPaymentSummary(rows)
-  const showDetails = buildShowDetails(rows)
+
+  // Show details (bottom table) — one row per raw API row, grouped by payment type
+  const paymentTypeGroups = buildPaymentTypeGroupsFromRows(rows)
 
   const grandPayments = paymentSummary.reduce((s, r) => s + r.payments, 0)
   const grandRefunds = paymentSummary.reduce((s, r) => s + r.refunds, 0)
   const grandTotal = grandPayments + grandRefunds
 
-  function openDrill(showId: string, showdt: string, label: string, pymtType?: string, ccType?: string) {
+  const canDrill = !!drillContext
+
+  function openDrill(showId: string, showdt: string, label: string, pymtType?: string) {
     if (!drillContext) return
-    setDrillTarget({ showId, showdt, pymtType, ccType, label })
+    setDrillTarget({ showId, showdt, pymtType, label })
   }
+
+  // Fixed-width numeric columns wide enough for "1,143.92"
+  const numColCls = "w-32 min-w-[7.5rem]"
 
   return (
     <>
       <ReportCard>
         <ReportSectionBar>Checkout Date: {formatUsDateFromValue(date, date)}</ReportSectionBar>
 
-        <div className="space-y-4 p-3">
-          {/* 1 — Payment type summary */}
+        <div className="p-3 space-y-4">
+
+          {/* ── Table 1: Payment Type Summary (no blue, no dialog) ── */}
           <ReportTableScroll>
-            <ReportTable>
+            <table className="w-full border-collapse text-xs">
+              <colgroup>
+                <col className="w-auto" />
+                <col className={numColCls} />
+                <col className={numColCls} />
+                <col className={numColCls} />
+              </colgroup>
               <thead>
                 <tr>
-                  <ReportTh className="min-w-32">Payment Type</ReportTh>
+                  <ReportTh>Payment Type</ReportTh>
                   <ReportTh right>Payments</ReportTh>
                   <ReportTh right>Refunds</ReportTh>
                   <ReportTh right>Totals</ReportTh>
@@ -312,22 +408,34 @@ function DateSection({
                     <ReportTd>{row.type}</ReportTd>
                     <ReportTd right>{fmt(row.payments)}</ReportTd>
                     <ReportTd right>{fmt(row.refunds)}</ReportTd>
-                    <ReportTd right blue={row.total !== 0}>{fmt(row.total)}</ReportTd>
+                    {/* Plain totals — no blue, no dialog */}
+                    <ReportTd right>{fmt(row.total)}</ReportTd>
                   </tr>
                 ))}
+                {/* Summary subtotal row */}
                 <tr className="bg-muted/10">
                   <ReportTd />
                   <ReportTd right>{fmt(grandPayments)}</ReportTd>
                   <ReportTd right>{fmt(grandRefunds)}</ReportTd>
-                  <ReportTd right blue={grandTotal !== 0}>{fmt(grandTotal)}</ReportTd>
+                  <ReportTd right>{fmt(grandTotal)}</ReportTd>
                 </tr>
               </tbody>
-            </ReportTable>
+            </table>
           </ReportTableScroll>
 
-          {/* 2 — Show details: Payment Type and Total are both clickable */}
+          {/* ── Table 2: Show details grouped by payment type ── */}
+          {/* Each raw API row = one table row; Cash rows first, then Visa rows, etc. */}
           <ReportTableScroll>
-            <ReportTable>
+            <table className="w-full border-collapse text-xs">
+              <colgroup>
+                {/* Show column stretches */}
+                <col className="w-auto" />
+                {/* Payment Type column stretches */}
+                <col className="w-auto" />
+                <col className={numColCls} />
+                <col className={numColCls} />
+                <col className={numColCls} />
+              </colgroup>
               <thead>
                 <tr>
                   <ReportTh>Show</ReportTh>
@@ -338,68 +446,69 @@ function DateSection({
                 </tr>
               </thead>
               <tbody>
-                {showDetails.map((show, si) => (
+                {paymentTypeGroups.map((group, gi) => (
                   <>
-                    {show.paymentLines.map((line, li) => {
-                      const drillLabel = `${fmtShowLabel(show.showdt, show.comicName)} (${line.type})`
-                      const canDrill = !!drillContext
+                    {group.lines.map((line, li) => {
+                      const drillLabel = `${fmtShowLabel(line.showdt, line.comicName)} (${group.type})`
                       return (
-                        <tr key={`${si}-${li}`} className={reportRowClass(si)}>
-                          {li === 0 ? (
-                            <ReportTd className="font-medium" rowSpan={show.paymentLines.length}>
-                              {fmtShowLabel(show.showdt, show.comicName)}
-                            </ReportTd>
-                          ) : null}
-                          <td
-                            className={cn(
-                              "border border-border px-3 py-2 text-xs whitespace-nowrap text-blue-600 font-medium",
-                              canDrill && "cursor-pointer underline hover:text-blue-800 transition-colors"
-                            )}
-                            onClick={() => canDrill && openDrill(show.showId, show.showdt, drillLabel, line.type)}
+                        <tr key={`${gi}-${li}`} className={reportRowClass(gi)}>
+                          {/* Show label */}
+                          <ReportTd className="font-medium">
+                            {fmtShowLabel(line.showdt, line.comicName)}
+                          </ReportTd>
+                          {/* Payment Type — blue/clickable → drill for this specific show + type */}
+                          <DrillCell
+                            canDrill={canDrill}
+                            onClick={() =>
+                              openDrill(line.showId, line.showdt, drillLabel, group.type)
+                            }
                           >
-                            {line.type}
-                          </td>
-                          <ReportTd right>{fmt(line.payments)}</ReportTd>
-                          <ReportTd right>{fmt(line.refunds)}</ReportTd>
-                          <td
-                            className={cn(
-                              "border border-border px-3 py-2 text-xs whitespace-nowrap text-right tabular-nums",
-                              line.total !== 0 && "text-blue-600",
-                              canDrill && line.total !== 0 && "cursor-pointer font-medium underline hover:text-blue-800 transition-colors"
-                            )}
-                            onClick={() => canDrill && line.total !== 0 && openDrill(show.showId, show.showdt, drillLabel, line.type)}
-                          >
-                            {fmt(line.total)}
-                          </td>
+                            {group.type}
+                          </DrillCell>
+                          <ReportTd right>
+                            {line.payments !== 0 ? fmt(line.payments) : ""}
+                          </ReportTd>
+                          <ReportTd right>
+                            {fmt(line.refunds)}
+                          </ReportTd>
+                          {/* Totals — plain, no blue, no dialog */}
+                          <ReportTd right>{fmt(line.total)}</ReportTd>
                         </tr>
                       )
                     })}
+
+                    {/* Payment type subtotal — total is blue/clickable for all shows of this type */}
                     <tr className="bg-muted/20">
                       <ReportTd />
                       <ReportTd />
-                      <ReportTd right>{fmt(show.totalPayments)}</ReportTd>
-                      <ReportTd right>{fmt(show.totalRefunds)}</ReportTd>
-                      <ReportTd right blue>{fmt(show.total)}</ReportTd>
+                      <ReportTd right>{fmt(group.totalPayments)}</ReportTd>
+                      <ReportTd right>{fmt(group.totalRefunds)}</ReportTd>
+                      <DrillCell
+                        right
+                        canDrill={canDrill}
+                        onClick={() =>
+                          openDrill("", date, `${group.type} — All Shows`, group.type)
+                        }
+                      >
+                        {fmt(group.total)}
+                      </DrillCell>
                     </tr>
                   </>
                 ))}
               </tbody>
-            </ReportTable>
-          </ReportTableScroll>
-
-          {/* 3 — Grand Total */}
-          <div className="flex justify-end">
-            <ReportTable>
-              <tbody>
+              {/* Grand Total — plain, no yellow */}
+              <tfoot>
                 <tr className="bg-muted/40">
-                  <ReportTd bold>Total</ReportTd>
+                  <ReportTd bold className="text-right">Total</ReportTd>
+                  <ReportTd />
                   <ReportTd bold right>{fmt(grandPayments)}</ReportTd>
                   <ReportTd bold right>{fmt(grandRefunds)}</ReportTd>
-                  <ReportTd bold right blue>{fmt(grandTotal)}</ReportTd>
+                  <ReportTd bold right>{fmt(grandTotal)}</ReportTd>
                 </tr>
-              </tbody>
-            </ReportTable>
-          </div>
+              </tfoot>
+            </table>
+          </ReportTableScroll>
+
         </div>
       </ReportCard>
 
@@ -423,7 +532,12 @@ type DoorCheckoutViewProps = {
   drillContext?: ReportDrillContext
 }
 
-export function DoorCheckoutView({ rawData, subtitle, generatedAt, drillContext }: DoorCheckoutViewProps) {
+export function DoorCheckoutView({
+  rawData,
+  subtitle,
+  generatedAt,
+  drillContext,
+}: DoorCheckoutViewProps) {
   const rows = normalizeDoorCheckoutRows(rawData)
 
   if (!rows.length) {
@@ -438,11 +552,15 @@ export function DoorCheckoutView({ rawData, subtitle, generatedAt, drillContext 
     <ReportViewShell>
       <ReportHeader title="Door Checkout" subtitle={subtitle} generatedAt={generatedAt} />
 
-      {isSeparateByUsers && summaryRows.length > 0 && (
+      {isSeparateByUsers && summaryRows.length > 0 &&
         groupDoorCheckoutByDate(summaryRows).map(([date, dateRows]) => (
-          <DateSection key={`summary-${date}`} date={date} rows={dateRows} drillContext={drillContext} />
-        ))
-      )}
+          <DateSection
+            key={`summary-${date}`}
+            date={date}
+            rows={dateRows}
+            drillContext={drillContext}
+          />
+        ))}
 
       {isSeparateByUsers ? (
         (() => {
@@ -458,7 +576,12 @@ export function DoorCheckoutView({ rawData, subtitle, generatedAt, drillContext 
                 User: {userName || "(unknown)"}
               </div>
               {groupDoorCheckoutByDate(perUserRows).map(([date, dateRows]) => (
-                <DateSection key={`${userName}-${date}`} date={date} rows={dateRows} drillContext={drillContext} />
+                <DateSection
+                  key={`${userName}-${date}`}
+                  date={date}
+                  rows={dateRows}
+                  drillContext={drillContext}
+                />
               ))}
             </div>
           ))
