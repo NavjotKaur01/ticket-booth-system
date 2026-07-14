@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import { useState } from "react"
 import { Outlet } from "react-router-dom"
 
@@ -49,8 +49,13 @@ export function AppLayout({ session }: AppLayoutProps) {
   const [searchReservationOpen, setSearchReservationOpen] = useState(false)
   const [paymentHistoryOpen, setPaymentHistoryOpen] = useState(false)
 
+  const sidebarWidth = sidebarCollapsed ? "4.25rem" : "16rem"
+
   return (
-    <div className="flex h-screen overflow-hidden bg-muted">
+    <div
+      className="flex min-h-dvh bg-muted"
+      style={{ "--app-sidebar-width": sidebarWidth } as CSSProperties}
+    >
       <div
         className={cn(
           "fixed inset-0 z-40 bg-black/40 lg:hidden",
@@ -62,7 +67,8 @@ export function AppLayout({ session }: AppLayoutProps) {
 
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 h-full shrink-0 lg:static lg:z-auto",
+          "fixed inset-y-0 left-0 z-50 h-full shrink-0",
+          "lg:sticky lg:top-0 lg:z-auto lg:h-dvh lg:self-start",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
           "transition-transform duration-300"
         )}
@@ -83,7 +89,7 @@ export function AppLayout({ session }: AppLayoutProps) {
         />
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col pb-10">
         <AdjustFeesDialog
           open={adjustFeesOpen}
           onOpenChange={setAdjustFeesOpen}
@@ -101,14 +107,17 @@ export function AppLayout({ session }: AppLayoutProps) {
           onMenuClick={() => setMobileOpen((prev) => !prev)}
         />
 
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto flex h-full min-h-0 max-w-[1600px] flex-col px-3 py-3 sm:px-4 md:px-5 lg:p-4">
+        <main className="flex-1">
+          <div className="mx-auto max-w-[1600px] px-3 py-3 sm:px-4 md:px-5 lg:p-4">
             <Outlet />
           </div>
         </main>
-
-        <AppFooter locationName={locSName || session.locationName} />
       </div>
+
+      <AppFooter
+        locationName={locSName || session.locationName}
+        className="fixed inset-x-0 bottom-0 z-20 lg:left-(--app-sidebar-width)"
+      />
     </div>
   )
 }
