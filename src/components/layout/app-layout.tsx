@@ -50,7 +50,7 @@ export function AppLayout({ session }: AppLayoutProps) {
   const [paymentHistoryOpen, setPaymentHistoryOpen] = useState(false)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-muted">
+    <div className="flex h-dvh overflow-hidden bg-muted">
       <div
         className={cn(
           "fixed inset-0 z-40 bg-black/40 lg:hidden",
