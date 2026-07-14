@@ -19,6 +19,7 @@ import { TicketPriceBreakdownView } from "@/features/reports/ticket-price-breakd
 import { PromoReportView } from "@/features/reports/promo-report-view"
 import { SalesByShowView } from "@/features/reports/sales-by-show-view"
 import { WebReservationsForDayView } from "@/features/reports/web-reservations-for-day-view"
+import { ComicTicketRevenueView } from "@/features/reports/comic-ticket-revenue-view"
 
 type ReportViewerResultsProps = {
   result: ReportViewerResult | null
@@ -153,6 +154,16 @@ export function ReportViewerResults({
   if (result.reportType === "web-reservations-for-day") {
     return (
       <WebReservationsForDayView
+        rawData={result.rawData}
+        subtitle={result.subtitle}
+        generatedAt={result.generatedAt}
+      />
+    )
+  }
+
+  if (result.reportType === "comic-ticket-revenue") {
+    return (
+      <ComicTicketRevenueView
         rawData={result.rawData}
         subtitle={result.subtitle}
         generatedAt={result.generatedAt}

@@ -110,14 +110,17 @@ export function Reports() {
 
   const comedianOptions = useMemo(
     () =>
-      rawComedianList.map((c) => {
-        // The API returns "ComicName" as the display field.
-        // WPF maps it to "CominName" client-side; StageName and First/LastName are fallbacks.
-        // Per spec: show blank if name is unavailable (never fall back to the GUID).
-        const nameParts = [c.LastName, c.FirstName].filter(Boolean).join(", ")
-        const label = c.ComicName || c.CominName || c.StageName || nameParts || ""
-        return { id: c.ComicID, label }
-      }),
+      rawComedianList
+        .map((c) => {
+          // The API returns "ComicName" as the display field.
+          // WPF maps it to "CominName" client-side; StageName and First/LastName are fallbacks.
+          // Per spec: show blank if name is unavailable (never fall back to the GUID).
+          const nameParts = [c.LastName, c.FirstName].filter(Boolean).join(", ")
+          const label = c.ComicName || c.CominName || c.StageName || nameParts || ""
+          return { id: c.ComicID, label }
+        })
+        // Drop nameless entries so the picker never shows a blank first option.
+        .filter((option) => option.label.trim() !== ""),
     [rawComedianList]
   )
 
@@ -134,7 +137,7 @@ export function Reports() {
       return {
         ...current,
         reportType: resolvedReportType,
-        headlinerId: nextConfig.showComicPicker ? current.headlinerId : "",
+        headlinerId: "",
         isAllDates: nextConfig.showAllDatesOption ? current.isAllDates : false,
         isWebReservationOnly: nextConfig.showWebReservationOnly
           ? current.isWebReservationOnly
@@ -167,15 +170,6 @@ export function Reports() {
   }, [locationId])
 
   useEffect(() => {
-    if (comedianOptions.length > 0 && !draftFilters.headlinerId) {
-      setDraftFilters((current) => ({
-        ...current,
-        headlinerId: comedianOptions[0].id,
-      }))
-    }
-  }, [comedianOptions, draftFilters.headlinerId])
-
-  useEffect(() => {
     if (!reportOptions.length) return
 
     const urlReport = searchParams.get("report")
@@ -192,7 +186,7 @@ export function Reports() {
       return {
         ...current,
         reportType: nextReportType,
-        headlinerId: nextConfig.showComicPicker ? current.headlinerId : "",
+        headlinerId: "",
         isAllDates: nextConfig.showAllDatesOption ? current.isAllDates : false,
         isWebReservationOnly: nextConfig.showWebReservationOnly ? current.isWebReservationOnly : false,
         isSeparateByUsers: nextReportType === "door-checkout" ? true : (nextConfig.showSeparateByUsers ? current.isSeparateByUsers : false),
@@ -212,7 +206,7 @@ export function Reports() {
       setDraftFilters((current) => ({
         ...current,
         [key]: value,
-        headlinerId: nextConfig.showComicPicker ? current.headlinerId : "",
+        headlinerId: "",
         isAllDates: nextConfig.showAllDatesOption ? current.isAllDates : false,
         isWebReservationOnly: nextConfig.showWebReservationOnly ? current.isWebReservationOnly : false,
         isSeparateByUsers: nextType === "door-checkout" ? true : (nextConfig.showSeparateByUsers ? current.isSeparateByUsers : false),
