@@ -41,6 +41,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { deleteEmploymentOpening } from "@/features/employment-openings/employment-openings.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useGetEmploymentPositionsQuery, useAddUpdateEmploymentPositionMutation } from "@/store/api/clubmanApi"
 import type { EmploymentOpeningRecord } from "@/types/employment-opening"
