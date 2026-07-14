@@ -1,8 +1,11 @@
 import { FileDown, Plus } from "lucide-react"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 
+import { ExportDataDialog } from "@/components/common/export-data-dialog"
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
+import { ROUTES } from "@/constants/routes"
 import { AddCustomerDialog } from "@/features/customers/add-customer-dialog"
 import { CustomerDataTable } from "@/features/customers/customer-data-table"
 import { CustomerDetailsDialog } from "@/features/customers/customer-details-dialog"
@@ -11,6 +14,8 @@ import { useAppSession } from "@/hooks/use-app-session"
 import { useCustomerSearch } from "@/hooks/use-customer-search"
 import { customerFormToSearchFilters } from "@/lib/build-save-customer-request"
 import { deleteCustomerRecord } from "@/lib/delete-customer"
+import { exportCustomerRecords } from "@/lib/export-customers"
+import type { ExportFormat } from "@/lib/export-table-data"
 import type { Customer, CustomerSearchFilters } from "@/types/customer"
 import type { CustomerFormValues } from "@/types/customer-form"
 
@@ -24,15 +29,24 @@ const EMPTY_FILTERS: CustomerSearchFilters = {
 }
 
 export function SearchCustomer() {
+  const navigate = useNavigate()
   const { connectionName, locationId, username, userRight, isReady } =
     useAppSession()
 
-  const { customers, loading, error, hasSearched, search, removeCustomer, clear } =
-    useCustomerSearch({
-      connectionName,
-      locationId,
-      enabled: isReady,
-    })
+  const {
+    customers,
+    exportRows,
+    loading,
+    error,
+    hasSearched,
+    search,
+    removeCustomer,
+    clear,
+  } = useCustomerSearch({
+    connectionName,
+    locationId,
+    enabled: isReady,
+  })
 
   const [draftFilters, setDraftFilters] =
     useState<CustomerSearchFilters>(EMPTY_FILTERS)
@@ -40,6 +54,7 @@ export function SearchCustomer() {
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
   const [detailsCustomer, setDetailsCustomer] = useState<Customer | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
   function updateDraftField(
@@ -99,6 +114,33 @@ export function SearchCustomer() {
     }
   }
 
+  /** Mirrors ClubMan CustomerVM.BuyCertificate → AddWebGiftCert. */
+  function handleBuyCertificate(customer: Customer) {
+    setDetailsOpen(false)
+    setDetailsCustomer(null)
+    navigate(ROUTES.giftCertificate, {
+      state: { customerId: customer.id },
+    })
+  }
+
+  function handleExportOpen() {
+    if (loading) {
+      window.alert("Please wait while loading data....")
+      return
+    }
+
+    if (exportRows.length === 0) {
+      window.alert("Please search customer first!")
+      return
+    }
+
+    setExportOpen(true)
+  }
+
+  function handleExport(format: ExportFormat) {
+    return exportCustomerRecords(exportRows, format)
+  }
+
   async function handleDelete(customer: Customer) {
     setActionError(null)
 
@@ -151,7 +193,13 @@ export function SearchCustomer() {
 
       <PanelCard>
         <div className="flex shrink-0 items-center justify-end gap-2 border-b p-3">
-          <Button variant="outline" size="sm" className="gap-1.5">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={handleExportOpen}
+          >
             <FileDown className="size-3.5" />
             Export
           </Button>
@@ -202,6 +250,7 @@ export function SearchCustomer() {
         connectionName={connectionName}
         locationId={locationId}
         lastUpdateId={username}
+        onBuyCertificate={handleBuyCertificate}
         onDelete={(customer) => void handleDelete(customer)}
         onCustomerSaved={handleCustomerSaved}
       />
@@ -214,6 +263,12 @@ export function SearchCustomer() {
         lastUpdateId={username}
         customer={editCustomer}
         onSaved={handleCustomerSaved}
+      />
+
+      <ExportDataDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        onExport={handleExport}
       />
     </div>
   )
