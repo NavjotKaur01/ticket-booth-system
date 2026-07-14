@@ -68,30 +68,32 @@ function PerformerTabs({
   onTabChange: (tab: PerformerTab) => void
 }) {
   return (
-    <div
-      role="tablist"
-      aria-label="Performer form sections"
-      className="inline-flex flex-wrap rounded-sm border border-border bg-muted/30 p-0.5"
-    >
-      {PERFORMER_TABS.map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          role="tab"
-          id={`performer-tab-${tab.id}`}
-          aria-selected={activeTab === tab.id}
-          aria-controls={`performer-panel-${tab.id}`}
-          onClick={() => onTabChange(tab.id)}
-          className={cn(
-            "rounded-sm px-3 py-1.5 text-sm font-medium transition-colors sm:px-4",
-            activeTab === tab.id
-              ? "bg-background text-primary shadow-xs"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {tab.label}
-        </button>
-      ))}
+    <div className="max-w-full overflow-x-auto">
+      <div
+        role="tablist"
+        aria-label="Performer form sections"
+        className="inline-flex w-max max-w-full flex-nowrap rounded-sm border border-border bg-muted/30 p-0.5"
+      >
+        {PERFORMER_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            id={`performer-tab-${tab.id}`}
+            aria-selected={activeTab === tab.id}
+            aria-controls={`performer-panel-${tab.id}`}
+            onClick={() => onTabChange(tab.id)}
+            className={cn(
+              "shrink-0 rounded-sm px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors sm:px-4",
+              activeTab === tab.id
+                ? "bg-background text-primary shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -589,7 +591,7 @@ export function UpdatePerformerDialog({
             </p>
           ) : null}
 
-          <div className="shrink-0 pb-3">
+          <div className="shrink-0 space-y-3 pb-3">
             <PerformerTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
             <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/10 p-3 sm:hidden">
@@ -609,7 +611,7 @@ export function UpdatePerformerDialog({
             </div>
           </div>
 
-          <div className={TAB_PANEL_HEIGHT_CLASS}>
+          <div className={cn(TAB_PANEL_HEIGHT_CLASS, "mt-1")}>
             <TabPanel
               id="performer-panel-basic"
               activeTab={activeTab}
@@ -644,10 +646,12 @@ export function UpdatePerformerDialog({
           </div>
         </div>
 
-        <DialogFooter className="shrink-0 border-t px-4 py-2">
+        <DialogFooter className="shrink-0 flex-row justify-end gap-2 border-t px-4 py-2">
           <Button
             type="button"
             variant="outline"
+            size="sm"
+            className="w-auto"
             disabled={saving}
             onClick={() => onOpenChange(false)}
           >
@@ -655,6 +659,8 @@ export function UpdatePerformerDialog({
           </Button>
           <Button
             type="button"
+            size="sm"
+            className="w-auto"
             disabled={formDisabled}
             onClick={() => void handleUpdate()}
           >
