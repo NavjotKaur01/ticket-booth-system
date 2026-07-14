@@ -61,7 +61,7 @@ export function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted px-4 py-10">
+    <div className="flex h-full min-h-0 items-center justify-center overflow-y-auto bg-muted px-4 py-10">
       <Card className="w-full max-w-[24rem] gap-0 rounded-xl border-border/80 bg-card py-0 shadow-[0_8px_30px_rgba(15,23,42,0.06)]">
         <div className="px-6 pt-8 pb-8 sm:px-8">
           <h1 className="text-center text-xl font-semibold tracking-tight text-foreground">
