@@ -49,6 +49,7 @@ import {
   showOptions,
   formatSectionDesktopPrice,
 } from '@/data/reservation'
+import { EXPIRATION_MONTHS } from '@/data/reservation-payment-options'
 import { ComicInfoDialog } from '@/features/reservations/comic-info-dialog'
 import type {
   ReservationBusinessSearchResult,
@@ -85,7 +86,6 @@ import {
 import { saveCustomer } from '@/lib/api/customers'
 import {
   assignReservationSeat,
-  openCashDrawer,
   refundReservationPayment,
   voidReservationPayment
 } from '@/lib/api/reservation-pos-actions'
@@ -441,7 +441,6 @@ function SectionPicker({
                 }
               />
             </SelectTrigger>
-
             <SelectContent onCloseAutoFocus={handlePromoCloseAutoFocus}>
               {promoOptions.map(option => (
                 <SelectItem key={option.id} value={option.id}>
@@ -1317,6 +1316,8 @@ export function AddReservationDialog({
     printProperties
   })
 
+
+
   const availableShows = apiShows
 
   const activeShowTime =
@@ -1656,7 +1657,7 @@ export function AddReservationDialog({
         existingDiscount: isEditMode && !hasPricingTriggerChanged ? reservationDetail?.Discount : undefined,
         existingSalesTax: isEditMode && !hasPricingTriggerChanged ? reservationDetail?.SalesTax : undefined,
         systemTaxRate: Number(systemDefaults?.lblTaxes || 0),
-        taxWithServiceCharge: systemDefaults?.lblTaxWithServiceCharge,
+        taxWithServiceCharge: systemDefaults?.lblTaxWithServiceCharge ?? undefined,
         baseSvcAmount,
         ccFeePercent: Number(systemDefaults?.cboCC || 0)
       })
@@ -1916,36 +1917,31 @@ export function AddReservationDialog({
   }
 
   function handleTransactionSelect(row: ReservationTransactionRow) {
-
+    console.log('row', row)
     setSelectedTransaction(row)
     setPaymentAmountOverride(formatReservationMoney(row.amount))
     setPaymentType(mapPaymentLabelToType(row.payment))
+    const expMonthIndex = Number(row.expMo) - 1
+    const expMonthName =
+      Number.isInteger(expMonthIndex) && expMonthIndex >= 0 && expMonthIndex <= 11
+        ? EXPIRATION_MONTHS[expMonthIndex]
+        : row.expMo || ''
+
+    const expYearStr = row.expYr?.length === 2 ? `20${row.expYr}` : row.expYr || ''
+
     setPaymentFields({
       ...createEmptyReservationPaymentFields(),
       cardNumber: row.cardNumber,
       cardType: row.cardType,
       authorization: row.authorization,
-      pnref: row.pnref
+      pnref: row.pnref,
+      expMonth: expMonthName,
+      expYear: expYearStr,
+      billingAddress: row.billAddr || '',
+      zipCode: row.billZip || ''
     })
     setPaymentValidationErrors({})
     setPaymentActionError(null)
-  }
-
-  async function handleCashDrawerClick() {
-    setPaymentActionBusy('cash-drawer')
-    setPaymentActionError(null)
-
-    try {
-      await openCashDrawer()
-    } catch (requestError) {
-      setPaymentActionError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'Failed to open cash drawer'
-      )
-    } finally {
-      setPaymentActionBusy(null)
-    }
   }
 
   async function handleSplitReservationClick() {
@@ -2607,7 +2603,8 @@ export function AddReservationDialog({
       password: '',
       address: '',
       city: '',
-      status: ''
+      status: '',
+      banned: false
     } satisfies Customer)
     : null
 
@@ -2634,7 +2631,8 @@ export function AddReservationDialog({
       password: '',
       address: '',
       city: '',
-      status: ''
+      status: '',
+      banned: false
     }
   }, [customerToEdit, isEditMode, reservation, resolvedEditCustomerId])
 

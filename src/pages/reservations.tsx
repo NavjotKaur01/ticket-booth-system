@@ -147,7 +147,7 @@ export function Reservations() {
     { skip: !connectionName || !locationId }
   )
 
-  console.log(systemDefaults)
+
 
   const [getReservationDetail] = clubmanApi.useLazyGetReservationDetailByIdQuery()
   const [getReservationPrintProperties] = clubmanApi.useLazyGetReservationPrintPropertiesQuery()

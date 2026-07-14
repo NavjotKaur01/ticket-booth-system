@@ -1,4 +1,4 @@
-import type { ApiShowData, ApiShowProperties } from "@/types/api/get-show-data"
+import type { ApiShowData } from "@/types/api/get-show-data"
 
 export type OriginCode = "SRC01" | "SRC02" | "SRC03"
 

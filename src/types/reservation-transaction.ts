@@ -10,5 +10,10 @@ export type ReservationTransactionRow = {
   authorization: string
   pnref: string
   isSplit: boolean
-  DueAmt: number
+  dueAmt: number
+  billAddr: string
+  billZip: string
+  expYr: string
+  expMo: string
+
 }

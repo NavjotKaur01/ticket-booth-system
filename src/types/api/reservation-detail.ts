@@ -16,6 +16,10 @@ export type ReservationDetailPaymentItem = {
   PaymentStatusCode?: string | null
   IsSelected?: boolean
   dueAmt?: number
+  ExpYr: string
+  BillZip: string
+  BillAddr: string
+  ExpMo: string
 }
 
 export type ReservationDetail = {

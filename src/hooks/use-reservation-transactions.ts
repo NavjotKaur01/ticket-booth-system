@@ -37,6 +37,8 @@ export function useReservationTransactions({
       return []
     }
 
+    console.log(paymentList)
+
     if (paymentList && paymentList.length > 0) {
       return paymentList.map((payment, index) => ({
         id: payment.PaymentID || `${reservation.id}-${index}`,
@@ -50,7 +52,11 @@ export function useReservationTransactions({
         authorization: payment.Auth ?? '',
         pnref: payment.PNREF ?? '',
         isSplit: payment.Split?.trim().toUpperCase() === 'Y',
-        DueAmt: payment?.dueAmt ?? 0
+        dueAmt: payment?.dueAmt ?? 0,
+        billAddr: payment.BillAddr ?? '',
+        billZip: payment.BillZip ?? '',
+        expYr: payment.ExpYr ?? '',
+        expMo: payment.ExpMo ?? ''
       }))
     }
 
@@ -73,7 +79,11 @@ export function useReservationTransactions({
         authorization: printProperties?.Auth ?? '',
         pnref: printProperties?.PNREF ?? '',
         isSplit: false,
-        DueAmt: printProperties?.DueAmount ?? 0
+        dueAmt: printProperties?.DueAmount ?? 0,
+        billAddr: '',
+        billZip: '',
+        expYr: '',
+        expMo: ''
       }
     ]
   }, [paymentList, printProperties, reservation])

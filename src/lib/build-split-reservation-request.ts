@@ -147,6 +147,7 @@ export function buildSplitReservationRequest({
   isSplitFlag,
   paymentAmount,
   promoId,
+  taxRate,
   detail
 }: {
   connectionName: string

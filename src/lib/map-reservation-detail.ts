@@ -86,7 +86,7 @@ export function mapReservationDetailPayment(
   raw: unknown
 ): ReservationDetailPaymentItem {
   if (!raw || typeof raw !== 'object') {
-    return { PaymentID: '' }
+    return { PaymentID: '', ExpYr: '', BillZip: '', BillAddr: '', ExpMo: '' }
   }
 
   const record = raw as Record<string, unknown>
@@ -111,6 +111,10 @@ export function mapReservationDetailPayment(
     PaymentStatusCode:
       readString(record, ['PaymentStatusCode', 'paymentStatusCode']) || null,
     IsSelected: readBoolean(record, ['IsSelected', 'isSelected']),
+    ExpYr: readString(record, ['ExpYr', 'expYr', 'ExpYear', 'expYear', 'ExpirationYear', 'expirationYear', 'CCExpYear', 'ccExpYear']) || '',
+    BillZip: readString(record, ['BillZip', 'billZip', 'ZipCode', 'zipCode', 'BillingZip', 'billingZip']) || '',
+    BillAddr: readString(record, ['BillAddr', 'billAddr', 'BillingAddress', 'billingAddress', 'Address', 'address']) || '',
+    ExpMo: readString(record, ['ExpMo', 'expMo', 'ExpMonth', 'expMonth', 'ExpirationMonth', 'expirationMonth', 'CCExpMonth', 'ccExpMonth']) || '',
   }
 }
 

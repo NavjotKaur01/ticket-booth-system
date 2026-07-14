@@ -24,7 +24,6 @@ import {
 } from '@/lib/build-split-reservation-request'
 import { formatReservationMoney, parseReservationMoney } from '@/lib/calculate-reservation-totals'
 import {
-  findReservationPromoId,
   findReservationSection,
   mapReservationSourceToOrigin
 } from '@/lib/reservation-edit'
@@ -149,8 +148,7 @@ export function SplitReservationDialog({
   const unitPrice = parseReservationMoney(matchedSection?.price ?? '0')
   const origin = reservation ? mapReservationSourceToOrigin(reservation.source) : 'phone'
   const promotionCode = detail?.Promo?.trim() ?? reservation?.promo.trim() ?? ''
-  const matchedPromoId = findReservationPromoId(promoOptions, promotionCode)
-  const promo = promoById.get(matchedPromoId) ?? null
+
 
   const origTotals = {
     subtotal: detail?.SubTotal ?? 0,

@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils"
 type DialogLayer = "base" | "nested"
 
 const DialogLayerContext = React.createContext<DialogLayer>("base")
-const DialogShowCloseContext = React.createContext(true)
 
 export function useDialogLayer() {
   return React.useContext(DialogLayerContext)
@@ -104,9 +103,6 @@ function shouldPreventOutsideDismiss(
     event.preventDefault()
   }
 }
-
-const dialogCloseButtonClassName =
-  "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none disabled:pointer-events-none"
 
 function DialogContent({
   className,
