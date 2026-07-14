@@ -14,10 +14,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAppSession } from "@/hooks/use-app-session"
 import { saveComedian } from "@/lib/api/comedians"
 import { buildSaveComedianRequest } from "@/lib/build-save-comedian-request"
+import { cn } from "@/lib/utils"
 import {
   EMPTY_PERFORMER_FORM,
   type PerformerFormValues,
 } from "@/types/performer-form"
+
+const FILE_INPUT_CLASS =
+  "min-w-0 flex-1 cursor-pointer file:mr-3 file:cursor-pointer file:rounded-sm file:border-0 file:bg-muted file:px-3 file:py-1 file:text-sm file:font-medium"
 
 type AddPerformerDialogProps = {
   open: boolean
@@ -35,12 +39,14 @@ export function AddPerformerDialog({
 }: AddPerformerDialogProps) {
   const { connectionName, locationId, username, isReady } = useAppSession()
   const [form, setForm] = useState<PerformerFormValues>(EMPTY_PERFORMER_FORM)
+  const [imageFileName, setImageFileName] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (!open) {
       setForm(EMPTY_PERFORMER_FORM)
+      setImageFileName("")
       setError(null)
       setSaving(false)
     }
@@ -98,9 +104,9 @@ export function AddPerformerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton
-        className="flex max-h-[92vh] max-w-3xl flex-col overflow-hidden sm:max-w-3xl"
+        className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden sm:max-w-3xl"
       >
-        <DialogHeader className="shrink-0 gap-0 border-b px-4 py-3 pr-12">
+        <DialogHeader className="shrink-0 gap-0 border-b px-4 py-3">
           <DialogTitle className="text-lg leading-snug font-normal">
             <span className="font-semibold text-foreground">
               {saveViaApi ? "Add Comedian" : "Add Performer"}
@@ -108,20 +114,9 @@ export function AddPerformerDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="overflow-y-auto px-4 py-3">
+        <div className="min-h-0 overflow-y-auto px-4 py-3">
           {error ? <p className="mb-3 text-sm text-destructive">{error}</p> : null}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <FormField label="Last Name" htmlFor="add-performer-last-name">
-              <Input
-                id="add-performer-last-name"
-                value={form.lastName}
-                disabled={saving}
-                onChange={(event) =>
-                  updateField("lastName", event.target.value)
-                }
-              />
-            </FormField>
-
+          <div className="grid gap-2.5 sm:grid-cols-2">
             <FormField label="First Name" htmlFor="add-performer-first-name">
               <Input
                 id="add-performer-first-name"
@@ -129,6 +124,17 @@ export function AddPerformerDialog({
                 disabled={saving}
                 onChange={(event) =>
                   updateField("firstName", event.target.value)
+                }
+              />
+            </FormField>
+
+            <FormField label="Last Name" htmlFor="add-performer-last-name">
+              <Input
+                id="add-performer-last-name"
+                value={form.lastName}
+                disabled={saving}
+                onChange={(event) =>
+                  updateField("lastName", event.target.value)
                 }
               />
             </FormField>
@@ -149,7 +155,7 @@ export function AddPerformerDialog({
             </FormField>
 
             <FormField
-              label="Global Bio"
+              label="Bio"
               htmlFor="add-performer-bio"
               className="sm:col-span-2"
             >
@@ -158,12 +164,12 @@ export function AddPerformerDialog({
                 value={form.bio}
                 disabled={saving}
                 onChange={(event) => updateField("bio", event.target.value)}
-                className="min-h-24 resize-y"
+                className="min-h-16 resize-y"
               />
             </FormField>
 
             <FormField
-              label="URL"
+              label="Website"
               htmlFor="add-performer-website"
               className="sm:col-span-2"
             >
@@ -176,7 +182,7 @@ export function AddPerformerDialog({
               />
             </FormField>
 
-            <FormField label="Alt URL" htmlFor="add-performer-facebook">
+            <FormField label="Facebook Page" htmlFor="add-performer-facebook">
               <Input
                 id="add-performer-facebook"
                 value={form.facebookPage}
@@ -210,8 +216,42 @@ export function AddPerformerDialog({
                 onChange={(event) =>
                   updateField("embeddedVideoCode", event.target.value)
                 }
-                className="min-h-24 resize-y font-mono text-xs"
+                className="min-h-16 resize-y font-mono text-xs"
               />
+            </FormField>
+
+            <FormField
+              label="Performer Image"
+              htmlFor="add-performer-image"
+              className="sm:col-span-2"
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  id="add-performer-image"
+                  type="file"
+                  accept="image/*"
+                  disabled={saving}
+                  className={cn(FILE_INPUT_CLASS, "w-full")}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    setImageFileName(file?.name ?? "")
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={saving}
+                  className="shrink-0 whitespace-nowrap sm:self-auto"
+                >
+                  Resize Picture
+                </Button>
+              </div>
+              {imageFileName ? (
+                <p className="mt-1 truncate text-xs text-muted-foreground">
+                  {imageFileName}
+                </p>
+              ) : null}
             </FormField>
           </div>
         </div>
