@@ -52,7 +52,7 @@ function formatDesktopDate(value: string) {
 
 function formatShowDateTime(value: string) {
   const parsed = dayjs(value)
-  return parsed.isValid() ? parsed.format("MM/DD/YYYY HH:mm") : value
+  return parsed.isValid() ? parsed.format("M/D/YYYY h:mm:ss A") : value
 }
 
 export function mapShowsAttendeesRows(rawData: unknown): ShowsAttendeesDocumentRow[] {

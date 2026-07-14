@@ -3,6 +3,10 @@ import { useCallback, useState } from "react"
 import { getClubmanErrorMessage } from "@/store/api/baseQuery"
 import { useSearchCustomersMutation } from "@/store/api/clubmanApi"
 import { hasCustomerSearchCriteria } from "@/lib/build-customer-search-request"
+import {
+  mapCustomerExportRows,
+  type CustomerExportRow,
+} from "@/lib/export-customers"
 import { mapCustomerSearchResults } from "@/lib/map-customer-search"
 import type { Customer, CustomerSearchFilters } from "@/types/customer"
 
@@ -14,6 +18,8 @@ type UseCustomerSearchParams = {
 
 type UseCustomerSearchResult = {
   customers: Customer[]
+  /** Active customers only — mirrors ClubMan CustomerExportList. */
+  exportRows: CustomerExportRow[]
   loading: boolean
   error: string | null
   hasSearched: boolean
@@ -28,6 +34,7 @@ export function useCustomerSearch({
   enabled = true,
 }: UseCustomerSearchParams): UseCustomerSearchResult {
   const [customers, setCustomers] = useState<Customer[]>([])
+  const [exportRows, setExportRows] = useState<CustomerExportRow[]>([])
   const [hasSearched, setHasSearched] = useState(false)
   const [searchCustomers, { isLoading, error, reset }] =
     useSearchCustomersMutation()
@@ -36,6 +43,7 @@ export function useCustomerSearch({
     async (filters: CustomerSearchFilters) => {
       if (!enabled || !connectionName || !locationId) {
         setCustomers([])
+        setExportRows([])
         setHasSearched(true)
         return
       }
@@ -58,8 +66,10 @@ export function useCustomerSearch({
           filters,
         }).unwrap()
         setCustomers(mapCustomerSearchResults(data))
+        setExportRows(mapCustomerExportRows(data))
       } catch {
         setCustomers([])
+        setExportRows([])
       }
     },
     [connectionName, locationId, enabled, searchCustomers]
@@ -69,10 +79,14 @@ export function useCustomerSearch({
     setCustomers((current) =>
       current.filter((customer) => customer.id !== customerId)
     )
+    setExportRows((current) =>
+      current.filter((row) => row.custId !== customerId)
+    )
   }, [])
 
   const clear = useCallback(() => {
     setCustomers([])
+    setExportRows([])
     setHasSearched(false)
     reset()
   }, [reset])
@@ -88,6 +102,7 @@ export function useCustomerSearch({
 
   return {
     customers,
+    exportRows,
     loading: isLoading,
     error: errorMessage,
     hasSearched,
