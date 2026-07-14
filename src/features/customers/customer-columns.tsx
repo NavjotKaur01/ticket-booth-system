@@ -21,7 +21,7 @@ export function createCustomerColumns({
         <DataTableColumnHeader label="Last Name" column={column} />
       ),
       cell: ({ row }) => (
-        <span className="font-medium text-foreground">{row.original.lastName}</span>
+        <span className="font-medium">{row.original.lastName}</span>
       ),
     },
     {
@@ -35,14 +35,7 @@ export function createCustomerColumns({
       header: ({ column }) => (
         <DataTableColumnHeader label="Email" column={column} />
       ),
-      cell: ({ row }) => (
-        <a
-          href={`mailto:${row.original.email}`}
-          className="cursor-pointer font-medium text-primary hover:underline"
-        >
-          {row.original.email}
-        </a>
-      ),
+      cell: ({ row }) => row.original.email,
     },
     {
       accessorKey: "password",
@@ -52,13 +45,8 @@ export function createCustomerColumns({
           <CircleHelp className="size-3.5 text-muted-foreground" aria-hidden />
         </div>
       ),
-      cell: ({ row }) => (
-        <span className="text-muted-foreground">
-          {row.original.password || "\u00A0"}
-        </span>
-      ),
-    },
-    {
+      cell: ({ row }) => row.original.password || "\u00A0",
+    },    {
       accessorKey: "address",
       header: ({ column }) => (
         <DataTableColumnHeader label="Address" column={column} />

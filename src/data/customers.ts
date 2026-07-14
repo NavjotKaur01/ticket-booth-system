@@ -11,6 +11,7 @@ export const customers: Customer[] = [
     phoneNo: "(121) 121 - 2111",
     city: "Test",
     status: "Y",
+    banned: false,
   },
   {
     id: "2",
@@ -22,6 +23,7 @@ export const customers: Customer[] = [
     phoneNo: "(171) 717 - 1717",
     city: "Columbus",
     status: "Y",
+    banned: false,
   },
   {
     id: "3",
@@ -33,5 +35,6 @@ export const customers: Customer[] = [
     phoneNo: "(111) 111 - 1111",
     city: "",
     status: "Y",
+    banned: false,
   },
 ]

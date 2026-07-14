@@ -8,6 +8,8 @@ export type Customer = {
   phoneNo: string
   city: string
   status: string
+  /** ClubMan Customer.Banned === "Y" — Search Customer red-row highlight. */
+  banned: boolean
 }
 
 export type CustomerSearchFilters = {

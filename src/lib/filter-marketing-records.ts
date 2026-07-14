@@ -18,5 +18,6 @@ export function marketingFilterRecordToCustomer(row: MarketingFilterRecord) {
     phoneNo,
     city: row.city,
     status: row.status || "N",
+    banned: false,
   }
 }
