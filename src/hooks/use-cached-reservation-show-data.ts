@@ -21,7 +21,7 @@ type UseCachedReservationShowDataParams = {
   enabled?: boolean
 }
 
-function clearCacheScope (
+function clearCacheScope(
   cacheRef: MutableRefObject<{
     scopeKey: string
     byShowId: Map<string, ShowDataCacheEntry>
@@ -34,7 +34,7 @@ function clearCacheScope (
   }
 }
 
-export function useCachedReservationShowData ({
+export function useCachedReservationShowData({
   connectionName,
   locationId,
   showDate,

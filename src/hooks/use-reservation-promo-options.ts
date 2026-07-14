@@ -16,13 +16,14 @@ type UseReservationPromoOptionsParams = {
   enabled?: boolean
 }
 
-export function useReservationPromoOptions ({
+export function useReservationPromoOptions({
   connectionName,
   locationId,
   showId,
   showDate,
   enabled = true
 }: UseReservationPromoOptionsParams) {
+
   const [promos, setPromos] = useState<ReservationPromo[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

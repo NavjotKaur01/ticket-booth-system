@@ -73,6 +73,8 @@ import {
   getReservationAmountDue,
   parseReservationMoney
 } from '@/lib/calculate-reservation-totals'
+import { calculateSvcBase, mapOriginToCode } from '@/lib/calculate-svc-base'
+import { formatUsDateTime } from '@/lib/format-us-datetime'
 import { showTimeLabelsMatch } from '@/lib/parse-admin-event-show-time'
 import {
   EMPTY_RESERVATION_CUSTOMER_SEARCH_CRITERIA,
@@ -98,6 +100,7 @@ import {
   buildSaveReservationWithPaymentRequest,
   buildUpdateReservationPaymentRequest
 } from '@/lib/build-save-reservation-request'
+import { useUpdateSplitReservationMutation, useGetShowDataQuery, useGetSystemDefaultsQuery } from '@/store/api/clubmanApi'
 import { mapReservationSearchCriteriaToCustomerForm } from '@/lib/map-reservation-search-to-customer-form'
 import { parsePhoneSearchParts, normalizePhoneSearchParts } from '@/lib/parse-phone-search-parts'
 import { resolveReservationBooking } from '@/lib/resolve-reservation-booking'
@@ -195,10 +198,20 @@ const SECTION_SEAT_STYLES = {
   availableValue: 'font-semibold text-emerald-600'
 } as const
 
-function SectionSeatDisplay({ option }: { option: SectionOption }) {
+function SectionSeatDisplay({
+  option,
+  className
+}: {
+  option: SectionOption
+  className?: string
+}) {
   return (
-    <div className='flex min-w-max items-center justify-end gap-x-1.5 whitespace-nowrap text-sm tabular-nums'>
-      <span className='shrink-0 tabular-nums text-foreground'>
+    <div
+      className={cn(
+        'flex min-w-max items-center justify-end gap-x-1.5 whitespace-nowrap text-sm tabular-nums',
+        className
+      )}
+    ><span className='shrink-0 tabular-nums text-foreground'>
         {formatSectionDesktopPrice(option.price)}
       </span>
 
@@ -344,22 +357,33 @@ function SectionPicker({
           {sections.map(option => (
             <div
               key={option.id}
-              className='grid min-w-[36rem] grid-cols-[minmax(0,1fr)_3.5rem] items-center gap-2 px-2.5 py-1.5'
+              className={cn(
+                'grid min-w-[36rem] items-center gap-x-2 gap-y-1 px-2.5 py-1.5',
+                'grid-cols-[auto_minmax(7rem,11rem)_minmax(0,1fr)_3.5rem]',
+                // between lg and xl only: collapse to 3 cols / 2 rows
+                'lg:min-w-0 lg:grid-cols-[auto_1fr_3.5rem]',
+                // revert back to the default layout at xl+
+                'xl:min-w-[36rem] xl:grid-cols-[auto_minmax(7rem,11rem)_minmax(0,1fr)_3.5rem]'
+              )}
             >
               <label
                 htmlFor={`section-${option.id}`}
-                className='grid min-w-0 cursor-pointer grid-cols-[auto_minmax(7rem,11rem)_minmax(0,1fr)] items-center gap-x-2'
+                className='contents cursor-pointer'
               >
                 <RadioGroupItem
                   value={option.id}
                   id={`section-${option.id}`}
                   className='shrink-0'
                 />
-                <span className='min-w-0 truncate text-sm font-semibold leading-tight text-foreground'>
+                <span className='min-w-0 truncate text-sm font-semibold leading-tight text-foreground lg:col-span-2 xl:col-span-1'>
                   {option.name}
                 </span>
-                <SectionSeatDisplay option={option} />
+                <SectionSeatDisplay
+                  option={option}
+                  className='lg:col-span-2 xl:col-span-1 lg:justify-start xl:justify-end'
+                />
               </label>
+
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Input
@@ -417,6 +441,7 @@ function SectionPicker({
                 }
               />
             </SelectTrigger>
+
             <SelectContent onCloseAutoFocus={handlePromoCloseAutoFocus}>
               {promoOptions.map(option => (
                 <SelectItem key={option.id} value={option.id}>
@@ -747,7 +772,7 @@ function PaymentMetadataBlock({
   createDate: string
   authorization: string
   pnref: string
-  busyAction: 'refund' | 'void' | 'clear' | 'cash-drawer' | null
+  busyAction: 'refund' | 'void' | 'clear' | 'cash-drawer' | 'split' | null
   error: string | null
   onRefund: () => void
   onVoid: () => void
@@ -1225,7 +1250,7 @@ export function AddReservationDialog({
   const [isAssigningSeat, setIsAssigningSeat] = useState(false)
   const [assignSeatError, setAssignSeatError] = useState<string | null>(null)
   const [paymentActionBusy, setPaymentActionBusy] = useState<
-    'refund' | 'void' | 'clear' | 'cash-drawer' | null
+    'refund' | 'void' | 'clear' | 'cash-drawer' | 'split' | null
   >(null)
   const [paymentActionError, setPaymentActionError] = useState<string | null>(
     null
@@ -1241,6 +1266,23 @@ export function AddReservationDialog({
     reservation?.id ?? '',
     open && isEditMode
   )
+
+  const [updateSplitReservation] = useUpdateSplitReservationMutation()
+
+  const { data: rawSystemDefaults } = useGetSystemDefaultsQuery(
+    { connectionName, locationId },
+    { skip: !open || !isReady || !connectionName || !locationId }
+  )
+
+  const systemDefaults = useMemo(() => {
+    if (!rawSystemDefaults) return {} as Record<string, string | null | undefined>
+    return rawSystemDefaults.reduce((acc, curr) => {
+      if (curr.Field) {
+        acc[curr.Field] = curr.DefValue
+      }
+      return acc
+    }, {} as Record<string, string | null | undefined>)
+  }, [rawSystemDefaults])
 
   const {
     customerResults: customerSearchResults,
@@ -1281,6 +1323,11 @@ export function AddReservationDialog({
     availableShows.find(show => show.id === showTime)?.id ??
     availableShows[0]?.id ??
     ''
+
+  const { data: showDataPayload } = useGetShowDataQuery(
+    { connectionName, showId: activeShowTime },
+    { skip: !open || !isReady || !connectionName || !activeShowTime }
+  )
 
   const {
     sections: availableSections,
@@ -1573,14 +1620,67 @@ export function AddReservationDialog({
     selectedShow?.headliner ?? reservationShowMeta.comicName
 
   const totals = useMemo(
-    () =>
-      calculateReservationTotals({
+    () => {
+
+
+
+      const originCode = mapOriginToCode(origin)
+      const isShowDataArray = Array.isArray(showDataPayload)
+      const rawSection = isShowDataArray ? showDataPayload.find(s => s.ShowDetID === section) : null
+      const showData = isShowDataArray && showDataPayload.length > 0 ? showDataPayload[0] : null
+
+      const baseSvcAmount = calculateSvcBase({
+        originCode,
+        partySize,
+        showDate,
+        reservationCreatedDate: isEditMode ? reservationDetail?.CreatedDate ?? null : null,
+        showData: showData,
+        sectionData: rawSection ?? null,
+        excludePhoneDayOfShow: systemDefaults?.txtDayOfShow2 === 'Y',
+        excludeWebDayOfShow: systemDefaults?.txtDayOfShow3 === 'Y'
+      })
+
+      const hasPricingTriggerChanged =
+        partySize !== origPartyRef.current ||
+        section !== origSectionIdRef.current ||
+        promo !== origPromoIdRef.current ||
+        origin !== origOriginRef.current ||
+        passes !== origPassesRef.current
+
+      return calculateReservationTotals({
         sectionPrice: selectedSection?.price ?? '$0.00',
         party: partySize,
         passes,
-        promo: selectedPromo
-      }),
-    [partySize, passes, selectedPromo, selectedSection?.price]
+        promo: selectedPromo,
+        existingServiceCharge: isEditMode && !hasPricingTriggerChanged ? reservationDetail?.SVC : undefined,
+        existingDiscount: isEditMode && !hasPricingTriggerChanged ? reservationDetail?.Discount : undefined,
+        existingSalesTax: isEditMode && !hasPricingTriggerChanged ? reservationDetail?.SalesTax : undefined,
+        systemTaxRate: Number(systemDefaults?.lblTaxes || 0),
+        taxWithServiceCharge: systemDefaults?.lblTaxWithServiceCharge,
+        baseSvcAmount,
+        ccFeePercent: Number(systemDefaults?.cboCC || 0)
+      })
+    },
+    [
+      partySize,
+      passes,
+      selectedPromo,
+      selectedSection?.price,
+      isEditMode,
+      reservationDetail?.SVC,
+      reservationDetail?.Discount,
+      reservationDetail?.SalesTax,
+      reservationDetail?.CreatedDate,
+      origin,
+      showDate,
+      showDataPayload,
+      section,
+      systemDefaults?.txtDayOfShow2,
+      systemDefaults?.txtDayOfShow3,
+      systemDefaults?.lblTaxes,
+      systemDefaults?.lblTaxWithServiceCharge,
+      systemDefaults?.cboCC
+    ]
   )
 
   const alreadyPaid = isEditMode
@@ -1816,12 +1916,14 @@ export function AddReservationDialog({
   }
 
   function handleTransactionSelect(row: ReservationTransactionRow) {
+
     setSelectedTransaction(row)
     setPaymentAmountOverride(formatReservationMoney(row.amount))
     setPaymentType(mapPaymentLabelToType(row.payment))
     setPaymentFields({
       ...createEmptyReservationPaymentFields(),
       cardNumber: row.cardNumber,
+      cardType: row.cardType,
       authorization: row.authorization,
       pnref: row.pnref
     })
@@ -1846,7 +1948,7 @@ export function AddReservationDialog({
     }
   }
 
-  function handleSplitReservationClick() {
+  async function handleSplitReservationClick() {
     if (!reservation) {
       return
     }
@@ -1858,6 +1960,54 @@ export function AddReservationDialog({
       return
     }
 
+    if (reservationDetail?.CheckedIn != null && partySize === reservationDetail.CheckedIn && partySize > 0) {
+      window.alert("Cannot split reservation: all guests are already checked in.")
+      return
+    }
+
+    if (promo !== 'none' && promoOptions.some(option => option.id === promo)) {
+      const confirmPromo = window.confirm("Promo will be removed from the whole party. Continue?")
+      if (!confirmPromo) {
+        return
+      }
+    }
+
+    if (isEditMode) {
+      setPaymentActionBusy('split')
+      try {
+        await updateSplitReservation({
+          ConnectionString: connectionName,
+          ReservationId: reservation.id,
+          ShowID: activeShowTime,
+          ShowDetID: reservationDetail?.ShowDetID ?? '',
+          ShowSec: selectedSection?.name ?? '',
+          ShowPrice: parseReservationMoney(selectedSection?.price ?? '0'),
+          DayOfShowFee: reservationDetail?.DayOfShowFee ?? 0,
+          PhoneInFee: reservationDetail?.PhoneInFee ?? 0,
+          WalkUpFee: reservationDetail?.WalkUpFee ?? 0,
+          WebFee: reservationDetail?.WebFee ?? 0,
+          SourceLookUpCode: origin === 'phone' ? 'SRC01' : origin === 'walkup' ? 'SRC02' : origin === 'web' ? 'SRC03' : 'SRC01',
+          Party: partySize,
+          SubTotal: totals.subtotal,
+          ServiceChage: totals.serviceCharge,
+          Discount: 0, // Force clear promo side effects
+          Taxes: totals.taxes,
+          Total: totals.total,
+          LastUpdateDt: formatUsDateTime(new Date()),
+          LastUpdateId: username,
+          TableNum: null
+        }).unwrap()
+      } catch (error) {
+        setPaymentActionError(
+          error instanceof Error ? error.message : 'Failed to prepare split reservation.'
+        )
+        setPaymentActionBusy(null)
+        return
+      }
+      setPaymentActionBusy(null)
+    }
+
+    setPromo('none') // Clear in UI memory
     onSplitReservation?.(reservation)
   }
 
@@ -1984,7 +2134,10 @@ export function AddReservationDialog({
       sectionPrice: saveSection?.price ?? '$0.00',
       party: saveParty,
       passes,
-      promo: savePromo
+      promo: savePromo,
+      existingServiceCharge: isEditMode ? reservationDetail?.SVC : undefined,
+      existingDiscount: isEditMode ? reservationDetail?.Discount : undefined,
+      existingSalesTax: isEditMode ? reservationDetail?.SalesTax : undefined
     })
     const savePaymentAmount =
       paymentAmountOverride ??
@@ -2507,8 +2660,8 @@ export function AddReservationDialog({
             }}
           >
             <DialogHeader className='shrink-0 border-b px-4 py-3'>
-              <DialogTitle className='text-base font-semibold text-foreground'>
-                Add Reservation
+              <DialogTitle className='truncate text-base font-semibold text-foreground'>
+                {dialogTitle}
               </DialogTitle>
             </DialogHeader>
 
@@ -2800,7 +2953,7 @@ export function AddReservationDialog({
                             >
                               Re Print Ticket
                             </Button>
-                            <Button
+                            {/* <Button
                               type='button'
                               size='sm'
                               variant='outline'
@@ -2808,7 +2961,7 @@ export function AddReservationDialog({
                               disabled={paymentActionBusy === 'cash-drawer'}
                             >
                               Cash Drawer
-                            </Button>
+                            </Button> */}
                           </>
                         ) : undefined
                       }

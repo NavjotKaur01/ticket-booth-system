@@ -5,11 +5,11 @@ import {
   type ReservationPromoOption
 } from '@/types/reservation-promo'
 
-function normalizeText (value: string | null | undefined) {
+function normalizeText(value: string | null | undefined) {
   return value?.trim() ?? ''
 }
 
-export function mapReservationPromo (
+export function mapReservationPromo(
   item: ApiPromotionSearchItem
 ): ReservationPromo {
   return {
@@ -25,7 +25,7 @@ export function mapReservationPromo (
   }
 }
 
-export function mapReservationPromoOptions (
+export function mapReservationPromoOptions(
   promos: ReservationPromo[]
 ): ReservationPromoOption[] {
   return [

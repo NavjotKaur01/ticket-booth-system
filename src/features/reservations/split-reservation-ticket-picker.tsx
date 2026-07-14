@@ -4,12 +4,14 @@ import { cn } from '@/lib/utils'
 /** One selectable chip per remaining ticket, e.g. "1 - $11.50". */
 export function SplitReservationTicketPicker ({
   remainingTickets,
-  unitPrice,
+  totalAmount,
+  partySize,
   selectedCount,
   onSelect
 }: {
   remainingTickets: number
-  unitPrice: number
+  totalAmount: number
+  partySize: number
   selectedCount: number
   onSelect: (count: number) => void
 }) {
@@ -37,7 +39,7 @@ export function SplitReservationTicketPicker ({
               : 'border-border bg-background text-foreground hover:bg-muted/60'
           )}
         >
-          {count} - {formatReservationMoney(unitPrice * count)}
+          {count} - {formatReservationMoney(partySize > 0 ? (totalAmount / partySize) * count : 0)}
         </button>
       ))}
     </div>

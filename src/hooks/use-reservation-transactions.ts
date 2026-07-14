@@ -6,7 +6,7 @@ import type { ReservationPrintProperties } from '@/types/api/reservation-print'
 import type { Reservation } from '@/types/reservation'
 import type { ReservationTransactionRow } from '@/types/reservation-transaction'
 
-function maskCardNumber (cardNum: string | null | undefined) {
+function maskCardNumber(cardNum: string | null | undefined) {
   if (!cardNum) {
     return ''
   }
@@ -23,7 +23,7 @@ function maskCardNumber (cardNum: string | null | undefined) {
  * derived from the reservation + GetReservationPrintProperties only when the
  * ledger is empty/unavailable.
  */
-export function useReservationTransactions ({
+export function useReservationTransactions({
   reservation,
   paymentList,
   printProperties
@@ -49,7 +49,8 @@ export function useReservationTransactions ({
         amount: payment.Amount ?? 0,
         authorization: payment.Auth ?? '',
         pnref: payment.PNREF ?? '',
-        isSplit: payment.Split?.trim().toUpperCase() === 'Y'
+        isSplit: payment.Split?.trim().toUpperCase() === 'Y',
+        DueAmt: payment?.dueAmt ?? 0
       }))
     }
 
@@ -71,7 +72,8 @@ export function useReservationTransactions ({
         amount,
         authorization: printProperties?.Auth ?? '',
         pnref: printProperties?.PNREF ?? '',
-        isSplit: false
+        isSplit: false,
+        DueAmt: printProperties?.DueAmount ?? 0
       }
     ]
   }, [paymentList, printProperties, reservation])

@@ -2,6 +2,11 @@ export type ApiShowProperties = {
   Over21: string
   MinAge: string | null
   ShowDate: string
+  PhoneCharge: number
+  WalkupCharge: number
+  WebCharge: number
+  DayOfShowCharge: number
+  ShowSectionFee: string
 }
 
 export type ApiShowData = {

@@ -36,7 +36,7 @@ const columns: ColumnDef<ReservationTransactionRow>[] = [
 ]
 
 /** Read-only payment/transaction ledger for a reservation. */
-export function ReservationTransactionsTable ({
+export function ReservationTransactionsTable({
   data,
   selectedTransactionId,
   onTransactionSelect

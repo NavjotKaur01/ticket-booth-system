@@ -93,7 +93,11 @@ export type ApiReportComedian = {
 }
 import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { ReservationCustomerSearchItem } from "@/types/api/reservation-customer-search"
-import type { SaveReservationRequest } from "@/types/api/save-reservation"
+import type {
+  SaveReservationRequest,
+  SaveSplitReservationRequestModel,
+  UpdateSplitReservationRequestModel
+} from "@/types/api/save-reservation"
 import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
 import type { ReservationCheckInRequest } from "@/types/api/reservation-check-in"
 import type {
@@ -919,6 +923,24 @@ export const clubmanApi = createApi({
     updateReservation: builder.mutation({
       query: (body: SaveReservationRequest) => ({
         url: reservationApiPath("UpdateReservation"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    updateSplitReservation: builder.mutation({
+      query: (body: UpdateSplitReservationRequestModel) => ({
+        url: reservationApiPath("UpdateSplitReservation"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    saveSplitReservation: builder.mutation({
+      query: (body: SaveSplitReservationRequestModel) => ({
+        url: reservationApiPath("SaveSplitReservation"),
         method: "PUT",
         body,
       }),
@@ -1946,4 +1968,6 @@ export const {
   useGetLocationGiftStatusQuery,
   useGetGiftLocationsQuery,
   useGetLocationsForLoggedInUserQuery,
+  useUpdateSplitReservationMutation,
+  useSaveSplitReservationMutation,
 } = clubmanApi

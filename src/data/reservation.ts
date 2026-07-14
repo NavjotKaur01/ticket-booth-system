@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   Reservation,
   ReservationCounts,
   SectionOption,
@@ -53,15 +53,15 @@ export function getShowOptionsForDate(showDate: string): ShowOption[] {
   return scheduledShows.map((show) => ({ ...show }))
 }
 
-export function formatSectionDesktopPrice (price: string) {
+export function formatSectionDesktopPrice(price: string) {
   return price.startsWith('$ ') ? price : `$ ${price.slice(1)}`
 }
 
-export function formatSectionSeatAvailability (seats: number, available: number) {
+export function formatSectionSeatAvailability(seats: number, available: number) {
   return `Seats: ${seats} Available: ${available}`
 }
 
-export function formatSectionOptionLabel (option: Pick<
+export function formatSectionOptionLabel(option: Pick<
   SectionOption,
   'price' | 'name' | 'seats' | 'available'
 >) {

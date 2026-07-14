@@ -10,4 +10,5 @@ export type ReservationTransactionRow = {
   authorization: string
   pnref: string
   isSplit: boolean
+  DueAmt: number
 }

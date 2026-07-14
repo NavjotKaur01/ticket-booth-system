@@ -97,11 +97,27 @@ function getCardNumberGroups(brand?: CardBrand | null) {
   return [4, 4, 4, 4, 3]
 }
 
+function mapStringToCardBrand(cardType?: string): CardBrand | null {
+  if (!cardType) return null
+  const normalized = cardType.toUpperCase().replace(/\s+/g, '')
+  if (normalized === 'VISA') return 'VISA'
+  if (normalized === 'MASTERCARD') return 'MASTERCARD'
+  if (normalized === 'AMEX' || normalized === 'AMERICANEXPRESS') return 'AMEX'
+  if (normalized === 'DISCOVER') return 'DISCOVER'
+  if (normalized === 'JCB') return 'JCB'
+  if (normalized === 'UNIONPAY') return 'UNIONPAY'
+  if (normalized === 'MAESTRO') return 'MAESTRO'
+  return null
+}
+
 function formatCardNumber(
   value: string,
   maxLength = 19,
   brand?: CardBrand | null
 ) {
+  if (value.includes('*')) {
+    return value
+  }
   const digits = value.replace(/\D/g, '').slice(0, maxLength)
 
   return groupCardDigits(digits, getCardNumberGroups(brand))
@@ -143,12 +159,14 @@ function PaymentTypeField({
   paymentType,
   onPaymentTypeChange,
   disabled = false,
-  error
+  error,
+  excludedPaymentTypes
 }: {
   paymentType: ReservationPaymentType
   onPaymentTypeChange: (value: ReservationPaymentType) => void
   disabled?: boolean
   error?: string
+  excludedPaymentTypes?: ReservationPaymentType[]
 }) {
   return (
     <FormField label='Payment Type' htmlFor='payment-type' className='min-w-0'>
@@ -160,10 +178,12 @@ function PaymentTypeField({
         }
         disabled={disabled}
         className={cn(COMPACT_INPUT, error && ERROR_FIELD_CLASS)}
-        options={RESERVATION_PAYMENT_TYPES.map(option => ({
-          value: option.id,
-          label: option.label,
-        }))}
+        options={RESERVATION_PAYMENT_TYPES
+          .filter(option => !excludedPaymentTypes?.includes(option.id))
+          .map(option => ({
+            value: option.id,
+            label: option.label,
+          }))}
       />
       {error ? <p className={ERROR_TEXT_CLASS}>{error}</p> : null}
     </FormField>
@@ -319,21 +339,25 @@ function CardBrandStrip({
 
 function CreditCardNumberField({
   value,
+  cardType,
   onChange,
   disabled = false,
   error
 }: {
   value: string
+  cardType?: string
   onChange: (value: string) => void
   disabled?: boolean
   error?: string
 }) {
   const [showLimitMessage, setShowLimitMessage] = useState(false)
   const [resolvedBrand, setResolvedBrand] = useState<CardBrand | null>(null)
-  const effectiveBrand =
+  const providedBrand = mapStringToCardBrand(cardType)
+  const effectiveBrand = providedBrand || (
     resolvedBrand && isCardBrandCandidate(value, resolvedBrand)
       ? resolvedBrand
       : detectCardBrand(value)?.brand ?? null
+  )
   const maxCardDigits = getCardBrandMaxLength(value, effectiveBrand)
   const formattedValue = formatCardNumber(value, maxCardDigits, effectiveBrand)
   const digits = value.replace(/\D/g, '')
@@ -546,6 +570,7 @@ function CreditCardInformationField({
         <div className='overflow-hidden rounded-lg border border-input bg-background divide-y divide-input'>
           <CreditCardNumberField
             value={fields.cardNumber}
+            cardType={fields.cardType}
             onChange={value => onFieldChange('cardNumber', value)}
             disabled={disabled}
             error={validationErrors.cardNumber}
@@ -669,7 +694,8 @@ function PaymentFormFields({
   onFieldChange,
   paymentDisabled = false,
   showAuthFields = false,
-  validationErrors = {}
+  validationErrors = {},
+  excludedPaymentTypes
 }: {
   paymentType: ReservationPaymentType
   onPaymentTypeChange: (value: ReservationPaymentType) => void
@@ -684,6 +710,7 @@ function PaymentFormFields({
   /** Shows Authorization/PNREF inputs — used by the Split Reservation payment form. */
   showAuthFields?: boolean
   validationErrors?: ReservationPaymentValidationErrors
+  excludedPaymentTypes?: ReservationPaymentType[]
 }) {
   const layout = getPaymentDetailLayout(paymentType)
 
@@ -696,6 +723,7 @@ function PaymentFormFields({
             onPaymentTypeChange={onPaymentTypeChange}
             disabled={paymentDisabled}
             error={validationErrors.paymentType}
+            excludedPaymentTypes={excludedPaymentTypes}
           />
           <PaymentAmountField
             value={paymentAmount}
@@ -725,6 +753,7 @@ function PaymentFormFields({
             onPaymentTypeChange={onPaymentTypeChange}
             disabled={paymentDisabled}
             error={validationErrors.paymentType}
+            excludedPaymentTypes={excludedPaymentTypes}
           />
           <PaymentAmountField
             value={paymentAmount}
@@ -753,6 +782,7 @@ function PaymentFormFields({
             onPaymentTypeChange={onPaymentTypeChange}
             disabled={paymentDisabled}
             error={validationErrors.paymentType}
+            excludedPaymentTypes={excludedPaymentTypes}
           />
           <PaymentAmountField
             value={paymentAmount}
@@ -786,6 +816,7 @@ function PaymentFormFields({
           onPaymentTypeChange={onPaymentTypeChange}
           disabled={paymentDisabled}
           error={validationErrors.paymentType}
+          excludedPaymentTypes={excludedPaymentTypes}
         />
         <PaymentAmountField
           value={paymentAmount}
@@ -861,7 +892,8 @@ export function ReservationPaymentPanel({
   onFieldChange,
   paymentDisabled = false,
   showAuthFields = false,
-  validationErrors
+  validationErrors,
+  excludedPaymentTypes
 }: {
   paymentType: ReservationPaymentType
   onPaymentTypeChange: (value: ReservationPaymentType) => void
@@ -876,6 +908,7 @@ export function ReservationPaymentPanel({
   /** Shows Authorization/PNREF inputs — used by the Split Reservation payment form. */
   showAuthFields?: boolean
   validationErrors?: ReservationPaymentValidationErrors
+  excludedPaymentTypes?: ReservationPaymentType[]
 }) {
   return (
     <div className='space-y-1.5 border-t border-border/50 pt-3'>
@@ -894,6 +927,7 @@ export function ReservationPaymentPanel({
           paymentDisabled={paymentDisabled}
           showAuthFields={showAuthFields}
           validationErrors={validationErrors}
+          excludedPaymentTypes={excludedPaymentTypes}
         />
       </div>
     </div>

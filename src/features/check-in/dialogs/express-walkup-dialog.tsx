@@ -1,4 +1,4 @@
-﻿import { Info, LoaderCircle } from "lucide-react"
+import { Info, LoaderCircle } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import { FormField, FormSection, ReadOnlyValue } from "@/components/forms/form-fields"
@@ -63,7 +63,8 @@ function TicketCountGrid({
           >
             {count} · ${total.toFixed(2)}
           </Button>
-        )}
+        )
+      }
       )}
     </div>
   )

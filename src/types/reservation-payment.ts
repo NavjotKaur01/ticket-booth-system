@@ -12,6 +12,8 @@ export type ReservationPaymentFields = {
   authorization: string
   /** Payment gateway reference number (PNREF). */
   pnref: string
+
+  cardType?: string
 }
 
 export type ReservationPaymentState = {
@@ -19,7 +21,7 @@ export type ReservationPaymentState = {
   fields: ReservationPaymentFields
 }
 
-export function createEmptyReservationPaymentFields (): ReservationPaymentFields {
+export function createEmptyReservationPaymentFields(): ReservationPaymentFields {
   return {
     cardNumber: '',
     cvv: '',
@@ -33,7 +35,7 @@ export function createEmptyReservationPaymentFields (): ReservationPaymentFields
   }
 }
 
-export function createEmptyReservationPaymentState (): ReservationPaymentState {
+export function createEmptyReservationPaymentState(): ReservationPaymentState {
   return {
     paymentType: 'credit-card',
     fields: createEmptyReservationPaymentFields()

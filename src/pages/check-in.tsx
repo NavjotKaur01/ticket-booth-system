@@ -1,4 +1,4 @@
-﻿import dayjs from "dayjs"
+import dayjs from "dayjs"
 import { FileDown, Plus, Printer, Zap } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 

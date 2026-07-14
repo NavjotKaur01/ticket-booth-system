@@ -1,4 +1,4 @@
-﻿import { PlusCircle } from "lucide-react"
+import { PlusCircle } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { FormField, FormSection } from "@/components/forms/form-fields"

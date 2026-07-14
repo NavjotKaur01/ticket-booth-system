@@ -147,6 +147,8 @@ export function Reservations() {
     { skip: !connectionName || !locationId }
   )
 
+  console.log(systemDefaults)
+
   const [getReservationDetail] = clubmanApi.useLazyGetReservationDetailByIdQuery()
   const [getReservationPrintProperties] = clubmanApi.useLazyGetReservationPrintPropertiesQuery()
 
@@ -298,7 +300,7 @@ export function Reservations() {
 
   function handleSplitDialogOpenChange(open: boolean) {
     setSplitOpen(open)
-    if (!open) {
+    if (!open && !editOpen) {
       setSelectedReservation(null)
     }
   }

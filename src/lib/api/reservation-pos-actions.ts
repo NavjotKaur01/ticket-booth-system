@@ -75,15 +75,4 @@ export async function revealMaskedCardNumber (
   )
 }
 
-/**
- * No confirmed Split Reservation contract exists yet — see plan for details.
- * Accepts whatever request shape build-split-reservation-request.ts produces
- * so swapping in the real endpoint later is a one-line change here only.
- */
-export async function splitReservation (
-  _request: unknown
-): Promise<never> {
-  throw new Error(
-    'Split Reservation is not available yet — the backend contract for splitting a reservation has not been confirmed.'
-  )
-}
+
