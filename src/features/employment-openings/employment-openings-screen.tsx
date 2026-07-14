@@ -41,13 +41,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {
-  createEmploymentOpening,
-  deleteEmploymentOpening,
-  getEmploymentOpeningsByLocation,
-  updateEmploymentOpening,
-} from "@/features/employment-openings/employment-openings.service"
+import { deleteEmploymentOpening } from "@/features/employment-openings/employment-openings.service"
 import { useAppSession } from "@/hooks/use-app-session"
+import { useGetEmploymentPositionsQuery, useAddUpdateEmploymentPositionMutation } from "@/store/api/clubmanApi"
 import type { EmploymentOpeningRecord } from "@/types/employment-opening"
 
 const ACTIVE_OPTIONS = [
@@ -128,9 +124,38 @@ export function EmploymentOpeningsScreen() {
 
   const canSave = titleInput.trim().length > 0
 
+  const { data: apiPositions, isLoading: isQueryLoading, error: queryError, refetch } = useGetEmploymentPositionsQuery(
+    { connectionString: "demo_prod", locationId: locationId ?? "" },
+    { skip: !locationId }
+  )
+
+  const [addUpdateEmploymentPosition] = useAddUpdateEmploymentPositionMutation()
+
+  useEffect(() => {
+    if (queryError) {
+      setError("Unable to load employment openings.")
+    } else {
+      setError(null)
+    }
+  }, [queryError])
+
+  useEffect(() => {
+    if (apiPositions) {
+      setRows(
+        apiPositions.map((pos) => ({
+          id: pos.PositionID,
+          locationId: pos.LocationId,
+          title: pos.PositionText,
+          active: pos.ActiveIndicator === "Y",
+        }))
+      )
+    } else {
+      setRows([])
+    }
+  }, [apiPositions])
+
   useEffect(() => {
     if (!locationId) {
-      setRows([])
       setEditorMode(null)
       setEditingOpeningId(null)
       setTitleInput("")
@@ -138,47 +163,12 @@ export function EmploymentOpeningsScreen() {
       setLoading(false)
       setError(null)
       setStatusMessage(null)
-      return
     }
+  }, [locationId])
 
-    let isActive = true
-    setLoading(true)
-    setError(null)
-    setStatusMessage(null)
-    setRows([])
-    setEditorMode(null)
-    setEditingOpeningId(null)
-    setTitleInput("")
-    setActiveInput("Y")
-
-    getEmploymentOpeningsByLocation({
-      locationId: locationId,
-      locationLabel: locationName,
-    })
-      .then((result) => {
-        if (isActive) {
-          setRows(result)
-        }
-      })
-      .catch((requestError: unknown) => {
-        if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load employment openings."
-          )
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      isActive = false
-    }
-  }, [locationId, locationName])
+  useEffect(() => {
+    setLoading(isQueryLoading)
+  }, [isQueryLoading])
 
   function openCreateEditor() {
     setEditorMode("create")
@@ -226,31 +216,31 @@ export function EmploymentOpeningsScreen() {
 
     try {
       if (editorMode === "edit" && editingOpeningId) {
-        const updatedRow = await updateEmploymentOpening({
-          locationId: locationId,
-          locationLabel: locationName,
-          openingId: editingOpeningId,
-          title: normalizedTitle,
-          active: activeInput === "Y",
-        })
-
-        setRows((current) =>
-          current.map((row) => (row.id === updatedRow.id ? updatedRow : row))
-        )
+        await addUpdateEmploymentPosition({
+          ConnectionString: "demo_prod",
+          LocationId: locationId,
+          PositionID: editingOpeningId,
+          PositionText: normalizedTitle,
+          ActiveIndicator: activeInput,
+          LastUpdatedId: "Admin",
+        }).unwrap()
+        
         setStatusMessage(`Updated employment opening for ${locationName}.`)
       } else {
-        const createdRow = await createEmploymentOpening({
-          locationId: locationId,
-          locationLabel: locationName,
-          title: normalizedTitle,
-          active: activeInput === "Y",
-        })
+        await addUpdateEmploymentPosition({
+          ConnectionString: "demo_prod",
+          LocationId: locationId,
+          PositionID: "",
+          PositionText: normalizedTitle,
+          ActiveIndicator: activeInput,
+          LastUpdatedId: "Admin",
+        }).unwrap()
 
-        setRows((current) => [createdRow, ...current])
         setStatusMessage(`Added a new employment opening for ${locationName}.`)
       }
 
       closeEditor()
+      refetch()
     } catch (requestError) {
       setError(
         requestError instanceof Error
