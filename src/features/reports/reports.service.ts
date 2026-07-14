@@ -1371,18 +1371,28 @@ function transformExportShowsAttendees(
     { key: "firstName", label: "First Name" },
     { key: "phone", label: "Phone" },
     { key: "email", label: "Email" },
-    { key: "source", label: "Source" },
+    { key: "source", label: "Source" }
   ]
   const rows = toRows(data).map((row) => ({
-    showDateTime: formatDisplayDateTime(String(row.ShowDateTime ?? "")),
-    comicName: safeStr(row.ComicName),
-    lastName: safeStr(row.LastName),
-    firstName: safeStr(row.FirstName),
-    phone: safeStr(row.Phone),
-    email: safeStr(row.Email),
-    source: safeStr(row.ReservationSource),
+      showDateTime: formatDisplayDateTime(String(row.ShowDateTime ?? "")),
+      comicName: safeStr(row.ComicName),
+      lastName: safeStr(row.LastName),
+      firstName: safeStr(row.FirstName),
+      phone: safeStr(row.Phone),
+      email: safeStr(row.Email),
+      source: safeStr(row.ReservationSource)
   }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt, rawData: data }
+
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    emptyMessage: "No records found",
+    generatedAt,
+    rawData: data,
+  }
 }
 
 function transformReceipts(
