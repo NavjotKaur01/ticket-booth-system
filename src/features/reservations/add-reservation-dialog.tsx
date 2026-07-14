@@ -1,5 +1,6 @@
 import {
   Calendar,
+  ChevronDown,
   Info,
   LoaderCircle,
   Pencil,
@@ -13,7 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RowSelectionState } from '@tanstack/react-table'
 
 import { DatePickerCalendarPanel } from '@/components/calendar/controls/date-picker-calendar-panel'
-
+import { CalendarScrollSelectList } from '@/components/calendar/controls/CalendarScrollSelectList'
 import {
   FormField,
   IconActionButton
@@ -36,13 +37,6 @@ import {
   PopoverTrigger
 } from '@/components/ui/popover'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -278,6 +272,7 @@ function SectionPicker({
   const passesInputRef = useRef<HTMLInputElement>(null)
   const promoTriggerRef = useRef<HTMLButtonElement>(null)
   const focusPassesAfterPromoCloseRef = useRef(false)
+  const [isPromoOpen, setIsPromoOpen] = useState(false)
 
   if (sectionsLoading) {
     return (
@@ -427,29 +422,45 @@ function SectionPicker({
       <div className='mt-2 flex flex-wrap items-center gap-2'>
         <div className='min-w-0 flex-1 sm:flex-initial sm:shrink-0'>
           <span className='sr-only'>Promo Code (Optional)</span>
-          <Select
-            value={promo}
-            onValueChange={handlePromoChange}
-            disabled={promoLoading}
-          >
-            <SelectTrigger
-              ref={promoTriggerRef}
-              className={cn(COMPACT_SELECT, COMPACT_FIELD_HOVER, 'w-full min-w-0 sm:w-44')}
+          <Popover open={isPromoOpen} onOpenChange={setIsPromoOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                ref={promoTriggerRef}
+                variant="outline"
+                disabled={promoLoading}
+                className={cn(
+                  COMPACT_SELECT,
+                  COMPACT_FIELD_HOVER,
+                  'w-full min-w-0 sm:w-44 justify-between px-3 font-normal',
+                  promo === 'none' && 'text-muted-foreground'
+                )}
+              >
+                <span className="truncate">
+                  {promoLoading
+                    ? 'Loading promo codes...'
+                    : promoOptions.find(option => option.value === promo)?.label || 'Select promo code'}
+                </span>
+                <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+              </Button>
+            </PopoverTrigger>
+
+            <PopoverContent
+              align="start"
+              className="w-[var(--radix-popover-trigger-width)] min-w-[8rem] touch-pan-y p-1"
+              sideOffset={4}
+              onCloseAutoFocus={handlePromoCloseAutoFocus}
             >
-              <SelectValue
-                placeholder={
-                  promoLoading ? 'Loading promo codes...' : 'Select promo code'
-                }
+              <CalendarScrollSelectList
+                isOpen={isPromoOpen}
+                value={promo === 'none' ? '' : promo}
+                options={promoOptions}
+                onSelect={(value) => {
+                  handlePromoChange(value)
+                  setIsPromoOpen(false)
+                }}
               />
-            </SelectTrigger>
-            <SelectContent onCloseAutoFocus={handlePromoCloseAutoFocus}>
-              {promoOptions.map(option => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <Tooltip>

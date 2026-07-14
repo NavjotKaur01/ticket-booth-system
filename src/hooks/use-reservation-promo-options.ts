@@ -6,6 +6,7 @@ import {
 } from '@/lib/map-reservation-promo'
 import { getClubmanErrorMessage } from '@/store/api/baseQuery'
 import { useGetReservationPromotionsQuery } from '@/store/api/clubmanApi'
+// import type { ReservationPromo } from '@/types/reservation-promo'
 
 type UseReservationPromoOptionsParams = {
   connectionName: string
