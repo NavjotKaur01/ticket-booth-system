@@ -21,6 +21,7 @@ export const preSaleRecords: PreSaleRecord[] = [
     endDate: "10/1/2023 11:00:00 PM",
     createdBy: "max",
     createDate: "8/28/2023 10:15:32 AM",
+    privateLink: "",
   },
   {
     id: "2",
@@ -29,6 +30,7 @@ export const preSaleRecords: PreSaleRecord[] = [
     endDate: "12/31/2023 11:59:00 PM",
     createdBy: "admin",
     createDate: "9/1/2023 9:02:11 AM",
+    privateLink: "",
   },
   {
     id: "3",
@@ -37,6 +39,7 @@ export const preSaleRecords: PreSaleRecord[] = [
     endDate: "6/30/2024 11:00:00 PM",
     createdBy: "admin",
     createDate: "6/1/2024 8:44:05 AM",
+    privateLink: "",
   },
   {
     id: "4",
@@ -45,6 +48,7 @@ export const preSaleRecords: PreSaleRecord[] = [
     endDate: "3/31/2024 11:00:00 PM",
     createdBy: "admin",
     createDate: "1/2/2024 2:30:18 PM",
+    privateLink: "",
   },
   {
     id: "5",
@@ -53,6 +57,7 @@ export const preSaleRecords: PreSaleRecord[] = [
     endDate: "5/20/2024 11:59:00 PM",
     createdBy: "max",
     createDate: "5/14/2024 4:12:47 PM",
+    privateLink: "",
   },
   {
     id: "6",
@@ -61,6 +66,7 @@ export const preSaleRecords: PreSaleRecord[] = [
     endDate: "2/10/2024 11:59:00 PM",
     createdBy: "admin",
     createDate: "2/9/2024 11:05:22 AM",
+    privateLink: "",
   },
   {
     id: "7",
@@ -69,6 +75,7 @@ export const preSaleRecords: PreSaleRecord[] = [
     endDate: "8/15/2024 11:00:00 PM",
     createdBy: "admin",
     createDate: "7/28/2024 1:18:09 PM",
+    privateLink: "",
   },
   {
     id: "8",
@@ -77,5 +84,6 @@ export const preSaleRecords: PreSaleRecord[] = [
     endDate: "6/30/2026 11:00:00 PM",
     createdBy: "admin",
     createDate: "6/19/2026 9:00:00 AM",
+    privateLink: "",
   },
 ]

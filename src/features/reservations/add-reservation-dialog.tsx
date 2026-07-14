@@ -21,7 +21,6 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle
@@ -2163,23 +2162,16 @@ export function AddReservationDialog({
           <DialogContent
             ref={dialogContentRef}
             disableOutsideDismiss
-            showCloseButton={false}
+            showCloseButton
             className='flex max-h-[82vh] w-[min(calc(100vw-2rem),84rem)] max-w-[84rem] flex-col overflow-hidden sm:max-w-[84rem]'
             onOpenAutoFocus={event => {
               event.preventDefault()
             }}
           >
-            <DialogHeader className='shrink-0 flex-row items-center justify-between gap-4 border-b px-4 py-3'>
+            <DialogHeader className='shrink-0 border-b px-4 py-3'>
               <DialogTitle className='text-base font-semibold text-foreground'>
                 Add Reservation
               </DialogTitle>
-              <DialogClose
-                tabIndex={-1}
-                className='flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none'
-              >
-                <X className='size-4' />
-                <span className='sr-only'>Close</span>
-              </DialogClose>
             </DialogHeader>
 
             <div
