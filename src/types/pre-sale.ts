@@ -5,6 +5,7 @@ export type PreSaleRecord = {
   endDate: string
   createdBy: string
   createDate: string
+  privateLink: string
 }
 
 export type PreSaleFormValues = {

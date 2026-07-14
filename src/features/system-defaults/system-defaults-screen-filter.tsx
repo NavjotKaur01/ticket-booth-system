@@ -6,16 +6,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { systemDefaultScreenOptions } from "@/data/system-defaults"
 import type { SystemDefaultFilters } from "@/types/system-default"
 
 type SystemDefaultsScreenFilterProps = {
   filters: SystemDefaultFilters
+  screenOptions: string[]
   onScreenChange: (value: string) => void
 }
 
 export function SystemDefaultsScreenFilter({
   filters,
+  screenOptions,
   onScreenChange,
 }: SystemDefaultsScreenFilterProps) {
   return (
@@ -24,15 +25,15 @@ export function SystemDefaultsScreenFilter({
         Screen
       </Label>
       <Select
-        value={filters.screen || undefined}
+        value={filters.screen || "all"}
         onValueChange={(value) => onScreenChange(value === "all" ? "" : value)}
       >
         <SelectTrigger id="system-defaults-screen" className="w-full sm:w-52">
           <SelectValue placeholder="Select" />
         </SelectTrigger>
         <SelectContent position="popper">
-          <SelectItem value="all">All Screens</SelectItem>
-          {systemDefaultScreenOptions.map((screen) => (
+          <SelectItem value="all">Select</SelectItem>
+          {screenOptions.map((screen) => (
             <SelectItem key={screen} value={screen}>
               {screen}
             </SelectItem>

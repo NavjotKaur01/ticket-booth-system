@@ -9,84 +9,104 @@ import type { SystemDefault } from "@/types/system-default"
 type SystemDefaultColumnsOptions = {
   hiddenActions?: readonly StandardRowAction[]
   editingRecordId?: string | null
+  canEditDescription?: boolean
   onEdit?: (record: SystemDefault) => void
   onCancelEdit?: () => void
-  onSaveValue?: (record: SystemDefault, value: string) => void
+  onSaveValue?: (
+    record: SystemDefault,
+    value: string,
+    description?: string
+  ) => void
 }
 
 export function createSystemDefaultColumns({
   hiddenActions,
   editingRecordId = null,
+  canEditDescription = false,
   onEdit,
   onCancelEdit,
   onSaveValue,
 }: SystemDefaultColumnsOptions = {}): ColumnDef<SystemDefault>[] {
-  return [
-  {
-    accessorKey: "screen",
-    header: ({ column }) => (
-      <DataTableColumnHeader label="Screen" column={column} />
-    ),
-    cell: ({ row }) => (
-      <span className="font-medium text-foreground">{row.original.screen}</span>
-    ),
-  },
-  {
-    accessorKey: "description",
-    header: ({ column }) => (
-      <DataTableColumnHeader label="Description" column={column} />
-    ),
-  },
-  {
-    accessorKey: "defaultValue",
-    header: ({ column }) => (
-      <div className="flex justify-center">
-        <DataTableColumnHeader label="Default" column={column} />
-      </div>
-    ),
-    cell: ({ row }) => (
-      <div className="flex justify-center">
-        <SystemDefaultValuePopover
-          record={row.original}
-          open={editingRecordId === row.original.id}
-          onOpenChange={(open) => {
-            if (open) {
-              onEdit?.(row.original)
-              return
-            }
+  const hidden = new Set(hiddenActions ?? [])
+  const showActionsColumn =
+    !hidden.has("Add") || !hidden.has("Edit") || !hidden.has("Delete")
 
-            onCancelEdit?.()
-          }}
-          onSave={(record, value) => onSaveValue?.(record, value)}
-        />
-      </div>
-    ),
-  },
-  {
-    accessorKey: "lastUpdateId",
-    header: ({ column }) => (
-      <DataTableColumnHeader label="Last Update" column={column} />
-    ),
-  },
-  {
-    accessorKey: "lastUpdateDt",
-    header: ({ column }) => (
-      <DataTableColumnHeader label="Last Update Dt" column={column} />
-    ),
-    cell: ({ row }) => (
-      <span className="whitespace-nowrap tabular-nums">
-        {row.original.lastUpdateDt}
-      </span>
-    ),
-  },
-    dataTableActionsColumn<SystemDefault>({
-      ariaLabel: "System default actions",
-      hiddenActions,
-      onAction: (record, action) => {
-        if (action === "Edit") {
-          onEdit?.(record)
-        }
-      },
-    }),
+  const columns: ColumnDef<SystemDefault>[] = [
+    {
+      accessorKey: "screen",
+      header: ({ column }) => (
+        <DataTableColumnHeader label="Screen" column={column} />
+      ),
+      cell: ({ row }) => (
+        <span className="font-medium text-foreground">{row.original.screen}</span>
+      ),
+    },
+    {
+      accessorKey: "description",
+      header: ({ column }) => (
+        <DataTableColumnHeader label="Description" column={column} />
+      ),
+    },
+    {
+      accessorKey: "defaultValue",
+      header: ({ column }) => (
+        <div className="flex justify-center">
+          <DataTableColumnHeader label="Default" column={column} />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <SystemDefaultValuePopover
+            record={row.original}
+            open={editingRecordId === row.original.id}
+            canEditDescription={canEditDescription}
+            onOpenChange={(open) => {
+              if (open) {
+                onEdit?.(row.original)
+                return
+              }
+
+              onCancelEdit?.()
+            }}
+            onSave={(record, value, description) =>
+              onSaveValue?.(record, value, description)
+            }
+          />
+        </div>
+      ),
+    },
+    {
+      accessorKey: "lastUpdateId",
+      header: ({ column }) => (
+        <DataTableColumnHeader label="Last Update" column={column} />
+      ),
+    },
+    {
+      accessorKey: "lastUpdateDt",
+      header: ({ column }) => (
+        <DataTableColumnHeader label="Last Update Dt" column={column} />
+      ),
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap tabular-nums">
+          {row.original.lastUpdateDt}
+        </span>
+      ),
+    },
   ]
+
+  if (showActionsColumn) {
+    columns.push(
+      dataTableActionsColumn<SystemDefault>({
+        ariaLabel: "System default actions",
+        hiddenActions,
+        onAction: (record, action) => {
+          if (action === "Edit") {
+            onEdit?.(record)
+          }
+        },
+      })
+    )
+  }
+
+  return columns
 }

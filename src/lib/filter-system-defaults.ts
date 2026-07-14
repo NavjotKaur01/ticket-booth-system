@@ -4,6 +4,13 @@ export function filterSystemDefaults(
   records: SystemDefault[],
   filters: SystemDefaultFilters
 ) {
-  if (!filters.screen) return records
-  return records.filter((record) => record.screen === filters.screen)
+  const filtered = !filters.screen
+    ? records
+    : records.filter((record) => record.screen === filters.screen)
+
+  return [...filtered].sort((a, b) => {
+    const screenCompare = a.screen.localeCompare(b.screen)
+    if (screenCompare !== 0) return screenCompare
+    return a.field.localeCompare(b.field)
+  })
 }
