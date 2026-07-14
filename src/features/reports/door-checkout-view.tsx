@@ -174,7 +174,7 @@ function DrillCell({
       className={cn(
         "border border-border px-3 py-2 text-xs whitespace-nowrap font-medium text-blue-600",
         right && "text-right tabular-nums",
-        canDrill && "cursor-pointer underline hover:text-blue-800 transition-colors",
+        canDrill && "cursor-pointer hover:text-blue-800 transition-colors",
         className
       )}
     >
