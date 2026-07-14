@@ -93,7 +93,11 @@ export type ApiReportComedian = {
 }
 import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { ReservationCustomerSearchItem } from "@/types/api/reservation-customer-search"
-import type { SaveReservationRequest } from "@/types/api/save-reservation"
+import type {
+  SaveReservationRequest,
+  SaveSplitReservationRequestModel,
+  UpdateSplitReservationRequestModel
+} from "@/types/api/save-reservation"
 import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
 import type { ReservationCheckInRequest } from "@/types/api/reservation-check-in"
 import type {
@@ -592,7 +596,7 @@ export const clubmanApi = createApi({
       invalidatesTags: ["SystemUser"],
     }),
 
-    getReservationPromotions: builder.mutation({
+    getReservationPromotions: builder.query({
       query: ({
         connectionName,
         locationId,
@@ -616,9 +620,14 @@ export const clubmanApi = createApi({
           isManager,
         }),
       }),
-      transformResponse: (response: ApiPromotionSearchItem[]) => response,
-      invalidatesTags: (_result, _error, arg) => [
-        { type: "Promotion", id: `${arg.showId}:${arg.showDate}` },
+      transformResponse: (response: { Data?: ApiPromotionSearchItem[] } | ApiPromotionSearchItem[]) => {
+        if (response && "Data" in response && Array.isArray(response.Data)) {
+          return response.Data
+        }
+        return Array.isArray(response) ? response : []
+      },
+      providesTags: (_result, _error, arg) => [
+        { type: "Promotion", id: arg.locationId },
       ],
     }),
 
@@ -643,7 +652,12 @@ export const clubmanApi = createApi({
           filters,
         }),
       }),
-      transformResponse: (response: ApiPromotionSearchItem[]) => response,
+      transformResponse: (response: { Data?: ApiPromotionSearchItem[] } | ApiPromotionSearchItem[]) => {
+        if (response && "Data" in response && Array.isArray(response.Data)) {
+          return response.Data
+        }
+        return Array.isArray(response) ? response : []
+      },
       invalidatesTags: (_result, _error, arg) => [
         { type: "Promotion", id: arg.locationId },
       ],
@@ -691,7 +705,12 @@ export const clubmanApi = createApi({
         ),
         method: "GET",
       }),
-      transformResponse: (response: ApiPromotionSearchItem) => response,
+      transformResponse: (response: { Data?: ApiPromotionSearchItem } | ApiPromotionSearchItem) => {
+        if (response && "Data" in response && response.Data) {
+          return response.Data
+        }
+        return response as ApiPromotionSearchItem
+      },
     }),
 
     updatePromotion: builder.mutation({
@@ -919,6 +938,24 @@ export const clubmanApi = createApi({
     updateReservation: builder.mutation({
       query: (body: SaveReservationRequest) => ({
         url: reservationApiPath("UpdateReservation"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    updateSplitReservation: builder.mutation({
+      query: (body: UpdateSplitReservationRequestModel) => ({
+        url: reservationApiPath("UpdateSplitReservation"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    saveSplitReservation: builder.mutation({
+      query: (body: SaveSplitReservationRequestModel) => ({
+        url: reservationApiPath("SaveSplitReservation"),
         method: "PUT",
         body,
       }),
@@ -1847,9 +1884,10 @@ export const {
   useSavePromotionMutation,
   useGetPromotionDetailsMutation,
   useUpdatePromotionMutation,
-  useGetReservationPromotionsMutation,
+  useGetReservationPromotionsQuery,
   useGetReservationDataQuery,
   useGetReservationDetailByIdQuery,
+  useGetReservationPrintPropertiesQuery,
   useGetReservationHistoryByIdQuery,
   useGetReservationNoteByIdQuery,
   useSaveReservationNoteMutation,
@@ -1945,4 +1983,6 @@ export const {
   useGetLocationGiftStatusQuery,
   useGetGiftLocationsQuery,
   useGetLocationsForLoggedInUserQuery,
+  useUpdateSplitReservationMutation,
+  useSaveSplitReservationMutation,
 } = clubmanApi

@@ -1,15 +1,14 @@
 import type { ApiPromotionSearchItem } from '@/types/api/promotion-search'
 import {
-  EMPTY_RESERVATION_PROMO_OPTION,
   type ReservationPromo,
   type ReservationPromoOption
 } from '@/types/reservation-promo'
 
-function normalizeText (value: string | null | undefined) {
+function normalizeText(value: string | null | undefined) {
   return value?.trim() ?? ''
 }
 
-export function mapReservationPromo (
+export function mapReservationPromo(
   item: ApiPromotionSearchItem
 ): ReservationPromo {
   return {
@@ -25,14 +24,11 @@ export function mapReservationPromo (
   }
 }
 
-export function mapReservationPromoOptions (
+export function mapReservationPromoOptions(
   promos: ReservationPromo[]
 ): ReservationPromoOption[] {
-  return [
-    EMPTY_RESERVATION_PROMO_OPTION,
-    ...promos.map(promo => ({
-      id: promo.id,
-      label: promo.promotionCode || promo.promotionName
-    }))
-  ]
+  return promos.map(promo => ({
+    value: promo.id,
+    label: promo.promotionCode || promo.promotionName
+  }))
 }

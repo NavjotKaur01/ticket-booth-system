@@ -21,7 +21,7 @@ type BuildGetReservationPromotionsRequestParams = {
   isManager?: boolean
 }
 
-function getPromoDayOfWeek (isoDate: string) {
+function getPromoDayOfWeek(isoDate: string) {
   const date = new Date(`${isoDate}T00:00:00`)
   if (Number.isNaN(date.getTime())) {
     return '1'
@@ -30,7 +30,7 @@ function getPromoDayOfWeek (isoDate: string) {
   return String(date.getDay() + 1)
 }
 
-export function buildGetReservationPromotionsRequest ({
+export function buildGetReservationPromotionsRequest({
   connectionName,
   locationId,
   showId,

@@ -12,11 +12,11 @@ export type ReservationPromo = {
 }
 
 export type ReservationPromoOption = {
-  id: string
+  value: string
   label: string
 }
 
 export const EMPTY_RESERVATION_PROMO_OPTION: ReservationPromoOption = {
-  id: 'none',
+  value: 'none',
   label: 'Select promo code'
 }

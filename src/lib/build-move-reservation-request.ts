@@ -104,7 +104,7 @@ function buildMovePaymentModel({
 
   if (paymentType !== 'cash') {
     payment.CCType = detectCreditCardType(paymentFields.cardNumber)
-    payment.CreditCardNubmer = paymentFields.cardNumber.trim()
+    payment.CreditCardNumber = paymentFields.cardNumber.trim()
     payment.CCExpYear = paymentFields.expYear
     payment.CCExpMonth = getExpirationMonthNumber(paymentFields.expMonth)
     payment.SecurityCode = paymentFields.cvv.trim()

@@ -8,7 +8,7 @@ export type SaveReservationPaymentRequest = {
   ServiceCharge: number
   GiftCardNumber?: string
   CCType?: string
-  CreditCardNubmer?: string
+  CreditCardNumber?: string
   CCExpYear?: string
   CCExpMonth?: string
   SecurityCode?: string
@@ -16,6 +16,9 @@ export type SaveReservationPaymentRequest = {
   IsCustomerSearch?: boolean
   IsSplitPayment?: boolean
   WebGiftCertificateNumber?: string
+  SplitTaxes?: number
+  SplitServiceCharge?: number
+  SplitTotal?: number
 }
 
 export type SaveReservationCustomerRequest = {
@@ -87,3 +90,39 @@ export type SaveReservationRequest = {
   BusinessCustomerModel?: SaveReservationBusinessCustomerRequest
   PaymentModel?: SaveReservationPaymentRequest
 }
+
+export type SaveSplitReservationRequestModel = SaveReservationRequest & {
+  TaxRate?: number
+  SplitSubTotal?: number
+  SplitServiceChage?: number
+  SplitDiscount?: number
+  SplitTaxes?: number
+  SplitTotal?: number
+  SplitParty?: number
+  SplitPasses?: number
+  SvcDiffAmount?: number
+}
+
+export type UpdateSplitReservationRequestModel = {
+  ConnectionString: string
+  ReservationId: string
+  ShowID: string
+  ShowDetID: string
+  ShowSec: string
+  ShowPrice: number
+  DayOfShowFee: number
+  PhoneInFee: number
+  WalkUpFee: number
+  WebFee: number
+  SourceLookUpCode: string
+  Party: number
+  SubTotal: number
+  ServiceChage: number
+  Discount: number
+  Taxes: number
+  Total: number
+  LastUpdateDt: string
+  LastUpdateId: string
+  TableNum: string | null
+}
+

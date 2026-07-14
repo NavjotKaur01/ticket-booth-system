@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { FormField } from '@/components/forms/form-fields'
 import { ScrollSelectControl } from '@/components/common/scroll-select-control'
 import { Button } from '@/components/ui/button'
@@ -97,11 +97,27 @@ function getCardNumberGroups(brand?: CardBrand | null) {
   return [4, 4, 4, 4, 3]
 }
 
+function mapStringToCardBrand(cardType?: string): CardBrand | null {
+  if (!cardType) return null
+  const normalized = cardType.toUpperCase().replace(/\s+/g, '')
+  if (normalized === 'VISA') return 'VISA'
+  if (normalized === 'MASTERCARD') return 'MASTERCARD'
+  if (normalized === 'AMEX' || normalized === 'AMERICANEXPRESS') return 'AMEX'
+  if (normalized === 'DISCOVER') return 'DISCOVER'
+  if (normalized === 'JCB') return 'JCB'
+  if (normalized === 'UNIONPAY') return 'UNIONPAY'
+  if (normalized === 'MAESTRO') return 'MAESTRO'
+  return null
+}
+
 function formatCardNumber(
   value: string,
   maxLength = 19,
   brand?: CardBrand | null
 ) {
+  if (value.includes('*')) {
+    return value
+  }
   const digits = value.replace(/\D/g, '').slice(0, maxLength)
 
   return groupCardDigits(digits, getCardNumberGroups(brand))
@@ -142,11 +158,15 @@ function getExpiryInputValue(expMonth: string, expYear: string) {
 function PaymentTypeField({
   paymentType,
   onPaymentTypeChange,
-  error
+  disabled = false,
+  error,
+  excludedPaymentTypes
 }: {
   paymentType: ReservationPaymentType
   onPaymentTypeChange: (value: ReservationPaymentType) => void
+  disabled?: boolean
   error?: string
+  excludedPaymentTypes?: ReservationPaymentType[]
 }) {
   return (
     <FormField label='Payment Type' htmlFor='payment-type' className='min-w-0'>
@@ -156,11 +176,14 @@ function PaymentTypeField({
         onChange={value =>
           onPaymentTypeChange(value as ReservationPaymentType)
         }
+        disabled={disabled}
         className={cn(COMPACT_INPUT, error && ERROR_FIELD_CLASS)}
-        options={RESERVATION_PAYMENT_TYPES.map(option => ({
-          value: option.id,
-          label: option.label,
-        }))}
+        options={RESERVATION_PAYMENT_TYPES
+          .filter(option => !excludedPaymentTypes?.includes(option.id))
+          .map(option => ({
+            value: option.id,
+            label: option.label,
+          }))}
       />
       {error ? <p className={ERROR_TEXT_CLASS}>{error}</p> : null}
     </FormField>
@@ -316,19 +339,25 @@ function CardBrandStrip({
 
 function CreditCardNumberField({
   value,
+  cardType,
   onChange,
+  disabled = false,
   error
 }: {
   value: string
+  cardType?: string
   onChange: (value: string) => void
+  disabled?: boolean
   error?: string
 }) {
   const [showLimitMessage, setShowLimitMessage] = useState(false)
   const [resolvedBrand, setResolvedBrand] = useState<CardBrand | null>(null)
-  const effectiveBrand =
+  const providedBrand = mapStringToCardBrand(cardType)
+  const effectiveBrand = providedBrand || (
     resolvedBrand && isCardBrandCandidate(value, resolvedBrand)
       ? resolvedBrand
       : detectCardBrand(value)?.brand ?? null
+  )
   const maxCardDigits = getCardBrandMaxLength(value, effectiveBrand)
   const formattedValue = formatCardNumber(value, maxCardDigits, effectiveBrand)
   const digits = value.replace(/\D/g, '')
@@ -344,6 +373,10 @@ function CreditCardNumberField({
           id='payment-card-number'
           value={formattedValue}
           onChange={event => {
+            if (disabled) {
+              return
+            }
+
             const rawValue = event.target.value.replace(/\D/g, '')
             const nextBrand =
               effectiveBrand && isCardBrandCandidate(rawValue, effectiveBrand)
@@ -373,6 +406,8 @@ function CreditCardNumberField({
             effectiveBrand
           )}
           placeholder='1234 1234 1234 1234'
+          disabled={disabled}
+          readOnly={disabled}
         />
         <CardBrandStrip cardNumber={value} resolvedBrand={effectiveBrand} />
       </div>
@@ -390,11 +425,13 @@ function GiftAccountField({
   paymentType,
   value,
   onChange,
+  disabled = false,
   error
 }: {
   paymentType: ReservationPaymentType
   value: string
   onChange: (value: string) => void
+  disabled?: boolean
   error?: string
 }) {
   return (
@@ -408,6 +445,8 @@ function GiftAccountField({
         value={value}
         onChange={event => onChange(event.target.value)}
         className={cn(COMPACT_INPUT, error && ERROR_FIELD_CLASS)}
+        disabled={disabled}
+        readOnly={disabled}
       />
       {error ? <p className={ERROR_TEXT_CLASS}>{error}</p> : null}
     </FormField>
@@ -442,10 +481,50 @@ function BillingAddressField({
   )
 }
 
+function AuthorizationFields({
+  fields,
+  onFieldChange,
+  disabled = false
+}: {
+  fields: ReservationPaymentFields
+  onFieldChange: <K extends keyof ReservationPaymentFields>(
+    key: K,
+    value: ReservationPaymentFields[K]
+  ) => void
+  disabled?: boolean
+}) {
+  return (
+    <div className='grid grid-cols-2 divide-x divide-input'>
+      <Input
+        id='payment-authorization'
+        value={fields.authorization}
+        onChange={event => onFieldChange('authorization', event.target.value)}
+        className={cn(GROUPED_INPUT_FOCUS, 'rounded-bl-lg')}
+        placeholder='Authorization'
+        aria-label='Authorization'
+        disabled={disabled}
+        readOnly={disabled}
+      />
+      <Input
+        id='payment-pnref'
+        value={fields.pnref}
+        onChange={event => onFieldChange('pnref', event.target.value)}
+        className={cn(GROUPED_INPUT_FOCUS, 'rounded-br-lg')}
+        placeholder='PNREF'
+        aria-label='PNREF'
+        disabled={disabled}
+        readOnly={disabled}
+      />
+    </div>
+  )
+}
+
 function CreditCardInformationField({
   fields,
   onFieldChange,
   showZip = false,
+  showAuthFields = false,
+  disabled = false,
   validationErrors = {}
 }: {
   fields: ReservationPaymentFields
@@ -454,6 +533,9 @@ function CreditCardInformationField({
     value: ReservationPaymentFields[K]
   ) => void
   showZip?: boolean
+  /** Shows Authorization/PNREF inputs — used by the Split Reservation payment form. */
+  showAuthFields?: boolean
+  disabled?: boolean
   validationErrors?: ReservationPaymentValidationErrors
 }) {
   const detectedCard = detectCardBrand(fields.cardNumber)
@@ -488,7 +570,9 @@ function CreditCardInformationField({
         <div className='overflow-hidden rounded-lg border border-input bg-background divide-y divide-input'>
           <CreditCardNumberField
             value={fields.cardNumber}
+            cardType={fields.cardType}
             onChange={value => onFieldChange('cardNumber', value)}
+            disabled={disabled}
             error={validationErrors.cardNumber}
           />
 
@@ -504,6 +588,8 @@ function CreditCardInformationField({
                 inputMode='numeric'
                 maxLength={7}
                 placeholder='MM / YY'
+                disabled={disabled}
+                readOnly={disabled}
               />
               {validationErrors.expiration ? (
                 <p className={cn(ERROR_TEXT_CLASS, 'px-3 pb-1')}>
@@ -527,6 +613,8 @@ function CreditCardInformationField({
                 inputMode='numeric'
                 maxLength={cvvMaxLength}
                 placeholder='CVV'
+                disabled={disabled}
+                readOnly={disabled}
               />
               {validationErrors.cvv ? (
                 <p className={cn(ERROR_TEXT_CLASS, 'px-3 pb-1')}>
@@ -552,6 +640,8 @@ function CreditCardInformationField({
                 autoComplete='postal-code'
                 inputMode='numeric'
                 placeholder='ZIP / Postal code'
+                disabled={disabled}
+                readOnly={disabled}
               />
               {validationErrors.zipCode ? (
                 <p className={cn(ERROR_TEXT_CLASS, 'px-3 pb-1')}>
@@ -568,10 +658,12 @@ function CreditCardInformationField({
               onChange={event =>
                 onFieldChange('billingAddress', event.target.value)
               }
-              className={cn(GROUPED_INPUT_FOCUS, 'rounded-b-lg')}
+              className={cn(GROUPED_INPUT_FOCUS, !showAuthFields && 'rounded-b-lg')}
               aria-invalid={validationErrors.billingAddress ? true : undefined}
               autoComplete='street-address'
               placeholder='Billing address'
+              disabled={disabled}
+              readOnly={disabled}
             />
             {validationErrors.billingAddress ? (
               <p className={cn(ERROR_TEXT_CLASS, 'px-3 pb-1')}>
@@ -579,6 +671,14 @@ function CreditCardInformationField({
               </p>
             ) : null}
           </div>
+
+          {showAuthFields ? (
+            <AuthorizationFields
+              fields={fields}
+              onFieldChange={onFieldChange}
+              disabled={disabled}
+            />
+          ) : null}
         </div>
       </div>
     </>
@@ -592,7 +692,10 @@ function PaymentFormFields({
   onPaymentAmountChange,
   fields,
   onFieldChange,
-  validationErrors = {}
+  paymentDisabled = false,
+  showAuthFields = false,
+  validationErrors = {},
+  excludedPaymentTypes
 }: {
   paymentType: ReservationPaymentType
   onPaymentTypeChange: (value: ReservationPaymentType) => void
@@ -604,7 +707,10 @@ function PaymentFormFields({
     value: ReservationPaymentFields[K]
   ) => void
   paymentDisabled?: boolean
+  /** Shows Authorization/PNREF inputs — used by the Split Reservation payment form. */
+  showAuthFields?: boolean
   validationErrors?: ReservationPaymentValidationErrors
+  excludedPaymentTypes?: ReservationPaymentType[]
 }) {
   const layout = getPaymentDetailLayout(paymentType)
 
@@ -615,7 +721,9 @@ function PaymentFormFields({
           <PaymentTypeField
             paymentType={paymentType}
             onPaymentTypeChange={onPaymentTypeChange}
+            disabled={paymentDisabled}
             error={validationErrors.paymentType}
+            excludedPaymentTypes={excludedPaymentTypes}
           />
           <PaymentAmountField
             value={paymentAmount}
@@ -628,6 +736,8 @@ function PaymentFormFields({
           fields={fields}
           onFieldChange={onFieldChange}
           showZip
+          showAuthFields={showAuthFields}
+          disabled={paymentDisabled}
           validationErrors={validationErrors}
         />
       </div>
@@ -641,7 +751,9 @@ function PaymentFormFields({
           <PaymentTypeField
             paymentType={paymentType}
             onPaymentTypeChange={onPaymentTypeChange}
+            disabled={paymentDisabled}
             error={validationErrors.paymentType}
+            excludedPaymentTypes={excludedPaymentTypes}
           />
           <PaymentAmountField
             value={paymentAmount}
@@ -653,6 +765,8 @@ function PaymentFormFields({
         <CreditCardInformationField
           fields={fields}
           onFieldChange={onFieldChange}
+          showAuthFields={showAuthFields}
+          disabled={paymentDisabled}
           validationErrors={validationErrors}
         />
       </div>
@@ -666,7 +780,9 @@ function PaymentFormFields({
           <PaymentTypeField
             paymentType={paymentType}
             onPaymentTypeChange={onPaymentTypeChange}
+            disabled={paymentDisabled}
             error={validationErrors.paymentType}
+            excludedPaymentTypes={excludedPaymentTypes}
           />
           <PaymentAmountField
             value={paymentAmount}
@@ -679,6 +795,7 @@ function PaymentFormFields({
           paymentType={paymentType}
           value={fields.accountNumber}
           onChange={value => onFieldChange('accountNumber', value)}
+          disabled={paymentDisabled}
           error={validationErrors.accountNumber}
         />
 
@@ -697,7 +814,9 @@ function PaymentFormFields({
         <PaymentTypeField
           paymentType={paymentType}
           onPaymentTypeChange={onPaymentTypeChange}
+          disabled={paymentDisabled}
           error={validationErrors.paymentType}
+          excludedPaymentTypes={excludedPaymentTypes}
         />
         <PaymentAmountField
           value={paymentAmount}
@@ -714,13 +833,18 @@ export function ReservationPaymentActions({
   onSave,
   saveDisabled,
   saving = false,
-  showReprint = false
+  showReprint = false,
+  onReprint,
+  extraActions
 }: {
   onCancel?: () => void
   onSave?: () => void
   saveDisabled?: boolean
   saving?: boolean
   showReprint?: boolean
+  onReprint?: () => void
+  /** Additional buttons rendered right-aligned (e.g. Split Party, Cash Drawer). */
+  extraActions?: ReactNode
 }) {
   return (
     <div className='flex flex-wrap items-center gap-2'>
@@ -740,8 +864,18 @@ export function ReservationPaymentActions({
       >
         Cancel
       </Button>
-      {showReprint ? (
-        <Button type='button' size='sm' variant='outline' className='ml-auto'>
+      {extraActions ? (
+        <div className='ml-auto flex flex-wrap items-center gap-2'>
+          {extraActions}
+        </div>
+      ) : showReprint ? (
+        <Button
+          type='button'
+          size='sm'
+          variant='outline'
+          className='ml-auto'
+          onClick={onReprint}
+        >
           Re Print Ticket
         </Button>
       ) : null}
@@ -757,7 +891,9 @@ export function ReservationPaymentPanel({
   fields,
   onFieldChange,
   paymentDisabled = false,
-  validationErrors
+  showAuthFields = false,
+  validationErrors,
+  excludedPaymentTypes
 }: {
   paymentType: ReservationPaymentType
   onPaymentTypeChange: (value: ReservationPaymentType) => void
@@ -769,7 +905,10 @@ export function ReservationPaymentPanel({
     value: ReservationPaymentFields[K]
   ) => void
   paymentDisabled?: boolean
+  /** Shows Authorization/PNREF inputs — used by the Split Reservation payment form. */
+  showAuthFields?: boolean
   validationErrors?: ReservationPaymentValidationErrors
+  excludedPaymentTypes?: ReservationPaymentType[]
 }) {
   return (
     <div className='space-y-1.5 border-t border-border/50 pt-3'>
@@ -786,7 +925,9 @@ export function ReservationPaymentPanel({
           fields={fields}
           onFieldChange={onFieldChange}
           paymentDisabled={paymentDisabled}
+          showAuthFields={showAuthFields}
           validationErrors={validationErrors}
+          excludedPaymentTypes={excludedPaymentTypes}
         />
       </div>
     </div>

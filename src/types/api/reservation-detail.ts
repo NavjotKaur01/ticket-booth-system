@@ -15,6 +15,11 @@ export type ReservationDetailPaymentItem = {
   PaymentTypeCode?: string | null
   PaymentStatusCode?: string | null
   IsSelected?: boolean
+  dueAmt?: number
+  ExpYr: string
+  BillZip: string
+  BillAddr: string
+  ExpMo: string
 }
 
 export type ReservationDetail = {
@@ -46,4 +51,15 @@ export type ReservationDetail = {
   Note?: string | null
   ReservationNotes?: string | null
   PaymentList?: ReservationDetailPaymentItem[]
+  Price?: number | null
+  DayOfShowFee?: number | null
+  PhoneInFee?: number | null
+  WalkUpFee?: number | null
+  WebFee?: number | null
+  LookupSDescSource?: string | null
+  ResStatus?: string | null
+  Memo?: string | null
+  TixPaid?: number | null
+  TixComp?: number | null
+  TixDisc?: number | null
 }

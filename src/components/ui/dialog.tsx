@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils"
 type DialogLayer = "base" | "nested"
 
 const DialogLayerContext = React.createContext<DialogLayer>("base")
-const DialogShowCloseContext = React.createContext(true)
 
 export function useDialogLayer() {
   return React.useContext(DialogLayerContext)
@@ -105,15 +104,13 @@ function shouldPreventOutsideDismiss(
   }
 }
 
-const dialogCloseButtonClassName =
-  "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none disabled:pointer-events-none"
-
 function DialogContent({
   className,
   children,
   showCloseButton = true,
   disableOutsideDismiss = false,
   nested = false,
+  suppressPresentation = false,
   onInteractOutside,
   onPointerDownOutside,
   onFocusOutside,
@@ -124,6 +121,8 @@ function DialogContent({
   showCloseButton?: boolean
   disableOutsideDismiss?: boolean
   nested?: boolean
+  /** Hides overlay + content while a nested child dialog is shown on top. */
+  suppressPresentation?: boolean
 }) {
   const dialogLayer: DialogLayer = nested ? "nested" : "base"
   const stackClass = nested ? "z-[90]" : "z-50"
@@ -142,12 +141,18 @@ function DialogContent({
 
   return (
     <DialogPortal>
-      <DialogOverlay className={stackClass} />
+      <DialogOverlay
+        className={cn(
+          stackClass,
+          suppressPresentation && 'pointer-events-none opacity-0'
+        )}
+      />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
           "fixed top-[50%] left-[50%] z-50 grid w-fit max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-0 rounded-lg border border-border/80 bg-background p-0 shadow-xl ring-1 ring-background/40 duration-200 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 sm:max-w-lg",
           stackClass,
+          suppressPresentation && 'invisible pointer-events-none',
           className
         )}
         onInteractOutside={(event) => handleOutsideEvent(event, onInteractOutside)}
@@ -170,42 +175,33 @@ function DialogContent({
         {...props}
       >
         <DialogLayerContext.Provider value={dialogLayer}>
-          <DialogShowCloseContext.Provider value={showCloseButton}>
-            {children}
-          </DialogShowCloseContext.Provider>
+          {children}
+          {showCloseButton && (
+            <DialogPrimitive.Close
+              data-slot="dialog-close"
+              className="absolute top-2 right-4 flex size-8 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none disabled:pointer-events-none"
+            >
+              <XIcon className="size-4" />
+              <span className="sr-only">Close</span>
+            </DialogPrimitive.Close>
+          )}
         </DialogLayerContext.Provider>
       </DialogPrimitive.Content>
     </DialogPortal>
   )
 }
 
-function DialogHeader({ className, children, ...props }: React.ComponentProps<"div">) {
-  const showCloseButton = React.useContext(DialogShowCloseContext)
 
+function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn(
-        "flex flex-row items-center gap-3 text-left",
-        className,
-        // Drop legacy absolute-close gutters (pr-12/pr-14/pr-24) now that close lives in-flow.
-        showCloseButton && "pr-4"
-      )}
+      className={cn("flex flex-col gap-1.5 text-left", className)}
       {...props}
-    >
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">{children}</div>
-      {showCloseButton ? (
-        <DialogPrimitive.Close
-          data-slot="dialog-close"
-          className={dialogCloseButtonClassName}
-        >
-          <XIcon className="size-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
-      ) : null}
-    </div>
+    />
   )
 }
+
 
 function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
