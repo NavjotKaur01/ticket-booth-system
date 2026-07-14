@@ -488,7 +488,7 @@ function formatDisplayDate(value: string | null | undefined) {
 function formatDisplayDateTime(value: string | null | undefined) {
   if (!value) return "-"
   const parsed = dayjs(value)
-  return parsed.isValid() ? parsed.format("MM/DD/YYYY HH:mm") : value
+  return parsed.isValid() ? parsed.format("M/D/YYYY h:mm:ss A") : value
 }
 
 function formatQuickViewDate(value: unknown): string {
@@ -1356,6 +1356,7 @@ function transformWebGiftCertificates(
   }
 }
 
+
 function transformExportShowsAttendees(
   data: unknown,
   reportType: string,
@@ -1365,23 +1366,33 @@ function transformExportShowsAttendees(
 ): ReportViewerResult {
   const columns: ReportViewerColumn[] = [
     { key: "showDateTime", label: "Show Date/Time" },
-    { key: "comicName", label: "Comic" },
+    { key: "comicName", label: "Comic Name" },
     { key: "lastName", label: "Last Name" },
     { key: "firstName", label: "First Name" },
     { key: "phone", label: "Phone" },
     { key: "email", label: "Email" },
-    { key: "source", label: "Source" },
+    { key: "source", label: "Source" }
   ]
   const rows = toRows(data).map((row) => ({
-    showDateTime: formatDisplayDateTime(String(row.ShowDateTime ?? "")),
-    comicName: safeStr(row.ComicName),
-    lastName: safeStr(row.LastName),
-    firstName: safeStr(row.FirstName),
-    phone: safeStr(row.Phone),
-    email: safeStr(row.Email),
-    source: safeStr(row.ReservationSource),
+      showDateTime: formatDisplayDateTime(String(row.ShowDateTime ?? "")),
+      comicName: safeStr(row.ComicName),
+      lastName: safeStr(row.LastName),
+      firstName: safeStr(row.FirstName),
+      phone: safeStr(row.Phone),
+      email: safeStr(row.Email),
+      source: safeStr(row.ReservationSource)
   }))
-  return { reportType, title, subtitle, columns, rows, emptyMessage: "No records found", generatedAt, rawData: data }
+
+  return {
+    reportType,
+    title,
+    subtitle,
+    columns,
+    rows,
+    emptyMessage: "No records found",
+    generatedAt,
+    rawData: data,
+  }
 }
 
 function transformReceipts(
