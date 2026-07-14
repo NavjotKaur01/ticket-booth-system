@@ -192,6 +192,12 @@ export function ReportViewerResults({
         generatedAt={result.generatedAt}
       />
 
+      {result.reportType === "export-shows-attendees" && (
+        <div className=" text-sm font-semibold px-2">
+          Total Count:&nbsp;&nbsp;&nbsp;&nbsp;{result.rows.length}
+        </div>
+      )}
+
       <ReportCard>
         <ReportTableScroll>
           <ReportTable>
@@ -246,7 +252,9 @@ export function ReportViewerResults({
         </ReportTableScroll>
       </ReportCard>
 
-      <ReportRecordCount count={result.rows.length} />
+      {result.reportType !== "export-shows-attendees" && (
+        <ReportRecordCount count={result.rows.length} />
+      )}
     </ReportViewShell>
   )
 }

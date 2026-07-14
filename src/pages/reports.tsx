@@ -1,4 +1,4 @@
-﻿import dayjs from "dayjs"
+import dayjs from "dayjs"
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 
@@ -220,6 +220,9 @@ export function Reports() {
       return
     } else {
       setDraftFilters((current) => ({ ...current, [key]: value }))
+      if (key === "isWebReservationOnly") {
+        void handleGenerate({ ...draftFilters, [key]: value })
+      }
     }
 
     if (key === "dateFrom" || key === "dateTo") {
