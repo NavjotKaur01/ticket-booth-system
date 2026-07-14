@@ -310,6 +310,10 @@ input[type="number"] {
   min-height: 0;
 }
 
+.rbc-calendar {
+  height: 100%;
+}
+
 .rbc-month-view {
   background-color: var(--color-background);
   color: var(--color-foreground);
