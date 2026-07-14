@@ -438,7 +438,7 @@ export function SplitReservationDialog({
                     <SelectContent>
                       <SelectItem value='none'>None</SelectItem>
                       {promoOptions.map(p => (
-                        <SelectItem key={p.id} value={p.id}>
+                        <SelectItem key={p.value} value={p.value}>
                           {p.label}
                         </SelectItem>
                       ))}

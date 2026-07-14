@@ -13,6 +13,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RowSelectionState } from '@tanstack/react-table'
 
 import { DatePickerCalendarPanel } from '@/components/calendar/controls/date-picker-calendar-panel'
+
 import {
   FormField,
   IconActionButton
@@ -443,7 +444,7 @@ function SectionPicker({
             </SelectTrigger>
             <SelectContent onCloseAutoFocus={handlePromoCloseAutoFocus}>
               {promoOptions.map(option => (
-                <SelectItem key={option.id} value={option.id}>
+                <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
               ))}
@@ -1608,7 +1609,7 @@ export function AddReservationDialog({
     selectedSection.showDinner !== 'Y'
 
   const effectivePromo =
-    promo !== 'none' && promoOptions.some(option => option.id === promo)
+    promo !== 'none' && promoOptions.some(option => option.value === promo)
       ? promo
       : 'none'
 
@@ -1961,7 +1962,7 @@ export function AddReservationDialog({
       return
     }
 
-    if (promo !== 'none' && promoOptions.some(option => option.id === promo)) {
+    if (promo !== 'none' && promoOptions.some(option => option.value === promo)) {
       const confirmPromo = window.confirm("Promo will be removed from the whole party. Continue?")
       if (!confirmPromo) {
         return

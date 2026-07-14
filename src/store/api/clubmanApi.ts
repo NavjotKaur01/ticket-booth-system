@@ -596,7 +596,7 @@ export const clubmanApi = createApi({
       invalidatesTags: ["SystemUser"],
     }),
 
-    getReservationPromotions: builder.mutation({
+    getReservationPromotions: builder.query({
       query: ({
         connectionName,
         locationId,
@@ -620,9 +620,14 @@ export const clubmanApi = createApi({
           isManager,
         }),
       }),
-      transformResponse: (response: ApiPromotionSearchItem[]) => response,
-      invalidatesTags: (_result, _error, arg) => [
-        { type: "Promotion", id: `${arg.showId}:${arg.showDate}` },
+      transformResponse: (response: { Data?: ApiPromotionSearchItem[] } | ApiPromotionSearchItem[]) => {
+        if (response && "Data" in response && Array.isArray(response.Data)) {
+          return response.Data
+        }
+        return Array.isArray(response) ? response : []
+      },
+      providesTags: (_result, _error, arg) => [
+        { type: "Promotion", id: arg.locationId },
       ],
     }),
 
@@ -647,7 +652,12 @@ export const clubmanApi = createApi({
           filters,
         }),
       }),
-      transformResponse: (response: ApiPromotionSearchItem[]) => response,
+      transformResponse: (response: { Data?: ApiPromotionSearchItem[] } | ApiPromotionSearchItem[]) => {
+        if (response && "Data" in response && Array.isArray(response.Data)) {
+          return response.Data
+        }
+        return Array.isArray(response) ? response : []
+      },
       invalidatesTags: (_result, _error, arg) => [
         { type: "Promotion", id: arg.locationId },
       ],
@@ -695,7 +705,12 @@ export const clubmanApi = createApi({
         ),
         method: "GET",
       }),
-      transformResponse: (response: ApiPromotionSearchItem) => response,
+      transformResponse: (response: { Data?: ApiPromotionSearchItem } | ApiPromotionSearchItem) => {
+        if (response && "Data" in response && response.Data) {
+          return response.Data
+        }
+        return response as ApiPromotionSearchItem
+      },
     }),
 
     updatePromotion: builder.mutation({
@@ -1869,7 +1884,7 @@ export const {
   useSavePromotionMutation,
   useGetPromotionDetailsMutation,
   useUpdatePromotionMutation,
-  useGetReservationPromotionsMutation,
+  useGetReservationPromotionsQuery,
   useGetReservationDataQuery,
   useGetReservationDetailByIdQuery,
   useGetReservationPrintPropertiesQuery,

@@ -136,11 +136,11 @@ export function findReservationPromoId (
 
   const match = promoOptions.find(
     option =>
-      option.id !== 'none' &&
+      option.value !== 'none' &&
       option.label.trim().toLowerCase() === normalized
   )
 
-  return match?.id ?? 'none'
+  return match?.value ?? 'none'
 }
 
 export function buildReservationEditSearchCriteria (reservation: Reservation) {

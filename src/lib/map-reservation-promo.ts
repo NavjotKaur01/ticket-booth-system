@@ -1,6 +1,5 @@
 import type { ApiPromotionSearchItem } from '@/types/api/promotion-search'
 import {
-  EMPTY_RESERVATION_PROMO_OPTION,
   type ReservationPromo,
   type ReservationPromoOption
 } from '@/types/reservation-promo'
@@ -28,11 +27,8 @@ export function mapReservationPromo(
 export function mapReservationPromoOptions(
   promos: ReservationPromo[]
 ): ReservationPromoOption[] {
-  return [
-    EMPTY_RESERVATION_PROMO_OPTION,
-    ...promos.map(promo => ({
-      id: promo.id,
-      label: promo.promotionCode || promo.promotionName
-    }))
-  ]
+  return promos.map(promo => ({
+    value: promo.id,
+    label: promo.promotionCode || promo.promotionName
+  }))
 }

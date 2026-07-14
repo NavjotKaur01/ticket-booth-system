@@ -124,7 +124,7 @@ export default function EventCalendar() {
   const suppressNextSlotSelectionRef = useRef(false)
   const [unCancelShow] = useUnCancelShowMutation()
 
-  const { events, loading, error, refetch } = useCalendarEvents(
+  const { events, loading, refetch } = useCalendarEvents(
     connectionName,
     locationId,
     locationName,
@@ -410,11 +410,7 @@ export default function EventCalendar() {
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg bg-background shadow-sm ring-1 ring-border">
-      {error ? (
-        <div className="border-b border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </div>
-      ) : null}
+      
       <Calendar
         localizer={localizer}
         events={events}

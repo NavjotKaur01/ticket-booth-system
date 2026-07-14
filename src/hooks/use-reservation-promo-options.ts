@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 import {
   mapReservationPromo,
   mapReservationPromoOptions
 } from '@/lib/map-reservation-promo'
 import { getClubmanErrorMessage } from '@/store/api/baseQuery'
-import { useGetReservationPromotionsMutation } from '@/store/api/clubmanApi'
-import type { ReservationPromo } from '@/types/reservation-promo'
+import { useGetReservationPromotionsQuery } from '@/store/api/clubmanApi'
 
 type UseReservationPromoOptionsParams = {
   connectionName: string
@@ -23,55 +22,29 @@ export function useReservationPromoOptions({
   showDate,
   enabled = true
 }: UseReservationPromoOptionsParams) {
+  const shouldSkip = !enabled || !connectionName || !locationId || !showId || !showDate
 
-  const [promos, setPromos] = useState<ReservationPromo[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [getReservationPromotions] = useGetReservationPromotionsMutation()
+  const { data, isLoading, isFetching, error, refetch } = useGetReservationPromotionsQuery(
+    {
+      connectionName,
+      locationId,
+      showId,
+      showDate
+    },
+    { skip: shouldSkip }
+  )
 
-  const loadPromos = useCallback(async () => {
-    if (!enabled || !connectionName || !locationId || !showId || !showDate) {
-      setPromos([])
-      setError(null)
-      return
+  const promos = useMemo(() => {
+    if (shouldSkip || !data) {
+      return []
     }
 
-    setLoading(true)
-    setError(null)
-
-    try {
-      const data = await getReservationPromotions({
-        connectionName,
-        locationId,
-        showId,
-        showDate
-      }).unwrap()
-
-      const mapped = (data ?? [])
-        .map(mapReservationPromo)
-        .sort((left, right) =>
-          left.promotionCode.localeCompare(right.promotionCode)
-        )
-
-      setPromos(mapped)
-    } catch (requestError) {
-      setPromos([])
-      setError(getClubmanErrorMessage(requestError))
-    } finally {
-      setLoading(false)
-    }
-  }, [
-    connectionName,
-    enabled,
-    getReservationPromotions,
-    locationId,
-    showDate,
-    showId
-  ])
-
-  useEffect(() => {
-    void loadPromos()
-  }, [loadPromos])
+    return [...data]
+      .map(mapReservationPromo)
+      .sort((left, right) =>
+        left.promotionCode.localeCompare(right.promotionCode)
+      )
+  }, [data, shouldSkip])
 
   const options = useMemo(
     () => mapReservationPromoOptions(promos),
@@ -87,8 +60,8 @@ export function useReservationPromoOptions({
     options,
     promos,
     promoById,
-    loading,
-    error,
-    reload: loadPromos
+    loading: shouldSkip ? false : isLoading || isFetching,
+    error: error ? getClubmanErrorMessage(error) : null,
+    reload: refetch
   }
 }

@@ -4,13 +4,10 @@ import { useReservationPromoOptions } from '@/hooks/use-reservation-promo-option
 import { useShowSections } from '@/hooks/use-show-sections'
 import { mapReservationPromoOptions } from '@/lib/map-reservation-promo'
 import type { ReservationSectionOption } from '@/types/reservation'
-import type { ReservationPromo } from '@/types/reservation-promo'
 
 type ShowDataCacheEntry = {
   sections: ReservationSectionOption[]
-  promos: ReservationPromo[]
   sectionsError: string | null
-  promosError: string | null
 }
 
 type UseCachedReservationShowDataParams = {
@@ -65,9 +62,6 @@ export function useCachedReservationShowData({
   }, [enabled, showDate])
 
   const shouldLoad = enabled && Boolean(showId)
-  const cachedEntry = cacheRef.current.byShowId.get(showId)
-  const isPromosCached = Boolean(cachedEntry)
-  const shouldFetchPromos = shouldLoad && !isPromosCached
 
   const {
     sections: fetchedSections,
@@ -84,7 +78,7 @@ export function useCachedReservationShowData({
     locationId,
     showId,
     showDate,
-    enabled: shouldFetchPromos
+    enabled: shouldLoad
   })
 
   useEffect(() => {
@@ -95,9 +89,7 @@ export function useCachedReservationShowData({
     const existing = cacheRef.current.byShowId.get(showId)
     const nextEntry: ShowDataCacheEntry = {
       sections: fetchedSections,
-      promos: existing?.promos ?? fetchedPromos,
-      sectionsError: fetchedSectionsError,
-      promosError: existing?.promosError ?? fetchedPromosError
+      sectionsError: fetchedSectionsError
     }
 
     if (
@@ -117,53 +109,23 @@ export function useCachedReservationShowData({
     showId
   ])
 
-  useEffect(() => {
-    if (!shouldFetchPromos || !showId) {
-      return
-    }
-
-    if (fetchedPromosLoading) {
-      return
-    }
-
-    const existing = cacheRef.current.byShowId.get(showId)
-    cacheRef.current.byShowId.set(showId, {
-      sections: existing?.sections ?? fetchedSections,
-      promos: fetchedPromos,
-      sectionsError: existing?.sectionsError ?? fetchedSectionsError,
-      promosError: fetchedPromosError
-    })
-    bumpCacheVersion(version => version + 1)
-  }, [
-    fetchedPromos,
-    fetchedPromosError,
-    fetchedPromosLoading,
-    fetchedSections,
-    fetchedSectionsError,
-    shouldFetchPromos,
-    showId
-  ])
-
   void cacheVersion
 
   const activeEntry = cacheRef.current.byShowId.get(showId)
   const sections = activeEntry?.sections ?? fetchedSections
-  const promos = activeEntry?.promos ?? fetchedPromos
   const sectionsError = activeEntry?.sectionsError ?? fetchedSectionsError
-  const promosError = activeEntry?.promosError ?? fetchedPromosError
   const loading =
     shouldLoad &&
-    !activeEntry &&
-    (fetchedSectionsLoading || fetchedPromosLoading)
+    ((!activeEntry && fetchedSectionsLoading) || fetchedPromosLoading)
 
   const promoOptions = useMemo(
-    () => mapReservationPromoOptions(promos),
-    [promos]
+    () => mapReservationPromoOptions(fetchedPromos),
+    [fetchedPromos]
   )
 
   const promoById = useMemo(
-    () => new Map(promos.map(promo => [promo.id, promo])),
-    [promos]
+    () => new Map(fetchedPromos.map(promo => [promo.id, promo])),
+    [fetchedPromos]
   )
 
   return {
@@ -173,6 +135,6 @@ export function useCachedReservationShowData({
     promoOptions,
     promoById,
     promoLoading: loading,
-    promosError
+    promosError: fetchedPromosError
   }
 }
