@@ -551,7 +551,6 @@ export function ComicInfoDialog({
   comic,
   nested = false,
   isLoading = false,
-  onSave,
   onChangeImage,
   onDeleteImage,
 }: ComicInfoDialogProps) {
