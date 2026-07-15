@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import dayjs from "dayjs"
 import { useGenerateReportMutation } from "@/store/api/clubmanApi"
 import type { ReportRequestModel } from "@/types/api/report-request"
@@ -13,7 +13,6 @@ import {
   REPORT_DRILL_DIALOG_CLASS,
   REPORT_DRILL_FOOTER_CLASS,
   REPORT_DRILL_HEADER_CLASS,
-  ReportRecordCount,
   ReportTable,
   ReportTd,
   ReportTh,
@@ -93,6 +92,25 @@ export function ReportDrillDialog({
   const [rows, setRows] = useState<Record<string, unknown>[] | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [colWidths, setColWidths] = useState<number[]>([])
+  const tableRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!isLoading && rows && rows.length > 0 && tableRef.current) {
+      const observer = new ResizeObserver(() => {
+        const headers = tableRef.current?.querySelectorAll("th")
+        if (headers) {
+          const widths = Array.from(headers).map((h) => h.getBoundingClientRect().width)
+          setColWidths(widths)
+        }
+      })
+      const tableEl = tableRef.current.querySelector("table")
+      if (tableEl) {
+        observer.observe(tableEl)
+      }
+      return () => observer.disconnect()
+    }
+  }, [isLoading, rows])
 
   useEffect(() => {
     async function load() {
@@ -110,9 +128,6 @@ export function ReportDrillDialog({
     load()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  const textCols = columns.filter((c) => !c.right)
-  const numCols = columns.filter((c) => c.right)
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -132,7 +147,7 @@ export function ReportDrillDialog({
         )}
 
         {!isLoading && !error && rows && (
-          <div className={REPORT_DRILL_BODY_CLASS}>
+          <div ref={tableRef} className={REPORT_DRILL_BODY_CLASS}>
             <ReportTable>
               <thead className="sticky top-0 z-10">
                 <tr>
@@ -161,26 +176,47 @@ export function ReportDrillDialog({
                     </tr>
                   ))
                 )}
-                {footerTotals && rows.length > 0 && (
-                  <tr className="bg-muted/30 font-semibold">
-                    <ReportTd colSpan={textCols.length}>Total:</ReportTd>
-                    {numCols.map((col) => (
-                      <ReportTd key={col.key} right bold>
-                        {fmtCell(col, sumColumn(rows, col))}
-                      </ReportTd>
-                    ))}
-                  </tr>
-                )}
               </tbody>
             </ReportTable>
           </div>
         )}
 
-        {!isLoading && rows && rows.length > 0 && (
-          <div className={REPORT_DRILL_FOOTER_CLASS}>
-            <ReportRecordCount count={rows.length} />
-          </div>
-        )}
+        {!isLoading && rows && rows.length > 0 && (() => {
+          const firstRightIdx = columns.findIndex((c) => c.right)
+          return (
+            <div className={REPORT_DRILL_FOOTER_CLASS}>
+              {footerTotals && firstRightIdx !== -1 && colWidths.length > 0 && (
+                <div className="border-border text-foreground font-semibold">
+                  <table className="w-full border-collapse text-xs table-fixed">
+                    <colgroup>
+                      {colWidths.map((w, idx) => (
+                        <col key={idx} style={{ width: w }} />
+                      ))}
+                    </colgroup>
+                    <tbody>
+                      <tr>
+                        <td colSpan={firstRightIdx} className="text-left px-3 py-1 font-semibold">
+                          Total:
+                        </td>
+                        {columns.slice(firstRightIdx).map((col) => {
+                          if (col.right) {
+                            return (
+                              <td key={col.key} className="text-right px-3 py-1 font-bold">
+                                {fmtCell(col, sumColumn(rows, col))}
+                              </td>
+                            )
+                          }
+                          return <td key={col.key} className="px-3 py-1" />
+                        })}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              
+            </div>
+          )
+        })()}
       </DialogContent>
     </Dialog>
   )

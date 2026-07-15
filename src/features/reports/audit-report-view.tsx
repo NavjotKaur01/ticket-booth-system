@@ -167,6 +167,7 @@ export function AuditReportView({
                 : 'Move Reservation'
           }}
           columns={DRILL_COLUMNS}
+          footerTotals
           onClose={() => setSelectedRow(null)}
         />
       )}

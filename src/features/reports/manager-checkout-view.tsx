@@ -216,7 +216,7 @@ const DRILL_COLUMNS: DrillColumn[] = [
   { key: "PymtFName",     label: "Pymt FName",     keys: ["PymtFName"] },
   { key: "Amount",        label: "Amount",         right: true, format: "currency" },
   { key: "CreatedBy",     label: "CreatedBy",      keys: ["CreatedBy"] },
-  { key: "PaymentTime",   label: "Payment Time",   format: "datetime", keys: ["PaymentTime", "paymentTime", "PaymentDate", "paymentDate", "CreateDt", "CreatedDate"] },
+  { key: "PaymentTime",   label: "CreateDt",   format: "datetime", keys: ["PaymentTime", "paymentTime", "PaymentDate", "paymentDate", "CreateDt", "CreatedDate"] },
 ]
 
 // ─── Drill cell ────────────────────────────────────────────────────────────────
@@ -373,7 +373,7 @@ function PaymentTable({ show, drillContext }: { show: ManagerCheckoutApiShow; dr
 
       {activeDrill && drillContext && (
         <ReportDrillDialog
-          title="Manager checkout -drill Down Payment Verification"
+          title="Manager Checkout - Drill Down Payment Verification"
           endpoint="ManagerCheckOutDrillDown"
           body={{
             Connection: drillContext.connectionName,
