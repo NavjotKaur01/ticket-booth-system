@@ -13,7 +13,7 @@ export function calculatePromoDiscount({
   unitPrice: number
   passes?: number
 }) {
-  if (!promo || ticketCount <= 0 || unitPrice <= 0) {
+  if (!promo || ticketCount <= 0 || unitPrice <= 0 || passes <= 0) {
     return 0
   }
   
@@ -75,7 +75,7 @@ export function getPromoApplicableTickets({
   ticketCount: number
   passes?: number
 }) {
-  if (!promo || ticketCount <= 0) {
+  if (!promo || ticketCount <= 0 || passes <= 0) {
     return { applicableTickets: 0, freeTickets: 0, iPromoParty: 0 }
   }
   
