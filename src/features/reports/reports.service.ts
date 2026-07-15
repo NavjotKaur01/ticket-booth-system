@@ -1402,21 +1402,23 @@ function transformReceipts(
   reportType: string,
   title: string,
   subtitle: string,
-  generatedAt: string
+  generatedAt: string,
+  drillContext?: ReportDrillContext
 ): ReportViewerResult {
   const columns: ReportViewerColumn[] = [
     { key: "paymentDate", label: "Payment Date" },
     { key: "cash", label: "Cash", align: "right" },
     { key: "american", label: "AmEx", align: "right" },
+    { key: "discover", label: "Discover", align: "right" },
     { key: "masterCard", label: "MasterCard", align: "right" },
     { key: "visa", label: "Visa", align: "right" },
-    { key: "discover", label: "Discover", align: "right" },
-    { key: "creditCard", label: "Credit Card", align: "right" },
+    // { key: "creditCard", label: "Credit Card", align: "right" },
     { key: "giftCard", label: "Gift Card", align: "right" },
-    { key: "webGiftCard", label: "Web Gift Card", align: "right" },
+    { key: "webGiftCard", label: "Gift Card", align: "right" },
     { key: "refund", label: "Refund", align: "right" },
-    { key: "deferedPaid", label: "Deferred Paid", align: "right" },
+    { key: "deferedPaid", label: "Deferred ", align: "right" },
     { key: "totalPaid", label: "Total Paid", align: "right" },
+    { key: "salesTax", label: "Sales Tax", align: "right" },
     { key: "total", label: "Total", align: "right" },
   ]
 
@@ -1432,6 +1434,7 @@ function transformReceipts(
     refund: 0,
     deferedPaid: 0,
     totalPaid: 0,
+    salesTax: 0,
     total: 0,
   }
 
@@ -1447,6 +1450,7 @@ function transformReceipts(
     const refund = toNum(row.Refund)
     const deferedPaid = toNum(row.DeferedPaid)
     const totalPaid = toNum(row.TotalPaid)
+    const salesTax = toNum(row.SalesTax ?? row.SaleTax ?? row.salesTax)
     const total = toNum(row.Total)
 
     totals.cash += cash
@@ -1460,10 +1464,12 @@ function transformReceipts(
     totals.refund += refund
     totals.deferedPaid += deferedPaid
     totals.totalPaid += totalPaid
+    totals.salesTax += salesTax
     totals.total += total
 
     return {
       paymentDate: formatDisplayDate(String(row.PaymentDate ?? row.ReportDate ?? "")),
+      rawDate: String(row.PaymentDate ?? row.ReportDate ?? ""),
       cash: formatCurrency(cash),
       american: formatCurrency(american),
       masterCard: formatCurrency(masterCard),
@@ -1475,6 +1481,7 @@ function transformReceipts(
       refund: formatCurrency(refund),
       deferedPaid: formatCurrency(deferedPaid),
       totalPaid: formatCurrency(totalPaid),
+      salesTax: formatCurrency(salesTax),
       total: formatCurrency(total),
     }
   })
@@ -1492,6 +1499,7 @@ function transformReceipts(
     refund: formatCurrency(totals.refund),
     deferedPaid: formatCurrency(totals.deferedPaid),
     totalPaid: formatCurrency(totals.totalPaid),
+    salesTax: formatCurrency(totals.salesTax),
     total: formatCurrency(totals.total),
   }
 
@@ -1505,6 +1513,7 @@ function transformReceipts(
     emptyMessage: "No records found",
     generatedAt,
     rawData: data,
+    drillContext,
   }
 }
 
@@ -1693,7 +1702,12 @@ export function transformReportApiResponse({
         locationId: filters.locationId,
       })
     case "receipts":
-      return transformReceipts(data, reportType, config.title, subtitle, generatedAt)
+      return transformReceipts(data, reportType, config.title, subtitle, generatedAt, {
+        connectionName,
+        startDate: filters.dateFrom,
+        endDate: filters.dateTo,
+        locationId: filters.locationId,
+      })
     case "promo-report":
       return transformPromoReport(data, reportType, config.title, subtitle, generatedAt)
     case "audit-report":

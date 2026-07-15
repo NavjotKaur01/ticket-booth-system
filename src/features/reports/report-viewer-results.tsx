@@ -20,6 +20,7 @@ import { PromoReportView } from "@/features/reports/promo-report-view"
 import { SalesByShowView } from "@/features/reports/sales-by-show-view"
 import { WebReservationsForDayView } from "@/features/reports/web-reservations-for-day-view"
 import { ComicTicketRevenueView } from "@/features/reports/comic-ticket-revenue-view"
+import { ReceiptsReportView } from "@/features/reports/receipts-report-view"
 
 type ReportViewerResultsProps = {
   result: ReportViewerResult | null
@@ -167,6 +168,15 @@ export function ReportViewerResults({
         rawData={result.rawData}
         subtitle={result.subtitle}
         generatedAt={result.generatedAt}
+      />
+    )
+  }
+
+  if (result.reportType === "receipts") {
+    return (
+      <ReceiptsReportView
+        result={result}
+        drillContext={result.drillContext}
       />
     )
   }
