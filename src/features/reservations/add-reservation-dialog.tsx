@@ -207,7 +207,9 @@ function SectionSeatDisplay({
         'flex min-w-max items-center justify-end gap-x-1.5 whitespace-nowrap text-sm tabular-nums',
         className
       )}
-    ><span className='shrink-0 tabular-nums text-foreground'>
+    >
+      {/* price only renders here from sm+ — hidden on mobile to avoid duplication */}
+      <span className='hidden shrink-0 tabular-nums text-foreground sm:inline'>
         {formatSectionDesktopPrice(option.price)}
       </span>
 

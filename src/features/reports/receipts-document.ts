@@ -145,16 +145,17 @@ export function mapReceiptsData(rawData: unknown): {
 const RECEIPT_HEADERS = [
   "Date",
   "Today",
-  "Deferred Paid",
+  "Deferred",
   "Total",
   "American",
   "Cash",
-  "Credit Card",
+  // "Credit Card",
   "Discover",
   "Gift Card",
   "Master Card",
   "Visa",
-  "Web Gift Card",
+  "Gift Card",
+  "Sales Tax",
   "Total",
 ] as const
 

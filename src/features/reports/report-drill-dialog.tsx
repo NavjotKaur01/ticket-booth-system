@@ -23,7 +23,7 @@ export type DrillColumn = {
   key: string
   label: string
   right?: boolean
-  format?: "text" | "number" | "currency" | "datetime" | "date"
+  format?: "text" | "number" | "currency" | "datetime" | "date" | "decimal"
   keys?: string[]
 }
 
@@ -34,6 +34,7 @@ type Props = {
   columns: DrillColumn[]
   footerTotals?: boolean
   onClose: () => void
+  isZero?: boolean
 }
 
 function cellValue(row: Record<string, unknown>, col: DrillColumn): unknown {
@@ -62,11 +63,15 @@ function fmtCell(col: DrillColumn, v: unknown): string {
     return d.isValid() ? d.format("M/D/YYYY") : String(v)
   }
 
-  if (col.format === "currency" || (col.right && col.format !== "number")) {
+  if (col.format === "currency" || (col.right && col.format !== "number" && col.format !== "decimal")) {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
     }).format(toNum(v))
+  }
+
+  if (col.format === "decimal") {
+    return toNum(v).toFixed(2)
   }
 
   if (col.format === "number") {
@@ -87,6 +92,7 @@ export function ReportDrillDialog({
   columns,
   footerTotals = false,
   onClose,
+  isZero = false,
 }: Props) {
   const [generateReport] = useGenerateReportMutation()
   const [rows, setRows] = useState<Record<string, unknown>[] | null>(null)
@@ -114,6 +120,10 @@ export function ReportDrillDialog({
 
   useEffect(() => {
     async function load() {
+      if (isZero) {
+        setRows([])
+        return
+      }
       setIsLoading(true)
       setError(null)
       try {
@@ -148,25 +158,23 @@ export function ReportDrillDialog({
 
         {!isLoading && !error && rows && (
           <div ref={tableRef} className={REPORT_DRILL_BODY_CLASS}>
-            <ReportTable>
-              <thead className="sticky top-0 z-10">
-                <tr>
-                  {columns.map((col) => (
-                    <ReportTh key={col.key} right={col.right}>
-                      {col.label}
-                    </ReportTh>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 ? (
+            {rows.length === 0 ? (
+              <div className="flex min-h-32 items-center justify-center p-4 text-sm text-muted-foreground">
+                No records found
+              </div>
+            ) : (
+              <ReportTable>
+                <thead className="sticky top-0 z-10">
                   <tr>
-                    <ReportTd colSpan={columns.length} center className="py-6 text-muted-foreground">
-                      No records found
-                    </ReportTd>
+                    {columns.map((col) => (
+                      <ReportTh key={col.key} right={col.right}>
+                        {col.label}
+                      </ReportTh>
+                    ))}
                   </tr>
-                ) : (
-                  rows.map((row, i) => (
+                </thead>
+                <tbody>
+                  {rows.map((row, i) => (
                     <tr key={i} className={reportRowClass(i)}>
                       {columns.map((col) => (
                         <ReportTd key={col.key} right={col.right}>
@@ -174,10 +182,10 @@ export function ReportDrillDialog({
                         </ReportTd>
                       ))}
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </ReportTable>
+                  ))}
+                </tbody>
+              </ReportTable>
+            )}
           </div>
         )}
 
