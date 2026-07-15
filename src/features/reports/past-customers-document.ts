@@ -35,15 +35,15 @@ type PastCustomerApiRow = {
 }
 
 const HEADERS = [
-  "Last Name",
-  "First Name",
+  "LastName",
+  "FirstName",
   "Addr1",
   "Addr2",
   "City",
   "State",
-  "Phone",
   "Zip",
   "Country",
+  "Phone",
   "Email Address",
 ]
 
@@ -71,9 +71,9 @@ function toRowCells(row: PastCustomerDocumentRow) {
     row.addr2,
     row.city,
     row.state,
-    row.phone,
     row.zip,
     row.country,
+    row.phone,
     row.email,
   ]
 }
