@@ -153,7 +153,7 @@ export function ReportTh({
       colSpan={colSpan}
       rowSpan={rowSpan}
       className={cn(
-        "border border-border bg-muted/50 px-3 py-2 text-[11px] font-semibold tracking-wide text-muted-foreground whitespace-nowrap",
+        "border border-border bg-muted/50 px-3 py-2 font-semibold tracking-wide whitespace-nowrap",
         right ? "text-right" : center ? "text-center" : "text-left",
         className
       )}
