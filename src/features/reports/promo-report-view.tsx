@@ -162,12 +162,24 @@ export function buildPromoReportData(raw: unknown): PromoReportData {
   }
 }
 
+function formatPromoPerc(val: number): string {
+  if (val === 0) return "0 %"
+  const formatted = val.toFixed(2)
+  if (formatted.endsWith(".00")) {
+    return val.toFixed(1) + " %"
+  }
+  if (formatted.endsWith("0")) {
+    return val.toFixed(1) + " %"
+  }
+  return formatted + " %"
+}
+
 function PromoDetailCells({ detail }: { detail: PromoDetail }) {
   return (
     <>
       <ReportTd right>{detail.made}</ReportTd>
       <ReportTd right>{detail.ci}</ReportTd>
-      <ReportTd right>{detail.perc}%</ReportTd>
+      <ReportTd right>{formatPromoPerc(detail.perc)}</ReportTd>
     </>
   )
 }
@@ -235,7 +247,7 @@ export function PromoReportView({ rawData, subtitle, generatedAt }: PromoReportV
                   <Fragment key={i}>
                     <ReportTd bold right>{detail.made}</ReportTd>
                     <ReportTd bold right>{detail.ci}</ReportTd>
-                    <ReportTd bold right>{detail.perc}%</ReportTd>
+                    <ReportTd bold right>{formatPromoPerc(detail.perc)}</ReportTd>
                   </Fragment>
                 ))}
               </tr>
