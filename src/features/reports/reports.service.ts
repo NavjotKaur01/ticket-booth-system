@@ -232,7 +232,7 @@ export const REPORT_CONFIGS: Record<string, ReportConfig> = {
   "door-checkout": { ...BASE, endpoint: "GetDoorCheckOutReport", title: "Door Checkout", showDateRange: true, showSeparateByUsers: true },
   "export-shows-attendees": { ...BASE, endpoint: "GetExportShowsAttendeesReport", title: "Export Shows Attendees", showDateRange: true, showWebReservationOnly: true },
   "manager-checkout": { ...BASE, endpoint: "GetManagerCheckOutReport", title: "Manager Checkout", showDateRange: true },
-  "new-customers": { ...BASE, endpoint: "GetNewCustomerReport", title: "New Customers", showDateRange: true, showCustomerFilters: true },
+  "new-customers": { ...BASE, endpoint: "GetNewCustomerReport", title: "New Customer Report", showDateRange: true, showCustomerFilters: true },
   "past-customers": { ...BASE, endpoint: "GetOldCustomerReport", title: "Past Customers", showDateRange: true, showCustomerFilters: true },
   "projected-sales": { ...BASE, endpoint: "GetProjectedReport", title: "Projected Sales", showDateRange: true },
   "promo-report": { ...BASE, endpoint: "GetPromoReport", title: "Promo Report", showDateRange: true },
@@ -788,7 +788,7 @@ function transformNewCustomers(
     state: safeStr(row.State),
     phone: safeStr(row.Phone),
     zip: safeStr(row.Zip ?? row.ZipCode),
-    createdOn: formatDisplayDate(String(row.DateCreated ?? "")),
+    createdOn: formatDisplayDateTime(String(row.DateCreated ?? "")),
   }))
   return {
     reportType,
