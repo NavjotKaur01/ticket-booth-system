@@ -551,7 +551,6 @@ export function ComicInfoDialog({
   comic,
   nested = false,
   isLoading = false,
-  onSave,
   onChangeImage,
   onDeleteImage,
 }: ComicInfoDialogProps) {
@@ -587,10 +586,10 @@ export function ComicInfoDialog({
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  async function handleSave() {
-    await onSave?.(form)
-    onOpenChange(false)
-  }
+  // async function handleSave() {
+  //   await onSave?.(form)
+  //   onOpenChange(false)
+  // }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -602,7 +601,7 @@ export function ComicInfoDialog({
       >
         <DialogHeader className="shrink-0 gap-0 border-b px-5 py-4 pr-12">
           <DialogTitle className="text-lg font-semibold text-foreground">
-            Edit Comedian
+            Show Comedian
           </DialogTitle>
         </DialogHeader>
 
@@ -642,9 +641,9 @@ export function ComicInfoDialog({
           >
             Cancel
           </Button>
-          <Button type="button" onClick={handleSave} disabled={isLoading}>
+          {/* <Button type="button" onClick={handleSave} disabled={isLoading}>
             Save changes
-          </Button>
+          </Button> */}
         </DialogFooter>
       </DialogContent>
     </Dialog>
