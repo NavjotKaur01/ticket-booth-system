@@ -733,8 +733,7 @@ function transformBannedCustomers(
     { key: "zip", label: "Zip" },
     { key: "country", label: "Country" },
     { key: "phone", label: "Phone" },
-    { key: "status", label: "Status" },
-    { key: "createdOn", label: "Created On" },
+    { key: "createdOn", label: "Date Created" },
   ]
   const rows = toRows(data).map((row) => ({
     lastName: safeStr(row.LastName),
@@ -747,7 +746,7 @@ function transformBannedCustomers(
     country: safeStr(row.Country),
     phone: safeStr(row.Phone),
     status: safeStr(row.Status),
-    createdOn: formatDisplayDate(String(row.DateCreated ?? "")),
+    createdOn: formatDisplayDateTime(String(row.DateCreated ?? "")),
   }))
   return {
     reportType,
