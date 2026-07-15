@@ -88,6 +88,7 @@ export default function EventCalendar() {
   const [refreshInterval, setRefreshInterval] = useState(DEFAULT_REFRESH_SECONDS)
   const [calendarDate, setCalendarDate] = useState(() => new Date())
   const [calendarView, setCalendarView] = useState<View>("month")
+  const [hasNavigated, setHasNavigated] = useState(false)
   const [recurrenceDate, setRecurrenceDate] = useState<Date | null>(null)
   const [recurrenceState, setRecurrenceState] = useState<RecurrenceState | null>(null)
   const [recurrenceError, setRecurrenceError] = useState<string | null>(null)
@@ -139,10 +140,10 @@ export default function EventCalendar() {
   const defaultScrollTime = useMemo(() => buildTime(8), [])
   const calendarViews = useMemo(
     () => ({
-      month: createTodayFirstMonthView(true),
+      month: createTodayFirstMonthView(!hasNavigated),
       week: true,
     }),
-    []
+    [hasNavigated]
   )
 
   const suppressNextSlotSelection = useCallback(() => {
@@ -337,6 +338,7 @@ export default function EventCalendar() {
       const today = getStartOfDay(new Date())
       const day = getStartOfDay(date)
       const isShiftedCurrentMonth =
+        !hasNavigated &&
         calendarView === "month" &&
         dayjs(calendarDate).isSame(today, "month")
 
@@ -346,7 +348,7 @@ export default function EventCalendar() {
 
       return {}
     },
-    [calendarDate, calendarView]
+    [calendarDate, calendarView, hasNavigated]
   )
 
   const handleSelectSlot = useCallback((slotInfo: SlotInfo) => {
@@ -415,7 +417,10 @@ export default function EventCalendar() {
         localizer={localizer}
         events={events}
         date={calendarDate}
-        onNavigate={setCalendarDate}
+        onNavigate={(newDate) => {
+          setCalendarDate(newDate)
+          setHasNavigated(true)
+        }}
         view={calendarView}
         onView={setCalendarView}
         views={calendarViews}
