@@ -355,32 +355,43 @@ function SectionPicker({
             <div
               key={option.id}
               className={cn(
-                'grid min-w-[36rem] items-center gap-x-2 gap-y-1 px-2.5 py-1.5',
-                'grid-cols-[auto_minmax(7rem,11rem)_minmax(0,1fr)_3.5rem]',
-                // between lg and xl only: collapse to 3 cols / 2 rows
+                'grid items-center gap-x-2 gap-y-1.5 px-2.5 py-1.5',
+                // mobile: 2 cols, 2 rows — col2 fits both price (row1) and input (row2)
+                'grid-cols-[minmax(0,1fr)_auto]',
+                // sm and up: original single-row 4-col grid
+                'sm:min-w-[36rem] sm:grid-cols-[auto_minmax(7rem,11rem)_minmax(0,1fr)_3.5rem]',
+                // lg only: collapse to 3 cols / 2 rows
                 'lg:min-w-0 lg:grid-cols-[auto_1fr_3.5rem]',
-                // revert back to the default layout at xl+
+                // xl+: revert to the sm layout
                 'xl:min-w-[36rem] xl:grid-cols-[auto_minmax(7rem,11rem)_minmax(0,1fr)_3.5rem]'
               )}
             >
-              <label
-                htmlFor={`section-${option.id}`}
-                className='contents cursor-pointer'
-              >
-                <RadioGroupItem
-                  value={option.id}
-                  id={`section-${option.id}`}
-                  className='shrink-0'
-                />
-                <span className='min-w-0 truncate text-sm font-semibold leading-tight text-foreground lg:col-span-2 xl:col-span-1'>
-                  {option.name}
+              <label htmlFor={`section-${option.id}`} className='contents cursor-pointer'>
+                {/* row 1, col 1: radio + name (mobile); flattens into grid at sm+ */}
+                <div className='flex min-w-0 items-center gap-2 sm:contents'>
+                  <RadioGroupItem
+                    value={option.id}
+                    id={`section-${option.id}`}
+                    className='shrink-0'
+                  />
+                  <span className='min-w-0 truncate text-sm font-semibold leading-tight text-foreground lg:col-span-2 xl:col-span-1'>
+                    {option.name}
+                  </span>
+                </div>
+
+                {/* row 1, col 2: price (mobile only — SectionSeatDisplay shows its own copy from sm+) */}
+                <span className='shrink-0 self-center tabular-nums text-sm text-foreground sm:hidden'>
+                  {formatSectionDesktopPrice(option.price)}
                 </span>
+
+                {/* row 2, col 1: seat display */}
                 <SectionSeatDisplay
                   option={option}
-                  className='lg:col-span-2 xl:col-span-1 lg:justify-start xl:justify-end'
+                  className='justify-start sm:justify-end lg:col-span-2 lg:justify-start xl:col-span-1 xl:justify-end'
                 />
               </label>
 
+              {/* row 2, col 2: input — sits naturally beside SectionSeatDisplay, no extra row needed */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Input
@@ -403,11 +414,11 @@ function SectionPicker({
                       event.currentTarget.select()
                     }}
                     onPointerDown={event => event.stopPropagation()}
-                    className={cn(COMPACT_NUMBER, 'shrink-0 self-start sm:self-center')}
+                    className={cn(COMPACT_NUMBER, 'shrink-0 self-center')}
                     aria-label={`${option.name} party size`}
                   />
                 </TooltipTrigger>
-                <TooltipContent side='top'>
+                <TooltipContent side='top' collisionPadding={12} avoidCollisions>
                   Number of customers to reserve in {option.name}
                 </TooltipContent>
               </Tooltip>
