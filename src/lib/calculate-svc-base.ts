@@ -1,4 +1,5 @@
 import type { ApiShowData } from "@/types/api/get-show-data"
+import type { ReservationPromo } from "@/types/reservation-promo"
 
 export type OriginCode = "SRC01" | "SRC02" | "SRC03"
 
@@ -91,4 +92,85 @@ function isSameDate(dateStr: string, compareTo: Date) {
     d.getMonth() === compareTo.getMonth() &&
     d.getDate() === compareTo.getDate()
   )
+}
+
+export function calculatePromoFeeAdjustment({
+  promo,
+  applicableTickets,
+  originCode,
+  showDate,
+  reservationCreatedDate,
+  showData,
+  sectionData,
+  excludePhoneDayOfShow = false,
+  excludeWebDayOfShow = false,
+}: {
+  promo: ReservationPromo | null
+  applicableTickets: number
+  originCode: OriginCode
+  showDate: string
+  reservationCreatedDate: string | null
+  showData: ApiShowData | null
+  sectionData: ApiShowData | null | undefined
+  excludePhoneDayOfShow?: boolean
+  excludeWebDayOfShow?: boolean
+}): number {
+  if (!promo || promo.useShowFees !== 'N' || applicableTickets <= 0 || !showData) {
+    return 0
+  }
+
+  const isUseSectionFee = showData.IsUseSectionFee
+
+  // Pick the base fee
+  let showSourceFee = 0
+  let promoSourceFee = 0
+
+  if (originCode === "SRC01") {
+    showSourceFee = isUseSectionFee
+      ? sectionData?.ShowDefDetphonesvc ?? showData.PhoneCharge
+      : showData.PhoneCharge
+    promoSourceFee = promo.phoneInFee
+  } else if (originCode === "SRC02") {
+    showSourceFee = isUseSectionFee
+      ? sectionData?.ShowDefDetwalkupsvc ?? showData.WalkupCharge
+      : showData.WalkupCharge
+    promoSourceFee = promo.walkUpFee
+  } else if (originCode === "SRC03") {
+    showSourceFee = isUseSectionFee
+      ? sectionData?.ShowDefDetwebsvc ?? showData.WebCharge
+      : showData.WebCharge
+    promoSourceFee = promo.webFee
+  }
+
+  let showDayOfShowFee = 0
+  let promoDayOfShowFee = 0
+  const isToday = isSameDate(showDate, new Date())
+
+  let isAdvanceBooking = false
+  if (reservationCreatedDate) {
+    const created = new Date(reservationCreatedDate)
+    const show = new Date(showDate)
+    if (!isNaN(created.getTime()) && !isNaN(show.getTime())) {
+      if (created.setHours(0, 0, 0, 0) < show.setHours(0, 0, 0, 0)) {
+        isAdvanceBooking = true
+      }
+    }
+  }
+
+  if (isToday && !isAdvanceBooking) {
+    let excluded = false
+    if (originCode === "SRC01" && excludePhoneDayOfShow) {
+      excluded = true
+    } else if (originCode === "SRC03" && excludeWebDayOfShow) {
+      excluded = true
+    }
+
+    if (!excluded) {
+      showDayOfShowFee = showData.DayOfShowCharge ?? 0
+      promoDayOfShowFee = promo.dayOfShowFee
+    }
+  }
+
+  const dSVCDiff = (promoSourceFee - showSourceFee) + (promoDayOfShowFee - showDayOfShowFee)
+  return dSVCDiff * applicableTickets
 }

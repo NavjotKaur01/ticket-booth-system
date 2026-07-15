@@ -21,7 +21,8 @@ export function formatReservationMoney(value: number) {
   })
 }
 
-function parseSectionUnitPrice(price: string) {
+function parseSectionUnitPrice(price: string | number) {
+  if (typeof price === 'number') return price
   return parseReservationMoney(price)
 }
 
@@ -29,13 +30,16 @@ function getPromoDiscount(
   promo: ReservationPromo | null,
   subtotal: number,
   ticketCount: number,
-  unitPrice: number
+  unitPrice: number,
+  passes: number
 ) {
-  return calculatePromoDiscount({ promo, subtotal, ticketCount, unitPrice })
+  return calculatePromoDiscount({ promo, subtotal, ticketCount, unitPrice, passes })
 }
 
 export function calculateReservationTotals({
   sectionPrice,
+  sectionShowPrice,
+  sectionPriceMultiplier,
   party,
   passes,
   promo,
@@ -47,7 +51,9 @@ export function calculateReservationTotals({
   baseSvcAmount,
   ccFeePercent
 }: {
-  sectionPrice: string
+  sectionPrice: string | number
+  sectionShowPrice?: number
+  sectionPriceMultiplier?: number
   party: number
   passes: number
   promo: ReservationPromo | null
@@ -66,8 +72,12 @@ export function calculateReservationTotals({
 
   // Step A — SubTotal
   const unitPrice = parseSectionUnitPrice(sectionPrice)
+  const multiplier = sectionPriceMultiplier ?? 1
   const ticketCount = party > 0 ? Math.max(party, passes) : 0
   const subtotal = unitPrice * ticketCount
+
+  // For promo math: convert table count → seat count
+  const promoTicketCount = ticketCount * multiplier
 
   // Step B — Base service charge
   const serviceChargeBase = typeof existingServiceCharge === 'number'
@@ -75,9 +85,10 @@ export function calculateReservationTotals({
     : (typeof baseSvcAmount === 'number' ? baseSvcAmount : (subtotal > 0 ? 2 * ticketCount : 0))
     
   // Step C — Discount
+  const promoUnitPrice = sectionShowPrice ?? (unitPrice / multiplier)
   const discount = typeof existingDiscount === 'number'
     ? existingDiscount
-    : getPromoDiscount(promo, subtotal, ticketCount, unitPrice)
+    : getPromoDiscount(promo, subtotal, promoTicketCount, promoUnitPrice, passes)
 
   // Step D — Taxes
   const taxable = Math.max(0, subtotal - discount)
