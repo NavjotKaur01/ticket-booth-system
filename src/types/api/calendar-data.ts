@@ -6,6 +6,7 @@ export type ApiCalendarModel = {
   Headliner: string | null
   BookedCount: number | null
   DinnerCount: number | null
+  ShowDinner?: string | null
   SeatsCount: number | null
   IsActive: string | boolean | null
   ComicId: string | null

@@ -48,7 +48,7 @@ export default function CalendarEventCard({ event, onActionSelect }: CalendarEve
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-0.5">
-        <span className={`hidden font-medium md:inline ${event.cancelled ? "text-destructive line-through" : "text-muted-foreground"}`}>
+        <span className={`hidden font-medium md:inline ${event.cancelled ? "text-destructive line-through" : "text-green-500"}`}>
           {event.status}
         </span>
         <DropdownMenu>
