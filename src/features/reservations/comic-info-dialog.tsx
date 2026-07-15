@@ -587,10 +587,10 @@ export function ComicInfoDialog({
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  async function handleSave() {
-    await onSave?.(form)
-    onOpenChange(false)
-  }
+  // async function handleSave() {
+  //   await onSave?.(form)
+  //   onOpenChange(false)
+  // }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
