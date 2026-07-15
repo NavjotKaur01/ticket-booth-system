@@ -42,6 +42,7 @@ export type SectionOption = {
   id: string
   label: string
   price: string
+  priceMultiplier: number
   name: string
   seats: number
   available: number

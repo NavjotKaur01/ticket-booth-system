@@ -20,7 +20,16 @@ export function mapReservationPromo(
     buyTix: item.BuyTix,
     buyTixFree: item.BuyTixFree,
     price: item.Price,
-    promoTix: item.PromoTix ?? 0
+    promoTix: item.PromoTix ?? 0,
+    minTix: item.MinTix,
+    tixMax: item.TixMax,
+    dollarMax: item.DollarMax,
+    discountType: item.DiscountType ?? '',
+    useShowFees: item.UseShowFees === 'N' ? 'N' : 'Y',
+    phoneInFee: item.PhoneInFee ?? 0,
+    walkUpFee: item.WalkUpFee ?? 0,
+    webFee: item.WebFee ?? 0,
+    dayOfShowFee: item.DayOfShowFee ?? 0
   }
 }
 

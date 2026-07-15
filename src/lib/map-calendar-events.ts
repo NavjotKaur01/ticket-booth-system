@@ -72,7 +72,7 @@ export function mapCalendarModelToEvent(
       capacity: item.SeatsCount ?? 0,
     },
     time: formatShowTime(start),
-    status: "d",
+    status: (item.DinnerCount ?? 0) > 0 ? 'd' : '',
     cancelled: isCancelledShow(item),
     location: locationLabel,
     rowColor: item.RowColor,

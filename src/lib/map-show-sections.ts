@@ -15,12 +15,24 @@ export function mapShowSectionsToOptions (
   return sections.map(section => {
     const name = section.LookupSDesc?.trim() || 'Section'
     const priceValue = section.ShowPrice ?? 0
+    let priceMultiplier = 1
+    const secCode = section.ShowSec?.trim().toUpperCase() ?? ''
+    if (['SECT12', 'SECT16', 'SECT15', 'SECT05'].includes(secCode)) {
+      priceMultiplier = 2
+    } else if (['SECT13', 'SECT17'].includes(secCode)) {
+      priceMultiplier = 4
+    } else if (['SECT10'].includes(secCode)) {
+      priceMultiplier = 6
+    }
+    
+    const effectivePriceValue = priceValue * priceMultiplier
     const price = formatSectionDesktopPrice(
-      priceValue.toLocaleString('en-US', {
+      effectivePriceValue.toLocaleString('en-US', {
         style: 'currency',
         currency: 'USD'
       })
     )
+
     const seats = section.ShowSeats ?? 0
     const available = section.ShowSectionAvialiableSeats ?? 0
     const label = formatSectionOptionLabel({
@@ -34,6 +46,7 @@ export function mapShowSectionsToOptions (
       id: section.ShowDetID,
       label,
       price,
+      priceMultiplier,
       name,
       seats,
       available,

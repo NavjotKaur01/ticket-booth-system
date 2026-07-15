@@ -9,6 +9,15 @@ export type ReservationPromo = {
   buyTixFree: number | null
   price: number | null
   promoTix: number
+  minTix: number | null
+  tixMax: number | null
+  dollarMax: number | null
+  discountType: string
+  useShowFees: 'Y' | 'N'
+  phoneInFee: number
+  walkUpFee: number
+  webFee: number
+  dayOfShowFee: number
 }
 
 export type ReservationPromoOption = {

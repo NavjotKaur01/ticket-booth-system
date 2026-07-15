@@ -63,13 +63,14 @@ import { useReservationDetail } from '@/hooks/use-reservation-detail'
 import { useReservationPrintProperties } from '@/hooks/use-reservation-print-properties'
 import { useReservationTransactions } from '@/hooks/use-reservation-transactions'
 import { useShowDetailsByDate } from '@/hooks/use-show-details-by-date'
+import { getPromoApplicableTickets } from '@/lib/calculate-promo-discount'
 import {
   calculateReservationTotals,
   formatReservationMoney,
   getReservationAmountDue,
   parseReservationMoney
 } from '@/lib/calculate-reservation-totals'
-import { calculateSvcBase, mapOriginToCode } from '@/lib/calculate-svc-base'
+import { calculatePromoFeeAdjustment, calculateSvcBase, mapOriginToCode } from '@/lib/calculate-svc-base'
 import { formatUsDateTime } from '@/lib/format-us-datetime'
 import { showTimeLabelsMatch } from '@/lib/parse-admin-event-show-time'
 import {
@@ -1642,7 +1643,7 @@ export function AddReservationDialog({
       const rawSection = isShowDataArray ? showDataPayload.find(s => s.ShowDetID === section) : null
       const showData = isShowDataArray && showDataPayload.length > 0 ? showDataPayload[0] : null
 
-      const baseSvcAmount = calculateSvcBase({
+      let baseSvcAmount = calculateSvcBase({
         originCode,
         partySize,
         showDate,
@@ -1651,7 +1652,77 @@ export function AddReservationDialog({
         sectionData: rawSection ?? null,
         excludePhoneDayOfShow: systemDefaults?.txtDayOfShow2 === 'Y',
         excludeWebDayOfShow: systemDefaults?.txtDayOfShow3 === 'Y'
+      }) * (selectedSection?.priceMultiplier ?? 1)
+      
+      const { applicableTickets } = getPromoApplicableTickets({
+        promo: selectedPromo,
+        ticketCount: partySize * (selectedSection?.priceMultiplier ?? 1),
+        passes
       })
+
+      const promoFeeAdjustment = calculatePromoFeeAdjustment({
+        promo: selectedPromo,
+        applicableTickets,
+        originCode,
+        showDate,
+        reservationCreatedDate: isEditMode ? reservationDetail?.CreatedDate ?? null : null,
+        showData: showData,
+        sectionData: rawSection ?? null,
+        excludePhoneDayOfShow: systemDefaults?.txtDayOfShow2 === 'Y',
+        excludeWebDayOfShow: systemDefaults?.txtDayOfShow3 === 'Y'
+      })
+
+      baseSvcAmount += promoFeeAdjustment
+
+
+      if (
+        isEditMode &&
+        reservationDetail?.SVC != null &&
+        origPartyRef.current > 0 &&
+        section === origSectionIdRef.current &&
+        origin === origOriginRef.current &&
+        promo === origPromoIdRef.current
+      ) {
+        const oldSvcTotal = reservationDetail.SVC
+        const oldParty = origPartyRef.current
+
+        if (partySize > oldParty) {
+          const addedTickets = partySize - oldParty
+          const addedSvcAmount = calculateSvcBase({
+            originCode,
+            partySize: addedTickets,
+            showDate,
+            reservationCreatedDate: reservationDetail?.CreatedDate ?? null,
+            showData: showData,
+            sectionData: rawSection ?? null,
+            excludePhoneDayOfShow: systemDefaults?.txtDayOfShow2 === 'Y',
+            excludeWebDayOfShow: systemDefaults?.txtDayOfShow3 === 'Y'
+          }) * (selectedSection?.priceMultiplier ?? 1)
+
+          const { applicableTickets: oldApplicableTickets } = getPromoApplicableTickets({
+            promo: selectedPromo,
+            ticketCount: oldParty * (selectedSection?.priceMultiplier ?? 1),
+            passes
+          })
+          
+          const addedPromoFeeAdjustment = calculatePromoFeeAdjustment({
+            promo: selectedPromo,
+            applicableTickets: Math.max(0, applicableTickets - oldApplicableTickets),
+            originCode,
+            showDate,
+            reservationCreatedDate: reservationDetail?.CreatedDate ?? null,
+            showData: showData,
+            sectionData: rawSection ?? null,
+            excludePhoneDayOfShow: systemDefaults?.txtDayOfShow2 === 'Y',
+            excludeWebDayOfShow: systemDefaults?.txtDayOfShow3 === 'Y'
+          })
+
+          baseSvcAmount = oldSvcTotal + addedSvcAmount + addedPromoFeeAdjustment
+        } else {
+          const oldRate = oldSvcTotal / oldParty
+          baseSvcAmount = partySize * oldRate
+        }
+      }
 
       const hasPricingTriggerChanged =
         partySize !== origPartyRef.current ||
@@ -1662,6 +1733,8 @@ export function AddReservationDialog({
 
       return calculateReservationTotals({
         sectionPrice: selectedSection?.price ?? '$0.00',
+        sectionShowPrice: selectedSection?.showPrice,
+        sectionPriceMultiplier: selectedSection?.priceMultiplier ?? 1,
         party: partySize,
         passes,
         promo: selectedPromo,
@@ -1929,7 +2002,7 @@ export function AddReservationDialog({
   }
 
   function handleTransactionSelect(row: ReservationTransactionRow) {
-    console.log('row', row)
+
     setSelectedTransaction(row)
     setPaymentAmountOverride(formatReservationMoney(row.amount))
     setPaymentType(mapPaymentLabelToType(row.payment))
@@ -2140,6 +2213,8 @@ export function AddReservationDialog({
       effectivePromo === 'none' ? null : promoById.get(effectivePromo) ?? null
     const saveTotals = calculateReservationTotals({
       sectionPrice: saveSection?.price ?? '$0.00',
+      sectionShowPrice: saveSection?.showPrice,
+      sectionPriceMultiplier: saveSection?.priceMultiplier ?? 1,
       party: saveParty,
       passes,
       promo: savePromo,
