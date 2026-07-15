@@ -115,6 +115,9 @@ export function buildProjectedSalesDesktopHtml({
         <td>${escapeHtml(formatDesktopDate(endDate))}</td>
       </tr>
     </table>
+    <div style="padding: 6px; margin: 10px auto; font-size: 11px; font-weight: bold;">
+      This is report is not meant to be used as sales or post sales report-it is show how you stand for future reservations ONLY.
+    </div>
     <table>
       <thead><tr>${headerCells}</tr></thead>
       <tbody>${bodyRows}</tbody>
@@ -135,6 +138,7 @@ export function buildProjectedSalesWorkbook({
   const sheetRows: (string | number)[][] = [
     ["Projected Sale Report"],
     ["Date Range", formatDesktopDate(startDate), "", "", "", "", "", "", "To:", formatDesktopDate(endDate)],
+    ["This is report is not meant to be used as sales or post sales report-it is show how you stand for future reservations ONLY."],
     [],
     [
       "Day",

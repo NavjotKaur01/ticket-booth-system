@@ -192,6 +192,12 @@ export function ReportViewerResults({
         generatedAt={result.generatedAt}
       />
 
+      {result.reportType === "projected-sales" && (
+        <div className=" font-semibold text-xs px-2 my-2 md:my-4 ">
+          This is report is not meant to be used as sales or post sales report-it is show how you stand for future reservations ONLY.
+        </div>
+      )}
+
       {result.reportType === "export-shows-attendees" && (
         <div className=" text-sm font-semibold px-2">
           Total Count:&nbsp;&nbsp;&nbsp;&nbsp;{result.rows.length}

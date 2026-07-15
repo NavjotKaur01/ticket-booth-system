@@ -5,6 +5,7 @@ import {
   type ExportFormat,
 } from "@/lib/export-table-data"
 import type { Reservation } from "@/types/reservation"
+import * as XLSX from "xlsx-js-style"
 
 function formatReservationSource(source: Reservation["source"]) {
   if (source === "Phone") {
@@ -37,7 +38,6 @@ const EXPORT_COLUMNS: ExportColumn<Reservation>[] = [
 ]
 
 async function downloadReservationWorkbook(headers: string[], rows: string[][], filename: string) {
-  const XLSX = await import("xlsx-js-style")
   const workbook = XLSX.utils.book_new()
   const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
   const range = XLSX.utils.decode_range(worksheet["!ref"] ?? "A1:I1")
