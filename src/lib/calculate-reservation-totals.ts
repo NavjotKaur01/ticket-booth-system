@@ -73,7 +73,7 @@ export function calculateReservationTotals({
   // Step A — SubTotal
   const unitPrice = parseSectionUnitPrice(sectionPrice)
   const multiplier = sectionPriceMultiplier ?? 1
-  const ticketCount = party > 0 ? Math.max(party, passes) : 0
+  const ticketCount = party > 0 ? party : 0
   const subtotal = unitPrice * ticketCount
 
   // For promo math: convert table count → seat count

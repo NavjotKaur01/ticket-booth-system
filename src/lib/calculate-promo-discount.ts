@@ -16,6 +16,8 @@ export function calculatePromoDiscount({
   if (!promo || ticketCount <= 0 || unitPrice <= 0) {
     return 0
   }
+  
+  const effectivePasses = Math.max(1, passes)
 
   const { applicableTickets, freeTickets, iPromoParty } = getPromoApplicableTickets({ promo, ticketCount, passes })
   if (applicableTickets <= 0 && freeTickets <= 0) {
@@ -54,7 +56,7 @@ export function calculatePromoDiscount({
 
   // Guard: DollarMax capping
   if (promo.dollarMax != null && promo.dollarMax > 0) {
-    const maxDiscount = promo.dollarMax * Math.max(1, passes)
+    const maxDiscount = promo.dollarMax * effectivePasses
     if (discount > maxDiscount) {
       discount = maxDiscount
     }
@@ -76,14 +78,16 @@ export function getPromoApplicableTickets({
   if (!promo || ticketCount <= 0) {
     return { applicableTickets: 0, freeTickets: 0, iPromoParty: 0 }
   }
+  
+  const effectivePasses = Math.max(1, passes)
 
   // Guard: MinTix
-  if (promo.minTix != null && promo.minTix > 0 && ticketCount < promo.minTix) {
+  if (promo.minTix != null && promo.minTix > 0 && ticketCount < (promo.minTix * effectivePasses)) {
     return { applicableTickets: 0, freeTickets: 0, iPromoParty: 0 }
   }
 
   const maxFree = (promo.tixMax != null && promo.tixMax > 0)
-    ? promo.tixMax * Math.max(1, passes)
+    ? promo.tixMax * effectivePasses
     : Infinity
 
   const discountType = promo.discountType?.trim().toUpperCase()
