@@ -1195,7 +1195,7 @@ function transformComicSalesBreakdown(
   generatedAt: string
 ): ReportViewerResult {
   const columns: ReportViewerColumn[] = [
-    { key: "comicName", label: "Comic Names" },
+    { key: "comicName", label: "Comic Name" },
     { key: "inHouse", label: "House Reservation", align: "right" },
     { key: "web", label: "Web Reservation", align: "right" },
     { key: "total", label: "Total", align: "right" },

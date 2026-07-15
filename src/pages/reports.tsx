@@ -220,7 +220,7 @@ export function Reports() {
       return
     } else {
       setDraftFilters((current) => ({ ...current, [key]: value }))
-      if (key === "isWebReservationOnly") {
+      if (key === "isWebReservationOnly" || key === "isAllDates") {
         void handleGenerate({ ...draftFilters, [key]: value })
       }
     }
