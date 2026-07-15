@@ -30,6 +30,11 @@ export type CheckInRecord = {
   createdDt: string
   lastUpdateDt: string
   lastUpdateBy: string
+  phoneNo: string
+  lastFourCardDigit: string
+  isCancelled: boolean
+  resStatus: string
+  oldReservationId: string
 }
 
 /** Live seat summary displayed in the toolbar stats bar. */

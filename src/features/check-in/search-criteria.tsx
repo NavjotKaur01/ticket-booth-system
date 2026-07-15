@@ -1,6 +1,7 @@
-import { Search, X } from "lucide-react"
+import { CreditCard, Search, Wallet, X } from "lucide-react"
 
 import { IconActionButton } from "@/components/forms/form-fields"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
@@ -15,9 +16,11 @@ type CheckInSearchCriteriaProps = {
   onTableNoChange: (value: string) => void
   phoneNo: string
   onPhoneNoChange: (value: string) => void
+  onSearch?: () => void
   onClear: () => void
 }
 
+/** Search filters. Swipe / Cash Drawer are placeholders until hardware bridge is wired. */
 export function CheckInSearchCriteria({
   lastName,
   onLastNameChange,
@@ -29,10 +32,17 @@ export function CheckInSearchCriteria({
   onTableNoChange,
   phoneNo,
   onPhoneNoChange,
+  onSearch,
   onClear,
 }: CheckInSearchCriteriaProps) {
   return (
-    <div className="flex flex-col gap-2.5 px-3 py-2.5 md:flex-row md:items-center md:gap-3">
+    <form
+      className="flex flex-col gap-2.5 px-3 py-2.5 md:flex-row md:items-center md:gap-3"
+      onSubmit={(event) => {
+        event.preventDefault()
+        onSearch?.()
+      }}
+    >
       <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
         <Input
           value={lastName}
@@ -69,8 +79,31 @@ export function CheckInSearchCriteria({
       </div>
 
       <TooltipProvider delayDuration={200}>
-        <div className="flex shrink-0 items-center justify-end gap-1.5">
-          <IconActionButton label="Search" icon={Search} variant="default" />
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+          >
+            <CreditCard className="size-3.5" />
+            Swipe
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+          >
+            <Wallet className="size-3.5" />
+            Cash Drawer
+          </Button>
+          <IconActionButton
+            label="Search"
+            icon={Search}
+            variant="default"
+            type="submit"
+          />
           <IconActionButton
             label="Clear"
             icon={X}
@@ -79,6 +112,6 @@ export function CheckInSearchCriteria({
           />
         </div>
       </TooltipProvider>
-    </div>
+    </form>
   )
 }

@@ -30,4 +30,9 @@ export type ReservationDataItem = {
   ResStatus?: string | null
   ReservationStatus?: string | null
   OldReservationID?: string | null
+  LastFourCardDigit?: string | null
+  CustPhone1?: string | null
+  PromoPymts?: number | null
+  Discount?: number | null
+  Price?: number | null
 }

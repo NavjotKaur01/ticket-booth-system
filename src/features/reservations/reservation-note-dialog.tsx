@@ -63,7 +63,7 @@ export function ReservationNoteDialog ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className='flex max-h-[82vh] max-w-lg flex-col overflow-hidden p-0 sm:max-w-lg'
+        className='flex max-h-[82vh] w-full max-w-2xl flex-col overflow-hidden p-0 sm:max-w-2xl'
       >
         <DialogHeader className='shrink-0 flex-row items-center justify-between gap-4 border-b px-4 py-3'>
           <div className='min-w-0'>
@@ -96,7 +96,7 @@ export function ReservationNoteDialog ({
               <Textarea
                 value={noteValue}
                 onChange={(event) => setNoteValue(event.target.value)}
-                className='mt-3 min-h-28 resize-y text-sm shadow-xs'
+                className='mt-3 min-h-40 resize-y text-sm shadow-xs'
                 disabled={isSubmitting}
               />
             )}

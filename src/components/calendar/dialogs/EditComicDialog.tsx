@@ -3,7 +3,16 @@ import { useMemo } from "react"
 import type { ComicInfo } from "@/data/comedian-info"
 import type { CalendarEvent } from "@/data/calendarEvents"
 import { ComicInfoDialog } from "@/features/reservations/comic-info-dialog"
-import { useGetComedianInfoQuery, useUpdateComedianMutation, useUpdateComedianImageMutation, useDeleteComedianImageMutation } from "@/store/api/clubmanApi"
+import {
+  isUsableComicId,
+  mapApiComedianToComicInfo,
+} from "@/lib/map-comedian-info"
+import {
+  useGetComedianInfoQuery,
+  useUpdateComedianMutation,
+  useUpdateComedianImageMutation,
+  useDeleteComedianImageMutation,
+} from "@/store/api/clubmanApi"
 
 type EditComicDialogProps = {
   open: boolean
@@ -22,48 +31,28 @@ export default function EditComicDialog({
   locationId = "",
   username = "",
 }: EditComicDialogProps) {
+  const comicId = event?.comicId ?? ""
+  const canLoadComic = isUsableComicId(comicId)
+
   const {
     data: comedianInfo,
     isLoading,
     isFetching,
     refetch,
   } = useGetComedianInfoQuery(
-    { connectionName, comicId: event?.comicId ?? "" },
-    { skip: !open || !event?.comicId || !connectionName }
+    { connectionName, comicId },
+    { skip: !open || !canLoadComic || !connectionName }
   )
   const [updateComedian] = useUpdateComedianMutation()
   const [updateComedianImage] = useUpdateComedianImageMutation()
   const [deleteComedianImage] = useDeleteComedianImageMutation()
 
   const mappedInfo: ComicInfo | null = useMemo(() => {
-    if (!comedianInfo || !event) return null
-
-    return {
-      lastName: comedianInfo.LastName ?? "",
-      firstName: comedianInfo.FirstName ?? "",
-      stageName: comedianInfo.StageName ?? event.performer,
-      about: comedianInfo.GlobalBio ?? comedianInfo.LocalBio ?? "",
-      notes: comedianInfo.GlobalNote ?? comedianInfo.LocalNote ?? "",
-      email: comedianInfo.Email ?? "",
-      address: comedianInfo.Address1 ?? "",
-      address2: comedianInfo.Address2 ?? "",
-      city: comedianInfo.City ?? "",
-      state: comedianInfo.State ?? "",
-      zipCode: comedianInfo.ZipCode ?? "",
-      country: comedianInfo.Country ?? "",
-      homePhone: comedianInfo.HomePhone ?? "",
-      mobilePhone: comedianInfo.CellPhone ?? "",
-      fax: comedianInfo.Fax ?? "",
-      url: comedianInfo.URL ?? "",
-      altUrl: comedianInfo.AltURL ?? "",
-      artistType: comedianInfo.ArtistType?.trim() ?? "",
-      preferredContact: comedianInfo.PreferredContact ?? "email",
-      imageUrl: (() => {
-        const imgData = comedianInfo.LocalPicture ?? comedianInfo.GlobalPicture ?? comedianInfo.LocalPic ?? comedianInfo.GlobalPic ?? comedianInfo.Pic
-        if (!imgData) return ""
-        return imgData.startsWith("data:image") ? imgData : `data:image/jpeg;base64,${imgData}`
-      })(),
+    if (!comedianInfo || !event) {
+      return null
     }
+
+    return mapApiComedianToComicInfo(comedianInfo, event.performer)
   }, [comedianInfo, event])
 
   if (!open || !event) {
@@ -77,49 +66,48 @@ export default function EditComicDialog({
       comic={mappedInfo}
       stageName={mappedInfo?.stageName ?? event.performer}
       nested
-      isLoading={isLoading || isFetching || (!!event.comicId && !mappedInfo)}
+      layout="flat"
+      title="Edit Comedian"
+      isLoading={isLoading || isFetching || (canLoadComic && !mappedInfo)}
       onSave={
-        mappedInfo
+        mappedInfo && canLoadComic
           ? async (values: ComicInfo) => {
-            await updateComedian({
-              connectionName,
-              locationId,
-              username,
-              comicId: event.comicId ?? "",
-              form: values,
-            }).unwrap()
-            refetch()
-          }
+              await updateComedian({
+                connectionName,
+                locationId,
+                username,
+                comicId,
+                form: values,
+              }).unwrap()
+              refetch()
+            }
           : undefined
       }
       onChangeImage={
-        event.comicId
+        canLoadComic
           ? async (base64Image: string) => {
-            await updateComedianImage({
-              connectionName,
-              locationId,
-              username,
-              comicId: event.comicId ?? "",
-              base64Image,
-            }).unwrap()
-            // Refetch comedian info if needed
-            refetch()
-          }
+              await updateComedianImage({
+                connectionName,
+                locationId,
+                username,
+                comicId,
+                base64Image,
+              }).unwrap()
+              refetch()
+            }
           : undefined
       }
       onDeleteImage={
-        event.comicId
+        canLoadComic
           ? async () => {
-            await deleteComedianImage({
-              connectionName,
-              comicId: event.comicId ?? "",
-            }).unwrap()
-            // Refetch comedian info to clear the image
-            refetch()
-          }
+              await deleteComedianImage({
+                connectionName,
+                comicId,
+              }).unwrap()
+              refetch()
+            }
           : undefined
       }
     />
   )
 }
-

@@ -95,6 +95,12 @@ function normalizeReservationDataItem(raw: unknown): ReservationDataItem {
       readString(record, ["ReservationStatus", "reservationStatus"]) || null,
     OldReservationID:
       readString(record, ["OldReservationID", "oldReservationID"]) || null,
+    LastFourCardDigit:
+      readString(record, ["LastFourCardDigit", "lastFourCardDigit"]) || null,
+    CustPhone1: readString(record, ["CustPhone1", "custPhone1"]) || null,
+    PromoPymts: readNumber(record, ["PromoPymts", "promoPymts"]),
+    Discount: readNumber(record, ["Discount", "discount"]),
+    Price: readNumber(record, ["Price", "price"]),
   }
 }
 
@@ -180,6 +186,9 @@ export function mapReservationDataItem(item: ReservationDataItem): Reservation {
   const lastName =
     normalizeText(item.CustLastName) || normalizeText(item.PaidForLastName)
 
+  const phoneFallback =
+    normalizeText(item.CustPhone1) || normalizeText(item.Phone) || null
+
   return {
     id: item.ReservationID,
     resStatus: normalizeText(item.ResStatus),
@@ -188,7 +197,12 @@ export function mapReservationDataItem(item: ReservationDataItem): Reservation {
     firstName,
     businessName: normalizeText(item.busName),
     email: normalizeText(item.EmailAddress),
-    phoneNo: formatPhoneNumber(item.AreaCode, item.Phone1, item.Phone2, item.Phone),
+    phoneNo: formatPhoneNumber(
+      item.AreaCode,
+      item.Phone1,
+      item.Phone2,
+      phoneFallback
+    ),
     source: mapSource(item.LookupSDescSource),
     tables: normalizeText(item.TableNums),
     seatNo: normalizeText(item.SeatNumbers),
@@ -201,6 +215,11 @@ export function mapReservationDataItem(item: ReservationDataItem): Reservation {
     scanner: item.ScannerIn ?? 0,
     total: formatCurrency(item.Total),
     paid: formatCurrency(item.ResPayments),
+    totalAmount: item.Total ?? 0,
+    paidAmount: item.ResPayments ?? 0,
+    promoPayments: item.PromoPymts ?? 0,
+    lastFourCardDigit: normalizeText(item.LastFourCardDigit),
+    oldReservationId: normalizeText(item.OldReservationID),
     createdBy: normalizeText(item.CreatedBy),
     createdDt: formatApiDateTime(item.CreateDt),
     lastUpdateBy: normalizeText(item.LastUpdateID),

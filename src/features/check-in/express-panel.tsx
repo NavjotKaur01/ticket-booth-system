@@ -1,5 +1,5 @@
 import { PlusCircle } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { FormField, FormSection } from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
@@ -11,16 +11,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { promoOptions, sectionOptions } from "@/data/reservation"
 import { ProcessPaymentDialog } from "@/features/check-in/dialogs/process-payment-dialog"
 import { SalesTransactionDialog } from "@/features/check-in/dialogs/sales-transaction-dialog"
 import { MultiplePromotionsDialog } from "@/features/check-in/multiple-promotions-dialog"
 import { PaymentNumberFieldset } from "@/features/check-in/payment-number-fieldset"
 import {
-  calculateExpressPanelTotals,
+  calculateExpressPanelTotalsFromSection,
   type ExpressPaymentType,
 } from "@/features/check-in/service/express-panel.service"
 import { cn } from "@/lib/utils"
+import type { ReservationPromo } from "@/types/reservation-promo"
+import type { ReservationSectionOption } from "@/types/reservation"
 
 const SELECT_TRIGGER_CLASS = "h-8 w-full min-w-0 text-xs"
 
@@ -29,34 +30,90 @@ type ActiveTransaction = {
   quantity: number
 }
 
-export function CheckInExpressPanel() {
-  const [section, setSection] = useState(sectionOptions[0]?.id ?? "")
-  const [promo, setPromo] = useState("none")
+export type ExpressPanelSalePayload = {
+  section: ReservationSectionOption
+  promo: ReservationPromo | null
+  party: number
+  passes: number
+  paymentType: "cash" | "credit-card"
+  paymentAmount: number
+}
+
+type CheckInExpressPanelProps = {
+  sections: ReservationSectionOption[]
+  promos: ReservationPromo[]
+  visible?: boolean
+  isSubmitting?: boolean
+  error?: string | null
+  onSale: (payload: ExpressPanelSalePayload) => void | Promise<void>
+}
+
+export function CheckInExpressPanel({
+  sections,
+  promos,
+  visible = true,
+  isSubmitting = false,
+  error = null,
+  onSale,
+}: CheckInExpressPanelProps) {
+  const [sectionId, setSectionId] = useState("")
+  const [promoId, setPromoId] = useState("none")
   const [passes, setPasses] = useState("1")
   const [cashNumber, setCashNumber] = useState<number | null>(null)
   const [cardNumber, setCardNumber] = useState<number | null>(null)
-  const [activeTransaction, setActiveTransaction] = useState<ActiveTransaction | null>(null)
+  const [activeTransaction, setActiveTransaction] =
+    useState<ActiveTransaction | null>(null)
   const [multiplePromotionsOpen, setMultiplePromotionsOpen] = useState(false)
+
+  useEffect(() => {
+    if (!sections.length) {
+      setSectionId("")
+      return
+    }
+
+    if (!sections.some((section) => section.id === sectionId)) {
+      setSectionId(sections[0].id)
+    }
+  }, [sectionId, sections])
+
+  const selectedSection = useMemo(
+    () => sections.find((section) => section.id === sectionId) ?? null,
+    [sectionId, sections]
+  )
+
+  const selectedPromo = useMemo(() => {
+    if (promoId === "none") {
+      return null
+    }
+
+    return promos.find((promo) => promo.id === promoId) ?? null
+  }, [promoId, promos])
 
   const passQuantity = Math.max(0, Number(passes) || 0)
   const totals = useMemo(
     () =>
-      calculateExpressPanelTotals({
-        sectionId: section,
-        promoId: promo,
+      calculateExpressPanelTotalsFromSection({
+        sectionPrice: selectedSection?.showPrice ?? 0,
+        walkUpFee: selectedSection?.walkUpFee ?? 0,
         quantity: passQuantity,
+        promo: selectedPromo,
       }),
-    [passQuantity, promo, section]
+    [passQuantity, selectedPromo, selectedSection]
   )
   const transactionTotals = useMemo(
     () =>
-      calculateExpressPanelTotals({
-        sectionId: section,
-        promoId: promo,
+      calculateExpressPanelTotalsFromSection({
+        sectionPrice: selectedSection?.showPrice ?? 0,
+        walkUpFee: selectedSection?.walkUpFee ?? 0,
         quantity: activeTransaction?.quantity ?? 0,
+        promo: selectedPromo,
       }),
-    [activeTransaction?.quantity, promo, section]
+    [activeTransaction?.quantity, selectedPromo, selectedSection]
   )
+
+  if (!visible) {
+    return null
+  }
 
   function handlePaymentSelect(paymentType: ExpressPaymentType, quantity: number) {
     setPasses(String(quantity))
@@ -72,24 +129,39 @@ export function CheckInExpressPanel() {
     setActiveTransaction({ paymentType, quantity })
   }
 
-  function handleSalesTransactionOk() {
-    // Placeholder for payment posting once the backend flow is wired.
+  async function handleSalesTransactionOk() {
+    if (!selectedSection || !activeTransaction) {
+      return
+    }
+
+    await onSale({
+      section: selectedSection,
+      promo: selectedPromo,
+      party: activeTransaction.quantity,
+      passes: activeTransaction.quantity,
+      paymentType:
+        activeTransaction.paymentType === "Cash" ? "cash" : "credit-card",
+      paymentAmount: transactionTotals.paymentDue,
+    })
   }
 
   return (
     <>
       <div className="px-3 py-3">
         <FormSection title="Express" className="space-y-3">
+          {error ? (
+            <p className="text-sm text-destructive">{error}</p>
+          ) : null}
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:items-start">
             <div className="min-w-0 space-y-2">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <FormField label="Section" className="min-w-0">
-                  <Select value={section} onValueChange={setSection}>
+                  <Select value={sectionId} onValueChange={setSectionId}>
                     <SelectTrigger className={SELECT_TRIGGER_CLASS}>
-                      <SelectValue />
+                      <SelectValue placeholder="Select section" />
                     </SelectTrigger>
                     <SelectContent>
-                      {sectionOptions.map((opt) => (
+                      {sections.map((opt) => (
                         <SelectItem key={opt.id} value={opt.id}>
                           {opt.label}
                         </SelectItem>
@@ -99,14 +171,15 @@ export function CheckInExpressPanel() {
                 </FormField>
 
                 <FormField label="Promo" className="min-w-0">
-                  <Select value={promo} onValueChange={setPromo}>
+                  <Select value={promoId} onValueChange={setPromoId}>
                     <SelectTrigger className={SELECT_TRIGGER_CLASS}>
                       <SelectValue placeholder="Select promo code" />
                     </SelectTrigger>
                     <SelectContent>
-                      {promoOptions.map((opt) => (
+                      <SelectItem value="none">Select promo code</SelectItem>
+                      {promos.map((opt) => (
                         <SelectItem key={opt.id} value={opt.id}>
-                          {opt.label}
+                          {opt.promotionName || opt.promotionCode || opt.id}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -126,6 +199,7 @@ export function CheckInExpressPanel() {
                       setCardNumber(null)
                     }}
                     className="h-8 min-w-0 flex-1 text-center text-xs tabular-nums"
+                    disabled={isSubmitting}
                   />
                   <Button
                     type="button"
@@ -133,6 +207,15 @@ export function CheckInExpressPanel() {
                     className="size-8 shrink-0"
                     aria-label="Open multiple promotions"
                     onClick={() => setMultiplePromotionsOpen(true)}
+                    disabled={
+                      isSubmitting ||
+                      Boolean(selectedSection?.restrictPromoForSection)
+                    }
+                    title={
+                      selectedSection?.restrictPromoForSection
+                        ? "Multiple promotions are disabled for this section"
+                        : "Add multiple promotions"
+                    }
                   >
                     <PlusCircle className="size-4" />
                   </Button>
@@ -202,7 +285,9 @@ export function CheckInExpressPanel() {
             }}
             paymentType={activeTransaction.paymentType}
             paymentDue={transactionTotals.paymentDue}
-            onOk={handleSalesTransactionOk}
+            onOk={() => {
+              void handleSalesTransactionOk()
+            }}
           />
         ) : (
           <ProcessPaymentDialog
@@ -215,7 +300,9 @@ export function CheckInExpressPanel() {
             }}
             quantity={activeTransaction.quantity}
             paymentAmount={transactionTotals.total}
-            onOk={handleSalesTransactionOk}
+            onOk={() => {
+              void handleSalesTransactionOk()
+            }}
           />
         )
       ) : null}
@@ -223,17 +310,17 @@ export function CheckInExpressPanel() {
       <MultiplePromotionsDialog
         open={multiplePromotionsOpen}
         onOpenChange={setMultiplePromotionsOpen}
-        onConfirm={(partyNumber) => {
-          if (partyNumber != null) {
-            setPasses(String(partyNumber))
-            setCashNumber(null)
-            setCardNumber(null)
-          }
+        promos={promos}
+        sectionPrice={selectedSection?.showPrice ?? 0}
+        walkUpFee={selectedSection?.walkUpFee ?? 0}
+        initialParty={Math.max(1, passQuantity || 1)}
+        onConfirm={(payload) => {
+          setPasses(String(payload.partyNumber))
+          setPromoId(payload.primaryPromo?.id ?? "none")
+          setCashNumber(null)
+          setCardNumber(null)
         }}
       />
     </>
   )
 }
-
-
-

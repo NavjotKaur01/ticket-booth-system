@@ -59,7 +59,11 @@ export function mapShowSectionsToOptions (
       dayOfShowFee: section.DayOfShowCharge ?? 0,
       phoneInFee: section.PhoneCharge ?? 0,
       walkUpFee: section.WalkupCharge ?? 0,
-      webFee: section.WebCharge ?? 0
+      webFee: section.WebCharge ?? 0,
+      restrictPromoForSection:
+        (section.RestrictPromoForSection ?? section.ShowDetRestrictPromo ?? "")
+          .trim()
+          .toUpperCase() === "Y",
     }
   })
 }

@@ -565,8 +565,8 @@ export function MoveReservationDialog({
 
                 <SectionCard title='Select a Show'>
                   <div className='grid gap-4 xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] xl:items-end'>
-                    <div className='space-y-1.5'>
-                      <span className='text-xs font-medium text-foreground'>
+                    <div className='space-y-2'>
+                      <span className='block text-xs font-medium text-foreground'>
                         Show Date
                       </span>
                       <ShowDateField
@@ -575,6 +575,7 @@ export function MoveReservationDialog({
                           setDestinationDate(value)
                           setSubmitError(null)
                         }}
+                        className='w-full'
                       />
                     </div>
 

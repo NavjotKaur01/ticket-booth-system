@@ -106,7 +106,10 @@ import type {
   UpdateSplitReservationRequestModel
 } from "@/types/api/save-reservation"
 import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
-import type { ReservationCheckInRequest } from "@/types/api/reservation-check-in"
+import type { ReservationCheckInRequest, RevertReservationCheckInRequest } from "@/types/api/reservation-check-in"
+import type { PartialCheckInRequest } from "@/types/api/partial-check-in"
+import type { UpdateTableNumberReservationRequest } from "@/types/api/update-table-number"
+import type { UpdateCustomerEmailRequest } from "@/types/api/update-customer-email"
 import type {
   MoveReservationRequest,
   UpcomingShowDetailsRequest,
@@ -380,6 +383,16 @@ export const clubmanApi = createApi({
       invalidatesTags: (_result, _error, arg) => [
         { type: "Customer", id: arg.locationId },
       ],
+    }),
+
+    /** Check-in resend email overwrite → PUT Adminstrator/UpdateCustomerEmail */
+    updateCustomerEmail: builder.mutation({
+      query: (body: UpdateCustomerEmailRequest) => ({
+        url: administratorApiPath("UpdateCustomerEmail"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "Customer"],
     }),
 
     getCustomerById: builder.mutation({
@@ -1073,6 +1086,42 @@ export const clubmanApi = createApi({
     reservationCheckIn: builder.mutation({
       query: (body: ReservationCheckInRequest) => ({
         url: reservationApiPath("ReservationCheckIn"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    revertReservationCheckIn: builder.mutation({
+      query: (body: RevertReservationCheckInRequest) => ({
+        url: reservationApiPath("RevertReservationCheckIn"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    partialCheckIn: builder.mutation({
+      query: (body: PartialCheckInRequest) => ({
+        url: reservationApiPath("PartialCheckIn"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    revertPartialCheckIn: builder.mutation({
+      query: (body: PartialCheckInRequest) => ({
+        url: reservationApiPath("RevertPartialCheckIn"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    updateTableNumberReservation: builder.mutation({
+      query: (body: UpdateTableNumberReservationRequest) => ({
+        url: reservationApiPath("UpdateTableNumberReservation"),
         method: "PUT",
         body,
       }),
@@ -1933,6 +1982,7 @@ export const {
   useSearchReservationBusinessCustomersMutation,
   useSaveCustomerMutation,
   useUpdateCustomerMutation,
+  useUpdateCustomerEmailMutation,
   useGetCustomerByIdMutation,
   useGetCustomerDeleteDetailMutation,
   useArchiveCustomerMutation,
@@ -1972,6 +2022,10 @@ export const {
   useGetUpcomingShowDetailsMutation,
   useSaveMoveReservationMutation,
   useReservationCheckInMutation,
+  useRevertReservationCheckInMutation,
+  usePartialCheckInMutation,
+  useRevertPartialCheckInMutation,
+  useUpdateTableNumberReservationMutation,
   useGetDailyTransactionDataQuery,
   useGetRecentSalesReportQuery,
   useGetCalendarDataQuery,

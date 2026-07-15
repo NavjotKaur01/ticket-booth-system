@@ -33,6 +33,8 @@ type ShowDateFieldProps = {
   className?: string
   disabled?: boolean
   displayFormat?: string
+  /** `input` = bordered field (forms). `plain` = compact text+icon (toolbars). */
+  appearance?: "input" | "plain"
 }
 
 export function ShowDateField({
@@ -41,10 +43,13 @@ export function ShowDateField({
   className,
   disabled = false,
   displayFormat,
+  appearance = "input",
 }: ShowDateFieldProps) {
   const selectedDate = parseDateValue(showDate)
   const [isOpen, setIsOpen] = useState(false)
-  const [visibleMonth, setVisibleMonth] = useState<Date>(() => selectedDate ?? new Date())
+  const [visibleMonth, setVisibleMonth] = useState<Date>(
+    () => selectedDate ?? new Date()
+  )
 
   useEffect(() => {
     if (selectedDate) {
@@ -65,17 +70,26 @@ export function ShowDateField({
     }
   }
 
+  const displayValue = formatDateForDisplay(showDate, showDate, displayFormat)
+
   if (disabled) {
     return (
       <div
         aria-disabled="true"
         className={cn(
-          "inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/25 px-2.5 py-1.5 opacity-70",
+          appearance === "plain"
+            ? "inline-flex items-center gap-1.5 opacity-70"
+            : "inline-flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-muted/25 px-3 py-2 opacity-70 shadow-xs",
           className
         )}
       >
-        <span className="text-sm leading-none text-muted-foreground">
-          {formatDateForDisplay(showDate, showDate, displayFormat)}
+        <span
+          className={cn(
+            "text-sm leading-none",
+            appearance === "plain" ? "text-muted-foreground" : "text-foreground"
+          )}
+        >
+          {displayValue}
         </span>
         <CalendarIcon className="size-4 shrink-0 text-muted-foreground/80" />
       </div>
@@ -89,12 +103,14 @@ export function ShowDateField({
           type="button"
           variant="ghost"
           className={cn(
-            "h-auto items-center gap-1 px-0 py-0 text-left font-normal hover:bg-transparent",
+            appearance === "plain"
+              ? "h-auto items-center gap-1.5 px-0 py-0 text-left font-normal hover:bg-transparent"
+              : "h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-left font-normal shadow-xs hover:bg-background",
             className
           )}
         >
           <span className="text-sm leading-none text-foreground">
-            {formatDateForDisplay(showDate, showDate, displayFormat)}
+            {displayValue}
           </span>
           <CalendarIcon className="size-4 shrink-0 text-muted-foreground" />
         </Button>
@@ -107,7 +123,9 @@ export function ShowDateField({
             onMonthChange={setVisibleMonth}
             selected={selectedDate ?? undefined}
             onSelect={(nextDate) => {
-              onShowDateChange(dayjs(getStartOfDay(nextDate)).format("YYYY-MM-DD"))
+              onShowDateChange(
+                dayjs(getStartOfDay(nextDate)).format("YYYY-MM-DD")
+              )
               setIsOpen(false)
             }}
           />
@@ -116,4 +134,3 @@ export function ShowDateField({
     </Popover>
   )
 }
-
