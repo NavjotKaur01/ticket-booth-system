@@ -19,6 +19,14 @@ export type Reservation = {
   scanner: number
   total: string
   paid: string
+  /** Raw Total for status / pay math. */
+  totalAmount?: number
+  /** Raw ResPayments for status / pay math. */
+  paidAmount?: number
+  /** Raw PromoPymts for partial-pay status. */
+  promoPayments?: number
+  lastFourCardDigit?: string
+  oldReservationId?: string
   createdBy: string
   createdDt: string
   lastUpdateBy: string
@@ -34,6 +42,8 @@ export type ShowOption = {
   subtitle?: string
   /** Formatted headliner name for the selected show. */
   headliner?: string
+  /** Headliner comedian GUID from GetShowDetailsByDate (Comic Info). */
+  comicId?: string
 }
 
 export type SectionTone = 'regular' | 'vip'
@@ -59,6 +69,8 @@ export type ReservationSectionOption = SectionOption & {
   phoneInFee: number
   walkUpFee: number
   webFee: number
+  /** Desktop RestrictPromoForSection — hides multi-promo when Y. */
+  restrictPromoForSection?: boolean
 }
 
 export type ReservationCounts = {

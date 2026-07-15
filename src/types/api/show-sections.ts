@@ -18,4 +18,6 @@ export type ShowSectionItem = {
   PhoneCharge?: number | null
   WalkupCharge?: number | null
   WebCharge?: number | null
+  RestrictPromoForSection?: string | null
+  ShowDetRestrictPromo?: string | null
 }

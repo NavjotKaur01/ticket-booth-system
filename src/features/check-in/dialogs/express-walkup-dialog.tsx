@@ -1,7 +1,11 @@
 import { Info, LoaderCircle } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
-import { FormField, FormSection, ReadOnlyValue } from "@/components/forms/form-fields"
+import {
+  FormField,
+  FormSection,
+  ReadOnlyValue,
+} from "@/components/forms/form-fields"
 import { ScrollSelectControl } from "@/components/common/scroll-select-control"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -14,17 +18,37 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ProcessPaymentDialog } from "@/features/check-in/dialogs/process-payment-dialog"
+import { SalesTransactionDialog } from "@/features/check-in/dialogs/sales-transaction-dialog"
 import { ComicInfoDialog } from "@/features/reservations/comic-info-dialog"
-import { cn } from "@/lib/utils"
 import {
+  buildExpressWalkupTitle,
   calculateExpressWalkupTotals,
   createExpressWalkupFormValues,
-  getExpressWalkupDialogData,
-  type ExpressWalkupDialogData,
+  EXPRESS_WALKUP_TICKET_COUNTS,
+  formatExpressWalkupShowDate,
   type ExpressWalkupFormValues,
   type ExpressWalkupTotals,
 } from "@/features/check-in/service/express-walkup.service"
-import type { ShowOption } from "@/types/reservation"
+import type { ExpressPaymentType } from "@/features/check-in/service/express-panel.service"
+import { useCachedReservationShowData } from "@/hooks/use-cached-reservation-show-data"
+import type { ComicInfo } from "@/data/comedian-info"
+import {
+  isUsableComicId,
+  mapApiComedianToComicInfo,
+} from "@/lib/map-comedian-info"
+import { cn } from "@/lib/utils"
+import {
+  useDeleteComedianImageMutation,
+  useGetComedianInfoQuery,
+  useUpdateComedianImageMutation,
+  useUpdateComedianMutation,
+} from "@/store/api/clubmanApi"
+import type { ReservationPromo } from "@/types/reservation-promo"
+import type {
+  ReservationSectionOption,
+  ShowOption,
+} from "@/types/reservation"
 
 const TICKET_GRID_CLASS =
   "grid grid-cols-[repeat(auto-fit,minmax(8.75rem,1fr))] gap-2"
@@ -61,11 +85,10 @@ function TicketCountGrid({
             )}
             onClick={() => onSelect(count)}
           >
-            {count} · ${total.toFixed(2)}
+            {count} -${total.toFixed(2)}
           </Button>
         )
-      }
-      )}
+      })}
     </div>
   )
 }
@@ -87,112 +110,205 @@ function WalkupDialogSkeleton() {
           <Skeleton key={index} className="h-11 w-full rounded-md" />
         ))}
       </div>
-      <div className={SUMMARY_GRID}>
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="space-y-1.5">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-9 w-full" />
-          </div>
-        ))}
-      </div>
-      <div className={TOTALS_GRID}>
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="space-y-1.5">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-9 w-full" />
-          </div>
-        ))}
-      </div>
-      <div className={TOTAL_ACTION_GRID}>
-        {Array.from({ length: 2 }).map((_, index) => (
-          <div key={index} className="space-y-1.5">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-9 w-full" />
-          </div>
-        ))}
-      </div>
     </div>
   )
+}
+
+export type ExpressWalkupContinuePayload = {
+  showTimeId: string
+  section: ReservationSectionOption
+  party: number
+  passes: number
+  promo: ReservationPromo | null
+  dinner: boolean
+  paymentType: "cash" | "credit-card"
+  paymentAmount: number
 }
 
 type ExpressWalkupDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  connectionName: string
+  locationId: string
+  username: string
   showDate: string
   showTimeId: string
   shows?: ShowOption[]
+  isSubmitting?: boolean
+  error?: string | null
+  onContinue?: (payload: ExpressWalkupContinuePayload) => void | Promise<void>
+  onShowTimeChange?: (showTimeId: string) => void
 }
 
 export function ExpressWalkupDialog({
   open,
   onOpenChange,
+  connectionName,
+  locationId,
+  username,
   showDate,
   showTimeId,
-  shows,
+  shows = [],
+  isSubmitting = false,
+  error = null,
+  onContinue,
+  onShowTimeChange,
 }: ExpressWalkupDialogProps) {
-  const [dialogData, setDialogData] = useState<ExpressWalkupDialogData | null>(null)
-  const [formValues, setFormValues] = useState<ExpressWalkupFormValues | null>(null)
+  const [formValues, setFormValues] = useState<ExpressWalkupFormValues | null>(
+    null
+  )
   const [totals, setTotals] = useState<ExpressWalkupTotals | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
   const [isCalculating, setIsCalculating] = useState(false)
   const [isComicInfoOpen, setIsComicInfoOpen] = useState(false)
+  const [paymentStep, setPaymentStep] = useState<ExpressPaymentType | null>(
+    null
+  )
   const suppressNextParentCloseRef = useRef(false)
+
+  const selectedShowTimeId = formValues?.showTimeId || showTimeId
+
+  const {
+    sections,
+    sectionsLoading,
+    promoById,
+    promoLoading,
+  } = useCachedReservationShowData({
+    connectionName,
+    locationId,
+    showDate,
+    showId: selectedShowTimeId,
+    enabled: open && Boolean(connectionName && locationId && selectedShowTimeId),
+  })
+
+  const promos = useMemo(() => Array.from(promoById.values()), [promoById])
+
+  const selectedShow = useMemo(
+    () => shows.find((show) => show.id === selectedShowTimeId) ?? shows[0],
+    [selectedShowTimeId, shows]
+  )
+
+  const comicId = selectedShow?.comicId ?? ""
+  const canLoadComic = isUsableComicId(comicId)
+
+  const {
+    data: comedianInfo,
+    isLoading: isComicLoading,
+    isFetching: isComicFetching,
+    refetch: refetchComic,
+  } = useGetComedianInfoQuery(
+    { connectionName, comicId },
+    {
+      skip:
+        !isComicInfoOpen || !canLoadComic || !connectionName,
+    }
+  )
+  const [updateComedian] = useUpdateComedianMutation()
+  const [updateComedianImage] = useUpdateComedianImageMutation()
+  const [deleteComedianImage] = useDeleteComedianImageMutation()
+
+  const mappedComicInfo = useMemo(() => {
+    if (!comedianInfo) {
+      return null
+    }
+
+    return mapApiComedianToComicInfo(
+      comedianInfo,
+      selectedShow?.headliner ?? ""
+    )
+  }, [comedianInfo, selectedShow?.headliner])
+
+  const selectedSection = useMemo(() => {
+    if (!formValues) {
+      return sections[0] ?? null
+    }
+
+    return (
+      sections.find((section) => section.id === formValues.sectionId) ??
+      sections[0] ??
+      null
+    )
+  }, [formValues, sections])
+
+  const selectedPromo = useMemo(() => {
+    if (!formValues || formValues.promoId === "none") {
+      return null
+    }
+
+    return promoById.get(formValues.promoId) ?? null
+  }, [formValues, promoById])
+
+  const selectedCount = Math.max(1, Number(formValues?.party) || 1)
+  const isLoading = open && (sectionsLoading || promoLoading || !formValues)
 
   useEffect(() => {
     if (!open) {
+      setFormValues(null)
+      setTotals(null)
+      setPaymentStep(null)
       setIsComicInfoOpen(false)
       return
     }
 
-    let isActive = true
-    setIsLoading(true)
+    setFormValues((current) => {
+      if (current) {
+        return current
+      }
 
-    getExpressWalkupDialogData({ showDate, showTimeId, shows })
-      .then((data) => {
-        if (!isActive) {
-          return
-        }
+      return createExpressWalkupFormValues({ showTimeId, sections: [] })
+    })
+  }, [open, showTimeId])
 
-        const nextForm = {
-          ...createExpressWalkupFormValues(data),
-          showTimeId,
-        }
-        setDialogData(data)
-        setFormValues(nextForm)
-        setTotals(
-          calculateExpressWalkupTotals({
-            formValues: nextForm,
-            sectionOptions: data.sectionOptions,
-          })
-        )
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoading(false)
-        }
-      })
-
-    return () => {
-      isActive = false
+  useEffect(() => {
+    if (!open || !formValues) {
+      return
     }
-  }, [open, showDate, showTimeId, shows])
 
-  const selectedSection = useMemo(
-    () =>
-      dialogData?.sectionOptions.find(
-        (option) => option.id === formValues?.sectionId
-      ) ?? dialogData?.sectionOptions[0],
-    [dialogData, formValues?.sectionId]
-  )
+    if (sections.length === 0) {
+      return
+    }
 
-  const selectedCount = Math.max(1, Number(formValues?.party) || 1)
-  const originValue = dialogData?.originOptions[0]?.label ?? "Walkup"
+    const sectionStillValid = sections.some(
+      (section) => section.id === formValues.sectionId
+    )
+
+    if (!sectionStillValid) {
+      setFormValues((current) =>
+        current
+          ? {
+              ...current,
+              sectionId: sections[0].id,
+            }
+          : current
+      )
+    }
+  }, [formValues, open, sections])
+
+  useEffect(() => {
+    if (!open || !formValues || sections.length === 0) {
+      return
+    }
+
+    setTotals(
+      calculateExpressWalkupTotals({
+        formValues,
+        sections,
+        promo: selectedPromo,
+      })
+    )
+  }, [formValues, open, sections, selectedPromo])
 
   function updateField<K extends keyof ExpressWalkupFormValues>(
     field: K,
     value: ExpressWalkupFormValues[K]
   ) {
-    setFormValues((current) => (current ? { ...current, [field]: value } : current))
+    setFormValues((current) =>
+      current ? { ...current, [field]: value } : current
+    )
+  }
+
+  function handleShowTimeChange(value: string) {
+    updateField("showTimeId", value)
+    onShowTimeChange?.(value)
   }
 
   function handleTicketCountSelect(count: number) {
@@ -201,7 +317,7 @@ export function ExpressWalkupDialog({
   }
 
   function handleCalculate() {
-    if (!dialogData || !formValues) {
+    if (!formValues || sections.length === 0) {
       return
     }
 
@@ -210,11 +326,12 @@ export function ExpressWalkupDialog({
       setTotals(
         calculateExpressWalkupTotals({
           formValues,
-          sectionOptions: dialogData.sectionOptions,
+          sections,
+          promo: selectedPromo,
         })
       )
       setIsCalculating(false)
-    }, 120)
+    }, 80)
   }
 
   function handleExpressWalkupOpenChange(nextOpen: boolean) {
@@ -223,9 +340,10 @@ export function ExpressWalkupDialog({
       return
     }
 
-    if (!nextOpen && isComicInfoOpen) {
+    if (!nextOpen && (isComicInfoOpen || paymentStep)) {
       suppressNextParentCloseRef.current = true
       setIsComicInfoOpen(false)
+      setPaymentStep(null)
       return
     }
 
@@ -240,6 +358,58 @@ export function ExpressWalkupDialog({
     setIsComicInfoOpen(nextOpen)
   }
 
+  function handlePaymentOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      suppressNextParentCloseRef.current = true
+      setPaymentStep(null)
+    }
+  }
+
+  async function completePayment() {
+    if (!formValues || !selectedSection || !totals) {
+      return
+    }
+
+    const party = Math.max(1, Number(formValues.party) || 1)
+    const passes = Math.max(0, Number(formValues.passes) || 0)
+
+    await Promise.resolve(
+      onContinue?.({
+        showTimeId: formValues.showTimeId || showTimeId,
+        section: selectedSection,
+        party,
+        passes: passes || party,
+        promo: selectedPromo,
+        dinner: formValues.dinner,
+        paymentType: paymentStep === "Credit Card" ? "credit-card" : "cash",
+        paymentAmount: totals.paymentDue,
+      })
+    )
+
+    setPaymentStep(null)
+  }
+
+  function handleContinue(paymentType: ExpressPaymentType) {
+    if (!formValues || !selectedSection || !totals) {
+      return
+    }
+
+    const nextTotals = calculateExpressWalkupTotals({
+      formValues,
+      sections,
+      promo: selectedPromo,
+    })
+    setTotals(nextTotals)
+    setPaymentStep(paymentType)
+  }
+
+  const title = buildExpressWalkupTitle(selectedShow, showDate)
+  const comicStageName =
+    mappedComicInfo?.stageName ||
+    selectedShow?.headliner?.trim() ||
+    selectedShow?.label?.replace(/^\d{1,2}:\d{2}\s*(AM|PM)\s*/i, "").trim() ||
+    ""
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleExpressWalkupOpenChange}>
@@ -249,29 +419,31 @@ export function ExpressWalkupDialog({
         >
           <DialogHeader className="shrink-0 gap-0 border-b px-4 py-3 pr-12">
             <DialogTitle className="text-lg leading-snug font-normal">
-              <span className="font-semibold text-foreground">
-                {dialogData?.title ?? "Express Walkup"}
-              </span>
+              <span className="font-semibold text-foreground">{title}</span>
             </DialogTitle>
           </DialogHeader>
 
           <div className="overflow-y-auto">
-            {isLoading || !dialogData || !formValues || !totals ? (
+            {isLoading || !formValues || !totals ? (
               <WalkupDialogSkeleton />
             ) : (
               <div className="space-y-5 px-4 py-4">
+                {error ? (
+                  <p className="text-sm text-destructive">{error}</p>
+                ) : null}
+
                 <FormSection title="Show Details" className="space-y-4">
                   <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-[12rem_minmax(0,1.2fr)_minmax(0,1.2fr)_auto]">
                     <FormField label="Show Date">
-                      <ReadOnlyValue value={dialogData.showDate} />
+                      <ReadOnlyValue value={formatExpressWalkupShowDate(showDate)} />
                     </FormField>
 
                     <FormField label="Show Time">
                       <ScrollSelectControl
                         id="express-walkup-show-time"
                         value={formValues.showTimeId}
-                        onChange={(value) => updateField("showTimeId", value)}
-                        options={dialogData.showTimeOptions.map((option) => ({
+                        onChange={handleShowTimeChange}
+                        options={shows.map((option) => ({
                           value: option.id,
                           label: option.label,
                         }))}
@@ -284,7 +456,7 @@ export function ExpressWalkupDialog({
                         id="express-walkup-section"
                         value={formValues.sectionId}
                         onChange={(value) => updateField("sectionId", value)}
-                        options={dialogData.sectionOptions.map((option) => ({
+                        options={sections.map((option) => ({
                           value: option.id,
                           label: option.label,
                         }))}
@@ -326,11 +498,11 @@ export function ExpressWalkupDialog({
                   </div>
                 </FormSection>
 
-                <FormSection title="Click the number of tickets to reserve">
+                <FormSection title="Click the Number of ticket to reserve:">
                   <TicketCountGrid
-                    counts={dialogData.ticketCountOptions}
+                    counts={EXPRESS_WALKUP_TICKET_COUNTS}
                     selectedCount={selectedCount}
-                    ticketPrice={selectedSection?.price ?? 0}
+                    ticketPrice={selectedSection?.showPrice ?? 0}
                     onSelect={handleTicketCountSelect}
                   />
                 </FormSection>
@@ -338,7 +510,7 @@ export function ExpressWalkupDialog({
                 <FormSection title="Reservation Details" className="space-y-4">
                   <div className={SUMMARY_GRID}>
                     <FormField label="Origin">
-                      <ReadOnlyValue value={originValue} />
+                      <ReadOnlyValue value="Walkup" />
                     </FormField>
 
                     <FormField label="Party">
@@ -358,7 +530,16 @@ export function ExpressWalkupDialog({
                         id="express-walkup-promo"
                         value={formValues.promoId}
                         onChange={(value) => updateField("promoId", value)}
-                        options={dialogData.promoOptions}
+                        options={[
+                          { value: "none", label: "Select" },
+                          ...promos.map((promo) => ({
+                            value: promo.id,
+                            label:
+                              promo.promotionName ||
+                              promo.promotionCode ||
+                              promo.id,
+                          })),
+                        ]}
                         className="text-sm"
                       />
                     </FormField>
@@ -387,7 +568,7 @@ export function ExpressWalkupDialog({
                       <ReadOnlyValue value={totals.discount} />
                     </FormField>
                     <FormField label="Taxes">
-                      <ReadOnlyValue value={totals.taxes} />
+                      <ReadOnlyValue value={totals.tax} />
                     </FormField>
                   </div>
 
@@ -427,12 +608,34 @@ export function ExpressWalkupDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="button" onClick={() => onOpenChange(false)}>
-              Continue
-            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isSubmitting || !formValues || !selectedSection}
+                onClick={() => handleContinue("Credit Card")}
+              >
+                Credit Card
+              </Button>
+              <Button
+                type="button"
+                disabled={isSubmitting || !formValues || !selectedSection}
+                onClick={() => handleContinue("Cash")}
+              >
+                {isSubmitting ? (
+                  <>
+                    <LoaderCircle className="size-4 animate-spin" />
+                    Saving
+                  </>
+                ) : (
+                  "Continue"
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -440,14 +643,80 @@ export function ExpressWalkupDialog({
       <ComicInfoDialog
         open={isComicInfoOpen}
         onOpenChange={handleComicInfoOpenChange}
-        stageName={dialogData?.comicStageName ?? ""}
+        comic={mappedComicInfo}
+        stageName={comicStageName}
         nested
+        layout="flat"
+        title="Edit Comedian"
+        isLoading={
+          isComicLoading ||
+          isComicFetching ||
+          (canLoadComic && !mappedComicInfo)
+        }
+        onSave={
+          mappedComicInfo && canLoadComic
+            ? async (values: ComicInfo) => {
+                await updateComedian({
+                  connectionName,
+                  locationId,
+                  username,
+                  comicId,
+                  form: values,
+                }).unwrap()
+                refetchComic()
+              }
+            : undefined
+        }
+        onChangeImage={
+          canLoadComic
+            ? async (base64Image: string) => {
+                await updateComedianImage({
+                  connectionName,
+                  locationId,
+                  username,
+                  comicId,
+                  base64Image,
+                }).unwrap()
+                refetchComic()
+              }
+            : undefined
+        }
+        onDeleteImage={
+          canLoadComic
+            ? async () => {
+                await deleteComedianImage({
+                  connectionName,
+                  comicId,
+                }).unwrap()
+                refetchComic()
+              }
+            : undefined
+        }
       />
+
+      {paymentStep === "Cash" && totals ? (
+        <SalesTransactionDialog
+          open
+          onOpenChange={handlePaymentOpenChange}
+          paymentType="Cash"
+          paymentDue={totals.paymentDue}
+          onOk={() => {
+            void completePayment()
+          }}
+        />
+      ) : null}
+
+      {paymentStep === "Credit Card" && totals ? (
+        <ProcessPaymentDialog
+          open
+          onOpenChange={handlePaymentOpenChange}
+          quantity={selectedCount}
+          paymentAmount={totals.total}
+          onOk={() => {
+            void completePayment()
+          }}
+        />
+      ) : null}
     </>
   )
 }
-
-
-
-
-

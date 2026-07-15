@@ -1,4 +1,5 @@
-﻿import { sectionOptions } from "@/data/reservation"
+import { calculateReservationTotals } from "@/lib/calculate-reservation-totals"
+import type { ReservationPromo } from "@/types/reservation-promo"
 
 export type ExpressPaymentType = "Cash" | "Credit Card"
 
@@ -11,60 +12,38 @@ export type ExpressPanelTotals = {
   paymentDue: number
 }
 
-const SERVICE_CHARGE_PER_TICKET = 1
-
-function parsePrice(value: string) {
-  return Number(value.replace(/[^0-9.]/g, "")) || 0
-}
-
 function formatMoney(value: number) {
   return `$${value.toFixed(2)}`
 }
 
-function calculateDiscount(
-  promoId: string,
-  sectionPrice: number,
-  quantity: number
-) {
-  switch (promoId) {
-    case "admit2":
-      return quantity >= 2 ? sectionPrice : 0
-    case "admit4":
-      return quantity >= 4 ? sectionPrice * 2 : 0
-    case "buy1get1":
-      return sectionPrice * Math.floor(quantity / 2)
-    case "comedy10":
-      return sectionPrice * quantity * 0.1
-    default:
-      return 0
-  }
-}
-
-export function calculateExpressPanelTotals({
-  sectionId,
-  promoId,
+/** Live express totals from section price + walk-up fee + promo. */
+export function calculateExpressPanelTotalsFromSection({
+  sectionPrice,
+  walkUpFee = 0,
   quantity,
+  promo,
 }: {
-  sectionId: string
-  promoId: string
+  sectionPrice: number
+  walkUpFee?: number
   quantity: number
+  promo: ReservationPromo | null
 }): ExpressPanelTotals {
-  const sanitizedQuantity = Math.max(0, quantity)
-  const section = sectionOptions.find((option) => option.id === sectionId)
-  const sectionPrice = section ? parsePrice(section.price) : 0
-  const subtotal = sectionPrice * sanitizedQuantity
-  const serviceCharge = sanitizedQuantity * SERVICE_CHARGE_PER_TICKET
-  const discount = calculateDiscount(promoId, sectionPrice, sanitizedQuantity)
-  const tax = 0
-  const paymentDue = Math.max(0, subtotal + serviceCharge + tax - discount)
+  const totals = calculateReservationTotals({
+    sectionPrice,
+    sectionShowPrice: sectionPrice,
+    party: Math.max(0, quantity),
+    passes: Math.max(0, quantity),
+    promo,
+    baseSvcAmount: walkUpFee || undefined,
+  })
 
   return {
-    subtotal: formatMoney(subtotal),
-    serviceCharge: formatMoney(serviceCharge),
-    discount: formatMoney(discount),
-    tax: formatMoney(tax),
-    total: formatMoney(paymentDue),
-    paymentDue,
+    subtotal: formatMoney(totals.subtotal),
+    serviceCharge: formatMoney(totals.serviceCharge),
+    discount: formatMoney(totals.discount),
+    tax: formatMoney(totals.taxes),
+    total: formatMoney(totals.total),
+    paymentDue: totals.total,
   }
 }
 
@@ -77,4 +56,3 @@ export function calculateSalesTransactionChange({
 }) {
   return paymentAmount - paymentDue
 }
-

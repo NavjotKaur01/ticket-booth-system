@@ -8,7 +8,18 @@ type CheckInSearchCriteria = {
   phoneNo: string
 }
 
-// Client-side check-in table filter by name and table (ccLast4/phone reserved for API).
+function includesNormalized(value: string, query: string) {
+  if (!query) {
+    return true
+  }
+
+  return value.toLowerCase().includes(query)
+}
+
+/**
+ * Desktop SearchReservation — client-side AND contains filters.
+ * Empty fields are ignored.
+ */
 export function filterCheckInRecords(
   records: CheckInRecord[],
   criteria: CheckInSearchCriteria
@@ -17,16 +28,18 @@ export function filterCheckInRecords(
   const firstName = criteria.firstName.trim().toLowerCase()
   const tableNo = criteria.tableNo.trim().toLowerCase()
   const phoneNo = criteria.phoneNo.trim().toLowerCase()
+  const ccLast4 = criteria.ccLast4.trim().toLowerCase()
 
-  // No criteria entered — show all records for the current show
-  if (!lastName && !firstName && !tableNo && !phoneNo && !criteria.ccLast4.trim()) {
+  if (!lastName && !firstName && !tableNo && !phoneNo && !ccLast4) {
     return records
   }
 
   return records.filter((record) => {
-    if (lastName && !record.lastName.toLowerCase().includes(lastName)) return false
-    if (firstName && !record.firstName.toLowerCase().includes(firstName)) return false
-    if (tableNo && !record.tables.toLowerCase().includes(tableNo)) return false
+    if (!includesNormalized(record.lastName, lastName)) return false
+    if (!includesNormalized(record.firstName, firstName)) return false
+    if (!includesNormalized(record.tables, tableNo)) return false
+    if (!includesNormalized(record.phoneNo, phoneNo)) return false
+    if (!includesNormalized(record.lastFourCardDigit, ccLast4)) return false
     return true
   })
 }

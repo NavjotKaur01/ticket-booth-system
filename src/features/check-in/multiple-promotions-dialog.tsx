@@ -1,5 +1,5 @@
 import { Info } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import {
   FormField,
@@ -7,11 +7,6 @@ import {
   ReadOnlyValue,
 } from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import {
   Dialog,
   DialogContent,
@@ -27,39 +22,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
+  calculateMultiplePromotionsTotals,
+  formatMultiplePromotionsMoney,
+  resolvePrimaryPromoFromRows,
+  type MultiplePromotionRowState,
+} from "@/features/check-in/service/multiple-promotions.service"
 import { cn } from "@/lib/utils"
+import type { ReservationPromo } from "@/types/reservation-promo"
 
 const PARTY_NUMBERS = Array.from({ length: 15 }, (_, i) => i + 1)
+const PROMOTION_ROW_COUNT = 5
 
-const PROMO_OPTIONS = [
-  { id: "select", label: "Select" },
-  { id: "admit2", label: "Admit2" },
-  { id: "admit4", label: "Admit4" },
-  { id: "buy1get1", label: "Buy1Get1" },
-] as const
-
-const PROMOTION_ROWS = Array.from({ length: 5 }, (_, i) => i)
-
-const RESERVATION_LINE_META = [
-  { key: "sub", label: "Subtotal", info: null },
-  {
-    key: "svc",
-    label: "Service Charge",
-    info: "Service charge applied per ticket",
-  },
-  { key: "disc", label: "Discount", info: null },
-  { key: "tax", label: "Taxes", info: "Sales tax on this reservation" },
-] as const
-
-const DEFAULT_RESERVATION_TOTALS = {
-  subtotal: "$0.00",
-  serviceCharge: "$0.00",
-  discount: "$0.00",
-  taxes: "$0.00",
-  total: "$0.00",
-  pricePerTicket: "$10.00",
-  unDiscount: "0",
-} as const
+function emptyRows(): MultiplePromotionRowState[] {
+  return Array.from({ length: PROMOTION_ROW_COUNT }, () => ({
+    promoId: "select",
+    passes: 0,
+  }))
+}
 
 function TotalsLine({
   label,
@@ -94,71 +79,11 @@ function TotalsLine({
   )
 }
 
-function MultiplePromotionsReservationDetails({
-  partyNumber,
-}: {
-  partyNumber: number | null
-}) {
-  const lineValues: Record<
-    (typeof RESERVATION_LINE_META)[number]["key"],
-    string
-  > = {
-    sub: DEFAULT_RESERVATION_TOTALS.subtotal,
-    svc: DEFAULT_RESERVATION_TOTALS.serviceCharge,
-    disc: DEFAULT_RESERVATION_TOTALS.discount,
-    tax: DEFAULT_RESERVATION_TOTALS.taxes,
-  }
-
-  return (
-    <div className="rounded-lg border border-border/60 p-2.5">
-      <div className="space-y-2.5 text-sm">
-        {RESERVATION_LINE_META.map((line) => (
-          <TotalsLine
-            key={line.key}
-            label={line.label}
-            value={lineValues[line.key]}
-            info={line.info}
-          />
-        ))}
-
-        <TotalsLine
-          label="Party Number"
-          value={partyNumber === null ? "0" : String(partyNumber)}
-        />
-        <TotalsLine
-          label="Price Per Ticket"
-          value={DEFAULT_RESERVATION_TOTALS.pricePerTicket}
-        />
-        <TotalsLine
-          label="UnDiscount"
-          value={DEFAULT_RESERVATION_TOTALS.unDiscount}
-        />
-
-        <div className="space-y-2 border-t border-border/50 pt-2">
-          <div className="flex items-center justify-between gap-4">
-            <span className="font-semibold">Total</span>
-            <span className="shrink-0 text-base font-bold tabular-nums">
-              {DEFAULT_RESERVATION_TOTALS.total}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-type MultiplePromotionsDialogProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onConfirm?: (partyNumber: number | null) => void
-}
-
-/** Party-size picker (1–15) — matches the desktop booth app. */
 function PartyNumberGrid({
   selected,
   onSelect,
 }: {
-  selected: number | null
+  selected: number
   onSelect: (value: number) => void
 }) {
   return (
@@ -179,78 +104,86 @@ function PartyNumberGrid({
   )
 }
 
-/** One promo row: select + passes/discount + paid/comp/disc summary. */
-function PromotionRow({ showDivider }: { showDivider: boolean }) {
-  return (
-    <div className={cn("space-y-2", showDivider && "border-t pt-3")}>
-      <div className="grid gap-2 xl:grid-cols-10 xl:items-end">
-        <div className="xl:col-span-6">
-          <Select defaultValue="select">
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
-            <SelectContent>
-              {PROMO_OPTIONS.map((opt) => (
-                <SelectItem key={opt.id} value={opt.id}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-2 xl:col-span-4">
-          <FormField label="Passes">
-            <Input type="number" defaultValue={0} min={0} />
-          </FormField>
-          <FormField label="Discount">
-            <ReadOnlyValue value="$0.00" />
-          </FormField>
-        </div>
-      </div>
-
-      <p className="text-xs text-muted-foreground">
-        Paid : <span className="font-semibold text-foreground">0</span>
-        <span className="mx-3">Comp :</span>
-        <span className="font-semibold text-foreground">0</span>
-        <span className="mx-3">Disc :</span>
-        <span className="font-semibold text-foreground">0</span>
-      </p>
-    </div>
-  )
+export type MultiplePromotionsConfirmPayload = {
+  partyNumber: number
+  primaryPromo: ReservationPromo | null
+  rows: MultiplePromotionRowState[]
+  total: number
 }
 
-// Split a party across up to five promotions before express checkout.
+type MultiplePromotionsDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  promos: ReservationPromo[]
+  sectionPrice: number
+  walkUpFee?: number
+  initialParty?: number
+  onConfirm?: (payload: MultiplePromotionsConfirmPayload) => void
+}
+
+/** Desktop Express Multiple Promotions popup (live section + promos). */
 export function MultiplePromotionsDialog({
   open,
   onOpenChange,
+  promos,
+  sectionPrice,
+  walkUpFee = 0,
+  initialParty = 1,
   onConfirm,
 }: MultiplePromotionsDialogProps) {
-  const [partyNumber, setPartyNumber] = useState<number | null>(null)
+  const [partyNumber, setPartyNumber] = useState(
+    Math.max(1, Math.min(15, initialParty || 1))
+  )
+  const [rows, setRows] = useState<MultiplePromotionRowState[]>(emptyRows)
 
-  function handleOpenChange(nextOpen: boolean) {
-    if (!nextOpen) {
-      setPartyNumber(null)
+  const promosById = useMemo(() => {
+    const map = new Map<string, ReservationPromo>()
+    for (const promo of promos) {
+      map.set(promo.id, promo)
     }
-    onOpenChange(nextOpen)
-  }
+    return map
+  }, [promos])
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    setPartyNumber(Math.max(1, Math.min(15, initialParty || 1)))
+    setRows(emptyRows())
+  }, [initialParty, open])
+
+  const totals = useMemo(
+    () =>
+      calculateMultiplePromotionsTotals({
+        sectionPrice,
+        walkUpFee,
+        partyNumber,
+        rows,
+        promosById,
+      }),
+    [partyNumber, promosById, rows, sectionPrice, walkUpFee]
+  )
 
   function handleConfirm() {
-    onConfirm?.(partyNumber)
-    handleOpenChange(false)
+    onConfirm?.({
+      partyNumber,
+      primaryPromo: resolvePrimaryPromoFromRows(rows, promosById),
+      rows,
+      total: totals.total,
+    })
+    onOpenChange(false)
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton
-        className="flex max-h-[92vh] max-w-3xl flex-col overflow-hidden sm:max-w-3xl"
+        className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden sm:max-w-3xl"
       >
         <DialogHeader className="shrink-0 gap-0 border-b px-4 py-3 pr-12">
-          <DialogTitle className="text-lg leading-snug font-normal">
-            <span className="font-semibold text-foreground">
-              Multiple Promotions
-            </span>
+          <DialogTitle className="text-lg font-semibold text-foreground">
+            Multiple Promotions
           </DialogTitle>
         </DialogHeader>
 
@@ -264,14 +197,139 @@ export function MultiplePromotionsDialog({
 
           <FormSection title="Promotions">
             <div className="space-y-3">
-              {PROMOTION_ROWS.map((index) => (
-                <PromotionRow key={index} showDivider={index > 0} />
+              {rows.map((row, index) => (
+                <div
+                  key={index}
+                  className={cn("space-y-2", index > 0 && "border-t pt-3")}
+                >
+                  <div className="grid gap-2 xl:grid-cols-10 xl:items-end">
+                    <div className="xl:col-span-6">
+                      <FormField label={index === 0 ? "Promotion" : undefined}>
+                        <Select
+                          value={row.promoId}
+                          onValueChange={(value) => {
+                            setRows((current) =>
+                              current.map((item, itemIndex) =>
+                                itemIndex === index
+                                  ? { ...item, promoId: value }
+                                  : item
+                              )
+                            )
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="select">Select</SelectItem>
+                            {promos.map((promo) => (
+                              <SelectItem key={promo.id} value={promo.id}>
+                                {promo.promotionName ||
+                                  promo.promotionCode ||
+                                  promo.id}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-2 xl:col-span-4">
+                      <FormField label="Passes">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={15}
+                          value={row.passes}
+                          onChange={(event) => {
+                            const next = Number.parseInt(event.target.value, 10)
+                            setRows((current) =>
+                              current.map((item, itemIndex) =>
+                                itemIndex === index
+                                  ? {
+                                      ...item,
+                                      passes: Number.isFinite(next)
+                                        ? Math.max(0, Math.min(15, next))
+                                        : 0,
+                                    }
+                                  : item
+                              )
+                            )
+                          }}
+                        />
+                      </FormField>
+                      <FormField label="Discount">
+                        <ReadOnlyValue
+                          value={formatMultiplePromotionsMoney(
+                            totals.rows[index]?.discountAmount ?? 0
+                          )}
+                        />
+                      </FormField>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Paid :{" "}
+                    <span className="font-semibold text-foreground">
+                      {totals.rows[index]?.paid ?? 0}
+                    </span>
+                    <span className="mx-3">Comp :</span>
+                    <span className="font-semibold text-foreground">
+                      {totals.rows[index]?.comp ?? 0}
+                    </span>
+                    <span className="mx-3">Disc :</span>
+                    <span className="font-semibold text-foreground">
+                      {totals.rows[index]?.disc ?? 0}
+                    </span>
+                  </p>
+                </div>
               ))}
             </div>
           </FormSection>
 
           <FormSection title="Reservation Details">
-            <MultiplePromotionsReservationDetails partyNumber={partyNumber} />
+            <div className="rounded-lg border border-border/60 p-2.5">
+              <div className="space-y-2.5 text-sm">
+                <TotalsLine
+                  label="Subtotal"
+                  value={formatMultiplePromotionsMoney(totals.subtotal)}
+                />
+                <TotalsLine
+                  label="Service Charge"
+                  value={formatMultiplePromotionsMoney(totals.serviceCharge)}
+                  info="Walk-up / section service charge"
+                />
+                <TotalsLine
+                  label="Discount"
+                  value={formatMultiplePromotionsMoney(totals.discount)}
+                />
+                <TotalsLine
+                  label="Taxes"
+                  value={formatMultiplePromotionsMoney(totals.taxes)}
+                  info="Sales tax on this reservation"
+                />
+                <TotalsLine
+                  label="Party Number"
+                  value={String(totals.partyNumber)}
+                />
+                <TotalsLine
+                  label="Price Per Ticket"
+                  value={formatMultiplePromotionsMoney(totals.pricePerTicket)}
+                />
+                <TotalsLine
+                  label="UnDiscount"
+                  value={String(totals.unDiscount)}
+                />
+                <div className="space-y-2 border-t border-border/50 pt-2">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="font-semibold">Total</span>
+                    <span className="shrink-0 text-base font-bold tabular-nums">
+                      {formatMultiplePromotionsMoney(totals.total)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </FormSection>
         </div>
 
@@ -279,7 +337,7 @@ export function MultiplePromotionsDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={() => handleOpenChange(false)}
+            onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
