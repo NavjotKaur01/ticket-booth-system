@@ -35,6 +35,7 @@ type Props = {
   footerTotals?: boolean
   onClose: () => void
   isZero?: boolean
+  filterRows?: (row: Record<string, unknown>) => boolean
 }
 
 function cellValue(row: Record<string, unknown>, col: DrillColumn): unknown {
@@ -93,30 +94,13 @@ export function ReportDrillDialog({
   footerTotals = false,
   onClose,
   isZero = false,
+  filterRows,
 }: Props) {
   const [generateReport] = useGenerateReportMutation()
   const [rows, setRows] = useState<Record<string, unknown>[] | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [colWidths, setColWidths] = useState<number[]>([])
   const tableRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!isLoading && rows && rows.length > 0 && tableRef.current) {
-      const observer = new ResizeObserver(() => {
-        const headers = tableRef.current?.querySelectorAll("th")
-        if (headers) {
-          const widths = Array.from(headers).map((h) => h.getBoundingClientRect().width)
-          setColWidths(widths)
-        }
-      })
-      const tableEl = tableRef.current.querySelector("table")
-      if (tableEl) {
-        observer.observe(tableEl)
-      }
-      return () => observer.disconnect()
-    }
-  }, [isLoading, rows])
 
   useEffect(() => {
     async function load() {
@@ -128,7 +112,11 @@ export function ReportDrillDialog({
       setError(null)
       try {
         const data = await generateReport({ endpoint, body }).unwrap()
-        setRows(Array.isArray(data) ? (data as Record<string, unknown>[]) : [])
+        let parsed = Array.isArray(data) ? (data as Record<string, unknown>[]) : []
+        if (filterRows) {
+          parsed = parsed.filter(filterRows)
+        }
+        setRows(parsed)
       } catch {
         setError("Failed to load drill-down data.")
       } finally {
@@ -158,23 +146,25 @@ export function ReportDrillDialog({
 
         {!isLoading && !error && rows && (
           <div ref={tableRef} className={REPORT_DRILL_BODY_CLASS}>
-            {rows.length === 0 ? (
-              <div className="flex min-h-32 items-center justify-center p-4 text-sm text-muted-foreground">
-                No records found
-              </div>
-            ) : (
-              <ReportTable>
-                <thead className="sticky top-0 z-10">
+            <ReportTable>
+              <thead className="sticky top-0 z-10">
+                <tr>
+                  {columns.map((col) => (
+                    <ReportTh key={col.key} right={col.right}>
+                      {col.label}
+                    </ReportTh>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.length === 0 ? (
                   <tr>
-                    {columns.map((col) => (
-                      <ReportTh key={col.key} right={col.right}>
-                        {col.label}
-                      </ReportTh>
-                    ))}
+                    <ReportTd colSpan={columns.length} center className="py-6 text-muted-foreground">
+                      No records found
+                    </ReportTd>
                   </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row, i) => (
+                ) : (
+                  rows.map((row, i) => (
                     <tr key={i} className={reportRowClass(i)}>
                       {columns.map((col) => (
                         <ReportTd key={col.key} right={col.right}>
@@ -182,46 +172,22 @@ export function ReportDrillDialog({
                         </ReportTd>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </ReportTable>
-            )}
+                  ))
+                )}
+              </tbody>
+            </ReportTable>
           </div>
         )}
 
-        {!isLoading && rows && rows.length > 0 && (() => {
+        {!isLoading && rows && (() => {
           const firstRightIdx = columns.findIndex((c) => c.right)
           return (
             <div className={REPORT_DRILL_FOOTER_CLASS}>
-              {footerTotals && firstRightIdx !== -1 && colWidths.length > 0 && (
-                <div className="border-border text-foreground font-semibold">
-                  <table className="w-full border-collapse text-xs table-fixed">
-                    <colgroup>
-                      {colWidths.map((w, idx) => (
-                        <col key={idx} style={{ width: w }} />
-                      ))}
-                    </colgroup>
-                    <tbody>
-                      <tr>
-                        <td colSpan={firstRightIdx} className="text-left px-3 py-1 font-semibold">
-                          Total:
-                        </td>
-                        {columns.slice(firstRightIdx).map((col) => {
-                          if (col.right) {
-                            return (
-                              <td key={col.key} className="text-right px-3 py-1 font-bold">
-                                {fmtCell(col, sumColumn(rows, col))}
-                              </td>
-                            )
-                          }
-                          return <td key={col.key} className="px-3 py-1" />
-                        })}
-                      </tr>
-                    </tbody>
-                  </table>
+              {footerTotals && firstRightIdx !== -1 && (
+                <div className="font-bold text-foreground text-sm">
+                  Total: {fmtCell(columns[firstRightIdx], sumColumn(rows, columns[firstRightIdx]))}
                 </div>
               )}
-              
             </div>
           )
         })()}

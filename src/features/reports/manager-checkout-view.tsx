@@ -402,7 +402,51 @@ function detailRowClass(index: number) {
   return index % 2 === 0 ? "bg-background" : "bg-muted/20"
 }
 
-function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow }) {
+type CheckedInDrillConfig = {
+  showId: string
+  drillType: string
+  isZero: boolean
+}
+
+function CheckedInDrillCell({
+  value,
+  drillType,
+  showId,
+  drillContext,
+  onDrill,
+}: {
+  value: number
+  drillType: string
+  showId: string
+  drillContext?: ReportDrillContext
+  onDrill: (params: CheckedInDrillConfig) => void
+}) {
+  const canDrill = !!drillContext && !!showId
+
+  if (!canDrill) {
+    return <>{value}</>
+  }
+
+  return (
+    <button
+      type="button"
+      className="text-blue-600 hover:text-blue-800 dark:hover:text-blue-300 font-semibold focus:outline-none transition-colors"
+      onClick={() => onDrill({ showId, drillType, isZero: value === 0 })}
+    >
+      {value}
+    </button>
+  )
+}
+
+function ManagerCheckoutDetailTables({
+  show,
+  drillContext,
+  onDrillCheckedIn,
+}: {
+  show: ManagerCheckoutApiShow
+  drillContext?: ReportDrillContext
+  onDrillCheckedIn: (params: CheckedInDrillConfig) => void
+}) {
   const promos = show.FillPromoList ?? []
   const sources = show.PromoSourceList ?? []
   const sections = show.BookedShowSectionList ?? []
@@ -482,13 +526,61 @@ function ManagerCheckoutDetailTables({ show }: { show: ManagerCheckoutApiShow })
               <Td bold>Total</Td>
               <Td right bold>{sumParty}</Td>
               <Td right bold>{sumCheckedIn}</Td>
-              <Td right bold>{sumPaid}</Td>
-              <Td right bold>{sumComp}</Td>
-              <Td right bold>{sumDisc}</Td>
+              <Td right bold>
+                <CheckedInDrillCell
+                  value={sumPaid}
+                  drillType="CheckInPaid"
+                  showId={show.ShowId ?? ""}
+                  drillContext={drillContext}
+                  onDrill={onDrillCheckedIn}
+                />
+              </Td>
+              <Td right bold>
+                <CheckedInDrillCell
+                  value={sumComp}
+                  drillType="CheckInComp"
+                  showId={show.ShowId ?? ""}
+                  drillContext={drillContext}
+                  onDrill={onDrillCheckedIn}
+                />
+              </Td>
+              <Td right bold>
+                <CheckedInDrillCell
+                  value={sumDisc}
+                  drillType="CheckInDisc"
+                  showId={show.ShowId ?? ""}
+                  drillContext={drillContext}
+                  onDrill={onDrillCheckedIn}
+                />
+              </Td>
               <Td right bold>{sumScanned}</Td>
-              <Td right bold>{sumScanPaid}</Td>
-              <Td right bold>{sumScanComp}</Td>
-              <Td right bold>{sumScanDisc}</Td>
+              <Td right bold>
+                <CheckedInDrillCell
+                  value={sumScanPaid}
+                  drillType="ScannerInPaid"
+                  showId={show.ShowId ?? ""}
+                  drillContext={drillContext}
+                  onDrill={onDrillCheckedIn}
+                />
+              </Td>
+              <Td right bold>
+                <CheckedInDrillCell
+                  value={sumScanComp}
+                  drillType="ScannerInComp"
+                  showId={show.ShowId ?? ""}
+                  drillContext={drillContext}
+                  onDrill={onDrillCheckedIn}
+                />
+              </Td>
+              <Td right bold>
+                <CheckedInDrillCell
+                  value={sumScanDisc}
+                  drillType="ScannerInDisc"
+                  showId={show.ShowId ?? ""}
+                  drillContext={drillContext}
+                  onDrill={onDrillCheckedIn}
+                />
+              </Td>
             </tr>
           </tbody>
         </table>
@@ -585,6 +677,7 @@ type ManagerCheckoutViewProps = {
 
 export function ManagerCheckoutView({ rawData, subtitle, generatedAt, drillContext }: ManagerCheckoutViewProps) {
   const shows = Array.isArray(rawData) ? (rawData as ManagerCheckoutApiShow[]) : []
+  const [activeCheckedInDrill, setActiveCheckedInDrill] = useState<CheckedInDrillConfig | null>(null)
 
   if (!shows.length) {
     return (
@@ -651,7 +744,11 @@ export function ManagerCheckoutView({ rawData, subtitle, generatedAt, drillConte
               <PaymentTable show={show} drillContext={drillContext} />
 
               {/* 2–3 — Checked-In, sources, origin, and show sections */}
-              <ManagerCheckoutDetailTables show={show} />
+              <ManagerCheckoutDetailTables
+                show={show}
+                drillContext={drillContext}
+                onDrillCheckedIn={setActiveCheckedInDrill}
+              />
             </div>
           </div>
         )
@@ -660,6 +757,48 @@ export function ManagerCheckoutView({ rawData, subtitle, generatedAt, drillConte
       <p className="text-right text-xs text-muted-foreground">
         {shows.length} show{shows.length !== 1 ? "s" : ""}
       </p>
+
+      {activeCheckedInDrill && drillContext && (() => {
+        const countKey =
+          activeCheckedInDrill.drillType === "CheckInPaid" ? "PaidCount" :
+          activeCheckedInDrill.drillType === "CheckInComp" ? "CompCount" :
+          activeCheckedInDrill.drillType === "CheckInDisc" ? "DiscCount" :
+          activeCheckedInDrill.drillType
+
+        return (
+          <ReportDrillDialog
+            title="Manager CheckOut - Drill Down CheckIn Counts"
+            endpoint="ManagerCheckOutDrillDown"
+            body={{
+              Connection: drillContext.connectionName,
+              StartDate: drillContext.startDate,
+              EndDate: drillContext.endDate,
+              LocaltionId: drillContext.locationId,
+              ShowId: activeCheckedInDrill.showId,
+              DrillType: activeCheckedInDrill.drillType,
+            }}
+            columns={[
+              { key: "CustLName", label: "Customer Last Name", keys: ["CustLName", "LastName", "Lname"] },
+              { key: "CustFName", label: "Customer First Name", keys: ["CustFName", "FirstName", "Fname"] },
+              {
+                key: countKey,
+                label: countKey,
+                format: "number",
+                right: true,
+                keys: [countKey, "Discount", "discount", "Count", "count"]
+              }
+            ]}
+            footerTotals
+            isZero={activeCheckedInDrill.isZero}
+            filterRows={(row) => {
+              const val = row[countKey] ?? row["Discount"] ?? row["discount"] ?? 0
+              const count = typeof val === "number" ? val : parseFloat(String(val))
+              return Number.isFinite(count) && count !== 0
+            }}
+            onClose={() => setActiveCheckedInDrill(null)}
+          />
+        )
+      })()}
     </div>
   )
 }
