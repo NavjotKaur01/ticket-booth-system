@@ -22,7 +22,9 @@ type SaveExpressWalkupParams = {
   passes: number
   promo: ReservationPromo | null
   paymentType: ReservationPaymentType
+  /** Tendered amount — must be >= due; persisted amount is always Total (desktop). */
   paymentAmount: number
+  cardType?: string
   dinner?: boolean
   notes?: string
   checkInAfterSave?: boolean
@@ -43,6 +45,7 @@ export async function saveExpressWalkupReservation({
   promo,
   paymentType,
   paymentAmount,
+  cardType,
   dinner = false,
   notes = "",
   checkInAfterSave = false,
@@ -75,6 +78,11 @@ export async function saveExpressWalkupReservation({
     )
   }
 
+  const paymentFields = createEmptyReservationPaymentFields()
+  if (cardType?.trim()) {
+    paymentFields.cardType = cardType.trim()
+  }
+
   const request = buildSaveReservationWithPaymentRequest({
     connectionName,
     locationId,
@@ -96,9 +104,10 @@ export async function saveExpressWalkupReservation({
     notes,
     dinner,
     isReservationCheckedIn: checkInAfterSave,
-    paymentAmount: Math.max(paymentAmount, totals.total),
+    // Desktop SaveSalesTransaction / SavePOSTypePayment: PaymentAmount = Total.
+    paymentAmount: totals.total,
     paymentType,
-    paymentFields: createEmptyReservationPaymentFields(),
+    paymentFields,
   })
 
   const ids = await createNewReservation(request)

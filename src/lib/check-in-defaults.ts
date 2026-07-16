@@ -48,11 +48,24 @@ export function readExpressPanelVisible(
   }
 
   const minutes = Number.parseInt(minutesRaw, 10)
-  if (!Number.isFinite(minutes) || !showDateTime) {
+  if (!Number.isFinite(minutes)) {
     return true
   }
 
+  // Desktop hides Express when minutes window is set but show details are missing.
+  if (!showDateTime) {
+    return false
+  }
+
   const now = new Date()
+  const showDay = new Date(showDateTime)
+  showDay.setHours(0, 0, 0, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  if (showDay < today) {
+    return false
+  }
+
   const windowStart = new Date(showDateTime.getTime() - minutes * 60_000)
   return now >= windowStart
 }
@@ -159,4 +172,14 @@ export function readTaxWithServiceCharge(defaults: ApiSystemDefaultItem[]) {
     findDefault(defaults, ["payment", "reservation"], "lbltaxwithservice")
   const value = normalize(match?.DefValue).toUpperCase()
   return value || undefined
+}
+
+/** Screen=Check-In Tab / PymtMeth Field=cmdPOScc — Express POS card-type mode. */
+export function readExpressPosCcMode(defaults: ApiSystemDefaultItem[]) {
+  const match = findDefault(defaults, EXPRESS_SCREENS, "cmdposcc")
+  if (!match) {
+    return false
+  }
+
+  return normalize(match.DefValue).toLowerCase() === "y"
 }

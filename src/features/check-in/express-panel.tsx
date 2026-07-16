@@ -1,6 +1,7 @@
 import { PlusCircle } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
+import { ConfirmDialog } from "@/components/common/confirm-dialog"
 import { FormField, FormSection } from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,9 +18,16 @@ import { MultiplePromotionsDialog } from "@/features/check-in/multiple-promotion
 import { PaymentNumberFieldset } from "@/features/check-in/payment-number-fieldset"
 import {
   calculateExpressPanelTotalsFromSection,
+  EXPRESS_POS_CARD_TYPES,
   type ExpressPaymentType,
+  type ExpressPosCardTypeKey,
 } from "@/features/check-in/service/express-panel.service"
+import {
+  isExpressShowDateAllowed,
+  validateBookFixedPartyTables,
+} from "@/features/check-in/service/express-panel-validation"
 import { cn } from "@/lib/utils"
+import type { ReservationPaymentType } from "@/data/reservation-payment-options"
 import type { ReservationPromo } from "@/types/reservation-promo"
 import type { ReservationSectionOption } from "@/types/reservation"
 
@@ -28,6 +36,7 @@ const SELECT_TRIGGER_CLASS = "h-8 w-full min-w-0 text-xs"
 type ActiveTransaction = {
   paymentType: ExpressPaymentType
   quantity: number
+  cardTypeLookup?: string
 }
 
 export type ExpressPanelSalePayload = {
@@ -35,8 +44,9 @@ export type ExpressPanelSalePayload = {
   promo: ReservationPromo | null
   party: number
   passes: number
-  paymentType: "cash" | "credit-card"
+  paymentType: ReservationPaymentType
   paymentAmount: number
+  cardType?: string
 }
 
 type CheckInExpressPanelProps = {
@@ -45,6 +55,8 @@ type CheckInExpressPanelProps = {
   showDate?: string
   taxRatePercent?: number
   taxWithServiceCharge?: string
+  /** Desktop cmdPOScc=Y — V/MC/AE/D + 1–10, save as POS. */
+  posCcMode?: boolean
   visible?: boolean
   isSubmitting?: boolean
   error?: string | null
@@ -57,6 +69,7 @@ export function CheckInExpressPanel({
   showDate,
   taxRatePercent = 0,
   taxWithServiceCharge,
+  posCcMode = false,
   visible = true,
   isSubmitting = false,
   error = null,
@@ -65,11 +78,21 @@ export function CheckInExpressPanel({
   const [sectionId, setSectionId] = useState("")
   const [promoId, setPromoId] = useState("none")
   const [passes, setPasses] = useState("1")
+  const [party, setParty] = useState(0)
   const [cashNumber, setCashNumber] = useState<number | null>(null)
   const [cardNumber, setCardNumber] = useState<number | null>(null)
+  const [posCardType, setPosCardType] = useState<ExpressPosCardTypeKey | null>(
+    null
+  )
   const [activeTransaction, setActiveTransaction] =
     useState<ActiveTransaction | null>(null)
+  const [paymentDueOverride, setPaymentDueOverride] = useState<number | null>(
+    null
+  )
   const [multiplePromotionsOpen, setMultiplePromotionsOpen] = useState(false)
+  const [localError, setLocalError] = useState<string | null>(null)
+  /** Desktop WPFMessageBox-style Alert (BookFixedPartyTables / past date / POS type). */
+  const [alertMessage, setAlertMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (!sections.length) {
@@ -96,20 +119,23 @@ export function CheckInExpressPanel({
   }, [promoId, promos])
 
   const passQuantity = Math.max(0, Number(passes) || 0)
-  const totals = useMemo(
+  // Desktop: pad click sets Party; Passes field is independent for promo math.
+  const displayParty = party > 0 ? party : 0
+  const previewTotals = useMemo(
     () =>
       calculateExpressPanelTotalsFromSection({
         sectionPrice: selectedSection?.showPrice ?? 0,
         walkUpFee: selectedSection?.walkUpFee ?? 0,
         dayOfShowFee: selectedSection?.dayOfShowFee ?? 0,
         showDate,
-        quantity: passQuantity,
+        quantity: displayParty,
         passes: passQuantity,
         promo: selectedPromo,
         taxRatePercent,
         taxWithServiceCharge,
       }),
     [
+      displayParty,
       passQuantity,
       selectedPromo,
       selectedSection,
@@ -126,13 +152,14 @@ export function CheckInExpressPanel({
         dayOfShowFee: selectedSection?.dayOfShowFee ?? 0,
         showDate,
         quantity: activeTransaction?.quantity ?? 0,
-        passes: activeTransaction?.quantity ?? 0,
+        passes: passQuantity || activeTransaction?.quantity || 0,
         promo: selectedPromo,
         taxRatePercent,
         taxWithServiceCharge,
       }),
     [
       activeTransaction?.quantity,
+      passQuantity,
       selectedPromo,
       selectedSection,
       showDate,
@@ -141,12 +168,60 @@ export function CheckInExpressPanel({
     ]
   )
 
+  const salePaymentDue = paymentDueOverride ?? transactionTotals.paymentDue
+  const salePaymentAmountLabel =
+    paymentDueOverride != null
+      ? `$${paymentDueOverride.toFixed(2)}`
+      : transactionTotals.total
+
   if (!visible) {
     return null
   }
 
-  function handlePaymentSelect(paymentType: ExpressPaymentType, quantity: number) {
-    setPasses(String(quantity))
+  function clearPadSelection() {
+    setCashNumber(null)
+    setCardNumber(null)
+    setActiveTransaction(null)
+    setPaymentDueOverride(null)
+  }
+
+  function handlePaymentSelect(
+    paymentType: ExpressPaymentType,
+    quantity: number
+  ) {
+    if (!selectedSection) {
+      setAlertMessage("Please select show section first")
+      return
+    }
+
+    if (!isExpressShowDateAllowed(showDate)) {
+      // Desktop SaveSalesTransaction / CashPayment date guard.
+      setAlertMessage("Show Date can't be prior than today.")
+      clearPadSelection()
+      return
+    }
+
+    if (paymentType === "POS-Credit Card" && !posCardType) {
+      setAlertMessage("Please select credit card type first")
+      return
+    }
+
+    // Desktop BookFixedPartyTables — Alert + stop (no Sales Transaction).
+    const fixedPartyError = validateBookFixedPartyTables({
+      showSec: selectedSection.showSec,
+      party: quantity,
+    })
+    if (fixedPartyError) {
+      setAlertMessage(fixedPartyError.message)
+      setParty(fixedPartyError.requiredParty)
+      clearPadSelection()
+      return
+    }
+
+    setLocalError(null)
+    setPaymentDueOverride(null)
+    // Desktop CashPayment / ExpressCreditCard / POSCreditCard set Party only.
+    setParty(quantity)
 
     if (paymentType === "Cash") {
       setCashNumber(quantity)
@@ -156,31 +231,61 @@ export function CheckInExpressPanel({
       setCashNumber(null)
     }
 
-    setActiveTransaction({ paymentType, quantity })
+    const cardLookup =
+      paymentType === "POS-Credit Card"
+        ? EXPRESS_POS_CARD_TYPES.find((item) => item.key === posCardType)
+            ?.lookupCode
+        : undefined
+
+    // Desktop Cash → opens Sales Transaction popup (Issalestransactionpopup).
+    setActiveTransaction({
+      paymentType,
+      quantity,
+      cardTypeLookup: cardLookup,
+    })
   }
 
-  async function handleSalesTransactionOk(paymentAmount: number) {
+  async function handleSalesTransactionOk(_tenderedAmount: number) {
     if (!selectedSection || !activeTransaction) {
       return
     }
 
-    await onSale({
-      section: selectedSection,
-      promo: selectedPromo,
-      party: activeTransaction.quantity,
-      passes: activeTransaction.quantity,
-      paymentType:
-        activeTransaction.paymentType === "Cash" ? "cash" : "credit-card",
-      paymentAmount: Math.max(paymentAmount, transactionTotals.paymentDue),
-    })
+    // Desktop SaveSalesTransaction / SavePOSTypePayment persist PaymentAmount = Total.
+    const due = salePaymentDue
+    const paymentType: ReservationPaymentType =
+      activeTransaction.paymentType === "Cash"
+        ? "cash"
+        : activeTransaction.paymentType === "POS-Credit Card"
+          ? "pos"
+          : "credit-card"
+
+    try {
+      await onSale({
+        section: selectedSection,
+        promo: selectedPromo,
+        party: activeTransaction.quantity,
+        passes: Math.max(1, passQuantity || activeTransaction.quantity),
+        paymentType,
+        paymentAmount: due,
+        cardType: activeTransaction.cardTypeLookup,
+      })
+      // Desktop after SaveSalesTransaction: Party = 0, promo reset.
+      clearPadSelection()
+      setParty(0)
+      setPasses("1")
+      setPromoId("none")
+      setLocalError(null)
+    } catch {
+      clearPadSelection()
+    }
   }
 
   return (
     <>
       <div className="px-3 py-3">
         <FormSection title="Express" className="space-y-3">
-          {error ? (
-            <p className="text-sm text-destructive">{error}</p>
+          {error || localError ? (
+            <p className="text-sm text-destructive">{error || localError}</p>
           ) : null}
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:items-start">
             <div className="min-w-0 space-y-2">
@@ -225,8 +330,7 @@ export function CheckInExpressPanel({
                     value={passes}
                     onChange={(event) => {
                       setPasses(event.target.value)
-                      setCashNumber(null)
-                      setCardNumber(null)
+                      clearPadSelection()
                     }}
                     className="h-8 min-w-0 flex-1 text-center text-xs tabular-nums"
                     disabled={isSubmitting}
@@ -258,23 +362,70 @@ export function CheckInExpressPanel({
                 <PaymentNumberFieldset
                   label="Cash"
                   selected={cashNumber}
+                  disabled={isSubmitting}
                   onSelect={(value) => handlePaymentSelect("Cash", value)}
                 />
-                <PaymentNumberFieldset
-                  label="Credit Card"
-                  selected={cardNumber}
-                  onSelect={(value) => handlePaymentSelect("Credit Card", value)}
-                />
+                <div className="min-w-0 flex-1 space-y-2">
+                  {posCcMode ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {EXPRESS_POS_CARD_TYPES.map((card) => (
+                        <Button
+                          key={card.key}
+                          type="button"
+                          variant={
+                            posCardType === card.key ? "default" : "outline"
+                          }
+                          className="h-8 min-w-10 rounded-sm px-2 text-xs font-semibold"
+                          disabled={isSubmitting}
+                          onClick={() => {
+                            setPosCardType(card.key)
+                            setLocalError(null)
+                          }}
+                        >
+                          {card.label}
+                        </Button>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-8 rounded-sm px-2 text-xs font-semibold"
+                        disabled={isSubmitting}
+                        onClick={() => {
+                          setPosCardType(null)
+                          setCardNumber(null)
+                          setActiveTransaction(null)
+                        }}
+                      >
+                        CLR
+                      </Button>
+                    </div>
+                  ) : null}
+                  <PaymentNumberFieldset
+                    label="Credit Card"
+                    selected={cardNumber}
+                    maxNumber={posCcMode ? 10 : 15}
+                    disabled={isSubmitting}
+                    onSelect={(value) =>
+                      handlePaymentSelect(
+                        posCcMode ? "POS-Credit Card" : "Credit Card",
+                        value
+                      )
+                    }
+                  />
+                </div>
               </div>
             </div>
 
             <div className="min-w-0 rounded-md border border-border/60 bg-background p-3">
               <div className="space-y-2">
                 {[
-                  { label: "Subtotal", value: totals.subtotal },
-                  { label: "Service Charge", value: totals.serviceCharge },
-                  { label: "Discount", value: totals.discount },
-                  { label: "Tax", value: totals.tax },
+                  { label: "Subtotal", value: previewTotals.subtotal },
+                  {
+                    label: "Service Charge",
+                    value: previewTotals.serviceCharge,
+                  },
+                  { label: "Discount", value: previewTotals.discount },
+                  { label: "Tax", value: previewTotals.tax },
                 ].map((line) => (
                   <div
                     key={line.label}
@@ -293,9 +444,11 @@ export function CheckInExpressPanel({
                   "flex items-end justify-between gap-3"
                 )}
               >
-                <span className="text-sm font-semibold text-foreground">TOTAL</span>
+                <span className="text-sm font-semibold text-foreground">
+                  TOTAL
+                </span>
                 <span className="text-xl leading-none font-bold tabular-nums text-primary sm:text-2xl">
-                  {totals.total}
+                  {previewTotals.total}
                 </span>
               </div>
             </div>
@@ -304,38 +457,54 @@ export function CheckInExpressPanel({
       </div>
 
       {activeTransaction ? (
-        activeTransaction.paymentType === "Cash" ? (
+        activeTransaction.paymentType === "Cash" ||
+        activeTransaction.paymentType === "POS-Credit Card" ? (
           <SalesTransactionDialog
-            key={`${activeTransaction.paymentType}-${activeTransaction.quantity}-${transactionTotals.paymentDue}`}
+            key={`${activeTransaction.paymentType}-${activeTransaction.quantity}-${salePaymentDue}`}
             open
             onOpenChange={(nextOpen) => {
               if (!nextOpen) {
-                setActiveTransaction(null)
+                clearPadSelection()
               }
             }}
             paymentType={activeTransaction.paymentType}
-            paymentDue={transactionTotals.paymentDue}
+            paymentDue={salePaymentDue}
+            amountLocked={activeTransaction.paymentType === "POS-Credit Card"}
             onOk={(paymentAmount) => {
               void handleSalesTransactionOk(paymentAmount)
             }}
           />
         ) : (
           <ProcessPaymentDialog
-            key={`${activeTransaction.paymentType}-${activeTransaction.quantity}-${transactionTotals.paymentDue}`}
+            key={`${activeTransaction.paymentType}-${activeTransaction.quantity}-${salePaymentDue}`}
             open
             onOpenChange={(nextOpen) => {
               if (!nextOpen) {
-                setActiveTransaction(null)
+                clearPadSelection()
               }
             }}
             quantity={activeTransaction.quantity}
-            paymentAmount={transactionTotals.total}
+            paymentAmount={salePaymentAmountLabel}
             onOk={() => {
-              void handleSalesTransactionOk(transactionTotals.paymentDue)
+              void handleSalesTransactionOk(salePaymentDue)
             }}
           />
         )
       ) : null}
+
+      <ConfirmDialog
+        open={Boolean(alertMessage)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            setAlertMessage(null)
+          }
+        }}
+        title="Alert"
+        description={alertMessage ?? ""}
+        confirmLabel="OK"
+        hideCancel
+        onConfirm={() => setAlertMessage(null)}
+      />
 
       <MultiplePromotionsDialog
         open={multiplePromotionsOpen}
@@ -343,12 +512,43 @@ export function CheckInExpressPanel({
         promos={promos}
         sectionPrice={selectedSection?.showPrice ?? 0}
         walkUpFee={selectedSection?.walkUpFee ?? 0}
-        initialParty={Math.max(1, passQuantity || 1)}
+        dayOfShowFee={selectedSection?.dayOfShowFee ?? 0}
+        showDate={showDate}
+        taxRatePercent={taxRatePercent}
+        taxWithServiceCharge={taxWithServiceCharge}
+        initialParty={Math.max(1, party || passQuantity || 1)}
         onConfirm={(payload) => {
-          setPasses(String(payload.partyNumber))
+          setParty(payload.partyNumber)
           setPromoId(payload.primaryPromo?.id ?? "none")
-          setCashNumber(null)
+          setLocalError(null)
+
+          if (!selectedSection) {
+            return
+          }
+
+          if (!isExpressShowDateAllowed(showDate)) {
+            setLocalError("Show Date can't be prior than today.")
+            return
+          }
+
+          const fixedPartyError = validateBookFixedPartyTables({
+            showSec: selectedSection.showSec,
+            party: payload.partyNumber,
+          })
+          if (fixedPartyError) {
+            setLocalError(fixedPartyError.message)
+            setParty(fixedPartyError.requiredParty)
+            return
+          }
+
+          // Desktop multi-promo OK continues into payment; open Cash tender next.
+          setPaymentDueOverride(payload.total)
+          setCashNumber(payload.partyNumber)
           setCardNumber(null)
+          setActiveTransaction({
+            paymentType: "Cash",
+            quantity: payload.partyNumber,
+          })
         }}
       />
     </>

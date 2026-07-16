@@ -38,6 +38,8 @@ export type ShowOption = {
   label: string
   /** Short time label for chip buttons (e.g. "7:30 PM"). */
   time?: string
+  /** Raw ShowTim/ShowDate for Express cmdExpress2 visibility window. */
+  showDateTime?: string
   /** Secondary line under the time (e.g. venue or show type). */
   subtitle?: string
   /** Formatted headliner name for the selected show. */

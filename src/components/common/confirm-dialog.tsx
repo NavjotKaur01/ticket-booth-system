@@ -15,8 +15,10 @@ type ConfirmDialogProps = {
   description: string
   /** Defaults to "Yes" (desktop WPF Yes/No). */
   confirmLabel?: string
-  /** Defaults to "No". */
+  /** Defaults to "No". Pass empty string or set hideCancel to show OK-only Alert. */
   cancelLabel?: string
+  /** When true, only the confirm button is shown (desktop Alert / OK). */
+  hideCancel?: boolean
   confirmVariant?: "default" | "destructive" | "outline" | "secondary"
   isPending?: boolean
   /** Open above another dialog (Assign Seats / Payment). */
@@ -37,6 +39,7 @@ export function ConfirmDialog({
   description,
   confirmLabel = "Yes",
   cancelLabel = "No",
+  hideCancel = false,
   confirmVariant = "default",
   isPending = false,
   nested = false,
@@ -62,17 +65,19 @@ export function ConfirmDialog({
         </DialogDescription>
 
         <DialogFooter className="shrink-0 border-t border-border/50 bg-muted/40 px-4 py-3 sm:justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              void onCancel?.()
-              onOpenChange(false)
-            }}
-            disabled={isPending}
-          >
-            {cancelLabel}
-          </Button>
+          {!hideCancel ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                void onCancel?.()
+                onOpenChange(false)
+              }}
+              disabled={isPending}
+            >
+              {cancelLabel}
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant={confirmVariant}

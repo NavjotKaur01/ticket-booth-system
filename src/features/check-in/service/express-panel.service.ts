@@ -1,7 +1,17 @@
 import { calculateReservationTotals } from "@/lib/calculate-reservation-totals"
 import type { ReservationPromo } from "@/types/reservation-promo"
 
-export type ExpressPaymentType = "Cash" | "Credit Card"
+export type ExpressPaymentType = "Cash" | "Credit Card" | "POS-Credit Card"
+
+/** Desktop Express POS buttons V/MC/AE/D → CCTYPE lookup codes. */
+export const EXPRESS_POS_CARD_TYPES = [
+  { key: "V", label: "V", lookupCode: "CCTYPE04" },
+  { key: "MC", label: "MC", lookupCode: "CCTYPE03" },
+  { key: "AE", label: "AE", lookupCode: "CCTYPE01" },
+  { key: "D", label: "D", lookupCode: "CCTYPE02" },
+] as const
+
+export type ExpressPosCardTypeKey = (typeof EXPRESS_POS_CARD_TYPES)[number]["key"]
 
 export type ExpressPanelTotals = {
   subtotal: string
