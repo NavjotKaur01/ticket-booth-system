@@ -39,47 +39,33 @@ function toOptionalGuid(value: string): string | null {
   return value && value !== "select" && value !== EMPTY_GUID ? value : null
 }
 
-// function resolveAge(ageRestriction: string) {
-//   switch (ageRestriction) {
-//     case "A":
-//       return { SelectedAge: "A", MinAge: null }
-//     case "Y":
-//       return { SelectedAge: "Y", MinAge: "21 & Over" }
-//     case "N":
-//       return { SelectedAge: "N", MinAge: null }
-//     case "S":
-//       return { SelectedAge: "S", MinAge: null } // S (custom) is handled if MinAge is passed in AddShowFormValues?
-//     default:
-//       // If it's a number (e.g. "18+"), the desktop uses SelectedAge="S (custom)" or similar.
-//       // But the desktop logic mentioned in previous message:
-//       // Y -> Y (21 and over)
-//       // N -> N (18 and over)
-//       // A -> A (all ages)
-//       // Custom -> "S (custom)" -> empty Over21 + MinAge
-//       // Based on user provided JSON: SelectedAge: "Y (21 and over)", MinAge: "21 & Over"
-//       // Wait, earlier the user showed how Age is resolved.
-//       // For UpdateShow they need SelectedAge: "Y (21 and over)", "N (18 and over)", "A (all ages)", "S (custom)", ""
-//       return { SelectedAge: ageRestriction, MinAge: ageRestriction }
-//   }
-// }
-
-// Map the age restriction dropdown back to the specific desktop string format
-function getSelectedAgeFormat(age: string): string {
-  if (age === "21+") return "Y (21 and over)"
-  if (age === "18+") return "N (18 and over)" // or whatever is used
-  if (age === "All Ages") return "A (all ages)"
-  if (age === "A") return "A (all ages)"
-  if (age === "Y") return "Y (21 and over)"
-  if (age === "N") return "N (18 and over)"
-  if (age) return "S (custom)"
-  return ""
+function getSelectedAgeFormat(ageRestriction: string): string {
+  switch (ageRestriction) {
+    case "A":
+      return "A (all ages)"
+    case "Y":
+      return "Y (21 and over)"
+    case "N":
+      return "N (18 and over)"
+    case "S":
+      return "S (custom)"
+    default:
+      return ""
+  }
 }
 
-function getMinAgeFormat(age: string): string | null {
-  if (age === "21+" || age === "Y") return "21 & Over"
-  if (age === "18+" || age === "N") return "18 & Over"
-  if (age === "All Ages" || age === "A") return null
-  return age || null
+function getMinAgeFormat(ageRestriction: string, minAge: string): string | null {
+  switch (ageRestriction) {
+    case "Y":
+      return "21 & Over"
+    case "N":
+      return "18 & Over"
+    case "S":
+      return minAge.trim() || null
+    case "A":
+    default:
+      return null
+  }
 }
 
 export function buildUpdateShowRequest({
@@ -163,7 +149,7 @@ export function buildUpdateShowRequest({
     WebFee: parseDecimal(form.webFee, 0),
     IsUseSectionFee: form.useSectionFee,
     SelectedAge: getSelectedAgeFormat(form.ageRestriction),
-    MinAge: getMinAgeFormat(form.ageRestriction),
+    MinAge: getMinAgeFormat(form.ageRestriction, form.minAge),
     IsShowSoldOut: form.isShowSoldOut,
     IsShowAvailableOnWeb: form.showOnWeb,
     IsPrivate: form.preSalePrivateShow,

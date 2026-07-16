@@ -39,6 +39,7 @@ type CalendarDatePickerControlProps = {
   className?: string
   displayFormat?: string
   tabIndex?: number
+  disabled?: boolean
 }
 
 export function canNavigateToPreviousDate(value: string, disablePastDates: boolean) {
@@ -60,6 +61,7 @@ export default function CalendarDatePickerControl({
   className,
   displayFormat,
   tabIndex,
+  disabled = false,
 }: CalendarDatePickerControlProps) {
   const selectedDate = parseDateValue(value)
   const [isOpen, setIsOpen] = useState(false)
@@ -87,6 +89,11 @@ export default function CalendarDatePickerControl({
   }, [value])
 
   function handleOpenChange(nextOpen: boolean) {
+    if (disabled) {
+      setIsOpen(false)
+      return
+    }
+
     setIsOpen(nextOpen)
 
     if (nextOpen && selectedDate) {
@@ -95,16 +102,18 @@ export default function CalendarDatePickerControl({
   }
 
   return (
-    <Popover open={isOpen} onOpenChange={handleOpenChange}>
+    <Popover open={disabled ? false : isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           id={id}
           type="button"
           variant="outline"
           tabIndex={tabIndex}
+          disabled={disabled}
           className={cn(
             "h-9 justify-start gap-2 px-3 text-left font-normal",
             !selectedDate && "text-muted-foreground",
+            disabled && "disabled:opacity-70",
             className
           )}
         >
@@ -114,25 +123,27 @@ export default function CalendarDatePickerControl({
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-0">
-        {isOpen ? (
-          <DatePickerCalendarPanel
-            key={`${id}-${value}-picker`}
-            month={visibleMonth}
-            onMonthChange={setVisibleMonth}
-            selected={selectedDate ?? undefined}
-            startMonth={minSelectableDate}
-            endMonth={maxSelectableDate ?? getDefaultCalendarEndMonth()}
-            minDate={minSelectableDate}
-            maxDate={maxSelectableDate ?? undefined}
-            disabled={disabledDates.length > 0 ? disabledDates : undefined}
-            onSelect={(nextDate) => {
-              onChange(dayjs(getStartOfDay(nextDate)).format("YYYY-MM-DD"))
-              setIsOpen(false)
-            }}
-          />
-        ) : null}
-      </PopoverContent>
+      {!disabled ? (
+        <PopoverContent align="start" className="w-auto p-0">
+          {isOpen ? (
+            <DatePickerCalendarPanel
+              key={`${id}-${value}-picker`}
+              month={visibleMonth}
+              onMonthChange={setVisibleMonth}
+              selected={selectedDate ?? undefined}
+              startMonth={minSelectableDate}
+              endMonth={maxSelectableDate ?? getDefaultCalendarEndMonth()}
+              minDate={minSelectableDate}
+              maxDate={maxSelectableDate ?? undefined}
+              disabled={disabledDates.length > 0 ? disabledDates : undefined}
+              onSelect={(nextDate) => {
+                onChange(dayjs(getStartOfDay(nextDate)).format("YYYY-MM-DD"))
+                setIsOpen(false)
+              }}
+            />
+          ) : null}
+        </PopoverContent>
+      ) : null}
     </Popover>
   )
 }

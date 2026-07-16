@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import { CalendarScrollSelectList } from "./CalendarScrollSelectList"
 
 const TIME_INTERVAL_MINUTES = 15
+const CHNAGE_TIME_ARROW_INTERVAL = 60;
 const MINUTES_PER_DAY = 24 * 60
 
 const quarterHourTimeOptions = Array.from(
@@ -86,7 +87,7 @@ function getTimeOptions(value: string) {
 }
 
 function stepTimeValue(value: string, direction: 1 | -1) {
-  const totalMinutes = timeToMinutes(value) + direction * TIME_INTERVAL_MINUTES
+  const totalMinutes = timeToMinutes(value) + direction * CHNAGE_TIME_ARROW_INTERVAL
   const wrapped =
     ((totalMinutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY
 
