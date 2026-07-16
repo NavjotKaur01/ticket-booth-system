@@ -3,13 +3,13 @@ import { useState } from "react"
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
   AssignSeatsPanel,
   type AssignSeatsSaveResult,
 } from "@/features/assign-seats"
-import { ASSIGN_SEATS_BLUE } from "@/features/assign-seats/assign-seats-styles"
 import type { Reservation } from "@/types/reservation"
 
 type AssignSeatsDialogProps = {
@@ -23,6 +23,8 @@ type AssignSeatsDialogProps = {
   checkInAfterSave?: boolean
   isSubmitting?: boolean
   error?: string | null
+  /** Open on top of another dialog (Quick Play / Reservation Payment). */
+  nested?: boolean
   onSaved: (payload: {
     result: AssignSeatsSaveResult
     checkInAfterSave: boolean
@@ -31,8 +33,8 @@ type AssignSeatsDialogProps = {
 }
 
 /**
- * Desktop AssignSeats window chrome:
- * ~1120×670, blue #155abb title bar, fixed layout, X close.
+ * Assign Seats dialog — same workspace as ClubMan AssignSeats,
+ * chrome matches site DialogHeader / border theme.
  */
 export function AssignSeatsDialog({
   open,
@@ -45,34 +47,39 @@ export function AssignSeatsDialog({
   checkInAfterSave = false,
   isSubmitting = false,
   error = null,
+  nested = false,
   onSaved,
 }: AssignSeatsDialogProps) {
   const [panelError, setPanelError] = useState<string | null>(null)
 
-  const titleGuest = reservation
-    ? ` — ${reservation.lastName} ${reservation.firstName}`.trim()
+  const guestLabel = reservation
+    ? [reservation.lastName, reservation.firstName].filter(Boolean).join(", ")
     : ""
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton
-        className="flex h-[670px] max-h-[90vh] w-[1120px] max-w-[min(96vw,1150px)] flex-col gap-0 overflow-hidden rounded-[5px] border-0 p-0 sm:max-w-[min(96vw,1150px)]"
-        style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.28)" }}
+        nested={nested}
+        disableOutsideDismiss={nested}
+        className="flex h-[min(670px,90vh)] max-h-[90vh] w-[min(calc(100vw-2rem),72rem)] max-w-[72rem] flex-col gap-0 overflow-hidden p-0 sm:max-w-[72rem]"
       >
-        <div
-          className="flex h-10 shrink-0 items-center justify-between px-2 pr-10"
-          style={{ backgroundColor: ASSIGN_SEATS_BLUE }}
-        >
-          <DialogTitle className="text-sm font-semibold text-white">
-            Assign Seats{titleGuest}
+        <DialogHeader className="shrink-0 border-b border-border/50 px-4 py-3 pr-12">
+          <DialogTitle className="truncate text-base font-semibold text-foreground">
+            Assign Seats
+            {guestLabel ? (
+              <span className="font-normal text-muted-foreground">
+                {" "}
+                — {guestLabel}
+              </span>
+            ) : null}
             {connectionName ? (
-              <span className="ml-2 font-normal text-white/75">
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
                 ({connectionName})
               </span>
             ) : null}
           </DialogTitle>
-        </div>
+        </DialogHeader>
 
         {open && showId ? (
           <AssignSeatsPanel

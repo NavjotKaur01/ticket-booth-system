@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import {
   CHART_COL_WIDTHS,
@@ -18,8 +18,8 @@ type AssignSeatsFloorMapProps = {
 
 /**
  * Desktop AssignSeats.xaml flexGrid:
- * - Background ImageBrush = AssignSeatChart (Columbus.jpg)
- * - Transparent chartGrid DataGrid = ChartD (P1…P21 text, Black→Red when full)
+ * - Background ImageBrush = AssignSeatChart (full opacity — never ChartGridOpacity)
+ * - Transparent chartGrid DataGrid = ChartD; Opacity = ChartGridOpacity when visible
  */
 export function AssignSeatsFloorMap({
   chart,
@@ -27,6 +27,10 @@ export function AssignSeatsFloorMap({
   visible,
 }: AssignSeatsFloorMapProps) {
   const [imageFailed, setImageFailed] = useState(false)
+
+  useEffect(() => {
+    setImageFailed(false)
+  }, [chart.imageUrl])
 
   if (!visible) {
     return null
@@ -46,8 +50,9 @@ export function AssignSeatsFloorMap({
 
   const showImage = Boolean(chart.imageUrl) && !imageFailed
   const totalWidth = CHART_COL_WIDTHS.reduce((sum, w) => sum + w, 0)
+  // Desktop binds ChartGridOpacity to the overlay grid only, not the chart image.
+  const overlayOpacity = Number.isFinite(chart.opacity) ? chart.opacity : 0.7
 
-  // Build 13×13 primary cell map from overlay (col 0…12 = P1…P13).
   const cellMap = new Map<string, { tableNo: string; isFull: boolean }>()
   for (const cell of chart.overlay) {
     if (cell.col < 0 || cell.col >= CHART_COLS) {
@@ -60,34 +65,28 @@ export function AssignSeatsFloorMap({
   }
 
   return (
-    <div
-      className="relative h-[280px] max-h-[280px] min-h-[280px] shrink-0 overflow-hidden border-b border-[#dbdbdb] bg-white"
-      style={{ opacity: 1 }}
-    >
-      {/* ImageBrush equivalent — Stretch Fill */}
+    <div className="relative h-[280px] max-h-[280px] min-h-[280px] shrink-0 overflow-hidden border-b border-border/60 bg-white">
       {showImage ? (
         <img
           key={chart.imageUrl}
           src={chart.imageUrl!}
           alt="Seating chart"
-          className="absolute inset-0 h-full w-full select-none"
+          className="absolute inset-0 h-full w-full select-none bg-white"
           style={{
-            opacity: chart.opacity,
-            // Numbered charts (Tampa/Liberty): contain. Columbus empty boxes: fill.
+            opacity: 1,
             objectFit: chart.fillVisible ? "fill" : "contain",
           }}
           onLoad={() => setImageFailed(false)}
           onError={() => setImageFailed(true)}
         />
       ) : (
-        <div className="absolute inset-0 bg-[#e8e8e8]" />
+        <div className="absolute inset-0 bg-muted/30" />
       )}
 
-      {/* Transparent ChartD DataGrid overlay */}
       {chart.fillVisible ? (
         <div
           className="pointer-events-none absolute inset-0 z-10 flex flex-col"
-          style={{ opacity: chart.opacity }}
+          style={{ opacity: overlayOpacity }}
         >
           {Array.from({ length: CHART_ROWS }, (_, row) => (
             <div
@@ -101,10 +100,10 @@ export function AssignSeatsFloorMap({
                 return (
                   <div
                     key={col}
-                    className="flex items-center justify-center overflow-hidden text-[10px] font-medium tabular-nums leading-none"
+                    className="flex items-center justify-center overflow-hidden text-[10px] font-medium tabular-nums leading-none text-foreground"
                     style={{
                       width: `${widthPct}%`,
-                      color: cell?.isFull ? "#ff0000" : "#000000",
+                      color: cell?.isFull ? "#ef4444" : undefined,
                     }}
                     title={cell ? `Table ${cell.tableNo}` : undefined}
                   >
@@ -118,8 +117,10 @@ export function AssignSeatsFloorMap({
       ) : null}
 
       {!showImage ? (
-        <p className="absolute inset-x-0 top-1/2 z-20 -translate-y-1/2 px-4 text-center text-xs text-[#555]">
-          Seating chart could not load.
+        <p className="absolute inset-x-0 top-1/2 z-20 -translate-y-1/2 px-4 text-center text-xs text-muted-foreground">
+          {chart.imageUrl
+            ? "Seating chart could not load."
+            : "No seating chart for this club."}
         </p>
       ) : null}
     </div>

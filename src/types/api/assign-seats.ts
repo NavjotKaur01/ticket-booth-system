@@ -82,6 +82,8 @@ export type ApiClubsAssignSeatChartTable = {
 export type ApiClubsAssignSeatDetail = {
   ChartImage?: string | number[] | null
   ByteImgSource?: string | number[] | null
+  /** Desktop pack URI, e.g. /ClubMan;component/Resources/Tampa-Seating-Chart.png */
+  ChartImageSource?: string | null
   ChartGridOpacity?: number | string | null
   ChartFillUpVisibility?: string | null
   ChartTableList?: ApiClubsAssignSeatChartTable[] | null

@@ -236,15 +236,15 @@ export function buildDefaultColumbusLayout(
           ...Array.from({ length: 18 }, (_, index) => String(181 + index)),
         ]
 
-  const gridTables = defaults.filter((tableNo) => !isWalkupTable(tableNo))
+  // Desktop left TableNums includes walk-up 181–198 (Tampa ChartTableList / GetTempaTableNumber).
+  // Walk-up is only a floor-map concept; do not omit those rows from the assign grid.
+  const gridTables = defaults
   const walkupSeats = defaults
     .filter((tableNo) => isWalkupTable(tableNo))
     .map((tableNo) => tableNumeric(tableNo))
     .filter((n) => Number.isFinite(n))
 
-  const tables: AssignSeatTableRow[] = (
-    gridTables.length > 0 ? gridTables : defaults
-  ).map((tableNo) =>
+  const tables: AssignSeatTableRow[] = gridTables.map((tableNo) =>
     buildTableRow(
       tableNo,
       maxSeatsByTable?.get(tableNo) ?? 4,
@@ -459,15 +459,18 @@ export function extractClubsAssignSeatDetail(
     record.ChartImage != null ||
     record.ByteImgSource != null ||
     record.chartImage != null
+  const chartImageSource =
+    (record.ChartImageSource as string | null | undefined) ??
+    (record.chartImageSource as string | null | undefined) ??
+    null
   const tableList = record.ChartTableList ?? record.chartTableList
   const hasTables = Array.isArray(tableList) && tableList.length > 0
 
-  if (!hasChartImage && !hasTables) {
+  if (!hasChartImage && !hasTables && !chartImageSource) {
     return null
   }
 
   return {
-    ...(value as ApiClubsAssignSeatDetail),
     ChartImage:
       (record.ChartImage as ApiClubsAssignSeatDetail["ChartImage"]) ??
       (record.ByteImgSource as ApiClubsAssignSeatDetail["ChartImage"]) ??
@@ -475,6 +478,7 @@ export function extractClubsAssignSeatDetail(
     ByteImgSource:
       (record.ByteImgSource as ApiClubsAssignSeatDetail["ByteImgSource"]) ??
       (record.ChartImage as ApiClubsAssignSeatDetail["ByteImgSource"]),
+    ChartImageSource: chartImageSource,
     ChartTableList: Array.isArray(tableList)
       ? (tableList as ApiClubsAssignSeatChartTable[])
       : null,
@@ -547,16 +551,22 @@ export function mapClubsAssignSeatDetail(
     { packUnknown: false }
   )
 
+  const chartImage =
+    detail?.ChartImage ?? detail?.ByteImgSource ?? record.ChartImage
+  const chartImageSource =
+    detail?.ChartImageSource ?? record.ChartImageSource ?? null
   const imageUrl = resolveAssignSeatChartUrl({
     connectionName,
-    chartImage: detail?.ChartImage ?? detail?.ByteImgSource ?? record.ChartImage,
+    chartImage,
+    chartImageSource,
   })
 
   const opacityRaw = Number(
     detail?.ChartGridOpacity ?? record.ChartGridOpacity ?? 0.7
   )
+  // Desktop Tampa/API uses 0.3 — do not raise above the API value.
   const opacity = Number.isFinite(opacityRaw)
-    ? Math.min(1, Math.max(0.35, opacityRaw))
+    ? Math.min(1, Math.max(0.2, opacityRaw))
     : 0.7
 
   const fillVisibility = String(
@@ -572,11 +582,7 @@ export function mapClubsAssignSeatDetail(
       fillVisible: shouldShowChartDOverlay({
         connectionName,
         fillVisibility,
-        hasApiChartImage: Boolean(
-          chartImageBytesToUrl(
-            detail?.ChartImage ?? detail?.ByteImgSource ?? record.ChartImage
-          )
-        ),
+        hasApiChartImage: Boolean(chartImageBytesToUrl(chartImage)),
       }),
       overlay: [],
     },
@@ -849,6 +855,7 @@ export function buildAssignSeatsWorkspace({
   } else {
     // Non-Columbus club with no assign-seat detail: do not invent Columbus.jpg
     // or Columbus default table rows (that is what made Standupmedia look wrong).
+    // Still resolve a static pack chart when ConnectionName maps to one (e.g. Standupmedia → Tampa).
     tables = []
     floor = { seats: [], walkupSeats: [] }
     coords = new Map()
@@ -1118,7 +1125,7 @@ export function collectTableNumsByReservation(tables: AssignSeatTableRow[]) {
 
 export function cellColorClass(color: AssignSeatColorFlag, filled: boolean) {
   if (!filled) {
-    return "bg-white text-black hover:bg-[#cccccc]"
+    return "bg-background text-foreground hover:bg-muted/80"
   }
 
   switch (color) {
@@ -1129,7 +1136,7 @@ export function cellColorClass(color: AssignSeatColorFlag, filled: boolean) {
     case "promo":
       return "bg-blue-500 text-white"
     default:
-      return "bg-[#f1f1f1] text-black"
+      return "bg-muted text-foreground"
   }
 }
 

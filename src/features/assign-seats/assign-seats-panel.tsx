@@ -25,7 +25,6 @@ import {
   removeReservationFromSeats,
   removeSeatsFromTable,
 } from "@/features/assign-seats/assign-seats.service"
-import { ASSIGN_SEATS_BLUE } from "@/features/assign-seats/assign-seats-styles"
 import type {
   AssignSeatChartState,
   AssignSeatReservationRow,
@@ -41,6 +40,11 @@ import {
 } from "@/lib/api/assign-seats"
 import { assignReservationSeat } from "@/lib/api/reservation-pos-actions"
 import { cn } from "@/lib/utils"
+import type {
+  ApiAssignSeatDetail,
+  ApiClubsAssignSeatDetail,
+  ApiReservationToAssignSeat,
+} from "@/types/api/assign-seats"
 
 export type AssignSeatsSaveResult = {
   assignments: ReturnType<typeof collectAssignments>
@@ -143,26 +147,44 @@ export function AssignSeatsPanel({
     try {
       const columbusStyle = isColumbusStyleConnection(connectionName)
 
+      if (!columbusStyle && !locationId) {
+        throw new Error(
+          "LocationId is required for GetClubsAssignSeatDetail (non-Columbus clubs)."
+        )
+      }
+
       const [columbusResult, clubsDetailResult, detailsResult, reservationResult] =
         await Promise.allSettled([
           columbusStyle
             ? fetchColumbusAssignSeatNumbers(connectionName)
-            : Promise.resolve([]),
-          fetchClubsAssignSeatDetail({ connectionName, locationId }),
+            : Promise.resolve(
+                [] as Awaited<ReturnType<typeof fetchColumbusAssignSeatNumbers>>
+              ),
+          !columbusStyle && locationId
+            ? fetchClubsAssignSeatDetail({ connectionName, locationId })
+            : Promise.resolve(null as ApiClubsAssignSeatDetail | null),
           fetchAssignSeatDetails({ connectionName, showId }),
           fetchReservationsToAssignSeats({ connectionName, showId }),
         ])
 
-      const columbus =
+      const columbus: Awaited<
+        ReturnType<typeof fetchColumbusAssignSeatNumbers>
+      > =
         columbusResult.status === "fulfilled" ? columbusResult.value : []
       const clubsDetailRaw =
         clubsDetailResult.status === "fulfilled"
           ? clubsDetailResult.value
           : null
+      if (clubsDetailResult.status === "rejected" && !columbusStyle) {
+        console.warn(
+          "GetClubsAssignSeatDetail failed:",
+          clubsDetailResult.reason
+        )
+      }
       const clubsDetail = extractClubsAssignSeatDetail(clubsDetailRaw)
-      const details =
+      const details: ApiAssignSeatDetail[] =
         detailsResult.status === "fulfilled" ? detailsResult.value : []
-      const reservationRows =
+      const reservationRows: ApiReservationToAssignSeat[] =
         reservationResult.status === "fulfilled" ? reservationResult.value : []
 
       if (reservationResult.status === "rejected") {
@@ -173,9 +195,9 @@ export function AssignSeatsPanel({
         clubsDetail?.ChartImage ?? clubsDetail?.ByteImgSource
       const hasApiChartImage = Boolean(chartImageBytesToUrl(apiChartImage))
 
-      // Desktop: columbus FillChart only when no AssignSeatChart API image.
-      // If API returns a numbered chart (Tampa-style STAGE-on-top), use that path.
-      const useColumbusFillChart = columbusStyle && !hasApiChartImage
+      // Desktop: columbus FillChart only when ConnectionName is columbus* (local path).
+      // Non-columbus always uses API ChartTableList / ChartImage when available.
+      const useColumbusFillChart = columbusStyle
 
       let workspace = buildAssignSeatsWorkspace({
         columbus: useColumbusFillChart ? columbus : [],
@@ -189,6 +211,7 @@ export function AssignSeatsPanel({
       const imageUrl = resolveAssignSeatChartUrl({
         connectionName,
         chartImage: apiChartImage,
+        chartImageSource: clubsDetail?.ChartImageSource,
       })
 
       const opacityRaw = Number(
@@ -203,16 +226,31 @@ export function AssignSeatsPanel({
           ...workspace.chart,
           imageUrl: imageUrl ?? workspace.chart.imageUrl,
           opacity: Number.isFinite(opacityRaw)
-            ? Math.min(1, Math.max(0.35, opacityRaw))
+            ? Math.min(1, Math.max(0.2, opacityRaw))
             : useColumbusFillChart
               ? 0.7
               : 1,
           fillVisible: shouldShowChartDOverlay({
             connectionName,
-            fillVisibility: clubsDetail?.ChartFillUpVisibility,
+            fillVisibility: useColumbusFillChart
+              ? "Visible"
+              : clubsDetail?.ChartFillUpVisibility,
             hasApiChartImage,
           }),
         },
+      }
+
+      if (!workspace.chart.imageUrl && !useColumbusFillChart && !clubsDetail) {
+        // Last resort: static pack map (Standupmedia → Tampa) so UI is not blank
+        // when API fails but ConnectionName is known.
+        workspace = {
+          ...workspace,
+          chart: {
+            ...workspace.chart,
+            imageUrl: resolveAssignSeatChartUrl({ connectionName }),
+            fillVisible: false,
+          },
+        }
       }
 
       if (chartBlobUrlRef.current?.startsWith("blob:")) {
@@ -416,8 +454,9 @@ export function AssignSeatsPanel({
   return (
     <div
       className={cn(
-        "relative flex min-h-0 flex-1 flex-col bg-white",
-        expanded && "fixed inset-3 z-50 rounded-md border shadow-2xl",
+        "relative flex min-h-0 flex-1 flex-col bg-background",
+        expanded &&
+          "fixed inset-3 z-50 rounded-lg border border-border/80 bg-background shadow-xl",
         className
       )}
     >
@@ -425,7 +464,7 @@ export function AssignSeatsPanel({
         <AssignSeatsPanelSkeleton />
       ) : (
         <>
-          {/* Desktop: equal 2-column body */}
+          {/* Equal 2-column body — same layout as desktop */}
           <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-2">
             <AssignSeatsTableGrid
               tables={tables}
@@ -438,7 +477,7 @@ export function AssignSeatsPanel({
               onRemoveReservation={handleRemoveReservation}
             />
 
-            <div className="flex min-h-0 flex-col border-l border-[#dbdbdb] bg-white">
+            <div className="flex min-h-0 flex-col border-l border-border/60 bg-background">
               <AssignSeatsFloorMap
                 chart={chart}
                 tables={tables}
@@ -455,25 +494,24 @@ export function AssignSeatsPanel({
           </div>
 
           {displayError ? (
-            <p className="border-t border-[#dbdbdb] bg-white px-3 py-1 text-sm text-red-600">
+            <p className="border-t border-border/50 bg-background px-4 py-2 text-sm text-destructive">
               {displayError}
             </p>
           ) : null}
 
-          {/* Desktop footer: WhiteSmoke, legend left, actions right */}
-          <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-t border-[#dbdbdb] bg-[#f5f5f5] px-2.5">
-            <div className="flex items-center gap-3 text-[12px]">
-              <span className="font-medium text-orange-500">Dinner</span>
-              <span className="font-medium text-red-600">Web</span>
-              <span className="font-medium text-blue-600">Promo</span>
+          <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-t border-border/50 bg-muted/40 px-4">
+            <div className="flex items-center gap-3 text-xs font-medium">
+              <span className="text-orange-500">Dinner</span>
+              <span className="text-red-600">Web</span>
+              <span className="text-blue-600">Promo</span>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
-                className="size-[25px] border-black"
+                className="size-8"
                 title={chartVisible ? "Hide chart" : "Show chart"}
                 onClick={() => setChartVisible((value) => !value)}
                 disabled={busy}
@@ -486,7 +524,8 @@ export function AssignSeatsPanel({
               </Button>
               <Button
                 type="button"
-                className="h-[30px] w-20 bg-emerald-600 text-white hover:bg-emerald-700"
+                size="sm"
+                className="min-w-20"
                 disabled={busy}
                 onClick={() => void handleSave()}
               >
@@ -498,8 +537,9 @@ export function AssignSeatsPanel({
               </Button>
               <Button
                 type="button"
-                className="h-[30px] w-20 text-white hover:opacity-90"
-                style={{ backgroundColor: ASSIGN_SEATS_BLUE }}
+                size="sm"
+                variant="outline"
+                className="min-w-20"
                 disabled={busy}
                 onClick={() => void handleClear()}
               >
@@ -513,7 +553,7 @@ export function AssignSeatsPanel({
                 type="button"
                 variant="outline"
                 size="icon"
-                className="size-[25px]"
+                className="size-8"
                 title={expanded ? "Exit full screen" : "Expand window"}
                 onClick={() => setExpanded((value) => !value)}
                 disabled={busy}
@@ -524,18 +564,10 @@ export function AssignSeatsPanel({
           </div>
 
           {busy && !loading ? (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/15">
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
               <div className="flex flex-col items-center gap-2">
-                <LoaderCircle
-                  className="size-10 animate-spin"
-                  style={{ color: ASSIGN_SEATS_BLUE }}
-                />
-                <p
-                  className="text-lg font-semibold"
-                  style={{ color: ASSIGN_SEATS_BLUE }}
-                >
-                  Please Wait
-                </p>
+                <LoaderCircle className="size-9 animate-spin text-primary" />
+                <p className="text-sm font-semibold text-primary">Please Wait</p>
               </div>
             </div>
           ) : null}

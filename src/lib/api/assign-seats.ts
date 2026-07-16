@@ -4,13 +4,18 @@ import {
   buildSaveAssignSeatsRequest,
 } from "@/lib/build-assign-seats-request"
 import { clubmanApi } from "@/store/api/clubmanApi"
-import type { AssignSeatSaveItem } from "@/types/api/assign-seats"
+import type {
+  ApiAssignSeatDetail,
+  ApiClubsAssignSeatDetail,
+  ApiColumbusAssignSeatNumber,
+  ApiReservationToAssignSeat,
+  AssignSeatSaveItem,
+} from "@/types/api/assign-seats"
 
-export async function fetchColumbusAssignSeatNumbers(connectionName: string) {
-  return dispatchEndpoint(
-    clubmanApi.endpoints.getColumbusAssignSeatNumbers,
-    connectionName
-  )
+export async function fetchColumbusAssignSeatNumbers(
+  connectionName: string
+): Promise<ApiColumbusAssignSeatNumber[] | number[] | string[]> {
+  return dispatchEndpoint(clubmanApi.endpoints.getColumbusAssignSeatNumbers, connectionName)
 }
 
 /** Desktop AssignSeatHelper.GetAssignSeatPropertiesV2 */
@@ -20,7 +25,7 @@ export async function fetchClubsAssignSeatDetail({
 }: {
   connectionName: string
   locationId: string
-}) {
+}): Promise<ApiClubsAssignSeatDetail> {
   return dispatchEndpoint(clubmanApi.endpoints.getClubsAssignSeatDetail, {
     connectionName,
     locationId,
@@ -35,7 +40,7 @@ export async function fetchAssignSeatDetails({
   connectionName: string
   showId: string
   isCheckedIn?: boolean
-}) {
+}): Promise<ApiAssignSeatDetail[]> {
   return dispatchEndpoint(clubmanApi.endpoints.getAssignSeatDetails, {
     connectionName,
     showId,
@@ -49,7 +54,7 @@ export async function fetchReservationsToAssignSeats({
 }: {
   connectionName: string
   showId: string
-}) {
+}): Promise<ApiReservationToAssignSeat[]> {
   return dispatchEndpoint(clubmanApi.endpoints.getReservationsToAssignSeats, {
     connectionName,
     showId,

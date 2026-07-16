@@ -1,7 +1,11 @@
 /**
  * Desktop pack-URI / AssignSeatChart resolution.
- * Columbus: local Columbus.jpg (ImgChart) + ChartD FillChart.
- * Other clubs: AssignSeatChart = API ChartImage bytes (GetClubsAssignSeatDetail).
+ *
+ * CheckInVM.GetTablesAndFillChart:
+ * - columbus_prod / columbustest_prod → local Columbus.jpg + FillChart (ImgChart)
+ * - else → AssignSeatHelper.GetAssignSeatPropertiesV2 → AssignSeatChart = ChartImage bytes
+ *
+ * Never fall back to Columbus for Standupmedia / tampa / unknown clubs.
  */
 import albanyChart from "@/assets/assign-seats-charts/Albany-Seating-Chart.jpg"
 import arlingtonChart from "@/assets/assign-seats-charts/Arlington Seating Chart.jpg"
@@ -19,6 +23,7 @@ import tampaChart from "@/assets/assign-seats-charts/Tampa-Seating-Chart.png"
 import toledoChart from "@/assets/assign-seats-charts/Toledo-Chart.jpg"
 import { chartHasBakedNumbers } from "@/features/assign-seats/assign-seats-chart-layout"
 
+/** Exact desktop ConnectionName → pack resource (CheckInVM ctor / ImgChart). */
 const CHART_URL_BY_CONNECTION: Record<string, string> = {
   columbus_prod: columbusChart,
   columbustest_prod: columbusChart,
@@ -36,8 +41,36 @@ const CHART_URL_BY_CONNECTION: Record<string, string> = {
   omaha_prod: omahaChart,
   orlando_prod: orlandoChart,
   tampa_prod: tampaChart,
+  /**
+   * Live GetClubsAssignSeatDetail for Standupmedia returns
+   * ChartImageSource = Tampa-Seating-Chart.png (same chart bytes as tampa_prod).
+   * Standupmedia is a real GetClubsEnum ConnectionName, not an alias of tampa_prod DB.
+   */
+  standupmedia: tampaChart,
   comedyclub_prod: toledoChart,
   toledo_prod: toledoChart,
+}
+
+/** Desktop pack filename → bundled asset (ChartImageSource / ImgChart). */
+const CHART_URL_BY_FILENAME: Record<string, string> = {
+  "columbus.jpg": columbusChart,
+  "syracuse-seating-chart-sized.jpg": syracuseChart,
+  "houston_chart.jpeg": houstonChart,
+  "levee.jpg": leveeChart,
+  "arlington seating chart.jpg": arlingtonChart,
+  "arlington-seating-chart.png": arlingtonChart,
+  "arlington-seating-chart.jpg": arlingtonChart,
+  "kcseatingchart.jpg": kcChart,
+  "hartford_chart.jpeg": hartfordChart,
+  "liberty-seating-chart-number.png": libertyChart,
+  "albany-seating-chart.jpg": albanyChart,
+  "cleveland-seating-chart-small.png": clevelandChart,
+  "cleveland-seating-chart-small.jpg": clevelandChart,
+  "omaha-seating-chart.png": omahaChart,
+  "orlando-seating.png": orlandoChart,
+  "tampa-seating-chart.png": tampaChart,
+  "toledo-chart.jpg": toledoChart,
+  "toledo-chart-new.jpeg": toledoChart,
 }
 
 const CHART_URL_BY_KEYWORD: Array<{ match: RegExp; url: string }> = [
@@ -53,7 +86,7 @@ const CHART_URL_BY_KEYWORD: Array<{ match: RegExp; url: string }> = [
   { match: /clev/i, url: clevelandChart },
   { match: /omaha/i, url: omahaChart },
   { match: /orlando/i, url: orlandoChart },
-  { match: /tampa/i, url: tampaChart },
+  { match: /tampa|standupmedia/i, url: tampaChart },
   { match: /toledo|comedy/i, url: toledoChart },
 ]
 
@@ -69,6 +102,45 @@ export function isColumbusStyleConnection(connectionName: string) {
 
 export function chartRotationDegrees(_connectionName: string) {
   return 0
+}
+
+function isPackComponentUri(text: string) {
+  return (
+    text.includes(";component/") ||
+    /^\/ClubMan\b/i.test(text) ||
+    /\\Resources\\/i.test(text)
+  )
+}
+
+/** Map desktop pack URI / Resources filename → bundled chart URL. */
+export function packChartUriToUrl(packUri: unknown): string | null {
+  if (typeof packUri !== "string") {
+    return null
+  }
+  const text = packUri.trim()
+  if (!text) {
+    return null
+  }
+
+  const fileMatch = text.match(/([^/\\]+\.(?:png|jpe?g|gif|bmp))$/i)
+  if (fileMatch?.[1]) {
+    const byFile = CHART_URL_BY_FILENAME[fileMatch[1].toLowerCase()]
+    if (byFile) {
+      return byFile
+    }
+  }
+
+  if (/tampa/i.test(text)) {
+    return tampaChart
+  }
+  if (/columbus/i.test(text)) {
+    return columbusChart
+  }
+  if (/liberty/i.test(text)) {
+    return libertyChart
+  }
+
+  return null
 }
 
 export function staticChartUrlForConnection(connectionName: string) {
@@ -122,6 +194,47 @@ function mimeFromBase64Prefix(text: string): string {
   return "image/jpeg"
 }
 
+function normalizeBase64Payload(text: string): string {
+  let payload = text.trim()
+  const dataMatch = payload.match(/^data:([^;,]+)?(;base64)?,([\s\S]+)$/i)
+  if (dataMatch) {
+    payload = dataMatch[3] ?? ""
+  }
+  // API / JSON sometimes insert whitespace in large base64 blobs.
+  return payload.replace(/\s+/g, "")
+}
+
+function bytesFromUnknown(chartImage: unknown): Uint8Array | null {
+  if (Array.isArray(chartImage) && chartImage.length > 32) {
+    return Uint8Array.from(chartImage.map((n) => Number(n) & 0xff))
+  }
+
+  if (chartImage instanceof Uint8Array && chartImage.length > 32) {
+    return chartImage
+  }
+
+  if (chartImage instanceof ArrayBuffer && chartImage.byteLength > 32) {
+    return new Uint8Array(chartImage)
+  }
+
+  // Some serializers nest base64 under $value / value.
+  if (chartImage && typeof chartImage === "object") {
+    const record = chartImage as Record<string, unknown>
+    for (const key of ["$value", "value", "Value", "Bytes", "bytes", "data"]) {
+      const nested = record[key]
+      if (typeof nested === "string" || Array.isArray(nested)) {
+        return bytesFromUnknown(nested)
+      }
+    }
+  }
+
+  return null
+}
+
+/**
+ * Convert API ChartImage / ByteImgSource into a browser-usable URL.
+ * Never treats desktop pack URIs (`/ClubMan;component/...`) as HTTP paths.
+ */
 export function chartImageBytesToUrl(chartImage: unknown): string | null {
   if (chartImage == null) {
     return null
@@ -132,24 +245,43 @@ export function chartImageBytesToUrl(chartImage: unknown): string | null {
     if (!text || text === "null" || text === "undefined") {
       return null
     }
-    if (
-      text.startsWith("data:") ||
-      text.startsWith("blob:") ||
-      text.startsWith("http://") ||
-      text.startsWith("https://") ||
-      text.startsWith("/")
-    ) {
+
+    if (text.startsWith("blob:") || text.startsWith("http://") || text.startsWith("https://")) {
       return text
     }
-    if (text.length < 64) {
+
+    // Desktop ChartImageSource pack URI — resolve via bundled assets, not as URL.
+    if (isPackComponentUri(text) || packChartUriToUrl(text)) {
+      return packChartUriToUrl(text)
+    }
+
+    // Bare absolute path that isn't a pack URI (e.g. /assign-seats-charts/...)
+    if (text.startsWith("/") && !text.includes(";")) {
+      return text
+    }
+
+    if (text.startsWith("data:")) {
+      return text
+    }
+
+    const base64 = normalizeBase64Payload(text)
+    if (base64.length < 64) {
       return null
     }
-    return `data:${mimeFromBase64Prefix(text)};base64,${text}`
+
+    // Reject non-base64 (pack leftovers, XML, etc.)
+    if (!/^[A-Za-z0-9+/]+=*$/.test(base64.slice(0, 80))) {
+      return packChartUriToUrl(text)
+    }
+
+    return `data:${mimeFromBase64Prefix(base64)};base64,${base64}`
   }
 
-  if (Array.isArray(chartImage) && chartImage.length > 64) {
-    const bytes = Uint8Array.from(chartImage.map((n) => Number(n) & 0xff))
-    const blob = new Blob([bytes], { type: sniffImageMime(bytes) })
+  const bytes = bytesFromUnknown(chartImage)
+  if (bytes && bytes.length > 32) {
+    const copy = new Uint8Array(bytes.byteLength)
+    copy.set(bytes)
+    const blob = new Blob([copy.buffer], { type: sniffImageMime(copy) })
     return URL.createObjectURL(blob)
   }
 
@@ -158,24 +290,29 @@ export function chartImageBytesToUrl(chartImage: unknown): string | null {
 
 /**
  * Desktop GetTablesAndFillChart image rules:
- * - Prefer API ChartImage whenever present (this is what XAML binds as AssignSeatChart)
- * - columbus* with no API image → local Columbus.jpg + ChartD FillChart
- * - else → local pack file by ConnectionName
- *
- * Note: Desktop columbus path never assigns AssignSeatChart (only ImgChart string).
- * If the live window shows STAGE-on-top + 181–198, that image is Tampa/Liberty-style
- * from the API branch — not Columbus.jpg.
+ * - Prefer API ChartImage whenever present (XAML binds AssignSeatChart)
+ * - Else API ChartImageSource pack URI → bundled Resources file
+ * - columbus* with no API image → local Columbus.jpg
+ * - else → local pack file by ConnectionName (Standupmedia → Tampa)
+ * - Never invent Columbus for non-columbus connections
  */
 export function resolveAssignSeatChartUrl({
   connectionName,
   chartImage,
+  chartImageSource,
 }: {
   connectionName: string
   chartImage?: unknown
+  chartImageSource?: unknown
 }) {
-  const fromApi = chartImageBytesToUrl(chartImage)
-  if (fromApi) {
-    return fromApi
+  const fromApiBytes = chartImageBytesToUrl(chartImage)
+  if (fromApiBytes) {
+    return fromApiBytes
+  }
+
+  const fromSource = packChartUriToUrl(chartImageSource)
+  if (fromSource) {
+    return fromSource
   }
 
   if (isColumbusStyleConnection(connectionName)) {
@@ -188,6 +325,7 @@ export function resolveAssignSeatChartUrl({
 /**
  * ChartD text overlay only when boxes are empty (Columbus.jpg).
  * Numbered charts (Tampa/Liberty API bytes) already include labels.
+ * Desktop ChartFillUpVisibility=Collapsed for API V2 Tampa-style clubs.
  */
 export function shouldShowChartDOverlay({
   connectionName,

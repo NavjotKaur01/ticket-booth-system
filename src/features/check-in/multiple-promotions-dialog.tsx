@@ -204,14 +204,14 @@ export function MultiplePromotionsDialog({
                 >
                   <div className="grid gap-2 xl:grid-cols-10 xl:items-end">
                     <div className="xl:col-span-6">
-                      <FormField label={index === 0 ? "Promotion" : undefined}>
+                      <FormField label={index === 0 ? "Promotion" : ""}>
                         <Select
-                          value={row.promoId}
+                          value={row.promoId || "select"}
                           onValueChange={(value) => {
                             setRows((current) =>
                               current.map((item, itemIndex) =>
                                 itemIndex === index
-                                  ? { ...item, promoId: value }
+                                  ? { ...item, promoId: value ?? "select" }
                                   : item
                               )
                             )
