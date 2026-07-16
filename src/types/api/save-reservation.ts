@@ -8,7 +8,7 @@ export type SaveReservationPaymentRequest = {
   ServiceCharge: number
   GiftCardNumber?: string
   CCType?: string
-  CreditCardNumber?: string
+  CreditCardNubmer?: string
   CCExpYear?: string
   CCExpMonth?: string
   SecurityCode?: string
