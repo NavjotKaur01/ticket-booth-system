@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react"
 import dayjs from "dayjs"
 
 import CalendarSelectControl from "../controls/CalendarSelectControl"
+import CalendarDatePickerControl from "../controls/CalendarDatePickerControl"
+import CalendarTimeControl from "../controls/CalendarTimeControl"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -29,6 +31,9 @@ import { fetchAddShowDialogData, saveShowRequest } from "@/lib/api/add-show"
 import { buildUpdateShowRequest } from "@/lib/build-update-show-request"
 import { useGetShowDataQuery, useGetShowPropertiesQuery, useUpdateShowMutation } from "@/store/api/clubmanApi"
 import SaveVerifyDialog from "./SaveVerifyDialog"
+import ComedianSearchDialog, {
+  type ComedianSearchSelection,
+} from "./ComedianSearchDialog"
 import {
   buildSaveShowFilterList,
 } from "@/lib/map-default-show-sections"
@@ -62,6 +67,7 @@ const emptyFormValues: AddShowFormValues = {
   assignTable: false,
   showOnWeb: true,
   ageRestriction: "",
+  minAge: "",
   dayOfShowFee: "1",
   phoneFee: "0.00",
   walkupFee: "0.00",
@@ -70,6 +76,9 @@ const emptyFormValues: AddShowFormValues = {
   preSalePrivateShow: false,
   isShowSoldOut: false,
   selectedShowTimeIds: [],
+  startDate: "",
+  showTime: "",
+  arrivalTime: "",
 }
 
 type AddShowValidationErrors = Partial<
@@ -100,6 +109,31 @@ const showDetailCheckboxes: { field: ShowDetailCheckboxField; label: string }[] 
   { field: "assignTable", label: "Assign Table" },
   { field: "showOnWeb", label: "Show On Web" },
 ]
+
+const editOtherCheckboxes: {
+  field: keyof AddShowFormValues
+  label: string
+  ageFlag?: "Y"
+}[] = [
+    { field: "dinner", label: "Dinner" },
+    { field: "noPasses", label: "No Passes" },
+    { field: "vipSeating", label: "VIP Seating" },
+    { field: "ageRestriction", label: "21 and Over", ageFlag: "Y" },
+    { field: "hub", label: "Hub" },
+    { field: "isShowSoldOut", label: "Show Sold Out" },
+    { field: "showOnWeb", label: "Show On Web" },
+    { field: "preSalePrivateShow", label: "Pre-sale Private Show" },
+  ]
+
+const AGE_RESTRICTION_NOTE =
+  "Note: Select minimum age [ Blank = Do not show age on web, A = All ages, Y = Over 21, N = Over 18, S = Special case set min age ]"
+
+type PerformerSearchField =
+  | "headlinerId"
+  | "headliner2Id"
+  | "featureId"
+  | "feature2Id"
+  | "openerId"
 
 function normalizePerformerName(value: string) {
   return value.replace(/\s+/g, " ").trim().toLowerCase()
@@ -175,6 +209,51 @@ function normalizeMinimumNumberValue(value: string, minimum: number) {
   return Number.isFinite(parsed) && parsed >= minimum ? String(parsed) : String(minimum)
 }
 
+/** Normalize API/display times to CalendarTimeControl format (e.g. "7:35 am"). */
+function toCalendarTimeControlValue(value: string | null | undefined) {
+  const formatted = formatShowTime(value, { seconds: false })
+  if (!formatted) {
+    return ""
+  }
+
+  const normalized = formatted.replace(/\s+/g, " ").trim()
+  const match = normalized.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+  if (!match) {
+    return normalized.toLowerCase()
+  }
+
+  return `${Number(match[1])}:${match[2]} ${match[3].toLowerCase()}`
+}
+
+function parseCalendarTimeParts(value: string) {
+  const match = value.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i)
+
+  if (!match) {
+    return { hour: 0, minute: 0 }
+  }
+
+  const period = match[3].toLowerCase()
+  const rawHour = Number(match[1])
+  const minute = Math.min(59, Math.max(0, Number(match[2] ?? 0)))
+  let hour = rawHour % 12
+
+  if (period === "pm") {
+    hour += 12
+  }
+
+  return { hour, minute }
+}
+
+function combineDateAndCalendarTime(dateYmd: string, timeValue: string) {
+  const base = dayjs(dateYmd)
+  if (!base.isValid()) {
+    return new Date()
+  }
+
+  const { hour, minute } = parseCalendarTimeParts(timeValue)
+  return base.hour(hour).minute(minute).second(0).millisecond(0).toDate()
+}
+
 
 
 type AddShowDialogProps = {
@@ -201,6 +280,7 @@ function PerformerSelect({
   value,
   performers,
   onValueChange,
+  onSearchClick,
   error,
 }: {
   id: string
@@ -208,8 +288,10 @@ function PerformerSelect({
   value: string
   performers: PerformerOption[]
   onValueChange: (value: string) => void
+  onSearchClick?: () => void
   error?: string
 }) {
+  const REDIRECT_TO_DASHBOARD_STANDUP_MEDIA = "https://dashboard.standup-media.com/"
   return (
     <div className="grid gap-1.5 sm:grid-cols-[7rem_minmax(0,1fr)_auto_auto] sm:items-start sm:gap-2">
       <Label htmlFor={id} className="text-sm">
@@ -228,10 +310,16 @@ function PerformerSelect({
           }))}
         />
       </div>
-      <Button type="button" size="icon" className="hidden sm:inline-flex" aria-label={`Add ${label}`}>
+      <Button onClick={() => window.open(REDIRECT_TO_DASHBOARD_STANDUP_MEDIA, "_blank", "noopener,noreferrer")} type="button" size="icon" className="hidden sm:inline-flex" aria-label={`Add ${label}`}>
         <PlusCircle className="size-4" />
       </Button>
-      <Button type="button" size="icon" className="hidden sm:inline-flex" aria-label={`Search ${label}`}>
+      <Button
+        type="button"
+        size="icon"
+        className="hidden sm:inline-flex"
+        aria-label={`Search ${label}`}
+        onClick={onSearchClick}
+      >
         <Search className="size-4" />
       </Button>
     </div>
@@ -253,8 +341,8 @@ function FeeInput({
   error?: boolean
 }) {
   return (
-    <div className="grid gap-1.5 sm:grid-cols-[auto_6rem] sm:items-start sm:gap-2">
-      <Label htmlFor={id} className="shrink-0 pt-2">
+    <div className="grid gap-1.5 sm:grid-cols-[auto_3rem] items-center sm:gap-2">
+      <Label htmlFor={id} className="shrink-0">
         {label}
       </Label>
       <div className="relative pb-4 sm:pb-0">
@@ -266,7 +354,7 @@ function FeeInput({
           onClick={(event) => event.currentTarget.select()}
           autoComplete="off"
           className={cn(
-            "h-9 w-full sm:w-24",
+            "h-9 w-full ",
             error && "border-destructive ring-2 ring-destructive/20"
           )}
         />
@@ -345,11 +433,13 @@ function ShowTimesTable({
   showTimes,
   selectedShowTimeIds,
   onToggleShowTime,
+  showDayLabel = true,
   error,
 }: {
   showTimes: ShowTimeOption[]
   selectedShowTimeIds: string[]
   onToggleShowTime: (showTimeId: string) => void
+  showDayLabel?: boolean
   error?: string
 }) {
   return (
@@ -383,10 +473,12 @@ function ShowTimesTable({
                       <Checkbox
                         checked={selectedShowTimeIds.includes(showTime.id)}
                         onCheckedChange={() => onToggleShowTime(showTime.id)}
-                        aria-label={`Toggle ${showTime.dayLabel} ${showTime.timeRange}`}
+                        aria-label={`Toggle ${showDayLabel ? `${showTime.dayLabel} ` : ""}${showTime.timeRange}`}
                       />
                       <div className="text-xs leading-5">
-                        <p className="font-medium text-foreground">{showTime.dayLabel}</p>
+                        {showDayLabel ? (
+                          <p className="font-medium text-foreground">{showTime.dayLabel}</p>
+                        ) : null}
                         <p>{showTime.timeRange}</p>
                       </div>
                     </div>
@@ -431,6 +523,10 @@ export default function AddShowDialog({
   const [isVerifyOpen, setIsVerifyOpen] = useState(false)
   const [verifyRows, setVerifyRows] = useState<ApiDefaultShowSection[]>([])
   const [hasSubmitted, setHasSubmitted] = useState(false)
+  const [performers, setPerformers] = useState<PerformerOption[]>([])
+  const [isComedianSearchOpen, setIsComedianSearchOpen] = useState(false)
+  const [searchTargetField, setSearchTargetField] =
+    useState<PerformerSearchField | null>(null)
 
   const isEditMode = Boolean(initialEvent?.showId)
   const showId = initialEvent?.showId || ""
@@ -480,11 +576,13 @@ export default function AddShowDialog({
         }
 
         setDialogData(data)
+        setPerformers(data.performers)
       })
       .catch((error: Error) => {
         if (isActive) {
           setErrorMessage(error.message || "Unable to load add show data.")
           setDialogData(null)
+          setPerformers([])
         }
       })
       .finally(() => {
@@ -521,10 +619,19 @@ export default function AddShowDialog({
         walkupFee: normalizeMinimumNumberValue(String(mainShowData.WalkupCharge), 0),
         webFee: normalizeMinimumNumberValue(String(mainShowData.WebCharge), 0),
         ageRestriction: parseAgeRestrictionValue(showProperties.Over21),
+        minAge:
+          showProperties.MinAge?.trim() ||
+          mainShowData.MinAge?.trim() ||
+          "",
         useSectionFee: mainShowData.IsUseSectionFee,
         preSalePrivateShow: mainShowData.IsPrivateShow,
         isShowSoldOut: mainShowData.IsShowSolidOut,
         selectedShowTimeIds: ["edit-show-time"],
+        startDate: dayjs(mainShowData.ShowDate).isValid()
+          ? dayjs(mainShowData.ShowDate).format("YYYY-MM-DD")
+          : "",
+        showTime: toCalendarTimeControlValue(mainShowData.ShowTim),
+        arrivalTime: toCalendarTimeControlValue(mainShowData.ShowArrival),
       })
       setIsLoading(false)
     } else if (!isEditMode) {
@@ -539,21 +646,22 @@ export default function AddShowDialog({
     }
   }, [open, dialogData, isEditMode, showData, showProperties, isShowDataReady, initialEvent])
 
-  const performers = dialogData?.performers ?? []
   let showTimes = dialogData?.showTimes ?? []
   const ageRestrictions = dialogData?.ageRestrictions ?? []
 
   if (isEditMode && showData && showData.length > 0) {
     const mainShowData = showData[0]
-    const arrivalTime =
-      formatShowTime(mainShowData.ShowArrival, { seconds: true }) ?? ""
-    const showTime = formatShowTime(mainShowData.ShowTim, { seconds: true }) ?? ""
+    const arrivalTime = formValues.arrivalTime || toCalendarTimeControlValue(mainShowData.ShowArrival)
+    const showTime = formValues.showTime || toCalendarTimeControlValue(mainShowData.ShowTim)
 
     showTimes = [
       {
         id: "edit-show-time",
         dayLabel: dayjs(mainShowData.ShowDate).format("dddd"),
-        timeRange: `${arrivalTime} - ${showTime}`,
+        timeRange:
+          arrivalTime && showTime
+            ? `${arrivalTime} - ${showTime}`
+            : arrivalTime || showTime || "",
         enabled: true,
         sections: showData.map(row => ({
           id: row.ShowDetID,
@@ -589,6 +697,27 @@ export default function AddShowDialog({
   ) {
     setErrorMessage(null)
     setFormValues((current) => ({ ...current, [field]: value }))
+  }
+
+  function openComedianSearch(field: PerformerSearchField) {
+    setSearchTargetField(field)
+    setIsComedianSearchOpen(true)
+  }
+
+  function handleComedianSearchSelect(comedian: ComedianSearchSelection) {
+    if (!searchTargetField) {
+      return
+    }
+
+    updateField(searchTargetField, comedian.id)
+    setPerformers((current) => {
+      if (current.some((performer) => performer.id === comedian.id)) {
+        return current
+      }
+
+      return [...current, { id: comedian.id, name: comedian.name }]
+    })
+    setSearchTargetField(null)
   }
 
   function toggleShowTime(showTimeId: string) {
@@ -687,8 +816,14 @@ export default function AddShowDialog({
           connectionString,
           locationId,
           username,
-          showDate: initialEvent.start,
-          showArrivalTime: initialEvent.start,
+          showDate: combineDateAndCalendarTime(
+            valuesToSave.startDate,
+            valuesToSave.showTime
+          ),
+          showArrivalTime: combineDateAndCalendarTime(
+            valuesToSave.startDate,
+            valuesToSave.arrivalTime
+          ),
           form: valuesToSave,
           sectionRows: rowsToSave,
           sectionLookups: dialogData.sectionLookups,
@@ -799,6 +934,44 @@ export default function AddShowDialog({
                 <AddShowDialogSkeleton />
               ) : (
                 <>
+                  {isEditMode ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 items-end gap-x-6 gap-y-4">
+                      {/* Start Date */}
+                      <div className="grid grid-cols-2 col-span-2 sm:col-span-2 min-w-[12rem] flex-1 gap-2">
+                        <div className="grid flex-1 col-span-1 gap-2">
+                          <Label htmlFor="edit-show-start-date">Start Date</Label>
+                          <CalendarDatePickerControl
+                            id="edit-show-start-date"
+                            value={formValues.startDate}
+                            onChange={() => undefined}
+                            disabled
+                            placeholder="Start date"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Show Time + Arrival Time collapse together on small screens */}
+                      <div className="grid grid-cols-2 col-span-2 sm:col-span-2 gap-2">
+                        <div className="grid gap-2 min-w-0">
+                          <Label htmlFor="edit-show-time">Show Time</Label>
+                          <CalendarTimeControl
+                            id="edit-show-time"
+                            value={formValues.showTime}
+                            onChange={(value) => updateField("showTime", value)}
+                          />
+                        </div>
+                        <div className="grid gap-2 min-w-0">
+                          <Label htmlFor="edit-show-arrival-time">Arrival Time</Label>
+                          <CalendarTimeControl
+                            id="edit-show-arrival-time"
+                            value={formValues.arrivalTime}
+                            onChange={(value) => updateField("arrivalTime", value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="grid gap-2 pt-3 lg:grid-cols-2 lg:gap-x-10 lg:gap-y-2">
                     <div className="space-y-1">
                       <PerformerSelect
@@ -807,6 +980,7 @@ export default function AddShowDialog({
                         value={formValues.headlinerId}
                         performers={performers}
                         onValueChange={(value) => updateField("headlinerId", value)}
+                        onSearchClick={() => openComedianSearch("headlinerId")}
                         error={visibleValidationErrors.headlinerId}
                       />
                       <PerformerSelect
@@ -815,6 +989,7 @@ export default function AddShowDialog({
                         value={formValues.featureId}
                         performers={performers}
                         onValueChange={(value) => updateField("featureId", value)}
+                        onSearchClick={() => openComedianSearch("featureId")}
                       />
                       <PerformerSelect
                         id="show-opener"
@@ -822,6 +997,7 @@ export default function AddShowDialog({
                         value={formValues.openerId}
                         performers={performers}
                         onValueChange={(value) => updateField("openerId", value)}
+                        onSearchClick={() => openComedianSearch("openerId")}
                       />
                     </div>
 
@@ -832,6 +1008,7 @@ export default function AddShowDialog({
                         value={formValues.headliner2Id}
                         performers={performers}
                         onValueChange={(value) => updateField("headliner2Id", value)}
+                        onSearchClick={() => openComedianSearch("headliner2Id")}
                       />
                       <PerformerSelect
                         id="show-feature-2"
@@ -839,6 +1016,7 @@ export default function AddShowDialog({
                         value={formValues.feature2Id}
                         performers={performers}
                         onValueChange={(value) => updateField("feature2Id", value)}
+                        onSearchClick={() => openComedianSearch("feature2Id")}
                       />
                       <div className="grid gap-2 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-center">
                         <Label htmlFor="show-special-note">Special Note</Label>
@@ -852,13 +1030,15 @@ export default function AddShowDialog({
                     </div>
                   </div>
 
-                  <div>
-                    <Button type="button" onClick={() => setIsShowDetailsVisible(!isShowDetailsVisible)}>
-                      {isShowDetailsVisible ? "Hide Default" : "Show Default"}
-                    </Button>
-                  </div>
+                  {!isEditMode ? (
+                    <div>
+                      <Button type="button" onClick={() => setIsShowDetailsVisible(!isShowDetailsVisible)}>
+                        {isShowDetailsVisible ? "Hide Default" : "Show Default"}
+                      </Button>
+                    </div>
+                  ) : null}
 
-                  {isShowDetailsVisible && (
+                  {!isEditMode && isShowDetailsVisible ? (
                     <fieldset className="rounded-md border p-3 sm:p-4">
                       <legend className="px-2 text-sm font-medium">Show Details</legend>
                       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-3">
@@ -880,7 +1060,17 @@ export default function AddShowDialog({
                           <CalendarSelectControl
                             id="show-age-restriction"
                             value={formValues.ageRestriction}
-                            onChange={(value) => updateField("ageRestriction", value)}
+                            onChange={(value) => {
+                              setErrorMessage(null)
+                              setFormValues((current) => ({
+                                ...current,
+                                ageRestriction: value,
+                                minAge:
+                                  value === "S"
+                                    ? current.minAge.trim() || "16"
+                                    : current.minAge,
+                              }))
+                            }}
                             placeholder="Select"
                             className="flex-1"
                             options={ageRestrictions.map((option) => ({
@@ -888,14 +1078,68 @@ export default function AddShowDialog({
                               label: option.label,
                             }))}
                           />
+                          {formValues.ageRestriction === "S" ? (
+                            <>
+                              <Label htmlFor="show-min-age" className="shrink-0">
+                                Min Age:
+                              </Label>
+                              <Input
+                                id="show-min-age"
+                                type="number"
+                                min={0}
+                                value={formValues.minAge}
+                                onChange={(event) =>
+                                  updateField("minAge", event.target.value)
+                                }
+                                className="h-9 w-20"
+                              />
+                            </>
+                          ) : null}
                         </div>
                       </div>
                       <p className="mt-4 text-center text-sm text-muted-foreground">
-                        Note: [ Blank = Do not show age on web, A = All ages, Y = Over 21, N = Over 18, S = Special case set min age ]
-
+                        {AGE_RESTRICTION_NOTE}
                       </p>
                     </fieldset>
-                  )}
+                  ) : null}
+
+                  {isEditMode ? (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-2">
+                      <span className="text-sm font-medium">Other:</span>
+                      {editOtherCheckboxes.map(({ field, label, ageFlag }) => {
+                        const checked = ageFlag
+                          ? formValues.ageRestriction === ageFlag
+                          : Boolean(formValues[field])
+
+                        return (
+                          <div key={`${field}-${label}`} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`edit-${field}-${label}`}
+                              checked={checked}
+                              onCheckedChange={(isChecked) => {
+                                if (ageFlag) {
+                                  setErrorMessage(null)
+                                  setFormValues((current) => ({
+                                    ...current,
+                                    ageRestriction: isChecked
+                                      ? ageFlag
+                                      : current.ageRestriction === ageFlag
+                                        ? ""
+                                        : current.ageRestriction,
+                                  }))
+                                  return
+                                }
+
+                                updateField(field, Boolean(isChecked) as never)
+                              }}
+                            />
+                            <Label htmlFor={`edit-${field}-${label}`}>{label}</Label>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : null}
+
                   <fieldset
                     className={cn(
                       "rounded-md border p-3 sm:p-4",
@@ -918,7 +1162,7 @@ export default function AddShowDialog({
                         "text-destructive"
                       )}
                     >
-                      Fees or Recurrence
+                      {isEditMode ? "Fees or Age" : "Fees or Recurrence"}
                     </legend>
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:flex sm:flex-wrap sm:items-start sm:gap-x-5">
@@ -954,6 +1198,51 @@ export default function AddShowDialog({
                           minimum={0}
                           error={hasSubmitted && Boolean(validationErrors.webFee)}
                         />
+                        {isEditMode ? (
+                          <div className="flex w-full flex-col gap-2 sm:min-w-[16rem] sm:w-auto sm:flex-row sm:items-center">
+                            <Label htmlFor="edit-age-restriction" className="shrink-0">
+                              Age Restrictions
+                            </Label>
+                            <CalendarSelectControl
+                              id="edit-age-restriction"
+                              value={formValues.ageRestriction}
+                              onChange={(value) => {
+                                setErrorMessage(null)
+                                setFormValues((current) => ({
+                                  ...current,
+                                  ageRestriction: value,
+                                  minAge:
+                                    value === "S"
+                                      ? current.minAge.trim() || "16"
+                                      : current.minAge,
+                                }))
+                              }}
+                              placeholder="Select"
+                              className="flex-1"
+                              options={ageRestrictions.map((option) => ({
+                                value: option.value,
+                                label: option.label,
+                              }))}
+                            />
+                            {formValues.ageRestriction === "S" ? (
+                              <>
+                                <Label htmlFor="edit-min-age" className="shrink-0">
+                                  Min Age
+                                </Label>
+                                <Input
+                                  id="edit-min-age"
+                                  type="number"
+                                  min={0}
+                                  value={formValues.minAge}
+                                  onChange={(event) =>
+                                    updateField("minAge", event.target.value)
+                                  }
+                                  className="h-9 w-20"
+                                />
+                              </>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                         <div className="flex items-center gap-2">
@@ -964,23 +1253,22 @@ export default function AddShowDialog({
                           />
                           <Label htmlFor="use-section-fee">Use Section Fee</Label>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            id="pre-sale-private-show"
-                            checked={formValues.preSalePrivateShow}
-                            onCheckedChange={(checked) => updateField("preSalePrivateShow", Boolean(checked))}
-                          />
-                          <Label htmlFor="pre-sale-private-show">Pre-sale Private Show</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            id="is-show-sold-out"
-                            checked={formValues.isShowSoldOut}
-                            onCheckedChange={(checked) => updateField("isShowSoldOut", Boolean(checked))}
-                          />
-                          <Label htmlFor="is-show-sold-out">Show Sold Out</Label>
-                        </div>
+                        {!isEditMode ? (
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id="pre-sale-private-show"
+                              checked={formValues.preSalePrivateShow}
+                              onCheckedChange={(checked) => updateField("preSalePrivateShow", Boolean(checked))}
+                            />
+                            <Label htmlFor="pre-sale-private-show">Pre-sale Private Show</Label>
+                          </div>
+                        ) : null}
                       </div>
+                      {isEditMode ? (
+                        <p className="text-center text-sm text-muted-foreground">
+                          {AGE_RESTRICTION_NOTE}
+                        </p>
+                      ) : null}
                     </div>
                   </fieldset>
 
@@ -1006,6 +1294,7 @@ export default function AddShowDialog({
                     showTimes={showTimes}
                     selectedShowTimeIds={formValues.selectedShowTimeIds}
                     onToggleShowTime={toggleShowTime}
+                    showDayLabel={!isEditMode}
                     error={visibleValidationErrors.selectedShowTimeIds}
                   />
                 </>
@@ -1041,6 +1330,19 @@ export default function AddShowDialog({
         onRowsChange={handleVerifyRowsChange}
         onConfirm={() => handleConfirmSave()}
         isSaving={isSaving}
+      />
+
+      <ComedianSearchDialog
+        open={isComedianSearchOpen}
+        onOpenChange={(nextOpen) => {
+          setIsComedianSearchOpen(nextOpen)
+          if (!nextOpen) {
+            setSearchTargetField(null)
+          }
+        }}
+        connectionString={connectionString}
+        locationId={locationId}
+        onSelect={handleComedianSearchSelect}
       />
     </>
   )

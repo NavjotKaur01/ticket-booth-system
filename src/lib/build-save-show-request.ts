@@ -47,7 +47,7 @@ function yn(value: boolean) {
   return value ? "Y" : "N"
 }
 
-function resolveAge(ageRestriction: string) {
+function resolveAge(ageRestriction: string, minAge: string) {
   switch (ageRestriction) {
     case "A":
       return { over21: "A", minAge: null }
@@ -56,7 +56,7 @@ function resolveAge(ageRestriction: string) {
     case "N":
       return { over21: "N", minAge: null }
     case "S":
-      return { over21: "S", minAge: null }
+      return { over21: "S", minAge: minAge.trim() || null }
     default:
       return { over21: "", minAge: null }
   }
@@ -104,7 +104,7 @@ export function buildSaveShowRequest({
   sectionRows,
   sectionLookups,
 }: BuildSaveShowRequestParams): SaveShowRequestModel {
-  const age = resolveAge(form.ageRestriction)
+  const age = resolveAge(form.ageRestriction, form.minAge)
   const dayName = showDate.toLocaleDateString("en-US", { weekday: "long" })
   const pendingCustomSections = collectPendingCustomSections(
     sectionRows,

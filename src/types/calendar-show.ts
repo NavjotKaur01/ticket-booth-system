@@ -55,6 +55,7 @@ export type AddShowFormValues = {
   assignTable: boolean
   showOnWeb: boolean
   ageRestriction: string
+  minAge: string
   dayOfShowFee: string
   phoneFee: string
   walkupFee: string
@@ -63,4 +64,7 @@ export type AddShowFormValues = {
   preSalePrivateShow: boolean
   isShowSoldOut: boolean
   selectedShowTimeIds: string[]
+  startDate: string
+  showTime: string
+  arrivalTime: string
 }
