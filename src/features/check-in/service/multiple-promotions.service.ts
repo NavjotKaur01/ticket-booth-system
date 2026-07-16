@@ -3,6 +3,7 @@ import {
   getPromoApplicableTickets,
 } from "@/lib/calculate-promo-discount"
 import { calculateReservationTotals } from "@/lib/calculate-reservation-totals"
+import { calculateExpressWalkupServiceCharge } from "@/features/check-in/service/express-panel.service"
 import type { ReservationPromo } from "@/types/reservation-promo"
 
 export type MultiplePromotionRowState = {
@@ -41,12 +42,20 @@ export function formatMultiplePromotionsMoney(value: number) {
 export function calculateMultiplePromotionsTotals({
   sectionPrice,
   walkUpFee = 0,
+  dayOfShowFee = 0,
+  showDate,
+  taxRatePercent = 0,
+  taxWithServiceCharge,
   partyNumber,
   rows,
   promosById,
 }: {
   sectionPrice: number
   walkUpFee?: number
+  dayOfShowFee?: number
+  showDate?: string
+  taxRatePercent?: number
+  taxWithServiceCharge?: string
   partyNumber: number
   rows: MultiplePromotionRowState[]
   promosById: Map<string, ReservationPromo>
@@ -121,14 +130,23 @@ export function calculateMultiplePromotionsTotals({
     ? (promosById.get(primaryRow.row.promoId) ?? null)
     : null
 
+  const baseSvcAmount = calculateExpressWalkupServiceCharge({
+    walkUpFee,
+    dayOfShowFee,
+    quantity: party,
+    showDate,
+  })
+
   const baseTotals = calculateReservationTotals({
     sectionPrice: unitPrice,
     sectionShowPrice: unitPrice,
     party,
     passes: party,
     promo: primaryPromo,
-    baseSvcAmount: walkUpFee || undefined,
+    baseSvcAmount: party > 0 ? baseSvcAmount : undefined,
     existingDiscount: totalDiscount > 0 ? totalDiscount : undefined,
+    systemTaxRate: taxRatePercent,
+    taxWithServiceCharge,
   })
 
   return {

@@ -157,10 +157,19 @@ function buildPaymentModel({
     return payment
   }
 
+  if (paymentType === 'pos') {
+    payment.CCType =
+      paymentFields.cardType?.trim() ||
+      detectCreditCardType(paymentFields.cardNumber) ||
+      undefined
+    return payment
+  }
+
   if (paymentType !== 'cash') {
     const cardNumber = paymentFields.cardNumber.replace(/\D/g, '')
 
-    payment.CCType = detectCreditCardType(paymentFields.cardNumber)
+    payment.CCType =
+      paymentFields.cardType?.trim() || detectCreditCardType(paymentFields.cardNumber)
     payment.CreditCardNubmer = cardNumber
     payment.CCExpYear = paymentFields.expYear
     payment.CCExpMonth = getExpirationMonthNumber(paymentFields.expMonth)

@@ -117,6 +117,10 @@ type MultiplePromotionsDialogProps = {
   promos: ReservationPromo[]
   sectionPrice: number
   walkUpFee?: number
+  dayOfShowFee?: number
+  showDate?: string
+  taxRatePercent?: number
+  taxWithServiceCharge?: string
   initialParty?: number
   onConfirm?: (payload: MultiplePromotionsConfirmPayload) => void
 }
@@ -128,6 +132,10 @@ export function MultiplePromotionsDialog({
   promos,
   sectionPrice,
   walkUpFee = 0,
+  dayOfShowFee = 0,
+  showDate,
+  taxRatePercent = 0,
+  taxWithServiceCharge,
   initialParty = 1,
   onConfirm,
 }: MultiplePromotionsDialogProps) {
@@ -158,11 +166,25 @@ export function MultiplePromotionsDialog({
       calculateMultiplePromotionsTotals({
         sectionPrice,
         walkUpFee,
+        dayOfShowFee,
+        showDate,
+        taxRatePercent,
+        taxWithServiceCharge,
         partyNumber,
         rows,
         promosById,
       }),
-    [partyNumber, promosById, rows, sectionPrice, walkUpFee]
+    [
+      dayOfShowFee,
+      partyNumber,
+      promosById,
+      rows,
+      sectionPrice,
+      showDate,
+      taxRatePercent,
+      taxWithServiceCharge,
+      walkUpFee,
+    ]
   )
 
   function handleConfirm() {

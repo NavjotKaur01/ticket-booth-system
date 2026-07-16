@@ -68,6 +68,7 @@ import {
   readAssignSeatsVisible,
   readExpressPanelVisible,
   readExpressPaymentMethodVisible,
+  readExpressPosCcMode,
   readPaymentPrintDefaults,
   readPaymentTaxRate,
   readScannerCheckInVisible,
@@ -78,6 +79,10 @@ import { filterCheckInRecords } from "@/lib/filter-check-in"
 import { mapReservationsToCheckInRecords } from "@/lib/map-check-in-record"
 import { resolveReservationTotalSeats } from "@/lib/resolve-reservation-total-seats"
 import { saveExpressWalkupReservation } from "@/lib/save-express-walkup-reservation"
+import {
+  isExpressShowDateAllowed,
+  validateBookFixedPartyTables,
+} from "@/features/check-in/service/express-panel-validation"
 import {
   reportError,
   reportErrorMessage,
@@ -300,12 +305,12 @@ export function CheckIn() {
     { skip: !connectionName || !locationId }
   )
 
-  const expressVisible = useMemo(
-    () => readExpressPanelVisible(systemDefaults, null),
-    [systemDefaults]
-  )
   const expressPaymentMethodVisible = useMemo(
     () => readExpressPaymentMethodVisible(systemDefaults),
+    [systemDefaults]
+  )
+  const expressPosCcMode = useMemo(
+    () => readExpressPosCcMode(systemDefaults),
     [systemDefaults]
   )
   const paymentTaxRate = useMemo(
@@ -405,6 +410,21 @@ export function CheckIn() {
   const selectedShow = useMemo(
     () => shows.find((show) => show.id === showTime),
     [showTime, shows]
+  )
+
+  const expressShowDateTime = useMemo(() => {
+    const raw = selectedShow?.showDateTime
+    if (!raw) {
+      return null
+    }
+
+    const parsed = new Date(raw)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }, [selectedShow?.showDateTime])
+
+  const expressVisible = useMemo(
+    () => readExpressPanelVisible(systemDefaults, expressShowDateTime),
+    [expressShowDateTime, systemDefaults]
   )
 
   const selectedShowLabel = selectedShow?.label ?? ""
@@ -916,6 +936,20 @@ export function CheckIn() {
       return
     }
 
+    if (!isExpressShowDateAllowed(showDate)) {
+      setExpressError("Show Date can't be prior than today.")
+      return
+    }
+
+    const fixedPartyError = validateBookFixedPartyTables({
+      showSec: payload.section.showSec,
+      party: payload.party,
+    })
+    if (fixedPartyError) {
+      setExpressError(fixedPartyError.message)
+      return
+    }
+
     setIsExpressSubmitting(true)
     setExpressError(null)
 
@@ -931,6 +965,7 @@ export function CheckIn() {
         promo: payload.promo,
         paymentType: payload.paymentType,
         paymentAmount: payload.paymentAmount,
+        cardType: payload.cardType,
         showDate,
         taxRatePercent: paymentTaxRate,
         taxWithServiceCharge,
@@ -1528,6 +1563,7 @@ export function CheckIn() {
           showDate={showDate}
           taxRatePercent={paymentTaxRate}
           taxWithServiceCharge={taxWithServiceCharge}
+          posCcMode={expressPosCcMode}
           visible={expressVisible}
           isSubmitting={isExpressSubmitting}
           error={expressError}

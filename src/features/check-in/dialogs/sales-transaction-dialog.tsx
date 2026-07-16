@@ -19,6 +19,8 @@ type SalesTransactionDialogProps = {
   onOpenChange: (open: boolean) => void
   paymentType: ExpressPaymentType
   paymentDue: number
+  /** Desktop POS locks the amount field (EnableSaleTransactionTextBox = false). */
+  amountLocked?: boolean
   /** Receives tendered amount when Ok is pressed (must be >= paymentDue). */
   onOk?: (paymentAmount: number) => void
 }
@@ -32,6 +34,7 @@ export function SalesTransactionDialog({
   onOpenChange,
   paymentType,
   paymentDue,
+  amountLocked = false,
   onOk,
 }: SalesTransactionDialogProps) {
   const [paymentAmount, setPaymentAmount] = useState(formatDialogMoney(paymentDue))
@@ -94,6 +97,8 @@ export function SalesTransactionDialog({
               onChange={(event) => setPaymentAmount(event.target.value)}
               className="h-9 tabular-nums"
               inputMode="decimal"
+              readOnly={amountLocked}
+              disabled={amountLocked}
             />
 
             <div className="text-sm font-medium tabular-nums">

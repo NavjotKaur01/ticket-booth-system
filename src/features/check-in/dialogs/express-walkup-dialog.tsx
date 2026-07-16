@@ -362,8 +362,8 @@ export function ExpressWalkupDialog({
   }
 
   function handleTicketCountSelect(count: number) {
+    // Desktop ExpressPartyIncrement sets Party only; Passes stay independent.
     updateField("party", String(count))
-    updateField("passes", String(count))
   }
 
   function handleCalculate() {
