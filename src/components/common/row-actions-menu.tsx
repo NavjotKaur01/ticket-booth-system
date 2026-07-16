@@ -17,6 +17,7 @@ type RowActionsMenuProps = {
   onPartialCheckInOrSplit?: () => void
   onPartialUnscan?: () => void
   onQuickPay?: () => void
+  /** @deprecated Desktop row menu only has Assign Seats And Check-In */
   onAssignSeats?: () => void
   onAssignSeatsAndCheckIn?: () => void
   onMoveReservation?: () => void
@@ -34,7 +35,11 @@ type MenuAction = {
   onSelect: () => void
 }
 
-/** Three-dot row action menu shared by Reservations and Check-In tables. */
+/**
+ * Check-in / reservation row actions.
+ * Order matches desktop ClubMan Check-in context menu (Assign Seats And Check-In first).
+ * Desktop does NOT include a separate "Assign Seats" row action — that is toolbar-only.
+ */
 export function RowActionsMenu({
   isCancelled = false,
   onCancelReservation,
@@ -44,7 +49,6 @@ export function RowActionsMenu({
   onPartialCheckInOrSplit,
   onPartialUnscan,
   onQuickPay,
-  onAssignSeats,
   onAssignSeatsAndCheckIn,
   onMoveReservation,
   onPrintTickets,
@@ -56,6 +60,14 @@ export function RowActionsMenu({
   onResendTicket,
 }: RowActionsMenuProps) {
   const actions: MenuAction[] = []
+
+  // Desktop order: Assign Seats And Check-In first
+  if (!isCancelled && onAssignSeatsAndCheckIn) {
+    actions.push({
+      label: "Assign Seats And Check-In",
+      onSelect: onAssignSeatsAndCheckIn,
+    })
+  }
 
   if (isCancelled && onUnCancelReservation) {
     actions.push({
@@ -72,32 +84,14 @@ export function RowActionsMenu({
   if (onCheckIn) {
     actions.push({ label: "Check-In", onSelect: onCheckIn })
   }
-  if (onUnCheckIn) {
-    actions.push({ label: "UnCheck-In", onSelect: onUnCheckIn })
+  if (onMoveReservation) {
+    actions.push({ label: "Move Reservation", onSelect: onMoveReservation })
   }
   if (onPartialCheckInOrSplit) {
     actions.push({
       label: "Partial Check-In/Split",
       onSelect: onPartialCheckInOrSplit,
     })
-  }
-  if (onPartialUnscan) {
-    actions.push({ label: "Partial Un-scan", onSelect: onPartialUnscan })
-  }
-  if (onQuickPay) {
-    actions.push({ label: "Quick Pay", onSelect: onQuickPay })
-  }
-  if (onAssignSeats) {
-    actions.push({ label: "Assign Seats", onSelect: onAssignSeats })
-  }
-  if (onAssignSeatsAndCheckIn) {
-    actions.push({
-      label: "Assign Seats And Check-In",
-      onSelect: onAssignSeatsAndCheckIn,
-    })
-  }
-  if (onMoveReservation) {
-    actions.push({ label: "Move Reservation", onSelect: onMoveReservation })
   }
   if (onPrintTickets) {
     actions.push({ label: "Print Ticket(s)", onSelect: onPrintTickets })
@@ -114,11 +108,20 @@ export function RowActionsMenu({
   if (onPrintSignature) {
     actions.push({ label: "Print Signature", onSelect: onPrintSignature })
   }
+  if (onQuickPay) {
+    actions.push({ label: "Quick Pay", onSelect: onQuickPay })
+  }
   if (onReservationHistory) {
     actions.push({
       label: "Reservation History",
       onSelect: onReservationHistory,
     })
+  }
+  if (onUnCheckIn) {
+    actions.push({ label: "UnCheck-In", onSelect: onUnCheckIn })
+  }
+  if (onPartialUnscan) {
+    actions.push({ label: "Partial Un-scan", onSelect: onPartialUnscan })
   }
   if (onAddNote) {
     actions.push({ label: "Add Note", onSelect: onAddNote })

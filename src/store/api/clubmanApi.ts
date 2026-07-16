@@ -109,6 +109,14 @@ import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
 import type { ReservationCheckInRequest, RevertReservationCheckInRequest } from "@/types/api/reservation-check-in"
 import type { PartialCheckInRequest } from "@/types/api/partial-check-in"
 import type { UpdateTableNumberReservationRequest } from "@/types/api/update-table-number"
+import type {
+  ApiAssignSeatDetail,
+  ApiClubsAssignSeatDetail,
+  ApiColumbusAssignSeatNumber,
+  ApiReservationToAssignSeat,
+  DeleteAllAssignSeatRequest,
+  SaveAssignSeatsRequest,
+} from "@/types/api/assign-seats"
 import type { UpdateCustomerEmailRequest } from "@/types/api/update-customer-email"
 import type {
   MoveReservationRequest,
@@ -1128,6 +1136,108 @@ export const clubmanApi = createApi({
       invalidatesTags: ["Reservation", "ShowDetails"],
     }),
 
+    getColumbusAssignSeatNumbers: builder.query<
+      ApiColumbusAssignSeatNumber[] | number[] | string[],
+      string
+    >({
+      query: (connectionName) => ({
+        url: reservationApiPath(connectionName, "GetColumbusAssignSeatNumbers"),
+        method: "GET",
+      }),
+      transformResponse: (response: unknown) =>
+        coerceApiArray<ApiColumbusAssignSeatNumber | number | string>(response),
+      providesTags: ["Reservation"],
+    }),
+
+    /** Desktop: GET GetClubsAssignSeatDetail/{clubName}/{locationId} */
+    getClubsAssignSeatDetail: builder.query<
+      ApiClubsAssignSeatDetail,
+      { connectionName: string; locationId: string }
+    >({
+      query: ({ connectionName, locationId }) => ({
+        url: reservationApiPath(
+          connectionName,
+          locationId,
+          "GetClubsAssignSeatDetail"
+        ),
+        method: "GET",
+      }),
+      transformResponse: (response: unknown) => {
+        if (!response || typeof response !== "object") {
+          return {}
+        }
+        const record = response as Record<string, unknown>
+        if (
+          record.ChartImage != null ||
+          record.ByteImgSource != null ||
+          record.ChartTableList != null
+        ) {
+          return response as ApiClubsAssignSeatDetail
+        }
+        for (const key of ["Data", "data", "Result", "result", "Value", "value"]) {
+          const nested = record[key]
+          if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+            return nested as ApiClubsAssignSeatDetail
+          }
+        }
+        return response as ApiClubsAssignSeatDetail
+      },
+      providesTags: ["Reservation"],
+    }),
+
+    getAssignSeatDetails: builder.query<
+      ApiAssignSeatDetail[],
+      { connectionName: string; showId: string; isCheckedIn?: boolean }
+    >({
+      query: ({ connectionName, showId, isCheckedIn = false }) => ({
+        url: reservationApiPath(
+          connectionName,
+          showId,
+          formatRouteBoolean(isCheckedIn),
+          "GetAssignSeatDetails"
+        ),
+        method: "GET",
+      }),
+      transformResponse: (response: unknown) =>
+        coerceApiArray<ApiAssignSeatDetail>(response),
+      providesTags: ["Reservation"],
+    }),
+
+    getReservationsToAssignSeats: builder.query<
+      ApiReservationToAssignSeat[],
+      { connectionName: string; showId: string }
+    >({
+      query: ({ connectionName, showId }) => ({
+        url: reservationApiPath(
+          connectionName,
+          showId,
+          "GetReservationsToAssignSeats"
+        ),
+        method: "GET",
+      }),
+      transformResponse: (response: unknown) =>
+        coerceApiArray<ApiReservationToAssignSeat>(response),
+      providesTags: ["Reservation"],
+    }),
+
+    saveAssignSeats: builder.mutation({
+      query: (body: SaveAssignSeatsRequest) => ({
+        url: reservationApiPath("SaveAssignSeats"),
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    deleteAllAssignSeats: builder.mutation({
+      query: (body: DeleteAllAssignSeatRequest) => ({
+        url: reservationApiPath("DeleteAllAsignSeat"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
     getCalendarData: builder.query({
       query: ({
         connectionString,
@@ -2026,6 +2136,16 @@ export const {
   usePartialCheckInMutation,
   useRevertPartialCheckInMutation,
   useUpdateTableNumberReservationMutation,
+  useGetColumbusAssignSeatNumbersQuery,
+  useLazyGetColumbusAssignSeatNumbersQuery,
+  useGetClubsAssignSeatDetailQuery,
+  useLazyGetClubsAssignSeatDetailQuery,
+  useGetAssignSeatDetailsQuery,
+  useLazyGetAssignSeatDetailsQuery,
+  useGetReservationsToAssignSeatsQuery,
+  useLazyGetReservationsToAssignSeatsQuery,
+  useSaveAssignSeatsMutation,
+  useDeleteAllAssignSeatsMutation,
   useGetDailyTransactionDataQuery,
   useGetRecentSalesReportQuery,
   useGetCalendarDataQuery,

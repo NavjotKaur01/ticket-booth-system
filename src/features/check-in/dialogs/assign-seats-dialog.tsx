@@ -1,114 +1,102 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
-import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
+import {
+  AssignSeatsPanel,
+  type AssignSeatsSaveResult,
+} from "@/features/assign-seats"
+import { ASSIGN_SEATS_BLUE } from "@/features/assign-seats/assign-seats-styles"
 import type { Reservation } from "@/types/reservation"
 
 type AssignSeatsDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  reservation: Reservation | null
+  connectionName: string
+  locationId: string
+  showId: string
+  username: string
+  reservation?: Reservation | null
   checkInAfterSave?: boolean
   isSubmitting?: boolean
   error?: string | null
-  onSave: (payload: {
-    tableNums: string
+  onSaved: (payload: {
+    result: AssignSeatsSaveResult
     checkInAfterSave: boolean
+    reservationId: string | null
   }) => void | Promise<void>
 }
 
-/** Minimal Assign Seats — updates table numbers (desktop chart deferred). */
+/**
+ * Desktop AssignSeats window chrome:
+ * ~1120×670, blue #155abb title bar, fixed layout, X close.
+ */
 export function AssignSeatsDialog({
   open,
   onOpenChange,
-  reservation,
-  checkInAfterSave: initialCheckIn = false,
+  connectionName,
+  locationId,
+  showId,
+  username,
+  reservation = null,
+  checkInAfterSave = false,
   isSubmitting = false,
   error = null,
-  onSave,
+  onSaved,
 }: AssignSeatsDialogProps) {
-  const [tableNums, setTableNums] = useState("")
-  const [checkInAfterSave, setCheckInAfterSave] = useState(initialCheckIn)
+  const [panelError, setPanelError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!open) {
-      return
-    }
-
-    setTableNums(reservation?.tables ?? "")
-    setCheckInAfterSave(initialCheckIn)
-  }, [initialCheckIn, open, reservation])
-
-  const guestName = reservation
-    ? `${reservation.firstName} ${reservation.lastName}`.trim()
+  const titleGuest = reservation
+    ? ` — ${reservation.lastName} ${reservation.firstName}`.trim()
     : ""
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        showCloseButton={false}
-        className="flex max-w-md flex-col overflow-hidden p-0 sm:max-w-md"
+        showCloseButton
+        className="flex h-[670px] max-h-[90vh] w-[1120px] max-w-[min(96vw,1150px)] flex-col gap-0 overflow-hidden rounded-[5px] border-0 p-0 sm:max-w-[min(96vw,1150px)]"
+        style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.28)" }}
       >
-        <DialogHeader className="shrink-0 border-b px-4 py-3">
-          <DialogTitle className="text-base font-semibold">
-            Assign Seats
+        <div
+          className="flex h-10 shrink-0 items-center justify-between px-2 pr-10"
+          style={{ backgroundColor: ASSIGN_SEATS_BLUE }}
+        >
+          <DialogTitle className="text-sm font-semibold text-white">
+            Assign Seats{titleGuest}
+            {connectionName ? (
+              <span className="ml-2 font-normal text-white/75">
+                ({connectionName})
+              </span>
+            ) : null}
           </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-3 px-4 py-4">
-          {guestName ? (
-            <p className="text-sm text-muted-foreground">{guestName}</p>
-          ) : null}
-          <div className="space-y-1.5">
-            <Label htmlFor="assign-table-nums">Table Nums</Label>
-            <Input
-              id="assign-table-nums"
-              value={tableNums}
-              onChange={(event) => setTableNums(event.target.value)}
-              placeholder="e.g. 12, 13"
-              className="h-9"
-              disabled={isSubmitting}
-            />
-          </div>
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <Checkbox
-              checked={checkInAfterSave}
-              onCheckedChange={(value) => setCheckInAfterSave(value === true)}
-              disabled={isSubmitting}
-            />
-            Check-In after save
-          </label>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
         </div>
 
-        <DialogFooter className="shrink-0 border-t px-4 py-3 sm:justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            disabled={isSubmitting || !reservation}
-            onClick={() => {
-              void onSave({ tableNums, checkInAfterSave })
+        {open && showId ? (
+          <AssignSeatsPanel
+            connectionName={connectionName}
+            locationId={locationId}
+            showId={showId}
+            username={username}
+            initialReservationId={reservation?.id ?? null}
+            isSubmitting={isSubmitting}
+            error={error ?? panelError}
+            onError={setPanelError}
+            onSaved={async (result) => {
+              await onSaved({
+                result,
+                checkInAfterSave,
+                reservationId: reservation?.id ?? null,
+              })
             }}
-          >
-            {isSubmitting ? "Saving…" : "Save"}
-          </Button>
-        </DialogFooter>
+          />
+        ) : (
+          <p className="p-4 text-sm text-muted-foreground">
+            Select a show before assigning seats.
+          </p>
+        )}
       </DialogContent>
     </Dialog>
   )
