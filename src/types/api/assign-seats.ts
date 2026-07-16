@@ -101,6 +101,7 @@ export type ApiReservationToAssignSeat = {
   CreatedDt?: string | null
   Qty?: number | string | null
   Quantity?: number | string | null
+  /** Desktop AssignSeatsModel.Party / seed PartyNo */
   Party?: number | string | null
   Rem?: number | string | null
   Remaining?: number | string | null
@@ -109,6 +110,7 @@ export type ApiReservationToAssignSeat = {
   Section?: string | null
   Source?: string | null
   ResSource?: string | null
+  SourceDesc?: string | null
   Notes?: string | null
   Note?: string | null
   Dinner?: string | boolean | null
@@ -119,7 +121,70 @@ export type ApiReservationToAssignSeat = {
   RowColor?: string | null
 }
 
-/** One seat assignment to persist. */
+/**
+ * Desktop API.AssignTableModel — one chart table row for SaveAssignSeats.
+ * SeatN = display text ("LastName- N" or "<Hold>"); ReservationIdSeatN = guest GUID.
+ */
+export type ApiAssignTableModel = {
+  ShowId: string
+  TableNum: string
+  Limit: number
+  MaxSeats: number
+  Seat1: string
+  IsRemovedSeat1: boolean
+  Seat2: string
+  IsRemovedSeat2: boolean
+  Seat3: string
+  IsRemovedSeat3: boolean
+  Seat4: string
+  IsRemovedSeat4: boolean
+  Seat5: string
+  IsRemovedSeat5: boolean
+  Seat6: string
+  IsRemovedSeat6: boolean
+  Seat7: string
+  IsRemovedSeat7: boolean
+  Seat8: string
+  IsRemovedSeat8: boolean
+  Seat9: string
+  IsRemovedSeat9: boolean
+  Seat10: string
+  IsRemovedSeat10: boolean
+  ReadOnlySeat1: boolean
+  ReadOnlySeat2: boolean
+  ReadOnlySeat3: boolean
+  ReadOnlySeat4: boolean
+  ReadOnlySeat5: boolean
+  ReadOnlySeat6: boolean
+  ReadOnlySeat7: boolean
+  ReadOnlySeat8: boolean
+  ReadOnlySeat9: boolean
+  ReadOnlySeat10: boolean
+  Party: number
+  Dinner: string
+  Name: string
+  Promo: string
+  Source: string
+  LastName: string
+  FirstName: string
+  TableNumbr: string
+  SeatNum: string
+  CellChanged: number
+  RequestFromWhichMenu: string
+  ReservationIdSeat1: string
+  ReservationIdSeat2: string
+  ReservationIdSeat3: string
+  ReservationIdSeat4: string
+  ReservationIdSeat5: string
+  ReservationIdSeat6: string
+  ReservationIdSeat7: string
+  ReservationIdSeat8: string
+  ReservationIdSeat9: string
+  ReservationIdSeat10: string
+  Status: string
+}
+
+/** Flat seat item used by UI save result / callers (not the API body). */
 export type AssignSeatSaveItem = {
   ReservationId: string
   TableNo: string
@@ -127,21 +192,41 @@ export type AssignSeatSaveItem = {
   Name?: string
 }
 
-/** POST SaveAssignSeats body. */
+/**
+ * Desktop CheckInVM.SaveSeats → POST SaveAssignSeats.
+ * NOT a flat AssignSeats[] — server expects table-row models.
+ */
 export type SaveAssignSeatsRequest = {
   ConnectionString: string
   LocationId: string
-  ShowId: string
-  LastUpdateDt: string
-  LastUpdateId: string
-  AssignSeats: AssignSeatSaveItem[]
+  RemoveAssignSeatList: ApiAssignTableModel[]
+  AssignTableNumList: ApiAssignTableModel[]
 }
 
-/** PUT DeleteAllAsignSeat body. */
+/**
+ * Desktop DeleteAssignSeat → PUT DeleteAllAsignSeat.
+ * Only ConnectionString / LocationId / ShowId.
+ */
 export type DeleteAllAssignSeatRequest = {
   ConnectionString: string
   LocationId: string
   ShowId: string
-  LastUpdateDt: string
-  LastUpdateId: string
+}
+
+/** Desktop APIRequest.ReservationTableNum */
+export type ApiReservationTableNum = {
+  ReservationId: string
+  Table: string
+}
+
+/**
+ * Desktop SaveTableNumberInReservation → PUT UpdateTableNumberReservation.
+ */
+export type UpdateTableNumberReservationRequest = {
+  ConnectionString: string
+  LocationId: string
+  ShowId: string
+  IsChkPackage: boolean
+  RemoveReservationIds: string[]
+  AddReservationIds: ApiReservationTableNum[]
 }

@@ -49,6 +49,7 @@ import {
   VENUE_SOCIAL_PLATFORM_OPTIONS,
 } from "@/features/venue-socials/venue-socials.service"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import type {
   VenueSocialFilters,
   VenueSocialPlatform,
@@ -212,11 +213,7 @@ export function VenueSocialsScreen() {
       })
       .catch((requestError: unknown) => {
         if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load venue social links."
-          )
+          reportError(setError, requestError, "Unable to load venue social links.")
         }
       })
       .finally(() => {
@@ -269,7 +266,10 @@ export function VenueSocialsScreen() {
         row.id !== editingSocialId
     )
     if (duplicateRow) {
-      setError("This social platform already exists for the selected location.")
+      reportErrorMessage(
+        setError,
+        "This social platform already exists for the selected location."
+      )
       return
     }
 
@@ -296,7 +296,9 @@ export function VenueSocialsScreen() {
             .map((row) => (row.id === updatedRow.id ? updatedRow : row))
             .sort((left, right) => left.displayOrder - right.displayOrder)
         )
-        setStatusMessage(`Updated ${formatSocialLabel(updatedRow.social)} for ${locationName}.`)
+        const updateMessage = `Updated ${formatSocialLabel(updatedRow.social)} for ${locationName}.`
+        setStatusMessage(updateMessage)
+        toastSuccess(updateMessage)
       } else {
         const createdRow = await createVenueSocial({
           locationId,
@@ -309,16 +311,14 @@ export function VenueSocialsScreen() {
             (left, right) => left.displayOrder - right.displayOrder
           )
         )
-        setStatusMessage(`Added ${formatSocialLabel(createdRow.social)} for ${locationName}.`)
+        const createMessage = `Added ${formatSocialLabel(createdRow.social)} for ${locationName}.`
+        setStatusMessage(createMessage)
+        toastSuccess(createMessage)
       }
 
       closeEditor()
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to save the social link."
-      )
+      reportError(setError, requestError, "Unable to save the social link.")
     } finally {
       setSaving(false)
     }
@@ -343,14 +343,12 @@ export function VenueSocialsScreen() {
       if (editingSocialId === deletingRow.id) {
         closeEditor()
       }
-      setStatusMessage(`Deleted ${formatSocialLabel(deletingRow.social)} from ${locationName}.`)
+      const deleteMessage = `Deleted ${formatSocialLabel(deletingRow.social)} from ${locationName}.`
+      setStatusMessage(deleteMessage)
+      toastSuccess(deleteMessage)
       setDeletingRow(null)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to delete the social link."
-      )
+      reportError(setError, requestError, "Unable to delete the social link.")
     } finally {
       setDeletingId(null)
     }

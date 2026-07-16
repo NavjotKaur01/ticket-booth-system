@@ -35,6 +35,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { getClubmanErrorMessage } from "@/store/api/baseQuery"
 import {
   useAddUpdateFormEmailMutation,
@@ -176,7 +177,7 @@ export function FormEmailsScreen() {
 
   useEffect(() => {
     if (queryError) {
-      setError(getClubmanErrorMessage(queryError))
+      reportErrorMessage(setError, getClubmanErrorMessage(queryError))
       return
     }
 
@@ -242,7 +243,10 @@ export function FormEmailsScreen() {
       (row) => row.emailAddress.toLowerCase() === normalized && row.id !== editingEmailId
     )
     if (duplicateRow) {
-      setError("This email address already exists for the selected form.")
+      reportErrorMessage(
+        setError,
+        "This email address already exists for the selected form."
+      )
       return
     }
 
@@ -258,14 +262,15 @@ export function FormEmailsScreen() {
         Username: username,
       }).unwrap()
 
-      setStatusMessage(
+      const saveMessage =
         editorMode === "edit"
           ? `Updated ${selectedFormLabel} email address for ${locationName}.`
           : `Added a new ${selectedFormLabel} email address for ${locationName}.`
-      )
+      setStatusMessage(saveMessage)
+      toastSuccess(saveMessage)
       closeEditor()
     } catch (requestError) {
-      setError(getClubmanErrorMessage(requestError))
+      reportErrorMessage(setError, getClubmanErrorMessage(requestError))
     }
   }
 
@@ -286,10 +291,12 @@ export function FormEmailsScreen() {
       if (editingEmailId === deletingRow.id) {
         closeEditor()
       }
-      setStatusMessage(`Removed ${deletingRow.emailAddress} from ${selectedFormLabel}.`)
+      const deleteMessage = `Removed ${deletingRow.emailAddress} from ${selectedFormLabel}.`
+      setStatusMessage(deleteMessage)
+      toastSuccess(deleteMessage)
       setDeletingRow(null)
     } catch (requestError) {
-      setError(getClubmanErrorMessage(requestError))
+      reportErrorMessage(setError, getClubmanErrorMessage(requestError))
     } finally {
       setDeletingId(null)
     }

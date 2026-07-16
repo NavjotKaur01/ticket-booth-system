@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 import {
   Dialog,
@@ -10,6 +10,9 @@ import {
   AssignSeatsPanel,
   type AssignSeatsSaveResult,
 } from "@/features/assign-seats"
+import { buildPaymentAssignSeatSeed } from "@/features/assign-seats/assign-seats.service"
+import { toastError } from "@/lib/app-toast"
+import type { ApiReservationToAssignSeat } from "@/types/api/assign-seats"
 import type { Reservation } from "@/types/reservation"
 
 type AssignSeatsDialogProps = {
@@ -20,6 +23,21 @@ type AssignSeatsDialogProps = {
   showId: string
   username: string
   reservation?: Reservation | null
+  /**
+   * Desktop ReservationPayment seed fields (Party / SeatNumbers / section…).
+   * When nested (payment) or paymentSeed is set, Assign Seats uses the local
+   * ReservationList path — same as CheckInVM.GetReservationsToAssignSeats(resList).
+   */
+  paymentSeed?: {
+    qty: number
+    /** Desktop ResAssignSeatNumbers (seat labels), NOT TableNums. */
+    seatNumbers?: string
+    section?: string
+    source?: string
+    promo?: string
+    notes?: string
+    dinner?: boolean | string
+  } | null
   checkInAfterSave?: boolean
   isSubmitting?: boolean
   error?: string | null
@@ -44,6 +62,7 @@ export function AssignSeatsDialog({
   showId,
   username,
   reservation = null,
+  paymentSeed = null,
   checkInAfterSave = false,
   isSubmitting = false,
   error = null,
@@ -56,8 +75,65 @@ export function AssignSeatsDialog({
     ? [reservation.lastName, reservation.firstName].filter(Boolean).join(", ")
     : ""
 
+  /**
+   * Desktop payment always passes ReservationList with one guest.
+   * Use local seed whenever this dialog is nested on Reservation Payment,
+   * or when paymentSeed is explicitly provided.
+   */
+  const useLocalReservationList = nested || Boolean(paymentSeed)
+
+  const seedReservations = useMemo((): ApiReservationToAssignSeat[] | null => {
+    if (!reservation?.id || !useLocalReservationList) {
+      return null
+    }
+
+    const qty =
+      (paymentSeed?.qty && paymentSeed.qty > 0
+        ? paymentSeed.qty
+        : reservation.qty) || 1
+
+    // Desktop Rem = Party − ResAssignSeatNumbers count (SeatNumbers), NOT TableNums.
+    // Passing TableNums here zeroed Rem and hid the guest in the list.
+    const seatNumbers = paymentSeed?.seatNumbers ?? reservation.seatNo ?? ""
+
+    const seed = buildPaymentAssignSeatSeed({
+      reservationId: reservation.id,
+      firstName: reservation.firstName,
+      lastName: reservation.lastName,
+      businessName: reservation.businessName,
+      qty,
+      seatNumbers,
+      section: paymentSeed?.section ?? reservation.section,
+      source: paymentSeed?.source ?? reservation.source,
+      promo: paymentSeed?.promo ?? reservation.promo,
+      notes: paymentSeed?.notes ?? reservation.notes,
+      dinner: paymentSeed?.dinner ?? reservation.din,
+      createDt: reservation.createdDt,
+      resStatus: reservation.resStatus,
+    })
+    return seed ? [seed] : null
+  }, [
+    paymentSeed?.dinner,
+    paymentSeed?.notes,
+    paymentSeed?.promo,
+    paymentSeed?.qty,
+    paymentSeed?.seatNumbers,
+    paymentSeed?.section,
+    paymentSeed?.source,
+    reservation,
+    useLocalReservationList,
+  ])
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          setPanelError(null)
+        }
+        onOpenChange(nextOpen)
+      }}
+    >
       <DialogContent
         showCloseButton
         nested={nested}
@@ -88,9 +164,16 @@ export function AssignSeatsDialog({
             showId={showId}
             username={username}
             initialReservationId={reservation?.id ?? null}
+            seedReservations={seedReservations}
             isSubmitting={isSubmitting}
             error={error ?? panelError}
-            onError={setPanelError}
+            onError={(message) => {
+              setPanelError(message)
+              if (message) {
+                toastError(message)
+              }
+            }}
+            onDismiss={() => onOpenChange(false)}
             onSaved={async (result) => {
               await onSaved({
                 result,

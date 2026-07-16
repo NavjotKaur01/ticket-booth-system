@@ -48,11 +48,24 @@ export function readExpressPanelVisible(
   }
 
   const minutes = Number.parseInt(minutesRaw, 10)
-  if (!Number.isFinite(minutes) || !showDateTime) {
+  if (!Number.isFinite(minutes)) {
     return true
   }
 
+  // Desktop hides Express when minutes window is set but show details are missing.
+  if (!showDateTime) {
+    return false
+  }
+
   const now = new Date()
+  const showDay = new Date(showDateTime)
+  showDay.setHours(0, 0, 0, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  if (showDay < today) {
+    return false
+  }
+
   const windowStart = new Date(showDateTime.getTime() - minutes * 60_000)
   return now >= windowStart
 }
@@ -107,4 +120,66 @@ export function readPaymentPrintDefaults(
     printCashReceipt: isYes("cmdprint3"),
     individualTickets: isYes("cmdprint7"),
   }
+}
+
+/** Screen=PymtMeth Field=cmdExpress — Express button on Payment Method popup. */
+export function readExpressPaymentMethodVisible(
+  defaults: ApiSystemDefaultItem[]
+) {
+  const match = findDefault(
+    defaults,
+    ["pymtmeth", "payment", "check-in tab"],
+    "cmdexpress"
+  )
+  if (!match) {
+    return true
+  }
+
+  return normalize(match.DefValue).toUpperCase() === "Y"
+}
+
+/** Screen=CheckIn Field=cmdCheckIn — show check-in Yes/No after full cash payment. */
+export function readCheckInConfirmOnPaymentVisible(
+  defaults: ApiSystemDefaultItem[]
+) {
+  const match = findDefault(
+    defaults,
+    ["checkin", "check-in", "check-in tab"],
+    "cmdcheckin"
+  )
+  if (!match) {
+    return true
+  }
+
+  return normalize(match.DefValue).toUpperCase() === "Y"
+}
+
+/** Screen=Payment Field=lblTaxes — percent tax rate used by Reservation Payment. */
+export function readPaymentTaxRate(defaults: ApiSystemDefaultItem[]) {
+  const match = findDefault(
+    defaults,
+    ["payment", "reservation", "pymtmeth"],
+    "lbltaxes"
+  )
+  const parsed = Number.parseFloat(normalize(match?.DefValue))
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+/** Screen=Payment Field=lblTaxWithService / lblTaxWithServiceCharge. */
+export function readTaxWithServiceCharge(defaults: ApiSystemDefaultItem[]) {
+  const match =
+    findDefault(defaults, ["payment", "reservation"], "lbltaxwithservicecharge") ??
+    findDefault(defaults, ["payment", "reservation"], "lbltaxwithservice")
+  const value = normalize(match?.DefValue).toUpperCase()
+  return value || undefined
+}
+
+/** Screen=Check-In Tab / PymtMeth Field=cmdPOScc — Express POS card-type mode. */
+export function readExpressPosCcMode(defaults: ApiSystemDefaultItem[]) {
+  const match = findDefault(defaults, EXPRESS_SCREENS, "cmdposcc")
+  if (!match) {
+    return false
+  }
+
+  return normalize(match.DefValue).toLowerCase() === "y"
 }

@@ -1,6 +1,7 @@
 import { Expand, LoaderCircle, Shrink } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 
+import { ConfirmDialog } from "@/components/common/confirm-dialog"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -20,11 +21,14 @@ import {
   clearSeatCell,
   collectAssignments,
   collectTableNumsByReservation,
+  collectTouchedReservationIds,
   extractClubsAssignSeatDetail,
   holdSeatCell,
   removeReservationFromSeats,
   removeSeatsFromTable,
+  sameReservationId,
 } from "@/features/assign-seats/assign-seats.service"
+import { hasAssignSeatChangesToSave } from "@/lib/build-assign-seats-request"
 import type {
   AssignSeatChartState,
   AssignSeatReservationRow,
@@ -38,7 +42,7 @@ import {
   fetchReservationsToAssignSeats,
   saveAssignSeats,
 } from "@/lib/api/assign-seats"
-import { assignReservationSeat } from "@/lib/api/reservation-pos-actions"
+import { updateReservationTableNumbers } from "@/lib/api/reservation-pos-actions"
 import { cn } from "@/lib/utils"
 import type {
   ApiAssignSeatDetail,
@@ -57,12 +61,19 @@ type AssignSeatsPanelProps = {
   showId: string
   username: string
   initialReservationId?: string | null
+  /**
+   * Desktop ReservationPayment → AssignSeats ReservationList seed.
+   * When set, list comes from this (not GetReservationsToAssignSeats).
+   */
+  seedReservations?: ApiReservationToAssignSeat[] | null
   guestLabel?: string
   className?: string
   isSubmitting?: boolean
   error?: string | null
   onError?: (message: string | null) => void
   onSaved?: (result: AssignSeatsSaveResult) => void | Promise<void>
+  /** Desktop Save with no Status=="A" → confirm close → dismiss dialog. */
+  onDismiss?: () => void
 }
 
 function AssignSeatsPanelSkeleton() {
@@ -86,11 +97,13 @@ export function AssignSeatsPanel({
   showId,
   username,
   initialReservationId = null,
+  seedReservations = null,
   className,
   isSubmitting = false,
   error = null,
   onError,
   onSaved,
+  onDismiss,
 }: AssignSeatsPanelProps) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -113,11 +126,25 @@ export function AssignSeatsPanel({
     new Map()
   )
   const chartBlobUrlRef = useRef<string | null>(null)
+  const seedReservationsRef = useRef(seedReservations)
+  seedReservationsRef.current = seedReservations
+
+  /** Stable key so inline seed objects from the payment dialog do not retrigger load forever. */
+  const seedKey =
+    seedReservations
+      ?.map(
+        (row) =>
+          `${row.ReservationId ?? row.ReservationID ?? ""}|${row.Qty ?? row.Party ?? ""}|${row.SeatNumbers ?? ""}|${row.Rem ?? ""}`
+      )
+      .join(";") ?? ""
+
   const [seatCount, setSeatCount] = useState(10)
   const [selectedReservationId, setSelectedReservationId] = useState<
     string | null
   >(initialReservationId)
   const [filter, setFilter] = useState<"dinner" | "all">("all")
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false)
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
 
   const displayError = error ?? localError
 
@@ -138,6 +165,7 @@ export function AssignSeatsPanel({
 
   const loadWorkspace = useCallback(async () => {
     if (!connectionName || !showId) {
+      setLoading(false)
       return
     }
 
@@ -146,6 +174,8 @@ export function AssignSeatsPanel({
 
     try {
       const columbusStyle = isColumbusStyleConnection(connectionName)
+      const seed = seedReservationsRef.current
+      const paymentSeed = seed && seed.length > 0 ? seed : null
 
       if (!columbusStyle && !locationId) {
         throw new Error(
@@ -164,7 +194,10 @@ export function AssignSeatsPanel({
             ? fetchClubsAssignSeatDetail({ connectionName, locationId })
             : Promise.resolve(null as ApiClubsAssignSeatDetail | null),
           fetchAssignSeatDetails({ connectionName, showId }),
-          fetchReservationsToAssignSeats({ connectionName, showId }),
+          // Desktop payment path skips this API when ReservationList is seeded.
+          paymentSeed
+            ? Promise.resolve([] as ApiReservationToAssignSeat[])
+            : fetchReservationsToAssignSeats({ connectionName, showId }),
         ])
 
       const columbus: Awaited<
@@ -184,11 +217,72 @@ export function AssignSeatsPanel({
       const clubsDetail = extractClubsAssignSeatDetail(clubsDetailRaw)
       const details: ApiAssignSeatDetail[] =
         detailsResult.status === "fulfilled" ? detailsResult.value : []
-      const reservationRows: ApiReservationToAssignSeat[] =
-        reservationResult.status === "fulfilled" ? reservationResult.value : []
+      if (detailsResult.status === "rejected") {
+        console.warn("GetAssignSeatDetails failed:", detailsResult.reason)
+      }
 
-      if (reservationResult.status === "rejected") {
-        throw reservationResult.reason
+      let reservationRows: ApiReservationToAssignSeat[] = paymentSeed ?? []
+      let reservationLoadError: string | null = null
+
+      if (!paymentSeed) {
+        if (reservationResult.status === "fulfilled") {
+          reservationRows = reservationResult.value
+        } else {
+          // Soft-fail: chart/details can still load (desktop shows API message).
+          reservationLoadError =
+            reservationResult.reason instanceof Error
+              ? reservationResult.reason.message
+              : "Failed to load reservations to assign"
+          console.warn(
+            "GetReservationsToAssignSeats failed:",
+            reservationResult.reason
+          )
+        }
+      }
+
+      // If API returned nothing / failed but we have a focused reservation with
+      // chart seats, synthesize a row so the guest can still be selected.
+      if (
+        reservationRows.length === 0 &&
+        initialReservationId &&
+        details.length > 0
+      ) {
+        const fromDetails = details.filter((detail) => {
+          const record = detail as Record<string, unknown>
+          const id = String(
+            record.ReservationId ??
+              record.ReservationID ??
+              record.reservationId ??
+              ""
+          )
+          return sameReservationId(id, initialReservationId)
+        })
+        if (fromDetails.length > 0) {
+          const first = fromDetails[0] as Record<string, unknown>
+          const lastName = String(first.LastName ?? first.lastName ?? "")
+          const firstName = String(first.FirstName ?? first.firstName ?? "")
+          reservationRows = [
+            {
+              ReservationId: initialReservationId,
+              ReservationID: initialReservationId,
+              Name:
+                String(first.Name ?? "") ||
+                [firstName, lastName].filter(Boolean).join(" "),
+              LastName: lastName,
+              FirstName: firstName,
+              Qty: fromDetails.length,
+              Party: fromDetails.length,
+              Rem: fromDetails.length,
+              Dinner:
+                first.Dinner != null || first.IsDinner != null
+                  ? String(first.Dinner ?? first.IsDinner)
+                  : "N",
+              Source: String(first.Source ?? first.ResSource ?? ""),
+              Promo: String(first.Promo ?? ""),
+            },
+          ]
+          reservationLoadError = null
+        }
       }
 
       const apiChartImage =
@@ -205,7 +299,9 @@ export function AssignSeatsPanel({
         details,
         reservations: reservationRows,
         connectionName,
-        filterReservationId: initialReservationId,
+        // Payment seed is already a single-guest list; do not re-filter away.
+        filterReservationId: paymentSeed ? null : initialReservationId,
+        preserveSeedRem: Boolean(paymentSeed),
       })
 
       const imageUrl = resolveAssignSeatChartUrl({
@@ -273,20 +369,33 @@ export function AssignSeatsPanel({
       setSeatCount(workspace.seatCount)
       setChartVisible(true)
 
+      if (reservationLoadError && workspace.reservations.length === 0) {
+        setErrorMessage(reservationLoadError)
+      } else {
+        setErrorMessage(null)
+      }
+
       setSelectedReservationId((current) => {
         if (
           initialReservationId &&
-          workspace.reservations.some((row) => row.id === initialReservationId)
+          workspace.reservations.some((row) =>
+            sameReservationId(row.id, initialReservationId)
+          )
         ) {
-          return initialReservationId
+          const match = workspace.reservations.find((row) =>
+            sameReservationId(row.id, initialReservationId)
+          )
+          return match?.id ?? initialReservationId
         }
         if (
           current &&
-          workspace.reservations.some((row) => row.id === current)
+          workspace.reservations.some((row) =>
+            sameReservationId(row.id, current)
+          )
         ) {
           return current
         }
-        return workspace.reservations[0]?.id ?? null
+        return workspace.reservations[0]?.id ?? initialReservationId ?? null
       })
     } catch (loadError) {
       setErrorMessage(
@@ -301,6 +410,7 @@ export function AssignSeatsPanel({
     connectionName,
     initialReservationId,
     locationId,
+    seedKey,
     setErrorMessage,
     showId,
   ])
@@ -383,6 +493,12 @@ export function AssignSeatsPanel({
   }
 
   async function handleClear() {
+    // Desktop ClearAssignSeats: confirm first, then DeleteAllAsignSeat.
+    setClearConfirmOpen(true)
+  }
+
+  async function confirmClearAssignSeats() {
+    setClearConfirmOpen(false)
     setClearing(true)
     setErrorMessage(null)
 
@@ -413,30 +529,44 @@ export function AssignSeatsPanel({
   }
 
   async function handleSave() {
-    setSaving(true)
     setErrorMessage(null)
 
+    // Desktop CheckInVM.SaveAssignSeats: no Status=="A" and no removals →
+    // "No Records" / "Are you want to close window?" — do not POST other guests' seats.
+    if (!hasAssignSeatChangesToSave(tables, [])) {
+      setCloseConfirmOpen(true)
+      return
+    }
+
+    setSaving(true)
+
     try {
-      const assignments = collectAssignments(tables)
+      // Desktop SaveSeats → only Status=="A" tables in AssignTableNumList
       await saveAssignSeats({
         connectionName,
         locationId,
         showId,
-        lastUpdateId: username,
-        assignSeats: assignments,
+        tables,
+        removeAssignSeatList: [],
       })
 
-      const tableNumsByReservation = collectTableNumsByReservation(tables)
-      for (const row of tableNumsByReservation) {
-        await assignReservationSeat({
+      // Desktop SaveTableNumberInReservation: only reservations touched this session
+      const touchedIds = collectTouchedReservationIds(tables)
+      const tableNumsByReservation = collectTableNumsByReservation(tables, {
+        onlyReservationIds: touchedIds,
+      })
+      if (tableNumsByReservation.length > 0) {
+        await updateReservationTableNumbers({
           connectionName,
           locationId,
-          reservationId: row.reservationId,
-          tableNums: row.tableNums,
-          lastUpdateId: username,
+          showId,
+          addReservationIds: tableNumsByReservation,
         })
       }
 
+      const assignments = collectAssignments(
+        tables.filter((table) => table.status === "A")
+      )
       await onSaved?.({ assignments, tableNumsByReservation })
     } catch (saveError) {
       setErrorMessage(
@@ -453,7 +583,7 @@ export function AssignSeatsPanel({
 
   return (
     <div
-      className={cn(
+        className={cn(
         "relative flex min-h-0 flex-1 flex-col bg-background",
         expanded &&
           "fixed inset-3 z-50 rounded-lg border border-border/80 bg-background shadow-xl",
@@ -486,6 +616,7 @@ export function AssignSeatsPanel({
               <AssignSeatsReservationList
                 reservations={reservations}
                 selectedReservationId={selectedReservationId}
+                pinnedReservationId={initialReservationId}
                 filter={filter}
                 onFilterChange={setFilter}
                 onSelect={setSelectedReservationId}
@@ -573,6 +704,35 @@ export function AssignSeatsPanel({
           ) : null}
         </>
       )}
+
+      {/* Desktop No Records → close confirm (nested above Assign Seats). */}
+      <ConfirmDialog
+        open={closeConfirmOpen}
+        onOpenChange={setCloseConfirmOpen}
+        nested
+        title="No Records"
+        description="Are you want to close window?"
+        confirmLabel="Yes"
+        cancelLabel="No"
+        onConfirm={() => {
+          setCloseConfirmOpen(false)
+          onDismiss?.()
+        }}
+      />
+
+      {/* Desktop ClearAssignSeats → UnAssign seats confirm. */}
+      <ConfirmDialog
+        open={clearConfirmOpen}
+        onOpenChange={setClearConfirmOpen}
+        nested
+        title="UnAssign seats"
+        description="Are you sure you want to clear all assignments off grid and reset tables?"
+        confirmLabel="Yes"
+        cancelLabel="No"
+        onConfirm={() => {
+          void confirmClearAssignSeats()
+        }}
+      />
     </div>
   )
 }

@@ -48,6 +48,7 @@ import {
   updateEmploymentQuestion,
 } from "@/features/employment-questions/employment-questions.service"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import type { EmploymentQuestionRecord } from "@/types/employment-question"
 
 const ACTIVE_OPTIONS = [
@@ -162,11 +163,7 @@ export function EmploymentQuestionsScreen() {
       })
       .catch((requestError: unknown) => {
         if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load employment questions."
-          )
+          reportError(setError, requestError, "Unable to load employment questions.")
         }
       })
       .finally(() => {
@@ -217,7 +214,10 @@ export function EmploymentQuestionsScreen() {
         row.id !== editingQuestionId
     )
     if (duplicateRow) {
-      setError("This employment question already exists for the selected location.")
+      reportErrorMessage(
+        setError,
+        "This employment question already exists for the selected location."
+      )
       return
     }
 
@@ -237,7 +237,9 @@ export function EmploymentQuestionsScreen() {
         setRows((current) =>
           current.map((row) => (row.id === updatedRow.id ? updatedRow : row))
         )
-        setStatusMessage(`Updated employment question for ${locationName}.`)
+        const updateMessage = `Updated employment question for ${locationName}.`
+        setStatusMessage(updateMessage)
+        toastSuccess(updateMessage)
       } else {
         const createdRow = await createEmploymentQuestion({
           locationId: locationId,
@@ -247,16 +249,14 @@ export function EmploymentQuestionsScreen() {
         })
 
         setRows((current) => [createdRow, ...current])
-        setStatusMessage(`Added a new employment question for ${locationName}.`)
+        const createMessage = `Added a new employment question for ${locationName}.`
+        setStatusMessage(createMessage)
+        toastSuccess(createMessage)
       }
 
       closeEditor()
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to save the employment question."
-      )
+      reportError(setError, requestError, "Unable to save the employment question.")
     } finally {
       setSaving(false)
     }
@@ -281,14 +281,12 @@ export function EmploymentQuestionsScreen() {
       if (editingQuestionId === deletingRow.id) {
         closeEditor()
       }
-      setStatusMessage(`Deleted employment question for ${locationName}.`)
+      const deleteMessage = `Deleted employment question for ${locationName}.`
+      setStatusMessage(deleteMessage)
+      toastSuccess(deleteMessage)
       setDeletingRow(null)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to delete the employment question."
-      )
+      reportError(setError, requestError, "Unable to delete the employment question.")
     } finally {
       setDeletingId(null)
     }

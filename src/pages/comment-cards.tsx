@@ -12,6 +12,7 @@ import { CustomerDetailsDialog } from "@/features/customers/customer-details-dia
 import { CustomerSearchToolbar } from "@/features/customers/customer-search-toolbar"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useCustomerSearch } from "@/hooks/use-customer-search"
+import { reportError, toastError, toastSuccess } from "@/lib/app-toast"
 import { customerFormToSearchFilters } from "@/lib/build-save-customer-request"
 import { deleteCustomerRecord } from "@/lib/delete-customer"
 import { exportCustomerRecords } from "@/lib/export-customers"
@@ -124,12 +125,12 @@ export function CommentCards() {
 
   function handleExportOpen() {
     if (loading) {
-      window.alert("Please wait while loading data....")
+      toastError("Please wait while loading data....")
       return
     }
 
     if (exportRows.length === 0) {
-      window.alert("Please search customer first!")
+      toastError("Please search customer first!")
       return
     }
 
@@ -160,13 +161,9 @@ export function CommentCards() {
       setDetailsCustomer(null)
       setAddOpen(false)
       setEditCustomer(null)
+      toastSuccess("Customer deleted")
     } catch (requestError) {
-      const message =
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to delete customer."
-      setActionError(message)
-      window.alert(message)
+      reportError(setActionError, requestError, "Unable to delete customer.")
     }
   }
 

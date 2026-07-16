@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { securityLevelOptions, userStatusOptions } from "@/data/users"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import {
   adminUserToFormValues,
   formValuesToAdminUser,
@@ -105,7 +106,9 @@ export function EditUserDialog({
   async function handleSave() {
     const validationError = validateForm()
     if (validationError || !user) {
-      setError(validationError)
+      if (validationError) {
+        reportErrorMessage(setError, validationError)
+      }
       return
     }
 
@@ -124,14 +127,11 @@ export function EditUserDialog({
       await updateSystemUser(request)
 
       const updatedUser = formValuesToAdminUser(user, form, lastUpdateId)
+      toastSuccess("User updated")
       await onSaved?.(updatedUser)
       onOpenChange(false)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to update user"
-      )
+      reportError(setError, requestError, "Failed to update user")
     } finally {
       setSaving(false)
     }

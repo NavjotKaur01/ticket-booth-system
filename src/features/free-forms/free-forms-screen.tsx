@@ -48,6 +48,7 @@ import {
   updateFreeForm,
 } from "@/features/free-forms/free-forms.service"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import type { FreeFormRecord } from "@/types/free-form"
 
 const ACTIVE_OPTIONS = [
@@ -185,11 +186,7 @@ export function FreeFormsScreen() {
       })
       .catch((requestError: unknown) => {
         if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load free forms."
-          )
+          reportError(setError, requestError, "Unable to load free forms.")
         }
       })
       .finally(() => {
@@ -249,7 +246,10 @@ export function FreeFormsScreen() {
         row.id !== editingFreeFormId
     )
     if (duplicateRow) {
-      setError("This button text already exists for the selected location.")
+      reportErrorMessage(
+        setError,
+        "This button text already exists for the selected location."
+      )
       return
     }
 
@@ -274,7 +274,9 @@ export function FreeFormsScreen() {
             .map((row) => (row.id === updatedRow.id ? updatedRow : row))
             .sort((left, right) => left.displayOrder - right.displayOrder)
         )
-        setStatusMessage(`Updated free form for ${locationName}.`)
+        const updateMessage = `Updated free form for ${locationName}.`
+        setStatusMessage(updateMessage)
+        toastSuccess(updateMessage)
       } else {
         const createdRow = await createFreeForm({
           locationId: locationId,
@@ -290,16 +292,14 @@ export function FreeFormsScreen() {
             (left, right) => left.displayOrder - right.displayOrder
           )
         )
-        setStatusMessage(`Created a new free form for ${locationName}.`)
+        const createMessage = `Created a new free form for ${locationName}.`
+        setStatusMessage(createMessage)
+        toastSuccess(createMessage)
       }
 
       closeEditor()
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to save the free form."
-      )
+      reportError(setError, requestError, "Unable to save the free form.")
     } finally {
       setSaving(false)
     }
@@ -326,14 +326,12 @@ export function FreeFormsScreen() {
       if (editingFreeFormId === deletingRow.id) {
         closeEditor()
       }
-      setStatusMessage(`Deleted free form for ${locationName}.`)
+      const deleteMessage = `Deleted free form for ${locationName}.`
+      setStatusMessage(deleteMessage)
+      toastSuccess(deleteMessage)
       setDeletingRow(null)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to delete the free form."
-      )
+      reportError(setError, requestError, "Unable to delete the free form.")
     } finally {
       setDeletingId(null)
     }

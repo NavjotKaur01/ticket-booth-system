@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { countryOptions, usStateOptions } from "@/data/customer-form-options"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import {
   getBusinessContactById,
   saveBusinessContact,
@@ -118,10 +119,10 @@ export function AddBusinessContactDialog({
         setForm(mapBusinessContactToForm(details))
       } catch (requestError) {
         if (!cancelled) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load business contact details."
+          reportError(
+            setError,
+            requestError,
+            "Unable to load business contact details."
           )
         }
       } finally {
@@ -163,7 +164,7 @@ export function AddBusinessContactDialog({
   async function handleSave() {
     const validationError = validateForm()
     if (validationError) {
-      setError(validationError)
+      reportErrorMessage(setError, validationError)
       return
     }
 
@@ -188,14 +189,13 @@ export function AddBusinessContactDialog({
         })
       }
 
+      toastSuccess(
+        isEditMode ? "Business contact updated" : "Business contact saved"
+      )
       await onSaved?.(form)
       onOpenChange(false)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to save business contact."
-      )
+      reportError(setError, requestError, "Unable to save business contact.")
     } finally {
       setSaving(false)
     }

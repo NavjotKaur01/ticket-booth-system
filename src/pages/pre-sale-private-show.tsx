@@ -7,6 +7,7 @@ import { AddPreSaleDialog } from "@/features/pre-sale/add-pre-sale-dialog"
 import { PreSaleDataTable } from "@/features/pre-sale/pre-sale-data-table"
 import { useAppSession } from "@/hooks/use-app-session"
 import { usePrivateShowLinks } from "@/hooks/use-private-show-links"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { deletePrivateShowLink } from "@/lib/api/private-show-links"
 import { buildDeletePrivateShowLinkRequest } from "@/lib/build-private-show-link-request"
 import { copyTextToClipboard } from "@/lib/export-table-data"
@@ -26,30 +27,31 @@ export function PreSalePrivateShow() {
   async function handleSaved() {
     setActionError(null)
     await refresh()
+    toastSuccess("Private show link saved")
   }
 
   async function handleCopy(record: PreSaleRecord) {
     const link = record.privateLink.trim()
     if (!link) {
-      setActionError("No private link available to copy.")
+      reportErrorMessage(setActionError, "No private link available to copy.")
       return
     }
 
     try {
       await copyTextToClipboard(link)
       setActionError(null)
+      toastSuccess("Private link copied")
     } catch (copyError) {
-      setActionError(
-        copyError instanceof Error
-          ? copyError.message
-          : "Unable to copy private link."
-      )
+      reportError(setActionError, copyError, "Unable to copy private link.")
     }
   }
 
   async function handleDelete(record: PreSaleRecord) {
     if (!isReady || !connectionName || !locationId) {
-      setActionError("Location is required before deleting a private show link.")
+      reportErrorMessage(
+        setActionError,
+        "Location is required before deleting a private show link."
+      )
       return
     }
 
@@ -66,12 +68,9 @@ export function PreSalePrivateShow() {
         })
       )
       await refresh()
+      toastSuccess("Private show link deleted")
     } catch (deleteError) {
-      setActionError(
-        deleteError instanceof Error
-          ? deleteError.message
-          : "Unable to delete private show link."
-      )
+      reportError(setActionError, deleteError, "Unable to delete private show link.")
     }
   }
 

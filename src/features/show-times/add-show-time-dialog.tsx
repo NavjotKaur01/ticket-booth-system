@@ -28,6 +28,7 @@ import {
 } from "@/data/show-time-form-options"
 import { ShowTimeSectionActionsMenu } from "@/features/show-times/show-time-row-actions-menu"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import {
   getDefShowInfo,
   saveShowDef,
@@ -191,10 +192,10 @@ export function AddShowTimeDialog({
       })
       .catch((loadError) => {
         if (cancelled) return
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "Unable to load show time details."
+        reportError(
+          setError,
+          loadError,
+          "Unable to load show time details."
         )
       })
       .finally(() => {
@@ -235,7 +236,7 @@ export function AddShowTimeDialog({
 
   function handleAddSection() {
     if (!form.sectionId) {
-      setError("Select a section before adding.")
+      reportErrorMessage(setError, "Select a section before adding.")
       return
     }
 
@@ -275,11 +276,14 @@ export function AddShowTimeDialog({
 
   async function handleSave() {
     if (!isReady || !connectionName || !locationId) {
-      setError("Location is required before saving a show time.")
+      reportErrorMessage(
+        setError,
+        "Location is required before saving a show time."
+      )
       return
     }
     if (form.sections.length === 0) {
-      setError("Add at least one section before saving.")
+      reportErrorMessage(setError, "Add at least one section before saving.")
       return
     }
 
@@ -311,7 +315,7 @@ export function AddShowTimeDialog({
           sectionLookups,
         })
         if (requests.length === 0) {
-          setError("Select at least one day before saving.")
+          reportErrorMessage(setError, "Select at least one day before saving.")
           return
         }
         for (const request of requests) {
@@ -319,14 +323,11 @@ export function AddShowTimeDialog({
         }
       }
 
+      toastSuccess(isEdit ? "Show time updated" : "Show time saved")
       await onSaved?.()
       onOpenChange(false)
     } catch (saveError) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : "Unable to save show time."
-      )
+      reportError(setError, saveError, "Unable to save show time.")
     } finally {
       setSaving(false)
     }

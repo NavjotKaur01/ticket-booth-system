@@ -4,6 +4,7 @@ import {
   calculateReservationTotals,
   parseReservationMoney,
 } from "@/lib/calculate-reservation-totals"
+import { calculateExpressWalkupServiceCharge } from "@/features/check-in/service/express-panel.service"
 import { EXPRESS_WALKUP_CUSTOMER_ID } from "@/lib/express-walkup-customer"
 import { EMPTY_RESERVATION_CUSTOMER_SEARCH_CRITERIA } from "@/lib/reservation-customer-search-criteria"
 import { createEmptyReservationPaymentFields } from "@/types/reservation-payment"
@@ -21,10 +22,15 @@ type SaveExpressWalkupParams = {
   passes: number
   promo: ReservationPromo | null
   paymentType: ReservationPaymentType
+  /** Tendered amount — must be >= due; persisted amount is always Total (desktop). */
   paymentAmount: number
+  cardType?: string
   dinner?: boolean
   notes?: string
   checkInAfterSave?: boolean
+  showDate?: string
+  taxRatePercent?: number
+  taxWithServiceCharge?: string
 }
 
 /** Create a walk-up reservation with payment (express panel / express walkup). */
@@ -39,10 +45,21 @@ export async function saveExpressWalkupReservation({
   promo,
   paymentType,
   paymentAmount,
+  cardType,
   dinner = false,
   notes = "",
   checkInAfterSave = false,
+  showDate,
+  taxRatePercent = 0,
+  taxWithServiceCharge,
 }: SaveExpressWalkupParams) {
+  const baseSvcAmount = calculateExpressWalkupServiceCharge({
+    walkUpFee: section.walkUpFee ?? 0,
+    dayOfShowFee: section.dayOfShowFee ?? 0,
+    quantity: party,
+    showDate,
+  })
+
   const totals = calculateReservationTotals({
     sectionPrice: section.showPrice || section.price,
     sectionShowPrice: section.showPrice,
@@ -50,13 +67,20 @@ export async function saveExpressWalkupReservation({
     party,
     passes,
     promo,
-    baseSvcAmount: section.walkUpFee || undefined,
+    baseSvcAmount: party > 0 ? baseSvcAmount : undefined,
+    systemTaxRate: taxRatePercent,
+    taxWithServiceCharge,
   })
 
   if (paymentAmount + 0.001 < totals.total) {
     throw new Error(
       "Express Pay requires full payment when reservation is made.Amount of payment is less then the amount due.  Cannot continue."
     )
+  }
+
+  const paymentFields = createEmptyReservationPaymentFields()
+  if (cardType?.trim()) {
+    paymentFields.cardType = cardType.trim()
   }
 
   const request = buildSaveReservationWithPaymentRequest({
@@ -68,8 +92,8 @@ export async function saveExpressWalkupReservation({
     customerId: EXPRESS_WALKUP_CUSTOMER_ID,
     searchCriteria: {
       ...EMPTY_RESERVATION_CUSTOMER_SEARCH_CRITERIA,
-      lastName: "WALKUP",
-      firstName: "EXPRESS",
+      lastName: "ZzzExpress",
+      firstName: "ZzzCustomer",
     },
     selectedSection: section,
     origin: "walkup",
@@ -80,9 +104,10 @@ export async function saveExpressWalkupReservation({
     notes,
     dinner,
     isReservationCheckedIn: checkInAfterSave,
-    paymentAmount: Math.max(paymentAmount, totals.total),
+    // Desktop SaveSalesTransaction / SavePOSTypePayment: PaymentAmount = Total.
+    paymentAmount: totals.total,
     paymentType,
-    paymentFields: createEmptyReservationPaymentFields(),
+    paymentFields,
   })
 
   const ids = await createNewReservation(request)

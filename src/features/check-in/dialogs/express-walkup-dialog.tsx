@@ -19,19 +19,28 @@ import {
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProcessPaymentDialog } from "@/features/check-in/dialogs/process-payment-dialog"
-import { SalesTransactionDialog } from "@/features/check-in/dialogs/sales-transaction-dialog"
+import { ExpressWalkupCustomerSearchDialog } from "@/features/check-in/dialogs/express-walkup-customer-search-dialog"
+import { ExpressWalkupPaymentMethodDialog } from "@/features/check-in/dialogs/express-walkup-payment-method-dialog"
+import {
+  buildExpressWalkupPaymentSeed,
+  type ExpressWalkupBookingPayload,
+  type ExpressWalkupPaymentSeed,
+} from "@/features/check-in/service/express-walkup-payment.types"
+import { EXPRESS_WALKUP_CUSTOMER_ID } from "@/lib/express-walkup-customer"
 import { ComicInfoDialog } from "@/features/reservations/comic-info-dialog"
 import {
   buildExpressWalkupTitle,
   calculateExpressWalkupTotals,
   createExpressWalkupFormValues,
+  estimateExpressWalkupTicketUnitPrice,
   EXPRESS_WALKUP_TICKET_COUNTS,
   formatExpressWalkupShowDate,
+  isExpressWalkupShowDateAllowed,
   type ExpressWalkupFormValues,
   type ExpressWalkupTotals,
 } from "@/features/check-in/service/express-walkup.service"
-import type { ExpressPaymentType } from "@/features/check-in/service/express-panel.service"
 import { useCachedReservationShowData } from "@/hooks/use-cached-reservation-show-data"
+import type { ReservationCustomerSearchResult } from "@/data/reservation-search-results"
 import type { ComicInfo } from "@/data/comedian-info"
 import {
   isUsableComicId,
@@ -59,18 +68,18 @@ const TOTAL_ACTION_GRID = "grid gap-3 md:grid-cols-2"
 function TicketCountGrid({
   counts,
   selectedCount,
-  ticketPrice,
+  ticketUnitPrice,
   onSelect,
 }: {
   counts: number[]
   selectedCount: number
-  ticketPrice: number
+  ticketUnitPrice: number
   onSelect: (count: number) => void
 }) {
   return (
     <div className={TICKET_GRID_CLASS}>
       {counts.map((count) => {
-        const total = ticketPrice * count
+        const total = ticketUnitPrice * count
         const isSelected = selectedCount === count
 
         return (
@@ -136,7 +145,17 @@ type ExpressWalkupDialogProps = {
   shows?: ShowOption[]
   isSubmitting?: boolean
   error?: string | null
-  onContinue?: (payload: ExpressWalkupContinuePayload) => void | Promise<void>
+  /** Desktop PymtMeth/cmdExpress — show Express button on Payment Method. */
+  showExpressPayment?: boolean
+  /** System default lblTaxes (percent). */
+  taxRatePercent?: number
+  taxWithServiceCharge?: string
+  /** Quick Pay (CC) save — same as previous direct continue save. */
+  onQuickPaySave?: (
+    payload: ExpressWalkupContinuePayload
+  ) => void | Promise<void>
+  /** Other / Express → open Reservation Payment (Add Reservation seeded). */
+  onOpenReservationPayment?: (seed: ExpressWalkupPaymentSeed) => void
   onShowTimeChange?: (showTimeId: string) => void
 }
 
@@ -151,7 +170,11 @@ export function ExpressWalkupDialog({
   shows = [],
   isSubmitting = false,
   error = null,
-  onContinue,
+  showExpressPayment = true,
+  taxRatePercent = 0,
+  taxWithServiceCharge,
+  onQuickPaySave,
+  onOpenReservationPayment,
   onShowTimeChange,
 }: ExpressWalkupDialogProps) {
   const [formValues, setFormValues] = useState<ExpressWalkupFormValues | null>(
@@ -160,9 +183,10 @@ export function ExpressWalkupDialog({
   const [totals, setTotals] = useState<ExpressWalkupTotals | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
   const [isComicInfoOpen, setIsComicInfoOpen] = useState(false)
-  const [paymentStep, setPaymentStep] = useState<ExpressPaymentType | null>(
-    null
-  )
+  const [paymentMethodOpen, setPaymentMethodOpen] = useState(false)
+  const [processPaymentOpen, setProcessPaymentOpen] = useState(false)
+  const [customerSearchOpen, setCustomerSearchOpen] = useState(false)
+  const [localError, setLocalError] = useState<string | null>(null)
   const suppressNextParentCloseRef = useRef(false)
 
   const selectedShowTimeId = formValues?.showTimeId || showTimeId
@@ -244,8 +268,11 @@ export function ExpressWalkupDialog({
     if (!open) {
       setFormValues(null)
       setTotals(null)
-      setPaymentStep(null)
+      setPaymentMethodOpen(false)
+      setProcessPaymentOpen(false)
+      setCustomerSearchOpen(false)
       setIsComicInfoOpen(false)
+      setLocalError(null)
       return
     }
 
@@ -284,6 +311,18 @@ export function ExpressWalkupDialog({
   }, [formValues, open, sections])
 
   useEffect(() => {
+    if (!open || !formValues || !selectedSection) {
+      return
+    }
+
+    if (selectedSection.showDinner !== "Y" && formValues.dinner) {
+      setFormValues((current) =>
+        current ? { ...current, dinner: false } : current
+      )
+    }
+  }, [formValues, open, selectedSection])
+
+  useEffect(() => {
     if (!open || !formValues || sections.length === 0) {
       return
     }
@@ -293,9 +332,20 @@ export function ExpressWalkupDialog({
         formValues,
         sections,
         promo: selectedPromo,
+        showDate,
+        taxRatePercent,
+        taxWithServiceCharge,
       })
     )
-  }, [formValues, open, sections, selectedPromo])
+  }, [
+    formValues,
+    open,
+    sections,
+    selectedPromo,
+    showDate,
+    taxRatePercent,
+    taxWithServiceCharge,
+  ])
 
   function updateField<K extends keyof ExpressWalkupFormValues>(
     field: K,
@@ -312,8 +362,8 @@ export function ExpressWalkupDialog({
   }
 
   function handleTicketCountSelect(count: number) {
+    // Desktop ExpressPartyIncrement sets Party only; Passes stay independent.
     updateField("party", String(count))
-    updateField("passes", String(count))
   }
 
   function handleCalculate() {
@@ -328,6 +378,9 @@ export function ExpressWalkupDialog({
           formValues,
           sections,
           promo: selectedPromo,
+          showDate,
+          taxRatePercent,
+          taxWithServiceCharge,
         })
       )
       setIsCalculating(false)
@@ -340,10 +393,18 @@ export function ExpressWalkupDialog({
       return
     }
 
-    if (!nextOpen && (isComicInfoOpen || paymentStep)) {
+    if (
+      !nextOpen &&
+      (isComicInfoOpen ||
+        paymentMethodOpen ||
+        processPaymentOpen ||
+        customerSearchOpen)
+    ) {
       suppressNextParentCloseRef.current = true
       setIsComicInfoOpen(false)
-      setPaymentStep(null)
+      setPaymentMethodOpen(false)
+      setProcessPaymentOpen(false)
+      setCustomerSearchOpen(false)
       return
     }
 
@@ -358,52 +419,159 @@ export function ExpressWalkupDialog({
     setIsComicInfoOpen(nextOpen)
   }
 
-  function handlePaymentOpenChange(nextOpen: boolean) {
+  function handleNestedOpenChange(
+    setter: (open: boolean) => void,
+    nextOpen: boolean
+  ) {
     if (!nextOpen) {
       suppressNextParentCloseRef.current = true
-      setPaymentStep(null)
+      setter(false)
     }
   }
 
-  async function completePayment() {
+  function buildBookingPayload(): ExpressWalkupBookingPayload | null {
     if (!formValues || !selectedSection || !totals) {
-      return
+      return null
     }
 
     const party = Math.max(1, Number(formValues.party) || 1)
     const passes = Math.max(0, Number(formValues.passes) || 0)
 
+    return {
+      showTimeId: formValues.showTimeId || showTimeId,
+      section: selectedSection,
+      party,
+      passes: passes || party,
+      promo: selectedPromo,
+      dinner: formValues.dinner,
+      paymentDue: totals.paymentDue,
+    }
+  }
+
+  async function completeQuickPay() {
+    const booking = buildBookingPayload()
+    if (!booking) {
+      return
+    }
+
+    if (!isExpressWalkupShowDateAllowed(showDate)) {
+      setLocalError("Show Date can't be prior than today.")
+      setProcessPaymentOpen(false)
+      return
+    }
+
+    setLocalError(null)
+
     await Promise.resolve(
-      onContinue?.({
-        showTimeId: formValues.showTimeId || showTimeId,
-        section: selectedSection,
-        party,
-        passes: passes || party,
-        promo: selectedPromo,
-        dinner: formValues.dinner,
-        paymentType: paymentStep === "Credit Card" ? "credit-card" : "cash",
-        paymentAmount: totals.paymentDue,
+      onQuickPaySave?.({
+        showTimeId: booking.showTimeId,
+        section: booking.section,
+        party: booking.party,
+        passes: booking.passes,
+        promo: booking.promo,
+        dinner: booking.dinner,
+        paymentType: "credit-card",
+        paymentAmount: booking.paymentDue,
       })
     )
 
-    setPaymentStep(null)
+    setProcessPaymentOpen(false)
   }
 
-  function handleContinue(paymentType: ExpressPaymentType) {
+  function handleContinue() {
     if (!formValues || !selectedSection || !totals) {
       return
+    }
+
+    if (!isExpressWalkupShowDateAllowed(showDate)) {
+      setLocalError("Show Date can't be prior than today.")
+      return
+    }
+
+    const party = Math.max(1, Number(formValues.party) || 1)
+    const available = selectedSection.available ?? 0
+    if (party > available) {
+      setLocalError(
+        `Party size (${party}) exceeds available seats (${available}).`
+      )
+    } else {
+      setLocalError(null)
     }
 
     const nextTotals = calculateExpressWalkupTotals({
       formValues,
       sections,
       promo: selectedPromo,
+      showDate,
+      taxRatePercent,
+      taxWithServiceCharge,
     })
     setTotals(nextTotals)
-    setPaymentStep(paymentType)
+    setPaymentMethodOpen(true)
+  }
+
+  function handleQuickPay() {
+    setPaymentMethodOpen(false)
+    setProcessPaymentOpen(true)
+  }
+
+  function handleOther() {
+    setPaymentMethodOpen(false)
+    setCustomerSearchOpen(true)
+  }
+
+  function handleExpress() {
+    const booking = buildBookingPayload()
+    if (!booking) {
+      return
+    }
+
+    if (!isExpressWalkupShowDateAllowed(showDate)) {
+      setLocalError("Show Date can't be prior than today.")
+      return
+    }
+
+    setPaymentMethodOpen(false)
+    onOpenReservationPayment?.(
+      buildExpressWalkupPaymentSeed({
+        booking,
+        customer: {
+          id: EXPRESS_WALKUP_CUSTOMER_ID,
+          lastName: "ZzzExpress",
+          firstName: "ZzzCustomer",
+          email: "",
+          phoneNo: "",
+        },
+        isExpressRequest: true,
+      })
+    )
+  }
+
+  function handleCustomerSelected(customer: ReservationCustomerSearchResult) {
+    const booking = buildBookingPayload()
+    if (!booking) {
+      return
+    }
+
+    setCustomerSearchOpen(false)
+    onOpenReservationPayment?.(
+      buildExpressWalkupPaymentSeed({
+        booking,
+        customer,
+        isExpressRequest: false,
+      })
+    )
   }
 
   const title = buildExpressWalkupTitle(selectedShow, showDate)
+  const ticketUnitPrice = estimateExpressWalkupTicketUnitPrice({
+    section: selectedSection,
+    showDate,
+    taxRatePercent,
+  })
+  const dinnerEnabled = selectedSection?.showDinner === "Y"
+  const partyExceedsAvailable =
+    selectedCount > (selectedSection?.available ?? 0)
   const comicStageName =
     mappedComicInfo?.stageName ||
     selectedShow?.headliner?.trim() ||
@@ -428,8 +596,17 @@ export function ExpressWalkupDialog({
               <WalkupDialogSkeleton />
             ) : (
               <div className="space-y-5 px-4 py-4">
-                {error ? (
-                  <p className="text-sm text-destructive">{error}</p>
+                {error || localError ? (
+                  <p className="text-sm text-destructive">
+                    {error || localError}
+                  </p>
+                ) : null}
+
+                {partyExceedsAvailable ? (
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    Party size exceeds available seats (
+                    {selectedSection?.available ?? 0}).
+                  </p>
                 ) : null}
 
                 <FormSection title="Show Details" className="space-y-4">
@@ -478,10 +655,16 @@ export function ExpressWalkupDialog({
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-[auto_12rem] sm:items-center sm:justify-between">
-                    <label className="inline-flex items-center gap-2 text-sm">
+                    <label
+                      className={cn(
+                        "inline-flex items-center gap-2 text-sm",
+                        !dinnerEnabled && "opacity-50"
+                      )}
+                    >
                       <Checkbox
                         id="express-walkup-dinner"
-                        checked={formValues.dinner}
+                        checked={dinnerEnabled && formValues.dinner}
+                        disabled={!dinnerEnabled}
                         onCheckedChange={(checked) =>
                           updateField("dinner", checked === true)
                         }
@@ -502,7 +685,7 @@ export function ExpressWalkupDialog({
                   <TicketCountGrid
                     counts={EXPRESS_WALKUP_TICKET_COUNTS}
                     selectedCount={selectedCount}
-                    ticketPrice={selectedSection?.showPrice ?? 0}
+                    ticketUnitPrice={ticketUnitPrice}
                     onSelect={handleTicketCountSelect}
                   />
                 </FormSection>
@@ -615,16 +798,8 @@ export function ExpressWalkupDialog({
             <div className="flex flex-wrap justify-end gap-2">
               <Button
                 type="button"
-                variant="outline"
                 disabled={isSubmitting || !formValues || !selectedSection}
-                onClick={() => handleContinue("Credit Card")}
-              >
-                Credit Card
-              </Button>
-              <Button
-                type="button"
-                disabled={isSubmitting || !formValues || !selectedSection}
-                onClick={() => handleContinue("Cash")}
+                onClick={handleContinue}
               >
                 {isSubmitting ? (
                   <>
@@ -694,27 +869,42 @@ export function ExpressWalkupDialog({
         }
       />
 
-      {paymentStep === "Cash" && totals ? (
-        <SalesTransactionDialog
+      {paymentMethodOpen && totals ? (
+        <ExpressWalkupPaymentMethodDialog
           open
-          onOpenChange={handlePaymentOpenChange}
-          paymentType="Cash"
-          paymentDue={totals.paymentDue}
+          onOpenChange={(nextOpen) =>
+            handleNestedOpenChange(setPaymentMethodOpen, nextOpen)
+          }
+          totalLabel={totals.total}
+          showExpress={showExpressPayment}
+          onQuickPay={handleQuickPay}
+          onOther={handleOther}
+          onExpress={handleExpress}
+        />
+      ) : null}
+
+      {processPaymentOpen && totals ? (
+        <ProcessPaymentDialog
+          open
+          onOpenChange={(nextOpen) =>
+            handleNestedOpenChange(setProcessPaymentOpen, nextOpen)
+          }
+          quantity={selectedCount}
+          paymentAmount={totals.total}
           onOk={() => {
-            void completePayment()
+            void completeQuickPay()
           }}
         />
       ) : null}
 
-      {paymentStep === "Credit Card" && totals ? (
-        <ProcessPaymentDialog
+      {customerSearchOpen ? (
+        <ExpressWalkupCustomerSearchDialog
           open
-          onOpenChange={handlePaymentOpenChange}
-          quantity={selectedCount}
-          paymentAmount={totals.total}
-          onOk={() => {
-            void completePayment()
-          }}
+          onOpenChange={(nextOpen) =>
+            handleNestedOpenChange(setCustomerSearchOpen, nextOpen)
+          }
+          connectionName={connectionName}
+          onContinue={handleCustomerSelected}
         />
       ) : null}
     </>

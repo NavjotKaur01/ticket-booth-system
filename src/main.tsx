@@ -4,6 +4,7 @@ import { Provider } from "react-redux"
 
 import { AuthProvider } from "@/contexts/auth-context"
 import { initTheme, ThemeProvider } from "@/components/theme-provider"
+import { AppToaster } from "@/components/ui/app-toaster"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { store } from "@/store"
 import App from "./App.tsx"
@@ -18,6 +19,7 @@ createRoot(document.getElementById("root")!).render(
         <AuthProvider>
           <TooltipProvider delayDuration={200}>
             <App />
+            <AppToaster />
           </TooltipProvider>
         </AuthProvider>
       </ThemeProvider>

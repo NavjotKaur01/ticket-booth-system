@@ -27,6 +27,8 @@ export type TicketPrintReservation = {
   paymentType: string
   source: string
   section: string
+  /** Desktop ticket line: "Promotions : {code}" when present. */
+  promotion: string | null
   tables: string | null
   seatNumbers: string | null
 }
@@ -60,6 +62,8 @@ export type CreateTicketPrintDataParams = {
   paymentType: string
   source: string
   section: string
+  /** Promo code/name from reservation.Promo — printed when non-empty. */
+  promotion?: string | null
   tables?: string | null
   seatNumbers?: string | null
   showDate: string

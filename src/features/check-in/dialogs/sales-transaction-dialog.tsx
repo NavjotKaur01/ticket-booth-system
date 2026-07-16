@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -19,7 +19,10 @@ type SalesTransactionDialogProps = {
   onOpenChange: (open: boolean) => void
   paymentType: ExpressPaymentType
   paymentDue: number
-  onOk?: () => void
+  /** Desktop POS locks the amount field (EnableSaleTransactionTextBox = false). */
+  amountLocked?: boolean
+  /** Receives tendered amount when Ok is pressed (must be >= paymentDue). */
+  onOk?: (paymentAmount: number) => void
 }
 
 function formatDialogMoney(value: number) {
@@ -31,6 +34,7 @@ export function SalesTransactionDialog({
   onOpenChange,
   paymentType,
   paymentDue,
+  amountLocked = false,
   onOk,
 }: SalesTransactionDialogProps) {
   const [paymentAmount, setPaymentAmount] = useState(formatDialogMoney(paymentDue))
@@ -53,9 +57,14 @@ export function SalesTransactionDialog({
       }),
     [numericPaymentAmount, paymentDue]
   )
+  const isShortPayment = numericPaymentAmount + 0.001 < paymentDue
 
   function handleOk() {
-    onOk?.()
+    if (isShortPayment) {
+      return
+    }
+
+    onOk?.(numericPaymentAmount)
     onOpenChange(false)
   }
 
@@ -88,6 +97,8 @@ export function SalesTransactionDialog({
               onChange={(event) => setPaymentAmount(event.target.value)}
               className="h-9 tabular-nums"
               inputMode="decimal"
+              readOnly={amountLocked}
+              disabled={amountLocked}
             />
 
             <div className="text-sm font-medium tabular-nums">
@@ -97,11 +108,23 @@ export function SalesTransactionDialog({
             <div className="text-sm font-medium tabular-nums">
               {formatDialogMoney(change)}
             </div>
+
+            {isShortPayment ? (
+              <p className="text-xs text-destructive">
+                Express Pay requires full payment when reservation is made.
+                Amount of payment is less then the amount due. Cannot continue.
+              </p>
+            ) : null}
           </div>
         </div>
 
         <DialogFooter className="shrink-0 border-t px-4 py-3 sm:justify-center">
-          <Button type="button" className="min-w-20" onClick={handleOk}>
+          <Button
+            type="button"
+            className="min-w-20"
+            onClick={handleOk}
+            disabled={isShortPayment}
+          >
             Ok
           </Button>
           <Button

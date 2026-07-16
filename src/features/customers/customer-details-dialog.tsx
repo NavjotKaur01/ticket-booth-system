@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { AddCustomerDialog } from "@/features/customers/add-customer-dialog"
+import { reportError } from "@/lib/app-toast"
 import { getCustomerById } from "@/lib/api/customers"
 import { mapApiCustomerToDetails } from "@/lib/map-api-customer-to-form"
 import type { Customer } from "@/types/customer"
@@ -182,10 +183,10 @@ export function CustomerDetailsDialog({
       } catch (requestError) {
         if (!cancelled) {
           setDetails(null)
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load customer details."
+          reportError(
+            setError,
+            requestError,
+            "Unable to load customer details."
           )
         }
       } finally {

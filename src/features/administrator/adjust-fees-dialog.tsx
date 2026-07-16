@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { updateShowAndPromotionFee } from "@/lib/api/adjust-fees"
 import { buildUpdateShowAndPromotionFeeRequest } from "@/lib/build-update-show-and-promotion-fee-request"
 import {
@@ -69,7 +70,7 @@ export function AdjustFeesDialog({ open, onOpenChange }: AdjustFeesDialogProps) 
 
   async function handleSave() {
     if (!isReady || !connectionName || !locationId) {
-      setError("Location is required before adjusting fees.")
+      reportErrorMessage(setError, "Location is required before adjusting fees.")
       return
     }
 
@@ -86,12 +87,13 @@ export function AdjustFeesDialog({ open, onOpenChange }: AdjustFeesDialogProps) 
           charges,
         })
       )
+      toastSuccess("Fees updated")
       onOpenChange(false)
     } catch (saveError) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : "Unable to update show and promotion fees."
+      reportError(
+        setError,
+        saveError,
+        "Unable to update show and promotion fees."
       )
     } finally {
       setSaving(false)

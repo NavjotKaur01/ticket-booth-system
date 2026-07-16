@@ -2,15 +2,17 @@ import { dispatchEndpoint } from "@/lib/api/dispatch-endpoint"
 import {
   buildDeleteAllAssignSeatRequest,
   buildSaveAssignSeatsRequest,
+  collectAssignTableNumList,
 } from "@/lib/build-assign-seats-request"
 import { clubmanApi } from "@/store/api/clubmanApi"
 import type {
   ApiAssignSeatDetail,
+  ApiAssignTableModel,
   ApiClubsAssignSeatDetail,
   ApiColumbusAssignSeatNumber,
   ApiReservationToAssignSeat,
-  AssignSeatSaveItem,
 } from "@/types/api/assign-seats"
+import type { AssignSeatTableRow } from "@/features/assign-seats/assign-seats.types"
 
 export async function fetchColumbusAssignSeatNumbers(
   connectionName: string
@@ -61,45 +63,45 @@ export async function fetchReservationsToAssignSeats({
   })
 }
 
+/** Desktop CheckInVM.SaveSeats → POST SaveAssignSeats */
 export async function saveAssignSeats({
   connectionName,
   locationId,
   showId,
-  lastUpdateId,
-  assignSeats,
+  tables,
+  removeAssignSeatList = [],
 }: {
   connectionName: string
   locationId: string
   showId: string
-  lastUpdateId: string
-  assignSeats: AssignSeatSaveItem[]
+  lastUpdateId?: string
+  tables: AssignSeatTableRow[]
+  removeAssignSeatList?: ApiAssignTableModel[]
 }) {
   const request = buildSaveAssignSeatsRequest({
     connectionName,
     locationId,
-    showId,
-    lastUpdateId,
-    assignSeats,
+    assignTableNumList: collectAssignTableNumList(tables, showId),
+    removeAssignSeatList,
   })
   return dispatchEndpoint(clubmanApi.endpoints.saveAssignSeats, request)
 }
 
+/** Desktop DeleteAssignSeat → PUT DeleteAllAsignSeat */
 export async function deleteAllAssignSeats({
   connectionName,
   locationId,
   showId,
-  lastUpdateId,
 }: {
   connectionName: string
   locationId: string
   showId: string
-  lastUpdateId: string
+  lastUpdateId?: string
 }) {
   const request = buildDeleteAllAssignSeatRequest({
     connectionName,
     locationId,
     showId,
-    lastUpdateId,
   })
   return dispatchEndpoint(clubmanApi.endpoints.deleteAllAssignSeats, request)
 }

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table"
 import { getGiftOfLaughterByLocation } from "@/features/gift-of-laughter/gift-of-laughter.service"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, toastSuccess } from "@/lib/app-toast"
 import { downloadCsv } from "@/lib/download-csv"
 import { buildExportMatrix, type ExportColumn } from "@/lib/export-table-data"
 import type {
@@ -220,11 +221,7 @@ export function GiftOfLaughterScreen() {
       })
       .catch((requestError: unknown) => {
         if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load Gift of Laughter records."
-          )
+          reportError(setError, requestError, "Unable to load Gift of Laughter records.")
         }
       })
       .finally(() => {
@@ -284,9 +281,9 @@ export function GiftOfLaughterScreen() {
         )
       }
 
-      setStatusMessage(
-        `Exported ${filteredRows.length} Gift of Laughter record${filteredRows.length === 1 ? "" : "s"} to ${format.toUpperCase()}.`
-      )
+      const exportMessage = `Exported ${filteredRows.length} Gift of Laughter record${filteredRows.length === 1 ? "" : "s"} to ${format.toUpperCase()}.`
+      setStatusMessage(exportMessage)
+      toastSuccess(exportMessage)
     } finally {
       setExportingFormat(null)
     }

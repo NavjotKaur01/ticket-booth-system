@@ -4,6 +4,7 @@ import { PanelCard } from "@/components/common/panel-card"
 import { SystemDefaultsDataTable } from "@/features/system-defaults/system-defaults-data-table"
 import { SystemDefaultsScreenFilter } from "@/features/system-defaults/system-defaults-screen-filter"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { updateSystemDefault } from "@/lib/api/system-defaults"
 import { buildUpdateSystemDefaultRequest } from "@/lib/build-update-system-default-request"
 import { filterSystemDefaults } from "@/lib/filter-system-defaults"
@@ -86,11 +87,14 @@ export function SystemDefaults() {
       return
     }
     if (!value.trim()) {
-      setActionError("Please enter a default value.")
+      reportErrorMessage(setActionError, "Please enter a default value.")
       return
     }
     if (!isReady || !connectionName || !locationId) {
-      setActionError("Location is required before updating a system default.")
+      reportErrorMessage(
+        setActionError,
+        "Location is required before updating a system default."
+      )
       return
     }
 
@@ -109,17 +113,14 @@ export function SystemDefaults() {
         })
       )
       if (!updated) {
-        setActionError("Unable to update system default.")
+        reportErrorMessage(setActionError, "Unable to update system default.")
         return
       }
       setEditingRecordId(null)
       await refetch()
+      toastSuccess("System default updated")
     } catch (saveError) {
-      setActionError(
-        saveError instanceof Error
-          ? saveError.message
-          : getClubmanErrorMessage(saveError)
-      )
+      reportError(setActionError, saveError, "Unable to update system default.")
     } finally {
       setSaving(false)
     }

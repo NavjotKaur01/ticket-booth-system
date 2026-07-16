@@ -46,6 +46,7 @@ import {
 } from "@/features/employment-applicants/employment-applicants.service"
 import { getEmploymentOpeningsByLocation } from "@/features/employment-openings/employment-openings.service"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, toastSuccess } from "@/lib/app-toast"
 import type {
   EmploymentApplicantFilterGroup,
   EmploymentApplicantRecord,
@@ -337,11 +338,7 @@ export function EmploymentApplicantsScreen() {
       })
       .catch((requestError: unknown) => {
         if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load employment applicants."
-          )
+          reportError(setError, requestError, "Unable to load employment applicants.")
         }
       })
       .finally(() => {
@@ -437,14 +434,12 @@ export function EmploymentApplicantsScreen() {
         current.map((row) => (row.id === updatedRow.id ? updatedRow : row))
       )
       setEditDialogApplicant(updatedRow)
-      setStatusMessage(`Updated ${updatedRow.firstName} ${updatedRow.lastName}.`)
+      const updateMessage = `Updated ${updatedRow.firstName} ${updatedRow.lastName}.`
+      setStatusMessage(updateMessage)
+      toastSuccess(updateMessage)
       closeEditDialog()
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to update the employment applicant."
-      )
+      reportError(setError, requestError, "Unable to update the employment applicant.")
     } finally {
       setSaving(false)
     }

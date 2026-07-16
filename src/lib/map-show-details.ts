@@ -44,6 +44,7 @@ export function mapShowDetailsToOptions(
       id: show.ShowId,
       label,
       time,
+      showDateTime: show.ShowTim || show.ShowDate || undefined,
       /** Chip secondary line — desktop combo shows time + headliner name. */
       subtitle: headliner || undefined,
       headliner: headliner || undefined,
