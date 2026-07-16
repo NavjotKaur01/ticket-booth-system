@@ -1144,21 +1144,29 @@ export const clubmanApi = createApi({
         url: reservationApiPath(connectionName, "GetColumbusAssignSeatNumbers"),
         method: "GET",
       }),
-      transformResponse: (response: unknown) =>
-        coerceApiArray<ApiColumbusAssignSeatNumber | number | string>(response),
+      transformResponse: (
+        response: unknown
+      ): ApiColumbusAssignSeatNumber[] | number[] | string[] =>
+        coerceApiArray<ApiColumbusAssignSeatNumber | number | string>(
+          response
+        ) as ApiColumbusAssignSeatNumber[] | number[] | string[],
       providesTags: ["Reservation"],
     }),
 
-    /** Desktop: GET GetClubsAssignSeatDetail/{clubName}/{locationId} */
+    /**
+     * Desktop ReservationApi.GetClubsAssignSeatDetail:
+     * GET clubman/api/Reservation/GetClubsAssignSeatDetail/{clubName}/{locationId}
+     * (action name BEFORE club/location — not the usual trailing-action pattern)
+     */
     getClubsAssignSeatDetail: builder.query<
       ApiClubsAssignSeatDetail,
       { connectionName: string; locationId: string }
     >({
       query: ({ connectionName, locationId }) => ({
         url: reservationApiPath(
+          "GetClubsAssignSeatDetail",
           connectionName,
-          locationId,
-          "GetClubsAssignSeatDetail"
+          locationId
         ),
         method: "GET",
       }),
@@ -1170,6 +1178,7 @@ export const clubmanApi = createApi({
         if (
           record.ChartImage != null ||
           record.ByteImgSource != null ||
+          record.ChartImageSource != null ||
           record.ChartTableList != null
         ) {
           return response as ApiClubsAssignSeatDetail

@@ -45,6 +45,7 @@ import {
   formatSectionDesktopPrice,
 } from '@/data/reservation'
 import { EXPIRATION_MONTHS } from '@/data/reservation-payment-options'
+import { AssignSeatsDialog } from '@/features/check-in/dialogs/assign-seats-dialog'
 import { ComicInfoDialog } from '@/features/reservations/comic-info-dialog'
 import type {
   ReservationBusinessSearchResult,
@@ -81,7 +82,6 @@ import {
 } from '@/lib/reservation-customer-search-criteria'
 import { saveCustomer } from '@/lib/api/customers'
 import {
-  assignReservationSeat,
   refundReservationPayment,
   voidReservationPayment
 } from '@/lib/api/reservation-pos-actions'
@@ -1272,7 +1272,7 @@ export function AddReservationDialog({
   )
   const [editCustomerId, setEditCustomerId] = useState<string | null>(null)
   const [tableNums, setTableNums] = useState('')
-  const [isAssigningSeat, setIsAssigningSeat] = useState(false)
+  const [assignSeatsOpen, setAssignSeatsOpen] = useState(false)
   const [assignSeatError, setAssignSeatError] = useState<string | null>(null)
   const [paymentActionBusy, setPaymentActionBusy] = useState<
     'refund' | 'void' | 'clear' | 'cash-drawer' | 'split' | null
@@ -1936,31 +1936,51 @@ export function AddReservationDialog({
     setIsAddCustomerOpen(true)
   }
 
-  async function handleAssignSeat() {
-    if (!reservation) {
+  /**
+   * Desktop ReservationPayment.cmdAddAssignSeatResPayment → AssignSeats dialog.
+   * Requires an existing reservation + show; chart save persists TableNums via API,
+   * then we mirror desktop by writing TableNums back onto the payment form.
+   */
+  function handleAssignSeat() {
+    if (!reservation?.id) {
+      setAssignSeatError('Save the reservation before assigning seats.')
+      return
+    }
+    if (!activeShowTime) {
+      setAssignSeatError('Select a show before assigning seats.')
+      return
+    }
+    if (!connectionName || !locationId) {
+      setAssignSeatError('Session connection/location is required.')
       return
     }
 
-    setIsAssigningSeat(true)
     setAssignSeatError(null)
+    setAssignSeatsOpen(true)
+  }
 
-    try {
-      await assignReservationSeat({
-        connectionName,
-        locationId,
-        reservationId: reservation.id,
-        tableNums,
-        lastUpdateId: username
-      })
-    } catch (requestError) {
-      setAssignSeatError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'Failed to assign seat'
-      )
-    } finally {
-      setIsAssigningSeat(false)
+  async function handleAssignSeatsSaved(payload: {
+    result: {
+      tableNumsByReservation: Array<{ reservationId: string; tableNums: string }>
     }
+    reservationId: string | null
+  }) {
+    const targetId = payload.reservationId ?? reservation?.id ?? null
+    const match = payload.result.tableNumsByReservation.find(
+      row => row.reservationId === targetId
+    )
+    const joined =
+      match?.tableNums ??
+      payload.result.tableNumsByReservation
+        .map(row => row.tableNums)
+        .filter(Boolean)
+        .join(', ')
+
+    if (joined) {
+      setTableNums(joined)
+    }
+    setAssignSeatsOpen(false)
+    setAssignSeatError(null)
   }
 
   async function runPaymentAction(
@@ -2600,7 +2620,7 @@ export function AddReservationDialog({
       setShowPartyRequiredError(false)
       setEditCustomerId(null)
       setTableNums('')
-      setIsAssigningSeat(false)
+      setAssignSeatsOpen(false)
       setAssignSeatError(null)
       setPaymentActionBusy(null)
       setPaymentActionError(null)
@@ -2741,7 +2761,7 @@ export function AddReservationDialog({
       <Dialog
         open={open}
         onOpenChange={(nextOpen) => {
-          if (!nextOpen && (comicInfoOpen || isAddCustomerOpen)) {
+          if (!nextOpen && (comicInfoOpen || isAddCustomerOpen || assignSeatsOpen)) {
             return
           }
           onOpenChange(nextOpen)
@@ -2752,6 +2772,7 @@ export function AddReservationDialog({
             ref={dialogContentRef}
             disableOutsideDismiss
             showCloseButton
+            suppressPresentation={comicInfoOpen || isAddCustomerOpen || assignSeatsOpen}
             className='flex max-h-[82vh] w-[min(calc(100vw-2rem),84rem)] max-w-[84rem] flex-col overflow-hidden sm:max-w-[84rem]'
             onOpenAutoFocus={event => {
               event.preventDefault()
@@ -2875,8 +2896,8 @@ export function AddReservationDialog({
                         <div className='shrink-0'>
                           <TableAssignmentRow
                             tableNums={tableNums}
-                            onAssignSeat={() => void handleAssignSeat()}
-                            isAssigning={isAssigningSeat}
+                            onAssignSeat={handleAssignSeat}
+                            isAssigning={assignSeatsOpen}
                             error={assignSeatError}
                           />
                         </div>
@@ -3100,6 +3121,28 @@ export function AddReservationDialog({
         customer={customerForEditDialog}
         initialValues={addCustomerInitialValues}
         onSaved={applySavedCustomer}
+      />
+
+      {/* Desktop ReservationPayment → AssignSeats (Quick Play / edit reservation) */}
+      <AssignSeatsDialog
+        open={assignSeatsOpen}
+        onOpenChange={openState => {
+          setAssignSeatsOpen(openState)
+          if (!openState) {
+            setAssignSeatError(null)
+          }
+        }}
+        connectionName={connectionName}
+        locationId={locationId}
+        showId={activeShowTime}
+        username={username}
+        reservation={reservation}
+        checkInAfterSave={false}
+        nested
+        error={assignSeatError}
+        onSaved={async payload => {
+          await handleAssignSeatsSaved(payload)
+        }}
       />
     </>
   )

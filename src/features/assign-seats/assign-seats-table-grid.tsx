@@ -8,10 +8,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { cellColorClass } from "@/features/assign-seats/assign-seats.service"
-import {
-  ASSIGN_SEATS_GRID,
-  ASSIGN_SEATS_HEADER,
-} from "@/features/assign-seats/assign-seats-styles"
 import type { AssignSeatTableRow } from "@/features/assign-seats/assign-seats.types"
 
 type ContextTarget = {
@@ -31,7 +27,7 @@ type AssignSeatsTableGridProps = {
   onRemoveReservation: (reservationId: string) => void
 }
 
-/** Desktop assignSeatsList DataGrid — Table + Seat1…Seat10 with A/B headers. */
+/** Assign seats table — same interactions as desktop; site table chrome. */
 export function AssignSeatsTableGrid({
   tables,
   seatCount,
@@ -48,28 +44,19 @@ export function AssignSeatsTableGrid({
   const [contextTarget, setContextTarget] = useState<ContextTarget | null>(null)
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-white px-2.5 pt-1">
-      <p className="shrink-0 py-0.5 text-[12px] text-black">
-        Note : Double click on cell to Assign seat.
+    <div className="flex h-full min-h-0 flex-col bg-background px-3 pt-2 pb-2">
+      <p className="shrink-0 pb-1.5 text-xs text-muted-foreground">
+        Note: Double-click a cell to assign a seat.
       </p>
 
-      <div
-        className="min-h-0 flex-1 overflow-auto border"
-        style={{ borderColor: ASSIGN_SEATS_GRID }}
-      >
-        <table className="w-max min-w-full border-collapse text-[10px] font-medium">
-          <thead
-            className="sticky top-0 z-10"
-            style={{ backgroundColor: ASSIGN_SEATS_HEADER }}
-          >
-            <tr>
-              <th
-                className="border px-1 py-0"
-                style={{ borderColor: ASSIGN_SEATS_GRID }}
-              >
-                <div className="flex h-10 w-[50px] flex-col justify-end pb-0.5 text-center text-[13px] font-semibold">
+      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-border/70 bg-background">
+        <table className="w-max min-w-full border-collapse text-[11px] font-medium">
+          <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-sm">
+            <tr className="border-b border-border/60">
+              <th className="border-r border-border/50 px-1 py-0">
+                <div className="flex h-10 w-[52px] flex-col justify-end pb-0.5 text-center text-xs font-semibold text-muted-foreground">
                   <span className="h-4" />
-                  <span className="h-px w-full bg-[#d3d3d3]" />
+                  <span className="h-px w-full bg-border" />
                   <span>Table</span>
                 </div>
               </th>
@@ -84,14 +71,15 @@ export function AssignSeatsTableGrid({
                   <th
                     key={seatNo}
                     className={cn(
-                      "border px-0 py-0",
-                      seatNo >= 5 && "bg-[#d0d0d0]"
+                      "border-r border-border/50 px-0 py-0",
+                      seatNo >= 5 && "bg-muted/70"
                     )}
-                    style={{ borderColor: ASSIGN_SEATS_GRID }}
                   >
-                    <div className="flex h-10 w-[50px] flex-col items-center justify-end pb-0.5 text-[13px] font-semibold">
-                      <span className="h-4 text-center">{group}</span>
-                      <span className="h-px w-full bg-[#d3d3d3]" />
+                    <div className="flex h-10 w-[52px] flex-col items-center justify-end pb-0.5 text-xs font-semibold text-muted-foreground">
+                      <span className="h-4 text-center text-[10px] text-muted-foreground/80">
+                        {group}
+                      </span>
+                      <span className="h-px w-full bg-border" />
                       <span>Seat{seatNo}</span>
                     </div>
                   </th>
@@ -104,22 +92,19 @@ export function AssignSeatsTableGrid({
               <tr
                 key={table.tableNo}
                 className={cn(
-                  "h-5 hover:bg-[#cccccc]",
-                  rowIndex % 2 === 1 ? "bg-[#fbfbfb]" : "bg-white"
+                  "h-5 border-b border-border/40 hover:bg-muted/50",
+                  rowIndex % 2 === 1 ? "bg-muted/15" : "bg-background"
                 )}
               >
-                <td
-                  className="border px-1.5 text-center text-[10px] font-medium tabular-nums text-black"
-                  style={{ borderColor: ASSIGN_SEATS_GRID }}
-                >
+                <td className="border-r border-border/40 px-1.5 text-center text-[11px] font-medium tabular-nums text-foreground">
                   {table.tableNo}
                 </td>
                 {table.seats.map((seat) => {
-                  const filled = Boolean(seat.reservationId) || Boolean(seat.isHold)
+                  const filled =
+                    Boolean(seat.reservationId) || Boolean(seat.isHold)
                   const selectedHere =
                     Boolean(seat.reservationId) &&
                     seat.reservationId === selectedReservationId
-                  // Desktop LightGray for seats above MaxSeats (typically Seat5–10).
                   const greyed =
                     !filled &&
                     (Boolean(seat.readOnly) || seat.seatNo > table.maxSeats)
@@ -127,8 +112,10 @@ export function AssignSeatsTableGrid({
                   return (
                     <td
                       key={`${table.tableNo}-${seat.seatNo}`}
-                      className={cn("border p-0", greyed && "bg-[#d3d3d3]")}
-                      style={{ borderColor: ASSIGN_SEATS_GRID }}
+                      className={cn(
+                        "border-r border-border/40 p-0",
+                        greyed && "bg-muted/60"
+                      )}
                       onContextMenu={(event) => {
                         event.preventDefault()
                         setContextTarget({
@@ -143,15 +130,17 @@ export function AssignSeatsTableGrid({
                       <button
                         type="button"
                         className={cn(
-                          "flex h-5 min-w-[50px] max-w-[70px] items-center justify-start truncate px-1 text-left text-[10px] font-medium leading-none",
+                          "flex h-5 min-w-[52px] max-w-[72px] items-center justify-start truncate px-1 text-left text-[11px] font-medium leading-none",
                           greyed
-                            ? "bg-[#d3d3d3] text-black hover:bg-[#c8c8c8]"
+                            ? "bg-muted/60 text-muted-foreground hover:bg-muted"
                             : cellColorClass(
                                 seat.color,
                                 Boolean(seat.reservationId)
                               ),
-                          seat.isHold && "bg-[#c0c0c0] text-black",
-                          selectedHere && !greyed && "bg-[#f1f1f1]"
+                          seat.isHold && "bg-muted text-foreground",
+                          selectedHere &&
+                            !greyed &&
+                            "ring-1 ring-inset ring-primary/40"
                         )}
                         onDoubleClick={() => {
                           if (seat.reservationId || seat.isHold) {

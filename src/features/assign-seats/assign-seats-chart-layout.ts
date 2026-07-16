@@ -150,6 +150,7 @@ export const COLUMBUS_CHART_COORDS: Record<string, ChartCoord> =
  */
 export const NUMBERED_CHART_CONNECTIONS = new Set([
   "tampa_prod",
+  "standupmedia",
   "liberty_prod",
   "orlando_prod",
   "omaha_prod",
@@ -172,7 +173,7 @@ export function chartHasBakedNumbers(connectionName: string) {
   if (NUMBERED_CHART_CONNECTIONS.has(key)) {
     return true
   }
-  return /tampa|liberty|orlando|omaha|albany|syracuse|kansas|arlington|clev|houston|hartford|demo|levee|toledo|comedy/i.test(
+  return /tampa|standupmedia|liberty|orlando|omaha|albany|syracuse|kansas|arlington|clev|houston|hartford|demo|levee|toledo|comedy/i.test(
     key
   )
 }
