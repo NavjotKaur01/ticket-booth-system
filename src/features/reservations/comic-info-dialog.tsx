@@ -68,6 +68,9 @@ type ComicInfoDialogProps = {
   comic?: ComicInfo | null
   nested?: boolean
   isLoading?: boolean
+  /** Desktop Edit Comedian = single page; tabs used elsewhere. */
+  layout?: "tabs" | "flat"
+  title?: string
   onSave?: (values: ComicInfo) => void | Promise<void>
   onChangeImage?: (base64Image: string) => void | Promise<void>
   onDeleteImage?: () => void | Promise<void>
@@ -318,12 +321,12 @@ function ComedianInfoPanel({
                 className="min-h-24 resize-y"
               />
             </FormField>
-            <FormField label="Internal notes" htmlFor="comic-notes">
+            <FormField label="Notes" htmlFor="comic-notes">
               <Textarea
                 id="comic-notes"
                 value={form.notes}
                 onChange={(e) => updateField("notes", e.target.value)}
-                placeholder="Staff-only notes (not shown to the public)"
+                placeholder="Staff notes"
                 className="min-h-16 resize-y"
               />
             </FormField>
@@ -551,19 +554,25 @@ export function ComicInfoDialog({
   comic,
   nested = false,
   isLoading = false,
+  layout = "tabs",
+  title,
+  onSave,
   onChangeImage,
   onDeleteImage,
 }: ComicInfoDialogProps) {
   const [form, setForm] = useState<ComicInfo>(() => comic ?? getComicInfo(stageName ?? ""))
   const [activeTab, setActiveTab] = useState<ComicInfoTab>("info")
   const [hasInitialized, setHasInitialized] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) {
       setHasInitialized(false)
+      setSaveError(null)
       return
     }
-    
+
     if (open && !isLoading && !hasInitialized) {
       setForm(comic ?? getComicInfo(stageName ?? ""))
       setActiveTab("info")
@@ -586,10 +595,28 @@ export function ComicInfoDialog({
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  // async function handleSave() {
-  //   await onSave?.(form)
-  //   onOpenChange(false)
-  // }
+  async function handleSave() {
+    if (!onSave) {
+      onOpenChange(false)
+      return
+    }
+
+    setIsSaving(true)
+    setSaveError(null)
+
+    try {
+      await onSave(form)
+      onOpenChange(false)
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : "Failed to save comedian"
+      )
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const dialogTitle = title ?? (onSave ? "Edit Comedian" : "Show Comedian")
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -601,7 +628,7 @@ export function ComicInfoDialog({
       >
         <DialogHeader className="shrink-0 gap-0 border-b px-5 py-4 pr-12">
           <DialogTitle className="text-lg font-semibold text-foreground">
-            Show Comedian
+            {dialogTitle}
           </DialogTitle>
         </DialogHeader>
 
@@ -610,40 +637,68 @@ export function ComicInfoDialog({
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
             <div className="space-y-4">
-              <ComicInfoTabs activeTab={activeTab} onTabChange={setActiveTab} />
+              {layout === "tabs" ? (
+                <>
+                  <ComicInfoTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-              <div
-                role="tabpanel"
-                id={`comic-panel-${activeTab}`}
-                aria-labelledby={`comic-tab-${activeTab}`}
-              >
-                {activeTab === "info" ? (
+                  <div
+                    role="tabpanel"
+                    id={`comic-panel-${activeTab}`}
+                    aria-labelledby={`comic-tab-${activeTab}`}
+                  >
+                    {activeTab === "info" ? (
+                      <ComedianInfoPanel
+                        form={form}
+                        updateField={updateField}
+                        onChangeImage={onChangeImage}
+                        onDeleteImage={onDeleteImage}
+                      />
+                    ) : (
+                      <ContactAddressPanel form={form} updateField={updateField} />
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
                   <ComedianInfoPanel
                     form={form}
                     updateField={updateField}
                     onChangeImage={onChangeImage}
                     onDeleteImage={onDeleteImage}
                   />
-                ) : (
                   <ContactAddressPanel form={form} updateField={updateField} />
-                )}
-              </div>
+                </>
+              )}
             </div>
           </div>
         )}
 
-        <DialogFooter className="shrink-0 border-t bg-muted/15 px-5 py-3 sm:justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          {/* <Button type="button" onClick={handleSave} disabled={isLoading}>
-            Save changes
-          </Button> */}
+        <DialogFooter className="shrink-0 border-t bg-muted/15 px-5 py-3 sm:justify-between">
+          {saveError ? (
+            <p className="text-sm text-destructive">{saveError}</p>
+          ) : (
+            <span />
+          )}
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isLoading || isSaving}
+            >
+              Cancel
+            </Button>
+            {onSave ? (
+              <Button
+                type="button"
+                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                onClick={() => void handleSave()}
+                disabled={isLoading || isSaving}
+              >
+                {isSaving ? "Saving..." : "Save"}
+              </Button>
+            ) : null}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -52,16 +52,18 @@ export function ShowTimePicker({
             <span className="truncate text-xs font-semibold sm:text-sm">
               {show.time ?? show.label}
             </span>
-            <span
-              className={cn(
-                "truncate text-[11px] sm:text-xs",
-                isSelected
-                  ? "text-primary-foreground/85"
-                  : "text-muted-foreground"
-              )}
-            >
-              {show.subtitle ?? "Main Theater"}
-            </span>
+            {show.subtitle?.trim() || show.headliner?.trim() ? (
+              <span
+                className={cn(
+                  "truncate text-[11px] sm:text-xs",
+                  isSelected
+                    ? "text-primary-foreground/85"
+                    : "text-muted-foreground"
+                )}
+              >
+                {show.subtitle?.trim() || show.headliner?.trim()}
+              </span>
+            ) : null}
           </button>
         )
       })}
@@ -76,7 +78,7 @@ type ShowTimeFieldProps = {
   className?: string
 }
 
-/** Labeled Show / Time field with card picker. */
+/** Labeled Show Time field with card picker. */
 export function ShowTimeField({
   shows,
   showTime,
@@ -86,7 +88,7 @@ export function ShowTimeField({
   return (
     <div className={cn("min-w-0", className)}>
       <span className="mb-1 block text-xs font-medium text-muted-foreground">
-        Show / Time
+        Show Time
       </span>
       <ShowTimePicker
         shows={shows}

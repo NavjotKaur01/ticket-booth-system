@@ -5,7 +5,11 @@ import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
 import type { ReservationNoteRequest } from "@/types/api/reservation-note"
 import type { MoveReservationRequest } from "@/types/api/move-reservation"
-import type { ReservationCheckInRequest } from "@/types/api/reservation-check-in"
+import type {
+  ReservationCheckInRequest,
+  RevertReservationCheckInRequest,
+} from "@/types/api/reservation-check-in"
+import type { PartialCheckInRequest } from "@/types/api/partial-check-in"
 import type { ReservationDetail } from "@/types/api/reservation-detail"
 import type { ReservationHistoryItem } from "@/types/api/reservation-history"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
@@ -208,6 +212,29 @@ export function moveReservation(request: MoveReservationRequest) {
 export function reservationCheckIn(request: ReservationCheckInRequest) {
   return dispatchEndpoint<unknown, ReservationCheckInRequest>(
     clubmanApi.endpoints.reservationCheckIn,
+    request
+  )
+}
+
+export function revertReservationCheckIn(
+  request: RevertReservationCheckInRequest
+) {
+  return dispatchEndpoint<unknown, RevertReservationCheckInRequest>(
+    clubmanApi.endpoints.revertReservationCheckIn,
+    request
+  )
+}
+
+export function partialCheckIn(request: PartialCheckInRequest) {
+  return dispatchEndpoint<unknown, PartialCheckInRequest>(
+    clubmanApi.endpoints.partialCheckIn,
+    request
+  )
+}
+
+export function revertPartialCheckIn(request: PartialCheckInRequest) {
+  return dispatchEndpoint<unknown, PartialCheckInRequest>(
+    clubmanApi.endpoints.revertPartialCheckIn,
     request
   )
 }

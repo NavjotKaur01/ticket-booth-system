@@ -323,16 +323,40 @@ export function createReservationColumns({
       cell: ({ row }) => (
         <RowActionsMenu
           isCancelled={row.original.isCancelled}
-          onCancelReservation={() => onCancelReservation?.(row.original)}
-          onUnCancelReservation={() => onUnCancelReservation?.(row.original)}
-          onCheckIn={() => onCheckIn?.(row.original)}
-          onMoveReservation={() => onMoveReservation?.(row.original)}
-          onPrintTickets={() => onPrintTickets?.(row.original)}
-          onPrintIndividualTickets={() => onPrintIndividualTickets?.(row.original)}
-          onPrintReceipt={() => onPrintReceipt?.(row.original)}
-          onReservationHistory={() => onReservationHistory?.(row.original)}
-          onAddNote={() => onAddNote?.(row.original)}
-          onPrintSignature={() => onPrintSignature?.(row.original)}
+          onCancelReservation={
+            onCancelReservation
+              ? () => onCancelReservation(row.original)
+              : undefined
+          }
+          onUnCancelReservation={
+            onUnCancelReservation
+              ? () => onUnCancelReservation(row.original)
+              : undefined
+          }
+          onCheckIn={onCheckIn ? () => onCheckIn(row.original) : undefined}
+          onMoveReservation={
+            onMoveReservation ? () => onMoveReservation(row.original) : undefined
+          }
+          onPrintTickets={
+            onPrintTickets ? () => onPrintTickets(row.original) : undefined
+          }
+          onPrintIndividualTickets={
+            onPrintIndividualTickets
+              ? () => onPrintIndividualTickets(row.original)
+              : undefined
+          }
+          onPrintReceipt={
+            onPrintReceipt ? () => onPrintReceipt(row.original) : undefined
+          }
+          onReservationHistory={
+            onReservationHistory
+              ? () => onReservationHistory(row.original)
+              : undefined
+          }
+          onAddNote={onAddNote ? () => onAddNote(row.original) : undefined}
+          onPrintSignature={
+            onPrintSignature ? () => onPrintSignature(row.original) : undefined
+          }
         />
       ),
     }

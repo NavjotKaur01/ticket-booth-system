@@ -45,10 +45,7 @@ export function EventsFiltersBar({
         showDate={draftFilters.date}
         onShowDateChange={(value) => onFilterChange("date", value)}
         disabled={draftFilters.allShows}
-        className={cn(
-          "h-9 w-full justify-between rounded-md border border-input bg-background px-3 py-2 hover:bg-background sm:w-44",
-          draftFilters.allShows && "opacity-60"
-        )}
+        className={cn("w-full sm:w-44", draftFilters.allShows && "opacity-60")}
       />
 
       <Input

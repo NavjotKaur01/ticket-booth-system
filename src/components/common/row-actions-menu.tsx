@@ -8,23 +8,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-const ROW_ACTIONS = [
-  "Check-In",
-  "Move Reservation",
-  "Print Ticket(s)",
-  "Print Individual Tickets",
-  "Print Receipt",
-  "Print Signature",
-  "Reservation History",
-  "Add Note",
-  "Resend Ticket",
-] as const
-
 type RowActionsMenuProps = {
   isCancelled?: boolean
   onCancelReservation?: () => void
   onUnCancelReservation?: () => void
   onCheckIn?: () => void
+  onUnCheckIn?: () => void
+  onPartialCheckInOrSplit?: () => void
+  onPartialUnscan?: () => void
+  onQuickPay?: () => void
+  /** @deprecated Desktop row menu only has Assign Seats And Check-In */
+  onAssignSeats?: () => void
+  onAssignSeatsAndCheckIn?: () => void
   onMoveReservation?: () => void
   onPrintTickets?: () => void
   onPrintIndividualTickets?: () => void
@@ -32,14 +27,29 @@ type RowActionsMenuProps = {
   onReservationHistory?: () => void
   onAddNote?: () => void
   onPrintSignature?: () => void
+  onResendTicket?: () => void
 }
 
-/** Three-dot row action menu shared by Reservations and Check-In tables. */
+type MenuAction = {
+  label: string
+  onSelect: () => void
+}
+
+/**
+ * Check-in / reservation row actions.
+ * Order matches desktop ClubMan Check-in context menu (Assign Seats And Check-In first).
+ * Desktop does NOT include a separate "Assign Seats" row action — that is toolbar-only.
+ */
 export function RowActionsMenu({
   isCancelled = false,
   onCancelReservation,
   onUnCancelReservation,
   onCheckIn,
+  onUnCheckIn,
+  onPartialCheckInOrSplit,
+  onPartialUnscan,
+  onQuickPay,
+  onAssignSeatsAndCheckIn,
   onMoveReservation,
   onPrintTickets,
   onPrintIndividualTickets,
@@ -47,63 +57,77 @@ export function RowActionsMenu({
   onReservationHistory,
   onAddNote,
   onPrintSignature,
+  onResendTicket,
 }: RowActionsMenuProps) {
-  const cancelActionLabel = isCancelled
-    ? "UnCancel Reservation"
-    : "Cancel Reservation"
+  const actions: MenuAction[] = []
 
-  function handleActionSelect(
-    action: typeof cancelActionLabel | (typeof ROW_ACTIONS)[number]
-  ) {
-    if (action === "Cancel Reservation") {
-      onCancelReservation?.()
-      return
-    }
+  // Desktop order: Assign Seats And Check-In first
+  if (!isCancelled && onAssignSeatsAndCheckIn) {
+    actions.push({
+      label: "Assign Seats And Check-In",
+      onSelect: onAssignSeatsAndCheckIn,
+    })
+  }
 
-    if (action === "UnCancel Reservation") {
-      onUnCancelReservation?.()
-      return
-    }
+  if (isCancelled && onUnCancelReservation) {
+    actions.push({
+      label: "UnCancel Reservation",
+      onSelect: onUnCancelReservation,
+    })
+  } else if (!isCancelled && onCancelReservation) {
+    actions.push({
+      label: "Cancel Reservation",
+      onSelect: onCancelReservation,
+    })
+  }
 
-    if (action === "Move Reservation") {
-      onMoveReservation?.()
-      return
-    }
-
-    if (action === "Check-In") {
-      onCheckIn?.()
-      return
-    }
-
-    if (action === "Print Ticket(s)") {
-      onPrintTickets?.()
-      return
-    }
-
-    if (action === "Print Individual Tickets") {
-      onPrintIndividualTickets?.()
-      return
-    }
-
-    if (action === "Print Receipt") {
-      onPrintReceipt?.()
-      return
-    }
-
-    if (action === "Reservation History") {
-      onReservationHistory?.()
-      return
-    }
-
-    if (action === "Add Note") {
-      onAddNote?.()
-      return
-    }
-
-    if (action === "Print Signature") {
-      onPrintSignature?.()
-      return
-    }
+  if (onCheckIn) {
+    actions.push({ label: "Check-In", onSelect: onCheckIn })
+  }
+  if (onMoveReservation) {
+    actions.push({ label: "Move Reservation", onSelect: onMoveReservation })
+  }
+  if (onPartialCheckInOrSplit) {
+    actions.push({
+      label: "Partial Check-In/Split",
+      onSelect: onPartialCheckInOrSplit,
+    })
+  }
+  if (onPrintTickets) {
+    actions.push({ label: "Print Ticket(s)", onSelect: onPrintTickets })
+  }
+  if (onPrintIndividualTickets) {
+    actions.push({
+      label: "Print Individual Tickets",
+      onSelect: onPrintIndividualTickets,
+    })
+  }
+  if (onPrintReceipt) {
+    actions.push({ label: "Print Receipt", onSelect: onPrintReceipt })
+  }
+  if (onPrintSignature) {
+    actions.push({ label: "Print Signature", onSelect: onPrintSignature })
+  }
+  if (onQuickPay) {
+    actions.push({ label: "Quick Pay", onSelect: onQuickPay })
+  }
+  if (onReservationHistory) {
+    actions.push({
+      label: "Reservation History",
+      onSelect: onReservationHistory,
+    })
+  }
+  if (onUnCheckIn) {
+    actions.push({ label: "UnCheck-In", onSelect: onUnCheckIn })
+  }
+  if (onPartialUnscan) {
+    actions.push({ label: "Partial Un-scan", onSelect: onPartialUnscan })
+  }
+  if (onAddNote) {
+    actions.push({ label: "Add Note", onSelect: onAddNote })
+  }
+  if (onResendTicket) {
+    actions.push({ label: "Resend Ticket", onSelect: onResendTicket })
   }
 
   return (
@@ -119,18 +143,16 @@ export function RowActionsMenu({
           <MoreVertical className="size-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[12.5rem]">
-        <DropdownMenuItem onSelect={() => handleActionSelect(cancelActionLabel)}>
-          {cancelActionLabel}
-        </DropdownMenuItem>
-        {ROW_ACTIONS.map((action) => (
-          <DropdownMenuItem
-            key={action}
-            onSelect={() => handleActionSelect(action)}
-          >
-            {action}
-          </DropdownMenuItem>
-        ))}
+      <DropdownMenuContent align="end" className="min-w-50">
+        {actions.length === 0 ? (
+          <DropdownMenuItem disabled>No actions</DropdownMenuItem>
+        ) : (
+          actions.map((action) => (
+            <DropdownMenuItem key={action.label} onSelect={action.onSelect}>
+              {action.label}
+            </DropdownMenuItem>
+          ))
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

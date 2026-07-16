@@ -1,6 +1,6 @@
 import type { CheckInCounts, CheckInRecord } from "@/types/check-in"
 
-// Static check-in mock data — replace with API when backend is wired up.
+// Static check-in mock data — kept for reference / Storybook only.
 
 /** Live seat counts for the currently selected show. */
 export const checkInCounts: CheckInCounts = {
@@ -35,5 +35,10 @@ export const checkInRecords: CheckInRecord[] = [
     createdDt: "6/18/2026 2:28:55 AM",
     lastUpdateDt: "",
     lastUpdateBy: "",
+    phoneNo: "",
+    lastFourCardDigit: "",
+    isCancelled: false,
+    resStatus: "RSTATE01",
+    oldReservationId: "",
   },
 ]

@@ -100,7 +100,18 @@ import type {
   UpdateSplitReservationRequestModel
 } from "@/types/api/save-reservation"
 import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
-import type { ReservationCheckInRequest } from "@/types/api/reservation-check-in"
+import type { ReservationCheckInRequest, RevertReservationCheckInRequest } from "@/types/api/reservation-check-in"
+import type { PartialCheckInRequest } from "@/types/api/partial-check-in"
+import type { UpdateTableNumberReservationRequest } from "@/types/api/update-table-number"
+import type {
+  ApiAssignSeatDetail,
+  ApiClubsAssignSeatDetail,
+  ApiColumbusAssignSeatNumber,
+  ApiReservationToAssignSeat,
+  DeleteAllAssignSeatRequest,
+  SaveAssignSeatsRequest,
+} from "@/types/api/assign-seats"
+import type { UpdateCustomerEmailRequest } from "@/types/api/update-customer-email"
 import type {
   MoveReservationRequest,
   UpcomingShowDetailsRequest,
@@ -374,6 +385,16 @@ export const clubmanApi = createApi({
       invalidatesTags: (_result, _error, arg) => [
         { type: "Customer", id: arg.locationId },
       ],
+    }),
+
+    /** Check-in resend email overwrite → PUT Adminstrator/UpdateCustomerEmail */
+    updateCustomerEmail: builder.mutation({
+      query: (body: UpdateCustomerEmailRequest) => ({
+        url: administratorApiPath("UpdateCustomerEmail"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "Customer"],
     }),
 
     getCustomerById: builder.mutation({
@@ -1067,6 +1088,153 @@ export const clubmanApi = createApi({
     reservationCheckIn: builder.mutation({
       query: (body: ReservationCheckInRequest) => ({
         url: reservationApiPath("ReservationCheckIn"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    revertReservationCheckIn: builder.mutation({
+      query: (body: RevertReservationCheckInRequest) => ({
+        url: reservationApiPath("RevertReservationCheckIn"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    partialCheckIn: builder.mutation({
+      query: (body: PartialCheckInRequest) => ({
+        url: reservationApiPath("PartialCheckIn"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    revertPartialCheckIn: builder.mutation({
+      query: (body: PartialCheckInRequest) => ({
+        url: reservationApiPath("RevertPartialCheckIn"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    updateTableNumberReservation: builder.mutation({
+      query: (body: UpdateTableNumberReservationRequest) => ({
+        url: reservationApiPath("UpdateTableNumberReservation"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    getColumbusAssignSeatNumbers: builder.query<
+      ApiColumbusAssignSeatNumber[] | number[] | string[],
+      string
+    >({
+      query: (connectionName) => ({
+        url: reservationApiPath(connectionName, "GetColumbusAssignSeatNumbers"),
+        method: "GET",
+      }),
+      transformResponse: (
+        response: unknown
+      ): ApiColumbusAssignSeatNumber[] | number[] | string[] =>
+        coerceApiArray<ApiColumbusAssignSeatNumber | number | string>(
+          response
+        ) as ApiColumbusAssignSeatNumber[] | number[] | string[],
+      providesTags: ["Reservation"],
+    }),
+
+    /**
+     * Desktop ReservationApi.GetClubsAssignSeatDetail:
+     * GET clubman/api/Reservation/GetClubsAssignSeatDetail/{clubName}/{locationId}
+     * (action name BEFORE club/location — not the usual trailing-action pattern)
+     */
+    getClubsAssignSeatDetail: builder.query<
+      ApiClubsAssignSeatDetail,
+      { connectionName: string; locationId: string }
+    >({
+      query: ({ connectionName, locationId }) => ({
+        url: reservationApiPath(
+          "GetClubsAssignSeatDetail",
+          connectionName,
+          locationId
+        ),
+        method: "GET",
+      }),
+      transformResponse: (response: unknown) => {
+        if (!response || typeof response !== "object") {
+          return {}
+        }
+        const record = response as Record<string, unknown>
+        if (
+          record.ChartImage != null ||
+          record.ByteImgSource != null ||
+          record.ChartImageSource != null ||
+          record.ChartTableList != null
+        ) {
+          return response as ApiClubsAssignSeatDetail
+        }
+        for (const key of ["Data", "data", "Result", "result", "Value", "value"]) {
+          const nested = record[key]
+          if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+            return nested as ApiClubsAssignSeatDetail
+          }
+        }
+        return response as ApiClubsAssignSeatDetail
+      },
+      providesTags: ["Reservation"],
+    }),
+
+    getAssignSeatDetails: builder.query<
+      ApiAssignSeatDetail[],
+      { connectionName: string; showId: string; isCheckedIn?: boolean }
+    >({
+      query: ({ connectionName, showId, isCheckedIn = false }) => ({
+        url: reservationApiPath(
+          connectionName,
+          showId,
+          formatRouteBoolean(isCheckedIn),
+          "GetAssignSeatDetails"
+        ),
+        method: "GET",
+      }),
+      transformResponse: (response: unknown) =>
+        coerceApiArray<ApiAssignSeatDetail>(response),
+      providesTags: ["Reservation"],
+    }),
+
+    getReservationsToAssignSeats: builder.query<
+      ApiReservationToAssignSeat[],
+      { connectionName: string; showId: string }
+    >({
+      query: ({ connectionName, showId }) => ({
+        url: reservationApiPath(
+          connectionName,
+          showId,
+          "GetReservationsToAssignSeats"
+        ),
+        method: "GET",
+      }),
+      transformResponse: (response: unknown) =>
+        coerceApiArray<ApiReservationToAssignSeat>(response),
+      providesTags: ["Reservation"],
+    }),
+
+    saveAssignSeats: builder.mutation({
+      query: (body: SaveAssignSeatsRequest) => ({
+        url: reservationApiPath("SaveAssignSeats"),
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    deleteAllAssignSeats: builder.mutation({
+      query: (body: DeleteAllAssignSeatRequest) => ({
+        url: reservationApiPath("DeleteAllAsignSeat"),
         method: "PUT",
         body,
       }),
@@ -1878,6 +2046,7 @@ export const {
   useSearchReservationBusinessCustomersMutation,
   useSaveCustomerMutation,
   useUpdateCustomerMutation,
+  useUpdateCustomerEmailMutation,
   useGetCustomerByIdMutation,
   useGetCustomerDeleteDetailMutation,
   useArchiveCustomerMutation,
@@ -1917,6 +2086,20 @@ export const {
   useGetUpcomingShowDetailsMutation,
   useSaveMoveReservationMutation,
   useReservationCheckInMutation,
+  useRevertReservationCheckInMutation,
+  usePartialCheckInMutation,
+  useRevertPartialCheckInMutation,
+  useUpdateTableNumberReservationMutation,
+  useGetColumbusAssignSeatNumbersQuery,
+  useLazyGetColumbusAssignSeatNumbersQuery,
+  useGetClubsAssignSeatDetailQuery,
+  useLazyGetClubsAssignSeatDetailQuery,
+  useGetAssignSeatDetailsQuery,
+  useLazyGetAssignSeatDetailsQuery,
+  useGetReservationsToAssignSeatsQuery,
+  useLazyGetReservationsToAssignSeatsQuery,
+  useSaveAssignSeatsMutation,
+  useDeleteAllAssignSeatsMutation,
   useGetDailyTransactionDataQuery,
   useGetRecentSalesReportQuery,
   useGetCalendarDataQuery,
