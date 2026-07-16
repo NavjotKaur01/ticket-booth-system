@@ -51,7 +51,7 @@ export function CalendarScrollSelectList({
   const displayOptions = getCalendarSelectOptions(value, options, clearOptionLabel)
 
   useEffect(() => {
-    if (!isOpen || !listRef.current || !value) {
+    if (!isOpen || !listRef.current || value == null) {
       return
     }
 
@@ -138,19 +138,18 @@ export function CalendarScrollSelectList({
     >
       {displayOptions.map((option) => (
         <button
-          key={option.value}
+          key={option.value || "__blank__"}
           type="button"
           data-scroll-select-option="true"
-          data-selected={option.value && option.value === value ? "true" : undefined}
+          data-selected={option.value === value ? "true" : undefined}
           className={cn(
             "flex h-8 w-full items-center justify-between rounded-sm px-2 text-left text-sm outline-none hover:bg-primary/10 hover:text-primary focus:bg-primary/10 focus:text-primary",
-            option.value && option.value === value && "bg-primary/10 text-primary",
-            !option.value && "text-muted-foreground"
+            option.value === value && "bg-primary/10 text-primary"
           )}
           onClick={() => onSelect(option.value)}
         >
           <span className="truncate">{option.label}</span>
-          {option.value && option.value === value ? <Check className="size-3.5 shrink-0" /> : null}
+          {option.value === value ? <Check className="size-3.5 shrink-0" /> : null}
         </button>
       ))}
     </div>

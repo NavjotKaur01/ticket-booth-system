@@ -1,18 +1,9 @@
-import type { CalendarEvent } from "@/data/calendarEvents"
+import type { ApiShowProperties } from "@/types/api/get-show-data"
 
 import type { CalendarSelectOption } from "../controls/CalendarSelectControl"
 
 export type AdjustAgeMode = "flag" | "minAge"
 
-export type AdjustAgeDialogData = {
-  eventId: string
-  performer: string
-  showDateLabel: string
-  mode: AdjustAgeMode
-  ageFlag: string
-  minAge: string
-  ageFlagOptions: CalendarSelectOption[]
-}
 
 export type AdjustAgeFormValues = {
   mode: AdjustAgeMode
@@ -20,14 +11,15 @@ export type AdjustAgeFormValues = {
   minAge: string
 }
 
-const AGE_FLAG_OPTIONS: CalendarSelectOption[] = [
+export const AGE_FLAG_OPTIONS: CalendarSelectOption[] = [
+  { value: "", label: "Blank" },
   { value: "A", label: "A (all ages)" },
   { value: "Y", label: "Y (21 and over)" },
   { value: "N", label: "N (18 and over)" },
   { value: "S", label: "S (custom)" },
 ]
 
-function formatShowDate(date: Date) {
+export function formatShowDate(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "long",
     month: "long",
@@ -36,17 +28,6 @@ function formatShowDate(date: Date) {
   }).format(date)
 }
 
-function getDefaultAgeFlag(event: CalendarEvent) {
-  if (event.performer.toLowerCase().includes("late night")) {
-    return "Y"
-  }
-
-  if (event.seats.capacity >= 200) {
-    return "N"
-  }
-
-  return "A"
-}
 
 export const CUSTOM_AGE_FLAG = "S"
 
@@ -120,29 +101,37 @@ export function applyAdjustAgeModeChange(
   }
 }
 
-export function createAdjustAgeFormValues(data: AdjustAgeDialogData): AdjustAgeFormValues {
-  return {
-    mode: data.mode,
-    ageFlag: data.ageFlag,
-    minAge: data.minAge,
-  }
+
+export function parseAgeRestrictionValue(over21: string | null | undefined): string {
+  const val = (over21 || "").trim()
+  if (val === "Y" || val.startsWith("Y")) return "Y"
+  if (val === "N" || val.startsWith("N")) return "N"
+  if (val === "A" || val.startsWith("A")) return "A"
+  if (val === "S" || val.startsWith("S")) return "S"
+  return ""
 }
 
-export async function getAdjustAgeDialogData(
-  event: CalendarEvent
-): Promise<AdjustAgeDialogData> {
-  await new Promise((resolve) => window.setTimeout(resolve, 200))
+export function parseInitialAgeValues(showProperties: ApiShowProperties): AdjustAgeFormValues {
+  const over21 = parseAgeRestrictionValue(showProperties.Over21)
+  const minAge = showProperties.MinAge || ""
 
-  const ageFlag = getDefaultAgeFlag(event)
+  if (over21 === "Y") return { mode: "flag", ageFlag: "Y", minAge: "21" }
+  if (over21 === "N") return { mode: "flag", ageFlag: "N", minAge: "18" }
+  if (over21 === "A") return { mode: "flag", ageFlag: "A", minAge: "" }
+  if (over21 === "S") return { mode: "minAge", ageFlag: "S", minAge: minAge }
+  
+  return { mode: "flag", ageFlag: "", minAge: "" }
+}
 
-  return {
-    eventId: event.id,
-    performer: event.performer,
-    showDateLabel: formatShowDate(event.start),
-    mode: "flag",
-    ageFlag,
-    minAge: getMinAgeForAgeFlag(ageFlag),
-    ageFlagOptions: AGE_FLAG_OPTIONS,
+export function getSelectedAgeParam(ageFlag: string, mode: AdjustAgeMode): string {
+  if (mode === "minAge") return "S (custom)"
+  switch (ageFlag) {
+    case "A": return "A (all ages)"
+    case "Y": return "Y (21 and over)"
+    case "N": return "N (18 and over)"
+    case "S": return "S (custom)"
+    case "": return ""
+    default: return ""
   }
 }
 

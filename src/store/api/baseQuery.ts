@@ -14,9 +14,25 @@ export type ClubmanQueryError =
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: appConfig.apiBaseUrl.replace(/\/$/, ""),
-  prepareHeaders: (headers) => {
+  prepareHeaders: (headers, { getState }) => {
     if (!headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json")
+    }
+    const state = getState() as { auth?: { credentials?: { UserID: string; LocationID: string | null; LocationName: string; UserName: string } | null } }
+    const credentials = state.auth?.credentials
+    if (credentials) {
+      if (credentials.LocationID) {
+        headers.set("LocationId", credentials.LocationID)
+      }
+      if (credentials.LocationName) {
+        headers.set("LocationName", credentials.LocationName)
+      }
+      if (credentials.UserID) {
+        headers.set("UserId", credentials.UserID)
+      }
+      if (credentials.UserName) {
+        headers.set("UserName", credentials.UserName)
+      }
     }
     // temporary-for-tunnel
     if (import.meta.env.DEV && import.meta.env.VITE_TUNNEL_URL) {
@@ -28,9 +44,25 @@ const rawBaseQuery = fetchBaseQuery({
 
 const newRawBaseQuery = fetchBaseQuery({
   baseUrl: appConfig.newApiBaseUrl.replace(/\/$/, ""),
-  prepareHeaders: (headers) => {
+  prepareHeaders: (headers, { getState }) => {
     if (!headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json")
+    }
+    const state = getState() as { auth?: { credentials?: { UserID: string; LocationID: string | null; LocationName: string; UserName: string } | null } }
+    const credentials = state.auth?.credentials
+    if (credentials) {
+      if (credentials.LocationID) {
+        headers.set("LocationId", credentials.LocationID)
+      }
+      if (credentials.LocationName) {
+        headers.set("LocationName", credentials.LocationName)
+      }
+      if (credentials.UserID) {
+        headers.set("UserId", credentials.UserID)
+      }
+      if (credentials.UserName) {
+        headers.set("UserName", credentials.UserName)
+      }
     }
     // temporary-for-tunnel
     if (import.meta.env.DEV && import.meta.env.VITE_NEW_API_BASE_URL) {

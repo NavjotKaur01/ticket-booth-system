@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -20,12 +20,14 @@ import {
   applyAdjustAgeModeChange,
   applyAgeFlagChange,
   applyMinAgeChange,
-  createAdjustAgeFormValues,
-  getAdjustAgeDialogData,
-  type AdjustAgeDialogData,
+  parseInitialAgeValues,
+  getSelectedAgeParam,
+  AGE_FLAG_OPTIONS,
   type AdjustAgeFormValues,
   type AdjustAgeMode,
 } from "../service/adjustAge.service"
+import { useAppSession } from "@/hooks/use-app-session"
+import { useGetShowPropertiesQuery, useAdjustShowAgeMutation } from "@/store/api/clubmanApi"
 
 type AdjustAgeDialogProps = {
   open: boolean
@@ -35,7 +37,7 @@ type AdjustAgeDialogProps = {
 }
 
 const AGE_FLAG_NOTE =
-  "Note: Select age = Do not show age on web, A = All ages, Y = Over 21, N = Over 18, S = Special case set min age"
+  "Note: [ Blank = Do not show age on web, A = All ages, Y = Over 21, N = Over 18, S = Special case set min age ]"
 
 function AdjustAgeSkeleton() {
   return (
@@ -60,35 +62,36 @@ export default function AdjustAgeDialog({
   onOpenChange,
   onSave,
 }: AdjustAgeDialogProps) {
-  const [dialogData, setDialogData] = useState<AdjustAgeDialogData | null>(null)
+  const { connectionName, locationId } = useAppSession()
   const [formValues, setFormValues] = useState<AdjustAgeFormValues | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+
+  const {
+    data: showProperties,
+    isFetching,
+  } = useGetShowPropertiesQuery(
+    { connectionName, showId: event?.showId || "" },
+    { skip: !open || !event || !connectionName }
+  )
+
+  const [adjustShowAge, { isLoading: isSaving }] = useAdjustShowAgeMutation()
+
+  const initialAgeValues = useMemo(() => {
+    if (!showProperties) return null
+    return parseInitialAgeValues(showProperties)
+  }, [showProperties])
 
   useEffect(() => {
-    if (!open || !event) {
-      return
+    if (open && initialAgeValues) {
+      setFormValues(initialAgeValues)
     }
+  }, [open, initialAgeValues])
 
-    let isCurrent = true
-
-    setIsLoading(true)
-    getAdjustAgeDialogData(event)
-      .then((data) => {
-        if (isCurrent) {
-          setDialogData(data)
-          setFormValues(createAdjustAgeFormValues(data))
-        }
-      })
-      .finally(() => {
-        if (isCurrent) {
-          setIsLoading(false)
-        }
-      })
-
-    return () => {
-      isCurrent = false
+  // Clear state when closed
+  useEffect(() => {
+    if (!open) {
+      setFormValues(null)
     }
-  }, [event, open])
+  }, [open])
 
   function handleModeChange(mode: AdjustAgeMode) {
     setFormValues((current) => (current ? applyAdjustAgeModeChange(current, mode) : current))
@@ -102,33 +105,49 @@ export default function AdjustAgeDialog({
     setFormValues((current) => (current ? applyMinAgeChange(current, minAge) : current))
   }
 
-  function handleSave() {
-    if (formValues) {
-      onSave?.(formValues)
+  async function handleSave() {
+    if (!event || !formValues) {
+      return
     }
 
-    onOpenChange(false)
+
+    const selectedAgeParam = getSelectedAgeParam(formValues.ageFlag, formValues.mode)
+    const specialAgeParam = formValues.mode === "minAge" ? formValues.minAge : null
+
+    try {
+      await adjustShowAge({
+        CalendarShowId: event.showId,
+        ConnectionString: connectionName,
+        LocationId: locationId,
+        SelectedAge: selectedAgeParam,
+        SpecialAge: specialAgeParam,
+      }).unwrap()
+
+      onSave?.(formValues)
+      onOpenChange(false)
+    } catch {
+      // silently ignore save errors
+    }
   }
 
-  const headerTitle = dialogData
-    ? `Adjust Age :- ${dialogData.performer}    ${dialogData.showDateLabel}`
-    : "Adjust Age"
+  const headerTitle = "Adjust Age"
 
   const isFlagMode = formValues?.mode === "flag"
   const isMinAgeMode = formValues?.mode === "minAge"
+  const isLoading = isFetching || !formValues
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         disableOutsideDismiss
-        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-2xl"
+        className="flex w-full max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-2xl"
       >
         <DialogHeader className="shrink-0 border-b px-5 py-4">
           <DialogTitle className="text-lg">{headerTitle}</DialogTitle>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {isLoading || !formValues || !dialogData ? (
+          {isLoading ? (
             <AdjustAgeSkeleton />
           ) : (
             <div className="space-y-4 px-5 py-5">
@@ -157,7 +176,7 @@ export default function AdjustAgeDialog({
                         onChange={handleAgeFlagChange}
                         placeholder="Select age"
                         disabled={!isFlagMode}
-                        options={dialogData.ageFlagOptions}
+                        options={AGE_FLAG_OPTIONS}
                       />
                     </div>
                   </div>
@@ -194,10 +213,10 @@ export default function AdjustAgeDialog({
         </div>
 
         <DialogFooter className="!flex-row flex-wrap justify-start border-t px-5 py-4">
-          <Button type="button" onClick={handleSave} disabled={!formValues || isLoading}>
-            Save
+          <Button type="button" onClick={handleSave} disabled={isLoading || isSaving}>
+            {isSaving ? "Saving..." : "Save"}
           </Button>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>
             Cancel
           </Button>
         </DialogFooter>
@@ -205,3 +224,4 @@ export default function AdjustAgeDialog({
     </Dialog>
   )
 }
+
