@@ -1,9 +1,17 @@
-import { FileDown, Plus, Printer, Zap } from "lucide-react"
+import { FileDown, Info, Plus, Printer, Zap } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { ExportDataDialog } from "@/components/common/export-data-dialog"
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { CheckInDataTable } from "@/features/check-in/data-table"
 import { AssignSeatsDialog } from "@/features/check-in/dialogs/assign-seats-dialog"
 import { ExpressWalkupDialog } from "@/features/check-in/dialogs/express-walkup-dialog"
@@ -36,7 +44,6 @@ import {
   resendReservationTicketEmail,
   updateCustomerEmail,
 } from "@/lib/api/resend-reservation-ticket"
-import { assignReservationSeat } from "@/lib/api/reservation-pos-actions"
 import {
   cancelReservation,
   fetchReservationDetailById,
@@ -205,6 +212,7 @@ export function CheckIn() {
   const [assignCheckInAfterSave, setAssignCheckInAfterSave] = useState(false)
   const [assignSeatsError, setAssignSeatsError] = useState<string | null>(null)
   const [isAssignSeatsSubmitting, setIsAssignSeatsSubmitting] = useState(false)
+  const [warningMessage, setWarningMessage] = useState<string | null>(null)
 
   const [selectedReservation, setSelectedReservation] =
     useState<Reservation | null>(null)
@@ -494,7 +502,10 @@ export function CheckIn() {
 
       const validation = validateReservationCheckIn(detail)
       if (!validation.canCheckIn) {
-        setCheckInError(validation.error)
+        setWarningMessage(
+          validation.error ??
+            "Amount due is greater than zero. Cannot Check-in."
+        )
         return
       }
 
@@ -1212,7 +1223,7 @@ export function CheckIn() {
   }
 
   function openAssignSeats(
-    reservation: Reservation,
+    reservation: Reservation | null,
     checkInAfterSave: boolean
   ) {
     setSelectedReservation(reservation)
@@ -1221,25 +1232,45 @@ export function CheckIn() {
     setAssignSeatsOpen(true)
   }
 
-  function handleOpenAssignSeats(record: CheckInRecord) {
+  async function handleOpenAssignSeatsAndCheckIn(record: CheckInRecord) {
     if (record.isCancelled) {
       return
     }
-    openAssignSeats(resolveReservation(record), false)
-  }
 
-  function handleOpenAssignSeatsAndCheckIn(record: CheckInRecord) {
-    if (record.isCancelled) {
+    // Desktop AssignSeatsAndCheckIn: unpaid → Warning, do not open dialog
+    if (!isReady) {
       return
     }
-    openAssignSeats(resolveReservation(record), true)
+
+    setCheckInError(null)
+    try {
+      const detail = await fetchReservationDetailById({
+        connectionName,
+        reservationId: record.id,
+      })
+      const validation = validateReservationCheckIn(detail)
+      if (!validation.canCheckIn) {
+        setWarningMessage(
+          validation.error?.includes("Amount due")
+            ? "Amount due greater than zero, Cannot check in"
+            : (validation.error ??
+              "Amount due greater than zero, Cannot check in")
+        )
+        return
+      }
+      openAssignSeats(resolveReservation(record), true)
+    } catch (requestError) {
+      setWarningMessage(
+        requestError instanceof Error
+          ? requestError.message
+          : "Payment detail no found"
+      )
+    }
   }
 
   function handleToolbarAssignSeats() {
-    if (!selectedReservation || selectedReservation.isCancelled) {
-      setCheckInError(
-        "Select a guest row first, then click Assign Seats (or use the row menu)."
-      )
+    if (!showTime) {
+      setCheckInError("Show does not exist")
       return
     }
 
@@ -1248,10 +1279,21 @@ export function CheckIn() {
   }
 
   async function handleSaveAssignSeats(payload: {
-    tableNums: string
+    result: {
+      assignments: Array<{
+        ReservationId: string
+        TableNo: string
+        SeatNo: number
+      }>
+      tableNumsByReservation: Array<{
+        reservationId: string
+        tableNums: string
+      }>
+    }
     checkInAfterSave: boolean
+    reservationId: string | null
   }) {
-    if (!selectedReservation || !isReady) {
+    if (!isReady) {
       return
     }
 
@@ -1260,42 +1302,48 @@ export function CheckIn() {
     setCheckInError(null)
 
     try {
-      await assignReservationSeat({
-        connectionName,
-        locationId,
-        reservationId: selectedReservation.id,
-        tableNums: payload.tableNums,
-        lastUpdateId: username,
-      })
       await refreshReservations()
 
-      if (!payload.checkInAfterSave) {
+      const targetReservationId =
+        payload.reservationId ??
+        selectedReservation?.id ??
+        payload.result.tableNumsByReservation[0]?.reservationId ??
+        null
+
+      if (!payload.checkInAfterSave || !targetReservationId) {
         setAssignSeatsOpen(false)
         return
       }
 
       const detail = await fetchReservationDetailById({
         connectionName,
-        reservationId: selectedReservation.id,
+        reservationId: targetReservationId,
       })
       const validation = validateReservationCheckIn(detail)
       if (!validation.canCheckIn) {
-        setAssignSeatsError(
-          validation.error ??
-            "Amount due greater than zero, Cannot check in"
+        setAssignSeatsOpen(false)
+        setWarningMessage(
+          validation.error?.includes("Amount due")
+            ? "Amount due greater than zero, Cannot check in"
+            : (validation.error ??
+              "Amount due greater than zero, Cannot check in")
         )
         return
       }
 
       if (needsPromoValidation(detail)) {
         setPendingCheckInDetail(detail)
+        setSelectedReservation(
+          reservations.find((row) => row.id === targetReservationId) ??
+            selectedReservation
+        )
         setAssignSeatsOpen(false)
         setPromoIntent("check-in")
         setCheckInPromoOpen(true)
         return
       }
 
-      await submitReservationCheckIn(selectedReservation.id)
+      await submitReservationCheckIn(targetReservationId)
       setAssignSeatsOpen(false)
     } catch (requestError) {
       setAssignSeatsError(
@@ -1465,8 +1513,9 @@ export function CheckIn() {
           }}
           onPartialUnscan={handlePartialUnscan}
           onQuickPay={handleQuickPay}
-          onAssignSeats={handleOpenAssignSeats}
-          onAssignSeatsAndCheckIn={handleOpenAssignSeatsAndCheckIn}
+          onAssignSeatsAndCheckIn={(record) => {
+            void handleOpenAssignSeatsAndCheckIn(record)
+          }}
           onMoveReservation={handleOpenMove}
           onPrintTickets={(record) => {
             void handlePrintReservation(record, {
@@ -1670,11 +1719,15 @@ export function CheckIn() {
             setIsAssignSeatsSubmitting(false)
           }
         }}
+        connectionName={connectionName}
+        locationId={locationId}
+        showId={showTime}
+        username={username}
         reservation={selectedReservation}
         checkInAfterSave={assignCheckInAfterSave}
         isSubmitting={isAssignSeatsSubmitting}
         error={assignSeatsError}
-        onSave={handleSaveAssignSeats}
+        onSaved={handleSaveAssignSeats}
       />
 
       <SplitReservationDialog
@@ -1702,6 +1755,45 @@ export function CheckIn() {
         onExport={handleExport}
         excelDescription="Download an Excel workbook (.xlsx) of the Check-in list."
       />
+
+      {/* Desktop Warning for unpaid Check-In / Assign Seats And Check-In */}
+      <Dialog
+        open={Boolean(warningMessage)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setWarningMessage(null)
+          }
+        }}
+      >
+        <DialogContent
+          className="gap-0 overflow-hidden p-0 sm:max-w-md"
+          showCloseButton={false}
+        >
+          <DialogHeader
+            className="shrink-0 border-b px-4 py-2.5"
+            style={{ backgroundColor: "#155abb" }}
+          >
+            <DialogTitle className="text-base font-semibold text-white">
+              Warning
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex items-start gap-3 px-5 py-6">
+            <Info className="mt-0.5 size-8 shrink-0 text-[#155abb]" />
+            <DialogDescription className="pt-1 text-sm text-foreground">
+              {warningMessage}
+            </DialogDescription>
+          </div>
+          <DialogFooter className="border-t bg-[#f5f5f5] px-4 py-3 sm:justify-center">
+            <Button
+              type="button"
+              className="h-9 min-w-20 bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={() => setWarningMessage(null)}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -15,7 +15,6 @@ type CheckInDataTableProps = {
   onPartialCheckInOrSplit?: (record: CheckInRecord) => void
   onPartialUnscan?: (record: CheckInRecord) => void
   onQuickPay?: (record: CheckInRecord) => void
-  onAssignSeats?: (record: CheckInRecord) => void
   onAssignSeatsAndCheckIn?: (record: CheckInRecord) => void
   onMoveReservation?: (record: CheckInRecord) => void
   onPrintTickets?: (record: CheckInRecord) => void
@@ -41,7 +40,6 @@ export function CheckInDataTable({
   onPartialCheckInOrSplit,
   onPartialUnscan,
   onQuickPay,
-  onAssignSeats,
   onAssignSeatsAndCheckIn,
   onMoveReservation,
   onPrintTickets,
@@ -65,7 +63,6 @@ export function CheckInDataTable({
         onPartialCheckInOrSplit,
         onPartialUnscan,
         onQuickPay,
-        onAssignSeats,
         onAssignSeatsAndCheckIn,
         onMoveReservation,
         onPrintTickets,
@@ -85,7 +82,6 @@ export function CheckInDataTable({
       onPartialCheckInOrSplit,
       onPartialUnscan,
       onQuickPay,
-      onAssignSeats,
       onAssignSeatsAndCheckIn,
       onMoveReservation,
       onPrintTickets,
