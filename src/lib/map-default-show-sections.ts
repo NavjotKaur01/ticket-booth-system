@@ -7,6 +7,7 @@ import { formatDateForDisplay } from "@/lib/date-display-format"
 import { formatShowTime } from "@/lib/format-show-time"
 
 const AGE_RESTRICTIONS = [
+  { value: "", label: "Blank", description: "Do not show age on web" },
   { value: "A", label: "A - All ages", description: "All ages" },
   { value: "Y", label: "Y - Over 21", description: "Over 21" },
   { value: "N", label: "N - Over 18", description: "Over 18" },

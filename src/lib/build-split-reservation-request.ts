@@ -127,7 +127,7 @@ function buildSplitPaymentModel({
   }
   if (paymentType !== 'cash') {
     payment.CCType = detectCreditCardType(paymentFields.cardNumber)
-    payment.CreditCardNumber = paymentFields.cardNumber.trim()
+    payment.CreditCardNubmer = paymentFields.cardNumber.trim()
     payment.CCExpYear = paymentFields.expYear
     payment.CCExpMonth = getExpirationMonthNumber(paymentFields.expMonth)
     payment.SecurityCode = paymentFields.cvv.trim()

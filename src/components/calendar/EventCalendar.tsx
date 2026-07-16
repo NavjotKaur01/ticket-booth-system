@@ -447,6 +447,7 @@ export default function EventCalendar() {
         isAdjustAgeOpen={isAdjustAgeOpen}
         setIsAdjustAgeOpen={setIsAdjustAgeOpen}
         adjustAgeEvent={adjustAgeEvent}
+        onAdjustAgeSaved={refetch}
         isAdjustHubOpen={isAdjustHubOpen}
         setIsAdjustHubOpen={setIsAdjustHubOpen}
         adjustHubEvent={adjustHubEvent}

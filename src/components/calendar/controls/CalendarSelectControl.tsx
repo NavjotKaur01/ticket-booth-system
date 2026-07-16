@@ -47,14 +47,12 @@ export default function CalendarSelectControl({
 }: CalendarSelectControlProps) {
   const [isOpen, setIsOpen] = useState(false)
 
-  const selectedLabel = useMemo(() => {
-    if (!value) {
-      return placeholder
-    }
+  const selectedOption = useMemo(
+    () => options.find((option) => option.value === value),
+    [options, value]
+  )
 
-    const matchedLabel = options.find((option) => option.value === value)?.label
-    return matchedLabel?.trim() ? matchedLabel : placeholder
-  }, [options, placeholder, value])
+  const selectedLabel = selectedOption?.label ?? placeholder
 
   function handleSelect(nextValue: string) {
     onChange(nextValue)
@@ -74,7 +72,7 @@ export default function CalendarSelectControl({
           onKeyDown={onTriggerKeyDown}
           className={cn(
             "h-9 w-full justify-between px-3 font-normal",
-            !value && "text-muted-foreground",
+            !selectedOption && "text-muted-foreground",
             className
           )}
         >
