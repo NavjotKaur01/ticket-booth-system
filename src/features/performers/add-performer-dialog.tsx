@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { saveComedian } from "@/lib/api/comedians"
 import { buildSaveComedianRequest } from "@/lib/build-save-comedian-request"
 import { cn } from "@/lib/utils"
@@ -67,11 +68,14 @@ export function AddPerformerDialog({
     }
 
     if (!form.lastName.trim() && !form.firstName.trim() && !form.stageName.trim()) {
-      setError("Enter at least a last name, first name, or stage name.")
+      reportErrorMessage(
+        setError,
+        "Enter at least a last name, first name, or stage name."
+      )
       return
     }
     if (!isReady || !connectionName || !locationId) {
-      setError("Location is required before saving a comedian.")
+      reportErrorMessage(setError, "Location is required before saving a comedian.")
       return
     }
 
@@ -87,14 +91,11 @@ export function AddPerformerDialog({
           form,
         })
       )
+      toastSuccess("Comedian saved")
       await onSaved?.()
       onOpenChange(false)
     } catch (saveError) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : "Unable to save comedian."
-      )
+      reportError(setError, saveError, "Unable to save comedian.")
     } finally {
       setSaving(false)
     }

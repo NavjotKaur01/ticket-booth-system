@@ -36,6 +36,11 @@ import {
   readReservationFilters,
   writeReservationFilters,
 } from "@/lib/reservation-filter-storage"
+import {
+  reportError,
+  reportErrorMessage,
+  toastSuccess,
+} from "@/lib/app-toast"
 import { resolveReservationTotalSeats } from "@/lib/resolve-reservation-total-seats"
 import type { CancelReservationPaymentRow } from "@/types/cancel-reservation-payment"
 import { filterReservations } from "@/lib/filter-reservations"
@@ -322,6 +327,7 @@ export function Reservations() {
     await refreshReservations()
     setCheckInPromoOpen(false)
     setPendingCheckInDetail(null)
+    toastSuccess("Reservation checked in successfully")
   }
 
   function handleCheckInPromoDialogOpenChange(open: boolean) {
@@ -345,10 +351,10 @@ export function Reservations() {
     try {
       await submitReservationCheckIn(reservationId)
     } catch (requestError) {
-      setCheckInError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to check in reservation"
+      reportError(
+        setCheckInError,
+        requestError,
+        "Failed to check in reservation"
       )
     } finally {
       setIsCheckingInReservation(false)
@@ -372,7 +378,10 @@ export function Reservations() {
 
       const validation = validateReservationCheckIn(detail)
       if (!validation.canCheckIn) {
-        setCheckInError(validation.error)
+        reportErrorMessage(
+          setCheckInError,
+          validation.error ?? "Failed to check in reservation"
+        )
         return
       }
 
@@ -384,10 +393,10 @@ export function Reservations() {
 
       await submitReservationCheckIn(reservation.id)
     } catch (requestError) {
-      setCheckInError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to check in reservation"
+      reportError(
+        setCheckInError,
+        requestError,
+        "Failed to check in reservation"
       )
     } finally {
       setIsCheckingInReservation(false)
@@ -434,11 +443,12 @@ export function Reservations() {
       )
       await refreshReservations()
       handleNoteDialogOpenChange(false)
+      toastSuccess("Note saved")
     } catch (requestError) {
-      setSaveReservationNoteError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to save reservation note"
+      reportError(
+        setSaveReservationNoteError,
+        requestError,
+        "Failed to save reservation note"
       )
     } finally {
       setIsSavingReservationNote(false)
@@ -484,11 +494,12 @@ export function Reservations() {
           lastUpdateId: username,
         })
       )
+      toastSuccess("Reservation uncanceled")
     } catch (requestError) {
-      setUncancelReservationError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to uncancel reservation"
+      reportError(
+        setUncancelReservationError,
+        requestError,
+        "Failed to uncancel reservation"
       )
     } finally {
       setIsUncancellingReservation(false)
@@ -521,11 +532,12 @@ export function Reservations() {
         })
       )
       handleCancelDialogOpenChange(false)
+      toastSuccess("Reservation cancelled")
     } catch (requestError) {
-      setCancelReservationError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to cancel reservation"
+      reportError(
+        setCancelReservationError,
+        requestError,
+        "Failed to cancel reservation"
       )
     } finally {
       setIsCancellingReservation(false)
@@ -563,11 +575,12 @@ export function Reservations() {
       if (!didStart) {
         throw new Error("Unable to start printing. Please allow popups and try again.")
       }
+      toastSuccess("Ticket print started")
     } catch (error) {
-      setReservationPrintError(
-        error instanceof Error
-          ? error.message
-          : "Unable to start printing. Please try again."
+      reportError(
+        setReservationPrintError,
+        error,
+        "Unable to start printing. Please try again."
       )
     }
   }
@@ -609,7 +622,10 @@ export function Reservations() {
       const totalPay = validPayments.reduce((sum, pymt) => sum + (pymt.Amount ?? 0), 0)
 
       if (totalPay <= 0 || totalPay !== (resDet.Total ?? 0)) {
-        setSignaturePrintError("No Credit Card payment found to print signature")
+        reportErrorMessage(
+          setSignaturePrintError,
+          "No Credit Card payment found to print signature"
+        )
         return
       }
 
@@ -625,9 +641,12 @@ export function Reservations() {
       if (!didStart) {
         throw new Error("Unable to start printing. Please allow popups and try again.")
       }
+      toastSuccess("Signature print started")
     } catch (error) {
-      setSignaturePrintError(
-        error instanceof Error ? error.message : "Unable to print signature. Please try again."
+      reportError(
+        setSignaturePrintError,
+        error,
+        "Unable to print signature. Please try again."
       )
     }
   }

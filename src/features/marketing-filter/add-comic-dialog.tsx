@@ -13,8 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { selectComedianColumns } from "@/features/marketing-filter/select-comedian-columns"
-import { getClubmanErrorMessage } from "@/store/api/baseQuery"
 import { useSearchMarketingComediansMutation } from "@/store/api/clubmanApi"
 import type { MarketingFilterComedian } from "@/types/marketing-filter"
 
@@ -77,7 +77,10 @@ export function AddComicDialog({
     async (filters: ComedianSearchFilters) => {
       if (!connectionName || !locationId) {
         setComedians([])
-        setError("Location is required before searching comedians.")
+        reportErrorMessage(
+          setError,
+          "Location is required before searching comedians."
+        )
         return
       }
 
@@ -97,7 +100,7 @@ export function AddComicDialog({
         setComedians(mapComedianResults(data))
       } catch (requestError) {
         setComedians([])
-        setError(getClubmanErrorMessage(requestError))
+        reportError(setError, requestError, "Failed to search comedians")
       }
     },
     [connectionName, locationId, searchMarketingComedians]
@@ -154,6 +157,7 @@ export function AddComicDialog({
     }
 
     onConfirm(merged)
+    toastSuccess("Comedians selected")
     onOpenChange(false)
   }
 

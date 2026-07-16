@@ -24,6 +24,7 @@ import {
 import { promotionFormDiscountSelectOptions } from "@/data/promotions"
 import { weekDayOptions, yesNoOptions } from "@/data/promotion-form-options"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import {
   getPromotionDetails,
   savePromotion,
@@ -260,7 +261,10 @@ export function AddPromotionDialog({
 
     async function loadPromotionDetails() {
       if (!connectionName) {
-        setError("Connection is required before loading a promotion.")
+        reportErrorMessage(
+          setError,
+          "Connection is required before loading a promotion."
+        )
         return
       }
 
@@ -276,10 +280,10 @@ export function AddPromotionDialog({
         setForm(mapPromotionDetailsToForm(details))
       } catch (requestError) {
         if (!cancelled) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load promotion details."
+          reportError(
+            setError,
+            requestError,
+            "Unable to load promotion details."
           )
         }
       } finally {
@@ -375,7 +379,7 @@ export function AddPromotionDialog({
   async function handleSave() {
     const validationError = validateForm()
     if (validationError) {
-      setError(validationError)
+      reportErrorMessage(setError, validationError)
       return
     }
 
@@ -399,15 +403,14 @@ export function AddPromotionDialog({
           form,
         })
       }
+      toastSuccess(isEditMode ? "Promotion updated" : "Promotion saved")
       await onSaved?.()
       onOpenChange(false)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : isEditMode
-            ? "Failed to update promotion"
-            : "Failed to save promotion"
+      reportError(
+        setError,
+        requestError,
+        isEditMode ? "Failed to update promotion" : "Failed to save promotion"
       )
     } finally {
       setSaving(false)

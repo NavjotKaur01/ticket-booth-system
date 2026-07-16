@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { securityLevelOptions, userStatusOptions } from "@/data/users"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { saveSystemUser } from "@/lib/api/system-users"
 import { buildSaveSystemUserRequest } from "@/lib/build-save-system-user-request"
 import {
@@ -90,7 +91,7 @@ export function AddUserDialog({
   async function handleSave() {
     const validationError = validateForm()
     if (validationError) {
-      setError(validationError)
+      reportErrorMessage(setError, validationError)
       return
     }
 
@@ -107,14 +108,11 @@ export function AddUserDialog({
         })
       )
 
+      toastSuccess("User saved")
       await onSaved?.()
       onOpenChange(false)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to save user"
-      )
+      reportError(setError, requestError, "Failed to save user")
     } finally {
       setSaving(false)
     }

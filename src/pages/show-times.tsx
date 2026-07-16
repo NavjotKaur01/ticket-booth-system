@@ -8,6 +8,7 @@ import { ShowTimeDataTable } from "@/features/show-times/show-time-data-table"
 import { ShowTimeFiltersCard } from "@/features/show-times/show-time-filters-card"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useShowTimeSearch } from "@/hooks/use-show-time-search"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { buildDeleteShowDefRequest } from "@/lib/build-show-def-request"
 import { deleteShowDefs } from "@/lib/api/show-times"
 import {
@@ -72,11 +73,15 @@ export function ShowTimes() {
   async function handleSaved() {
     setActionError(null)
     await search(draftFilters)
+    toastSuccess("Show time saved")
   }
 
   async function handleDelete(row: ShowTimeRow) {
     if (!isReady || !connectionName || !locationId) {
-      setActionError("Location is required before deleting a show time.")
+      reportErrorMessage(
+        setActionError,
+        "Location is required before deleting a show time."
+      )
       return
     }
 
@@ -94,12 +99,9 @@ export function ShowTimes() {
         })
       )
       await search(draftFilters)
+      toastSuccess("Show time deleted")
     } catch (deleteError) {
-      setActionError(
-        deleteError instanceof Error
-          ? deleteError.message
-          : "Unable to delete show time."
-      )
+      reportError(setActionError, deleteError, "Unable to delete show time.")
     }
   }
 

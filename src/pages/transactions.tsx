@@ -1,5 +1,5 @@
 import { FileDown } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { ExportDataDialog } from "@/components/common/export-data-dialog"
 import { PanelCard } from "@/components/common/panel-card"
@@ -8,6 +8,7 @@ import { TransactionDataTable } from "@/features/transactions/transaction-data-t
 import { TransactionToolbar } from "@/features/transactions/transaction-toolbar"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useDailyTransactionData } from "@/hooks/use-daily-transaction-data"
+import { toastError } from "@/lib/app-toast"
 import { useShowDetailsByDate } from "@/hooks/use-show-details-by-date"
 import { exportDailyTransactions } from "@/lib/export-daily-transactions"
 import type { ExportFormat } from "@/lib/export-table-data"
@@ -82,6 +83,12 @@ export function Transactions() {
   }
 
   const pageError = showsError ?? transactionsError
+
+  useEffect(() => {
+    if (pageError) {
+      toastError(pageError)
+    }
+  }, [pageError])
 
   return (
     <div className="space-y-3">

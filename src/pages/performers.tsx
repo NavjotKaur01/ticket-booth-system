@@ -10,6 +10,7 @@ import { PerformerFiltersCard } from "@/features/performers/performer-filters-ca
 import { UpdatePerformerDialog } from "@/features/performers/update-performer-dialog"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useComedianSearch } from "@/hooks/use-comedian-search"
+import { reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import {
   DEFAULT_PERFORMER_FILTERS,
   type Performer,
@@ -121,12 +122,13 @@ export function Performers() {
 
   function handleDeletePerformer(_performer: Performer) {
     // Desktop soft-delete path is commented out; no live API for Administrator delete.
-    setActionError("Delete comedian is not available from the API.")
+    reportErrorMessage(setActionError, "Delete comedian is not available from the API.")
   }
 
   async function handlePerformerSaved() {
     setActionError(null)
     await search(draftFilters)
+    toastSuccess("Comedian saved")
   }
 
   const emptyMessage = loading

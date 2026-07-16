@@ -34,6 +34,11 @@ import {
 } from '@/lib/validate-reservation-payment'
 import { cn } from '@/lib/utils'
 import {
+  reportError,
+  reportErrorMessage,
+  toastSuccess,
+} from '@/lib/app-toast'
+import {
   createEmptyReservationPaymentFields,
   type ReservationPaymentFields
 } from '@/types/reservation-payment'
@@ -232,9 +237,7 @@ export function SplitReservationDialog({
     try {
       await openCashDrawer()
     } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : 'Failed to open cash drawer'
-      )
+      reportError(setSubmitError, error, 'Failed to open cash drawer')
     } finally {
       setIsCashDrawerBusy(false)
     }
@@ -252,13 +255,16 @@ export function SplitReservationDialog({
     })
 
     if (validationError) {
-      setSubmitError(validationError)
+      reportErrorMessage(setSubmitError, validationError)
       return
     }
 
     const inputAmount = parseReservationMoney(paymentAmountInput)
     if (inputAmount > paymentDue) {
-      setSubmitError("Payment amount cannot be greater than the remaining due.")
+      reportErrorMessage(
+        setSubmitError,
+        'Payment amount cannot be greater than the remaining due.'
+      )
       return
     }
 
@@ -273,7 +279,7 @@ export function SplitReservationDialog({
 
     if (paymentError) {
       setPaymentValidationErrors(nextPaymentErrors)
-      setSubmitError(paymentError)
+      reportErrorMessage(setSubmitError, paymentError)
       return
     }
 
@@ -312,11 +318,10 @@ export function SplitReservationDialog({
       } else {
         onOpenChange(false)
         await onSplit?.()
+        toastSuccess('Reservation split')
       }
     } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : 'Failed to split reservation'
-      )
+      reportError(setSubmitError, error, 'Failed to split reservation')
     } finally {
       setIsSubmitting(false)
     }

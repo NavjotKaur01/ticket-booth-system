@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,7 @@ import { PromotionDataTable } from "@/features/promotions/promotion-data-table"
 import { PromotionFiltersCard } from "@/features/promotions/promotion-filters-card"
 import { useAppSession } from "@/hooks/use-app-session"
 import { usePromotionSearch } from "@/hooks/use-promotion-search"
+import { toastError } from "@/lib/app-toast"
 import {
   DEFAULT_PROMOTION_FILTERS,
   type Promotion,
@@ -32,6 +33,12 @@ export function Promotions() {
   const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(
     null
   )
+
+  useEffect(() => {
+    if (error) {
+      toastError(error)
+    }
+  }, [error])
 
   function updateDraftField<K extends keyof PromotionFilters>(
     key: K,

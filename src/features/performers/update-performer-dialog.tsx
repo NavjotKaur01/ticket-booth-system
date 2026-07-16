@@ -16,13 +16,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import {
   mapComedianInfoToUpdateForm,
   mapPerformerToUpdateForm,
   mapUpdateFormToComicInfo,
 } from "@/lib/map-performer-form"
 import { cn } from "@/lib/utils"
-import { getClubmanErrorMessage } from "@/store/api/baseQuery"
 import {
   useGetComedianInfoQuery,
   useUpdateComedianMutation,
@@ -529,7 +529,7 @@ export function UpdatePerformerDialog({
   async function handleUpdate() {
     if (!performer) return
     if (!isReady || !connectionName || !locationId) {
-      setError("Location is required before updating a comedian.")
+      reportErrorMessage(setError, "Location is required before updating a comedian.")
       return
     }
 
@@ -544,10 +544,11 @@ export function UpdatePerformerDialog({
         comicId: performer.id,
         form: mapUpdateFormToComicInfo(form, details),
       }).unwrap()
+      toastSuccess("Comedian updated")
       await onSaved?.()
       onOpenChange(false)
     } catch (saveError) {
-      setError(getClubmanErrorMessage(saveError))
+      reportError(setError, saveError, "Failed to update comedian")
     } finally {
       setSaving(false)
     }

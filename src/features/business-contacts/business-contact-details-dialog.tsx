@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { reportError } from "@/lib/app-toast"
 import { getBusinessContactById } from "@/lib/api/business-contacts"
 import type { ApiBusinessContactItem } from "@/types/api/business-contact"
 import type { BusinessContact } from "@/types/business-contact"
@@ -97,10 +98,10 @@ export function BusinessContactDetailsDialog({
       } catch (requestError) {
         if (!cancelled) {
           setDetails(null)
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load business contact details."
+          reportError(
+            setError,
+            requestError,
+            "Unable to load business contact details."
           )
         }
       } finally {

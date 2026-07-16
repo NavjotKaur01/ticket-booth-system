@@ -58,6 +58,7 @@ import {
   updateVenueRotatingAd,
 } from "@/features/venue-rotating-ads/venue-rotating-ads.service"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, toastSuccess } from "@/lib/app-toast"
 import type { VenueRotatingAdDraft, VenueRotatingAdRecord } from "@/types/venue-rotating-ad"
 
 const ACTIVE_OPTIONS = [
@@ -239,11 +240,7 @@ export function VenueRotatingAdsScreen() {
       })
       .catch((requestError: unknown) => {
         if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load rotating ads."
-          )
+          reportError(setError, requestError, "Unable to load rotating ads.")
         }
       })
       .finally(() => {
@@ -323,7 +320,9 @@ export function VenueRotatingAdsScreen() {
             .map((row) => (row.id === updatedRow.id ? updatedRow : row))
             .sort((left, right) => left.displayOrder - right.displayOrder)
         )
-        setStatusMessage(`Updated rotating ad "${updatedRow.adName}" for ${locationName}.`)
+        const updateMessage = `Updated rotating ad "${updatedRow.adName}" for ${locationName}.`
+        setStatusMessage(updateMessage)
+        toastSuccess(updateMessage)
       } else {
         const createdRow = await createVenueRotatingAd({
           locationId,
@@ -336,18 +335,16 @@ export function VenueRotatingAdsScreen() {
             (left, right) => left.displayOrder - right.displayOrder
           )
         )
-        setStatusMessage(`Added rotating ad "${createdRow.adName}" for ${locationName}.`)
+        const createMessage = `Added rotating ad "${createdRow.adName}" for ${locationName}.`
+        setStatusMessage(createMessage)
+        toastSuccess(createMessage)
       }
 
       setDialogOpen(false)
       setEditingAdId(null)
       setForm(buildEmptyAd())
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to save the rotating ad."
-      )
+      reportError(setError, requestError, "Unable to save the rotating ad.")
     } finally {
       setSaving(false)
     }
@@ -374,14 +371,12 @@ export function VenueRotatingAdsScreen() {
         setEditingAdId(null)
         setForm(buildEmptyAd())
       }
-      setStatusMessage(`Deleted rotating ad "${deletingRow.adName}" from ${locationName}.`)
+      const deleteMessage = `Deleted rotating ad "${deletingRow.adName}" from ${locationName}.`
+      setStatusMessage(deleteMessage)
+      toastSuccess(deleteMessage)
       setDeletingRow(null)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to delete the rotating ad."
-      )
+      reportError(setError, requestError, "Unable to delete the rotating ad.")
     } finally {
       setDeletingId(null)
     }

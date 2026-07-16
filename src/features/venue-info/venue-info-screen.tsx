@@ -28,6 +28,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, toastSuccess } from "@/lib/app-toast"
 import {
   getVenueInfoByLocation,
   updateVenueInfo,
@@ -123,11 +124,7 @@ export function VenueInfoScreen() {
       })
       .catch((requestError: unknown) => {
         if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load venue info."
-          )
+          reportError(setError, requestError, "Unable to load venue info.")
         }
       })
       .finally(() => {
@@ -166,13 +163,11 @@ export function VenueInfoScreen() {
     try {
       const savedRecord = await updateVenueInfo(form)
       setForm(savedRecord)
-      setSaveMessage(`Venue info updated for ${savedRecord.locationLabel}.`)
+      const message = `Venue info updated for ${savedRecord.locationLabel}.`
+      setSaveMessage(message)
+      toastSuccess(message)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to update venue info."
-      )
+      reportError(setError, requestError, "Unable to update venue info.")
     } finally {
       setSaving(false)
     }

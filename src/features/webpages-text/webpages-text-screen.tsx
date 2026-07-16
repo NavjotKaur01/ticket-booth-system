@@ -24,6 +24,7 @@ import {
   updateWebpageText,
 } from "@/features/webpages-text/webpages-text.service"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, toastSuccess } from "@/lib/app-toast"
 import type {
   WebpageTextPageDefinition,
   WebpageTextRecord,
@@ -98,11 +99,7 @@ export function WebpagesTextScreen() {
       })
       .catch((requestError: unknown) => {
         if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load webpage text pages."
-          )
+          reportError(setError, requestError, "Unable to load webpage text pages.")
         }
       })
       .finally(() => {
@@ -141,11 +138,7 @@ export function WebpagesTextScreen() {
       })
       .catch((requestError: unknown) => {
         if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load webpage text content."
-          )
+          reportError(setError, requestError, "Unable to load webpage text content.")
         }
       })
       .finally(() => {
@@ -181,13 +174,11 @@ export function WebpagesTextScreen() {
     try {
       const updatedRecord = await updateWebpageText(record)
       setRecord(updatedRecord)
-      setStatusMessage(`Updated ${updatedRecord.pageLabel} for ${updatedRecord.locationLabel}.`)
+      const message = `Updated ${updatedRecord.pageLabel} for ${updatedRecord.locationLabel}.`
+      setStatusMessage(message)
+      toastSuccess(message)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to update webpage text."
-      )
+      reportError(setError, requestError, "Unable to update webpage text.")
     } finally {
       setSaving(false)
     }

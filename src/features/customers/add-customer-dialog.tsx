@@ -23,6 +23,7 @@ import {
   dobMonthOptions,
   usStateOptions,
 } from "@/data/customer-form-options"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { saveCustomer, updateCustomer, getCustomerById } from "@/lib/api/customers"
 import { mapApiCustomerToForm } from "@/lib/map-api-customer-to-form"
 import { mapCustomerToForm } from "@/lib/map-customer-form"
@@ -150,10 +151,10 @@ export function AddCustomerDialog({
       } catch (requestError) {
         if (!cancelled) {
           setForm(mapCustomerToForm(fallbackCustomer))
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load customer details."
+          reportError(
+            setError,
+            requestError,
+            "Unable to load customer details."
           )
         }
       } finally {
@@ -221,7 +222,7 @@ export function AddCustomerDialog({
   async function handleSave() {
     const validationError = validateForm()
     if (validationError) {
-      setError(validationError)
+      reportErrorMessage(setError, validationError)
       return
     }
 
@@ -246,14 +247,11 @@ export function AddCustomerDialog({
         })
       }
 
+      toastSuccess(isEditMode ? "Customer updated" : "Customer saved")
       await onSaved?.(form)
       onOpenChange(false)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to save customer"
-      )
+      reportError(setError, requestError, "Failed to save customer")
     } finally {
       setSaving(false)
     }

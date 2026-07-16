@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/tooltip"
 import { deleteEmploymentOpening } from "@/features/employment-openings/employment-openings.service"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { useGetEmploymentPositionsQuery, useAddUpdateEmploymentPositionMutation } from "@/store/api/clubmanApi"
 import type { EmploymentOpeningRecord } from "@/types/employment-opening"
 
@@ -133,7 +134,7 @@ export function EmploymentOpeningsScreen() {
 
   useEffect(() => {
     if (queryError) {
-      setError("Unable to load employment openings.")
+      reportErrorMessage(setError, "Unable to load employment openings.")
     } else {
       setError(null)
     }
@@ -207,7 +208,10 @@ export function EmploymentOpeningsScreen() {
         row.id !== editingOpeningId
     )
     if (duplicateRow) {
-      setError("This employment opening already exists for the selected location.")
+      reportErrorMessage(
+        setError,
+        "This employment opening already exists for the selected location."
+      )
       return
     }
 
@@ -225,7 +229,9 @@ export function EmploymentOpeningsScreen() {
           LastUpdatedId: "Admin",
         }).unwrap()
         
-        setStatusMessage(`Updated employment opening for ${locationName}.`)
+        const updateMessage = `Updated employment opening for ${locationName}.`
+        setStatusMessage(updateMessage)
+        toastSuccess(updateMessage)
       } else {
         await addUpdateEmploymentPosition({
           ConnectionString: "demo_prod",
@@ -236,17 +242,15 @@ export function EmploymentOpeningsScreen() {
           LastUpdatedId: "Admin",
         }).unwrap()
 
-        setStatusMessage(`Added a new employment opening for ${locationName}.`)
+        const createMessage = `Added a new employment opening for ${locationName}.`
+        setStatusMessage(createMessage)
+        toastSuccess(createMessage)
       }
 
       closeEditor()
       refetch()
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to save the employment opening."
-      )
+      reportError(setError, requestError, "Unable to save the employment opening.")
     } finally {
       setSaving(false)
     }
@@ -271,14 +275,12 @@ export function EmploymentOpeningsScreen() {
       if (editingOpeningId === deletingRow.id) {
         closeEditor()
       }
-      setStatusMessage(`Deleted employment opening for ${locationName}.`)
+      const deleteMessage = `Deleted employment opening for ${locationName}.`
+      setStatusMessage(deleteMessage)
+      toastSuccess(deleteMessage)
       setDeletingRow(null)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to delete the employment opening."
-      )
+      reportError(setError, requestError, "Unable to delete the employment opening.")
     } finally {
       setDeletingId(null)
     }

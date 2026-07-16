@@ -42,6 +42,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import {
   createVenueShowTime,
   deleteVenueShowTime,
@@ -205,11 +206,7 @@ export function VenueShowTimesScreen() {
       })
       .catch((requestError: unknown) => {
         if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load venue show times."
-          )
+          reportError(setError, requestError, "Unable to load venue show times.")
         }
       })
       .finally(() => {
@@ -284,7 +281,7 @@ export function VenueShowTimesScreen() {
         row.id !== editingShowTimeId
     )
     if (duplicateRow) {
-      setError("This show time already exists for the selected day.")
+      reportErrorMessage(setError, "This show time already exists for the selected day.")
       return
     }
 
@@ -313,7 +310,9 @@ export function VenueShowTimesScreen() {
             .map((row) => (row.id === updatedRow.id ? updatedRow : row))
             .sort((left, right) => left.dayOfWeek.localeCompare(right.dayOfWeek) || left.showTime.localeCompare(right.showTime))
         )
-        setStatusMessage(`Updated ${updatedRow.dayOfWeek} ${updatedRow.showTime} for ${locationName}.`)
+        const updateMessage = `Updated ${updatedRow.dayOfWeek} ${updatedRow.showTime} for ${locationName}.`
+        setStatusMessage(updateMessage)
+        toastSuccess(updateMessage)
       } else {
         const createdRow = await createVenueShowTime({
           locationId,
@@ -333,16 +332,14 @@ export function VenueShowTimesScreen() {
             (left, right) => left.dayOfWeek.localeCompare(right.dayOfWeek) || left.showTime.localeCompare(right.showTime)
           )
         )
-        setStatusMessage(`Added ${createdRow.dayOfWeek} ${createdRow.showTime} for ${locationName}.`)
+        const createMessage = `Added ${createdRow.dayOfWeek} ${createdRow.showTime} for ${locationName}.`
+        setStatusMessage(createMessage)
+        toastSuccess(createMessage)
       }
 
       closeEditor()
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to save the venue show time."
-      )
+      reportError(setError, requestError, "Unable to save the venue show time.")
     } finally {
       setSaving(false)
     }
@@ -368,14 +365,12 @@ export function VenueShowTimesScreen() {
       if (editingShowTimeId === deletingRow.id) {
         closeEditor()
       }
-      setStatusMessage(`Deleted ${deletingRow.dayOfWeek} ${deletingRow.showTime} for ${locationName}.`)
+      const deleteMessage = `Deleted ${deletingRow.dayOfWeek} ${deletingRow.showTime} for ${locationName}.`
+      setStatusMessage(deleteMessage)
+      toastSuccess(deleteMessage)
       setDeletingRow(null)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to delete the venue show time."
-      )
+      reportError(setError, requestError, "Unable to delete the venue show time.")
     } finally {
       setDeletingId(null)
     }

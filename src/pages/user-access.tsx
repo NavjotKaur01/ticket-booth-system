@@ -4,6 +4,7 @@ import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
 import { UserAccessDataTable } from "@/features/user-access/user-access-data-table"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { saveUserAccessibility } from "@/lib/api/user-access"
 import { buildSaveUserAccessRequest } from "@/lib/build-save-user-access-request"
 import { mapUserAccessPermissions } from "@/lib/map-user-access"
@@ -64,11 +65,17 @@ export function UserAccess() {
 
   async function handleSave() {
     if (!isReady || !connectionName || !locationId) {
-      setActionError("Location is required before saving user access.")
+      reportErrorMessage(
+        setActionError,
+        "Location is required before saving user access."
+      )
       return
     }
     if (!editableRoles.user && !editableRoles.manager) {
-      setActionError("You do not have permission to edit user access.")
+      reportErrorMessage(
+        setActionError,
+        "You do not have permission to edit user access."
+      )
       return
     }
 
@@ -86,17 +93,14 @@ export function UserAccess() {
         })
       )
       if (!saved) {
-        setActionError("Unable to save user access.")
+        reportErrorMessage(setActionError, "Unable to save user access.")
         return
       }
       setActionMessage("User access saved.")
+      toastSuccess("User access saved")
       await refetch()
     } catch (saveError) {
-      setActionError(
-        saveError instanceof Error
-          ? saveError.message
-          : getClubmanErrorMessage(saveError)
-      )
+      reportError(setActionError, saveError, "Unable to save user access.")
     } finally {
       setSaving(false)
     }
