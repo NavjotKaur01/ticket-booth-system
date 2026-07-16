@@ -136,16 +136,16 @@ export function ExpressWalkupCustomerSearchDialog({
               <PhoneInputGroup
                 idPrefix="express-walkup-customer-phone"
                 value={{
-                  areaCode: criteria.areaCode,
-                  phone1: criteria.phone1,
-                  phone2: criteria.phone2,
+                  area: criteria.areaCode,
+                  prefix: criteria.phone1,
+                  line: criteria.phone2,
                 }}
                 onChange={(phone) =>
                   setCriteria((current) => ({
                     ...current,
-                    areaCode: phone.areaCode,
-                    phone1: phone.phone1,
-                    phone2: phone.phone2,
+                    areaCode: phone.area,
+                    phone1: phone.prefix,
+                    phone2: phone.line,
                   }))
                 }
                 onEnter={handleSearch}
