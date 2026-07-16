@@ -24,6 +24,10 @@ export type AssignSeatTableRow = {
   /** Desktop AssignTable.MaxSeats — active seat capacity. */
   maxSeats: number
   seats: AssignSeatCell[]
+  /**
+   * Desktop AssignTable.Status — "A" when modified this session (SaveAssignSeats).
+   */
+  status?: string
 }
 
 export type AssignSeatReservationRow = {

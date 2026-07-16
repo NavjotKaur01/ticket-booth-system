@@ -95,6 +95,19 @@ function usableReservationId(id: string | null | undefined) {
   return normalized
 }
 
+/** GUID compare — API/desktop casing often differs from web session IDs. */
+export function sameReservationId(
+  left?: string | null,
+  right?: string | null
+): boolean {
+  const a = usableReservationId(left)
+  const b = usableReservationId(right)
+  if (!a || !b) {
+    return false
+  }
+  return a.toLowerCase() === b.toLowerCase()
+}
+
 /** Desktop SeatNum is often "Seat1"…"Seat10". */
 export function parseSeatNum(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value) && value > 0) {
@@ -598,6 +611,77 @@ function countSeatNumbers(seatNumbers: string) {
   return (text.match(/[,|]/g)?.length ?? 0) + 1
 }
 
+/**
+ * Desktop ReservationPayment → AssignSeats passes ReservationList locally
+ * (CheckInVM.GetReservationsToAssignSeats with resList) instead of relying on
+ * GetReservationsToAssignSeats API. Rem = Party − form SeatNumbers count.
+ */
+export function buildPaymentAssignSeatSeed({
+  reservationId,
+  firstName,
+  lastName,
+  businessName = "",
+  qty,
+  seatNumbers = "",
+  section = "",
+  source = "",
+  promo = "",
+  notes = "",
+  dinner = false,
+  createDt = "",
+  resStatus = "",
+}: {
+  reservationId: string
+  firstName: string
+  lastName: string
+  businessName?: string
+  qty: number
+  seatNumbers?: string
+  section?: string
+  source?: string
+  promo?: string
+  notes?: string
+  dinner?: boolean | string
+  createDt?: string
+  resStatus?: string
+}): ApiReservationToAssignSeat | null {
+  const id = usableReservationId(reservationId)
+  if (!id) {
+    return null
+  }
+
+  const party = Math.max(0, Math.floor(qty) || 0)
+  const seated = countSeatNumbers(seatNumbers)
+  const bus = businessName.trim()
+  const last = bus || lastName.trim()
+  const first = bus ? "" : firstName.trim()
+  const name =
+    [first, last].filter(Boolean).join(" ").trim() ||
+    [lastName, firstName].filter(Boolean).join(", ").trim() ||
+    "Guest"
+
+  return {
+    ReservationId: id,
+    ReservationID: id,
+    Name: name,
+    LastName: last,
+    FirstName: first,
+    CreateDt: createDt,
+    Qty: party,
+    Party: party,
+    Rem: Math.max(0, party - seated),
+    SeatNumbers: seatNumbers.trim(),
+    Section: section,
+    Source: source,
+    SourceDesc: source,
+    Promo: promo,
+    Notes: notes,
+    Note: notes,
+    Dinner: readFlag(dinner) ? "Y" : "N",
+    ResStatus: resStatus,
+  }
+}
+
 export function mapReservationsToAssignSeats(
   raw: ApiReservationToAssignSeat[],
   filterReservationId?: string | null
@@ -666,7 +750,9 @@ export function mapReservationsToAssignSeats(
   // ReservationId empty → remove cancelled (RSTATE11)
   // ReservationId set → only that guest
   if (filterReservationId) {
-    rows = rows.filter((row) => row.id === filterReservationId)
+    rows = rows.filter((row) =>
+      sameReservationId(row.id, filterReservationId)
+    )
   } else {
     rows = rows.filter((row) => row.resStatus !== "RSTATE11")
   }
@@ -688,6 +774,26 @@ function formatAssignedSeatLabel(lastName: string, seatNo: number) {
     return name
   }
   return `${name}- ${seatNo}`
+}
+
+function lookupReservation(
+  reservationLookup: Map<string, AssignSeatReservationRow>,
+  reservationId: string | null
+): AssignSeatReservationRow | undefined {
+  if (!reservationId) {
+    return undefined
+  }
+  const direct = reservationLookup.get(reservationId)
+  if (direct) {
+    return direct
+  }
+  const needle = reservationId.toLowerCase()
+  for (const [key, row] of reservationLookup) {
+    if (key.toLowerCase() === needle) {
+      return row
+    }
+  }
+  return undefined
 }
 
 export function applyAssignSeatDetails(
@@ -731,32 +837,27 @@ export function applyAssignSeatDetails(
       const reservationId = usableReservationId(
         readString(record, ["ReservationId", "ReservationID", "reservationId"])
       )
+      const matched = lookupReservation(reservationLookup, reservationId)
       const lastName = readString(record, ["LastName", "lastName"])
       const firstName = readString(record, ["FirstName", "firstName"])
       const rawName =
         lastName ||
         readString(record, ["Name", "GuestName", "guestName"]) ||
         [lastName, firstName].filter(Boolean).join(", ") ||
-        (reservationId
-          ? reservationLookup.get(reservationId)?.name ?? ""
-          : "")
+        matched?.name ||
+        ""
       const displayName = formatAssignedSeatLabel(rawName, seat.seatNo)
       const source =
         readString(record, ["Source", "ResSource", "source"]) ||
-        (reservationId
-          ? reservationLookup.get(reservationId)?.source ?? ""
-          : "")
+        matched?.source ||
+        ""
       const promo =
         readString(record, ["Promo", "Promotion", "promo"]) ||
         (reservationId
           ? reservationLookup.get(reservationId)?.promo ?? ""
           : "")
       const isDinner = readFlag(
-        record.Dinner ??
-          record.IsDinner ??
-          (reservationId
-            ? reservationLookup.get(reservationId)?.isDinner
-            : false)
+        record.Dinner ?? record.IsDinner ?? matched?.isDinner
       )
       const isWeb = readFlag(record.Web ?? record.IsWeb)
       const isPromo = readFlag(record.Promo ?? record.IsPromo) || Boolean(promo)
@@ -816,6 +917,11 @@ export function buildAssignSeatsWorkspace({
   reservations,
   connectionName,
   filterReservationId,
+  /**
+   * Desktop payment Assign Seats: Rem comes from form SeatNumbers, not chart fill.
+   * Keep seed Rem so the guest stays visible (AssignSeatsRemainningConverter).
+   */
+  preserveSeedRem = false,
 }: {
   columbus?: ApiColumbusAssignSeatNumber[] | number[] | string[] | null
   clubsDetail?: ApiClubsAssignSeatDetail | null
@@ -823,6 +929,7 @@ export function buildAssignSeatsWorkspace({
   reservations: ApiReservationToAssignSeat[]
   connectionName: string
   filterReservationId?: string | null
+  preserveSeedRem?: boolean
 }): AssignSeatsWorkspace {
   const mappedReservations = mapReservationsToAssignSeats(
     reservations,
@@ -874,10 +981,15 @@ export function buildAssignSeatsWorkspace({
   return {
     tables,
     reservations: mappedReservations.map((row) => {
+      if (preserveSeedRem) {
+        return row
+      }
       const assigned = tables.reduce(
         (count, table) =>
           count +
-          table.seats.filter((seat) => seat.reservationId === row.id).length,
+          table.seats.filter((seat) =>
+            sameReservationId(seat.reservationId, row.id)
+          ).length,
         0
       )
       const rem =
@@ -937,10 +1049,14 @@ export function assignSeatToCell(
   reservations: AssignSeatReservationRow[]
   error?: string
 } {
-  const reservation = reservations.find((row) => row.id === reservationId)
+  const reservation = reservations.find((row) =>
+    sameReservationId(row.id, reservationId)
+  )
   if (!reservation) {
     return { tables, reservations, error: "Select a reservation first." }
   }
+
+  const resolvedReservationId = reservation.id
 
   let workingTables = tables
   const target = workingTables
@@ -971,11 +1087,16 @@ export function assignSeatToCell(
   const currentAssigned = workingTables.reduce(
     (count, table) =>
       count +
-      table.seats.filter((seat) => seat.reservationId === reservationId).length,
+      table.seats.filter((seat) =>
+        sameReservationId(seat.reservationId, resolvedReservationId)
+      ).length,
     0
   )
 
-  const replacingOwnSeat = unlocked?.reservationId === reservationId
+  const replacingOwnSeat = sameReservationId(
+    unlocked?.reservationId,
+    resolvedReservationId
+  )
   const needsNewSlot = !replacingOwnSeat
   if (needsNewSlot && currentAssigned >= reservation.qty) {
     return {
@@ -994,33 +1115,43 @@ export function assignSeatToCell(
   })
 
   const lastName =
-    reservation.name.split(",")[0]?.trim() || reservation.name.trim()
+    reservation.name.split(",")[0]?.trim() ||
+    reservation.name.split(" ")[0]?.trim() ||
+    reservation.name.trim()
 
-  const nextTables = workingTables.map((table) => ({
-    ...table,
-    seats: table.seats.map((seat) => {
-      if (seat.tableNo === tableNo && seat.seatNo === seatNo) {
-        return {
-          ...seat,
-          reservationId,
-          displayName: formatAssignedSeatLabel(lastName, seatNo),
-          color,
-          isHold: false,
-          readOnly: false,
+  const nextTables = workingTables.map((table) => {
+    if (table.tableNo !== tableNo) {
+      return table
+    }
+    return {
+      ...table,
+      status: "A",
+      seats: table.seats.map((seat) => {
+        if (seat.tableNo === tableNo && seat.seatNo === seatNo) {
+          return {
+            ...seat,
+            reservationId: resolvedReservationId,
+            displayName: formatAssignedSeatLabel(lastName, seatNo),
+            color,
+            isHold: false,
+            readOnly: false,
+          }
         }
-      }
-      return seat
-    }),
-  }))
+        return seat
+      }),
+    }
+  })
 
   const nextReservations = reservations.map((row) => {
-    if (row.id !== reservationId) {
+    if (!sameReservationId(row.id, resolvedReservationId)) {
       return row
     }
     const assigned = nextTables.reduce(
       (count, table) =>
         count +
-        table.seats.filter((seat) => seat.reservationId === row.id).length,
+        table.seats.filter((seat) =>
+          sameReservationId(seat.reservationId, row.id)
+        ).length,
       0
     )
     return { ...row, rem: Math.max(0, row.qty - assigned) }
@@ -1035,27 +1166,35 @@ export function clearSeatCell(
   tableNo: string,
   seatNo: number
 ) {
-  const nextTables = tables.map((table) => ({
-    ...table,
-    seats: table.seats.map((seat) => {
-      if (seat.tableNo === tableNo && seat.seatNo === seatNo) {
-        return {
-          ...seat,
-          reservationId: null,
-          displayName: "",
-          color: "none" as AssignSeatColorFlag,
-          isHold: false,
+  const nextTables = tables.map((table) => {
+    if (table.tableNo !== tableNo) {
+      return table
+    }
+    return {
+      ...table,
+      status: "A",
+      seats: table.seats.map((seat) => {
+        if (seat.tableNo === tableNo && seat.seatNo === seatNo) {
+          return {
+            ...seat,
+            reservationId: null,
+            displayName: "",
+            color: "none" as AssignSeatColorFlag,
+            isHold: false,
+          }
         }
-      }
-      return seat
-    }),
-  }))
+        return seat
+      }),
+    }
+  })
 
   const nextReservations = reservations.map((row) => {
     const assigned = nextTables.reduce(
       (count, table) =>
         count +
-        table.seats.filter((seat) => seat.reservationId === row.id).length,
+        table.seats.filter((seat) =>
+          sameReservationId(seat.reservationId, row.id)
+        ).length,
       0
     )
     return { ...row, rem: Math.max(0, row.qty - assigned) }
@@ -1070,6 +1209,7 @@ export function clearAllAssignments(
 ) {
   const nextTables = tables.map((table) => ({
     ...table,
+    status: "A",
     seats: table.seats.map((seat) => ({
       ...seat,
       reservationId: null,
@@ -1101,12 +1241,34 @@ export function collectAssignments(tables: AssignSeatTableRow[]) {
 }
 
 /** Aggregate table numbers per reservation for UpdateTableNumberReservation. */
-export function collectTableNumsByReservation(tables: AssignSeatTableRow[]) {
+export function collectTableNumsByReservation(
+  tables: AssignSeatTableRow[],
+  options?: {
+    /**
+     * Desktop SaveTableNumberInReservation: only reservations touched by
+     * Status=="A" / remove lists. When set, still scans the full grid for
+     * each touched guest's current table nums.
+     */
+    onlyReservationIds?: string[] | null
+  }
+) {
+  const onlyIds = options?.onlyReservationIds
+  const onlySet =
+    onlyIds && onlyIds.length > 0
+      ? new Set(onlyIds.map((id) => id.trim().toLowerCase()))
+      : null
+
   const byReservation = new Map<string, Set<string>>()
 
   for (const table of tables) {
     for (const seat of table.seats) {
       if (!seat.reservationId) {
+        continue
+      }
+      if (
+        onlySet &&
+        !onlySet.has(seat.reservationId.trim().toLowerCase())
+      ) {
         continue
       }
       const set = byReservation.get(seat.reservationId) ?? new Set<string>()
@@ -1121,6 +1283,22 @@ export function collectTableNumsByReservation(tables: AssignSeatTableRow[]) {
       .sort((a, b) => compareTableNos(a, b))
       .join(", "),
   }))
+}
+
+/** Reservation IDs present on Status=="A" tables (desktop touched guests). */
+export function collectTouchedReservationIds(tables: AssignSeatTableRow[]) {
+  const ids = new Set<string>()
+  for (const table of tables) {
+    if (table.status !== "A") {
+      continue
+    }
+    for (const seat of table.seats) {
+      if (seat.reservationId) {
+        ids.add(seat.reservationId)
+      }
+    }
+  }
+  return [...ids]
 }
 
 export function cellColorClass(color: AssignSeatColorFlag, filled: boolean) {
@@ -1146,22 +1324,28 @@ export function holdSeatCell(
   seatNo: number
 ) {
   return {
-    tables: tables.map((table) => ({
-      ...table,
-      seats: table.seats.map((seat) => {
-        if (seat.tableNo === tableNo && seat.seatNo === seatNo) {
-          return {
-            ...seat,
-            reservationId: null,
-            displayName: "<Hold>",
-            color: "none" as AssignSeatColorFlag,
-            isHold: true,
-            readOnly: false,
+    tables: tables.map((table) => {
+      if (table.tableNo !== tableNo) {
+        return table
+      }
+      return {
+        ...table,
+        status: "A",
+        seats: table.seats.map((seat) => {
+          if (seat.tableNo === tableNo && seat.seatNo === seatNo) {
+            return {
+              ...seat,
+              reservationId: null,
+              displayName: "<Hold>",
+              color: "none" as AssignSeatColorFlag,
+              isHold: true,
+              readOnly: false,
+            }
           }
-        }
-        return seat
-      }),
-    })),
+          return seat
+        }),
+      }
+    }),
   }
 }
 
@@ -1176,6 +1360,7 @@ export function removeSeatsFromTable(
     }
     return {
       ...table,
+      status: "A",
       seats: table.seats.map((seat) => ({
         ...seat,
         reservationId: null,
@@ -1190,7 +1375,9 @@ export function removeSeatsFromTable(
     const assigned = nextTables.reduce(
       (count, table) =>
         count +
-        table.seats.filter((seat) => seat.reservationId === row.id).length,
+        table.seats.filter((seat) =>
+          sameReservationId(seat.reservationId, row.id)
+        ).length,
       0
     )
     return { ...row, rem: Math.max(0, row.qty - assigned) }
@@ -1204,24 +1391,33 @@ export function removeReservationFromSeats(
   reservations: AssignSeatReservationRow[],
   reservationId: string
 ) {
-  const nextTables = tables.map((table) => ({
-    ...table,
-    seats: table.seats.map((seat) => {
-      if (seat.reservationId !== reservationId) {
-        return seat
-      }
-      return {
-        ...seat,
-        reservationId: null,
-        displayName: "",
-        color: "none" as AssignSeatColorFlag,
-        isHold: false,
-      }
-    }),
-  }))
+  const nextTables = tables.map((table) => {
+    const touched = table.seats.some((seat) =>
+      sameReservationId(seat.reservationId, reservationId)
+    )
+    if (!touched) {
+      return table
+    }
+    return {
+      ...table,
+      status: "A",
+      seats: table.seats.map((seat) => {
+        if (!sameReservationId(seat.reservationId, reservationId)) {
+          return seat
+        }
+        return {
+          ...seat,
+          reservationId: null,
+          displayName: "",
+          color: "none" as AssignSeatColorFlag,
+          isHold: false,
+        }
+      }),
+    }
+  })
 
   const nextReservations = reservations.map((row) => {
-    if (row.id !== reservationId) {
+    if (!sameReservationId(row.id, reservationId)) {
       return row
     }
     return { ...row, rem: row.qty }
