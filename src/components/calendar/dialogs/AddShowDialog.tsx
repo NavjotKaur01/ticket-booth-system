@@ -33,6 +33,7 @@ import {
   buildSaveShowFilterList,
 } from "@/lib/map-default-show-sections"
 import { formatShowTime } from "@/lib/format-show-time"
+import { parseAgeRestrictionValue } from "../service/adjustAge.service"
 import {
   validateAddShowForm,
 } from "@/lib/build-save-show-request"
@@ -519,7 +520,7 @@ export default function AddShowDialog({
         phoneFee: normalizeMinimumNumberValue(String(mainShowData.PhoneCharge), 0),
         walkupFee: normalizeMinimumNumberValue(String(mainShowData.WalkupCharge), 0),
         webFee: normalizeMinimumNumberValue(String(mainShowData.WebCharge), 0),
-        ageRestriction: showProperties.Over21 || "",
+        ageRestriction: parseAgeRestrictionValue(showProperties.Over21),
         useSectionFee: mainShowData.IsUseSectionFee,
         preSalePrivateShow: mainShowData.IsPrivateShow,
         isShowSoldOut: mainShowData.IsShowSolidOut,
@@ -890,7 +891,8 @@ export default function AddShowDialog({
                         </div>
                       </div>
                       <p className="mt-4 text-center text-sm text-muted-foreground">
-                        Note: Select minimum age [ Blank = Do not show age on web, A = All ages, Y = Over 21, N = Over 18, S = Special case set min age ]
+                        Note: [ Blank = Do not show age on web, A = All ages, Y = Over 21, N = Over 18, S = Special case set min age ]
+
                       </p>
                     </fieldset>
                   )}
@@ -898,22 +900,22 @@ export default function AddShowDialog({
                     className={cn(
                       "rounded-md border p-3 sm:p-4",
                       hasSubmitted &&
-                        (validationErrors.dayOfShowFee ||
-                          validationErrors.phoneFee ||
-                          validationErrors.walkupFee ||
-                          validationErrors.webFee) &&
-                        "border-destructive"
+                      (validationErrors.dayOfShowFee ||
+                        validationErrors.phoneFee ||
+                        validationErrors.walkupFee ||
+                        validationErrors.webFee) &&
+                      "border-destructive"
                     )}
                   >
                     <legend
                       className={cn(
                         "px-2 text-sm font-medium",
                         hasSubmitted &&
-                          (validationErrors.dayOfShowFee ||
-                            validationErrors.phoneFee ||
-                            validationErrors.walkupFee ||
-                            validationErrors.webFee) &&
-                          "text-destructive"
+                        (validationErrors.dayOfShowFee ||
+                          validationErrors.phoneFee ||
+                          validationErrors.walkupFee ||
+                          validationErrors.webFee) &&
+                        "text-destructive"
                       )}
                     >
                       Fees or Recurrence

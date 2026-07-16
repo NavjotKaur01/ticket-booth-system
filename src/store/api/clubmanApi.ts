@@ -39,6 +39,7 @@ import type {
   SaveShowRequestModel,
 } from "@/types/api/save-show"
 import type { UpdateShowRequestModel } from "@/types/api/update-show"
+import type { AdjustShowAgeRequest } from "@/types/api/adjust-show-age"
 import type { ApiShowData, ApiShowProperties } from "@/types/api/get-show-data"
 import type { ApiCustomerSearchItem } from "@/types/api/customer-search"
 import type { ApiComedianInfo, ComedianRequestModel } from "@/types/api/comedian-info"
@@ -1810,6 +1811,15 @@ export const clubmanApi = createApi({
       providesTags: ["Calendar"],
     }),
 
+    adjustShowAge: builder.mutation<boolean, AdjustShowAgeRequest>({
+      query: (body) => ({
+        url: "/clubman/api/Calendar/AdjustShowAge",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Calendar"],
+    }),
+
     getGiftCertificates: builder.mutation<GiftCertificate[], GetGiftCertificatesRequest>({
       query: (body) => ({
         url: "/clubman/api/GetGiftCertificates",
@@ -1937,6 +1947,7 @@ export const {
   useGetShowPropertiesQuery,
   useLazyGetShowPropertiesQuery,
   useUpdateShowMutation,
+  useAdjustShowAgeMutation,
   useGetEmploymentPositionsQuery,
   useAddUpdateEmploymentPositionMutation,
   useDeleteEmploymentPositionMutation,

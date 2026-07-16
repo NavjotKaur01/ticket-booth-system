@@ -55,7 +55,7 @@ export const calendarEventActions: CalendarActionDefinition[] = [
   { id: "adjust-age", label: "Adjust Age", dialog: "adjustAge", pastDateBehavior: "block" },
   // { id: "adjust-hub", label: "Adjust Hub", dialog: "adjustHub", pastDateBehavior: "block" },
   { id: "adjust-promo", label: "Adjust Promo for show", dialog: "adjustPromo", pastDateBehavior: "block" },
-  { id: "adjust-seats-section-price", label: "Adjust Seats/Section/Price", dialog: "adjustSeats", pastDateBehavior: "block" },
+  // { id: "adjust-seats-section-price", label: "Adjust Seats/Section/Price", dialog: "adjustSeats", pastDateBehavior: "block" },
   { id: "cancel-show", label: "Cancel Show", dialog: "cancelShow", pastDateBehavior: "block" },
   { id: "uncancel-show", label: "UnCancel Show", pastDateBehavior: "block" },
   { id: "edit-comic", label: "Show Comic", dialog: "editComic", pastDateBehavior: "block" },

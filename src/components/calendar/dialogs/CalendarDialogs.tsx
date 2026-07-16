@@ -29,6 +29,7 @@ type CalendarDialogsProps = {
   isAdjustAgeOpen: boolean
   setIsAdjustAgeOpen: (open: boolean) => void
   adjustAgeEvent: CalendarEvent | null
+  onAdjustAgeSaved?: () => void
   isAdjustHubOpen: boolean
   setIsAdjustHubOpen: (open: boolean) => void
   adjustHubEvent: CalendarEvent | null
@@ -89,6 +90,7 @@ export default function CalendarDialogs({
   isAdjustAgeOpen,
   setIsAdjustAgeOpen,
   adjustAgeEvent,
+  onAdjustAgeSaved,
   isAdjustHubOpen,
   setIsAdjustHubOpen,
   adjustHubEvent,
@@ -157,6 +159,7 @@ export default function CalendarDialogs({
         open={isAdjustAgeOpen}
         event={adjustAgeEvent}
         onOpenChange={setIsAdjustAgeOpen}
+        onSave={onAdjustAgeSaved}
       />
       <AdjustHubDialog
         open={isAdjustHubOpen}
