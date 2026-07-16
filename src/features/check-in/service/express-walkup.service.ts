@@ -1,5 +1,6 @@
 import {
   calculateExpressPanelTotalsFromSection,
+  estimateExpressTicketUnitPrice,
   type ExpressPanelTotals,
 } from "@/features/check-in/service/express-panel.service"
 import type { ReservationPromo } from "@/types/reservation-promo"
@@ -66,24 +67,70 @@ export function createExpressWalkupFormValues({
   }
 }
 
-/** Desktop walk-up totals: section price + WalkupCharge + promo. */
+/** Desktop walk-up totals: section price + WalkupCharge×party (+ day-of-show) + promo. */
 export function calculateExpressWalkupTotals({
   formValues,
   sections,
   promo,
+  showDate,
+  taxRatePercent = 0,
+  taxWithServiceCharge,
 }: {
   formValues: ExpressWalkupFormValues
   sections: ReservationSectionOption[]
   promo: ReservationPromo | null
+  showDate?: string
+  taxRatePercent?: number
+  taxWithServiceCharge?: string
 }): ExpressWalkupTotals {
   const party = Math.max(0, Number(formValues.party) || 0)
+  const passes = Math.max(0, Number(formValues.passes) || 0)
   const section =
     sections.find((item) => item.id === formValues.sectionId) ?? sections[0]
 
   return calculateExpressPanelTotalsFromSection({
     sectionPrice: section?.showPrice ?? 0,
     walkUpFee: section?.walkUpFee ?? 0,
+    dayOfShowFee: section?.dayOfShowFee ?? 0,
+    showDate,
     quantity: party,
+    passes: passes || party,
     promo,
+    taxRatePercent,
+    taxWithServiceCharge,
   })
+}
+
+export function estimateExpressWalkupTicketUnitPrice({
+  section,
+  showDate,
+  taxRatePercent = 0,
+}: {
+  section: ReservationSectionOption | null | undefined
+  showDate?: string
+  taxRatePercent?: number
+}): number {
+  if (!section) {
+    return 0
+  }
+
+  return estimateExpressTicketUnitPrice({
+    sectionPrice: section.showPrice ?? 0,
+    walkUpFee: section.walkUpFee ?? 0,
+    dayOfShowFee: section.dayOfShowFee ?? 0,
+    showDate,
+    taxRatePercent,
+  })
+}
+
+/** Desktop: show date must not be prior to today. */
+export function isExpressWalkupShowDateAllowed(showDate: string) {
+  const show = new Date(`${showDate}T00:00:00`)
+  if (Number.isNaN(show.getTime())) {
+    return false
+  }
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return show.getTime() >= today.getTime()
 }

@@ -15,6 +15,7 @@ import {
 import { CheckInDataTable } from "@/features/check-in/data-table"
 import { AssignSeatsDialog } from "@/features/check-in/dialogs/assign-seats-dialog"
 import { ExpressWalkupDialog } from "@/features/check-in/dialogs/express-walkup-dialog"
+import type { ExpressWalkupPaymentSeed } from "@/features/check-in/service/express-walkup-payment.types"
 import { PartialCheckInDialog } from "@/features/check-in/dialogs/partial-check-in-dialog"
 import { ResendEmailDialog } from "@/features/check-in/dialogs/resend-email-dialog"
 import { SplitPromoConfirmDialog } from "@/features/check-in/dialogs/split-promo-confirm-dialog"
@@ -66,8 +67,11 @@ import { writeStoredBoothSeatCount } from "@/lib/booth-seat-storage"
 import {
   readAssignSeatsVisible,
   readExpressPanelVisible,
+  readExpressPaymentMethodVisible,
   readPaymentPrintDefaults,
+  readPaymentTaxRate,
   readScannerCheckInVisible,
+  readTaxWithServiceCharge,
 } from "@/lib/check-in-defaults"
 import type { ExportFormat } from "@/lib/export-table-data"
 import { filterCheckInRecords } from "@/lib/filter-check-in"
@@ -174,6 +178,8 @@ export function CheckIn() {
   const [addOpen, setAddOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [expressWalkupOpen, setExpressWalkupOpen] = useState(false)
+  const [expressWalkupPaymentSeed, setExpressWalkupPaymentSeed] =
+    useState<ExpressWalkupPaymentSeed | null>(null)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -289,6 +295,18 @@ export function CheckIn() {
 
   const expressVisible = useMemo(
     () => readExpressPanelVisible(systemDefaults, null),
+    [systemDefaults]
+  )
+  const expressPaymentMethodVisible = useMemo(
+    () => readExpressPaymentMethodVisible(systemDefaults),
+    [systemDefaults]
+  )
+  const paymentTaxRate = useMemo(
+    () => readPaymentTaxRate(systemDefaults),
+    [systemDefaults]
+  )
+  const taxWithServiceCharge = useMemo(
+    () => readTaxWithServiceCharge(systemDefaults),
     [systemDefaults]
   )
 
@@ -884,17 +902,16 @@ export function CheckIn() {
         promo: payload.promo,
         paymentType: payload.paymentType,
         paymentAmount: payload.paymentAmount,
+        showDate,
+        taxRatePercent: paymentTaxRate,
+        taxWithServiceCharge,
+        // Desktop SaveSalesTransaction auto check-in for express cash/CC pad.
+        checkInAfterSave: true,
       })
 
       const reservationId = reservationIds[0]
-      if (reservationId && window.confirm("Check-In party?")) {
-        await reservationCheckIn(
-          buildReservationCheckInRequest({
-            connectionName,
-            reservationId,
-            lastUpdateId: username,
-          })
-        )
+      if (reservationId) {
+        void maybeAutoPrintAfterCheckIn(reservationId)
       }
 
       await refreshReservations()
@@ -909,7 +926,7 @@ export function CheckIn() {
     }
   }
 
-  async function handleExpressWalkupContinue(payload: {
+  async function handleExpressWalkupQuickPay(payload: {
     showTimeId: string
     section: (typeof expressSections)[number]
     party: number
@@ -931,6 +948,8 @@ export function CheckIn() {
     setExpressError(null)
 
     try {
+      const shouldCheckIn = window.confirm("Check-In party?")
+
       const { reservationIds } = await saveExpressWalkupReservation({
         connectionName,
         locationId,
@@ -943,17 +962,14 @@ export function CheckIn() {
         paymentType: payload.paymentType,
         paymentAmount: payload.paymentAmount,
         dinner: payload.dinner,
+        showDate,
+        taxRatePercent: paymentTaxRate,
+        taxWithServiceCharge,
+        checkInAfterSave: shouldCheckIn,
       })
 
       const reservationId = reservationIds[0]
-      if (reservationId && window.confirm("Check-In party?")) {
-        await reservationCheckIn(
-          buildReservationCheckInRequest({
-            connectionName,
-            reservationId,
-            lastUpdateId: username,
-          })
-        )
+      if (reservationId && shouldCheckIn) {
         void maybeAutoPrintAfterCheckIn(reservationId)
       }
 
@@ -968,6 +984,16 @@ export function CheckIn() {
     } finally {
       setIsExpressSubmitting(false)
     }
+  }
+
+  function handleExpressWalkupOpenPayment(seed: ExpressWalkupPaymentSeed) {
+    if (seed.showTimeId && seed.showTimeId !== showTime) {
+      setShowTime(seed.showTimeId)
+    }
+
+    setExpressWalkupPaymentSeed(seed)
+    setExpressWalkupOpen(false)
+    setAddOpen(true)
   }
 
   function handleExport(format: ExportFormat) {
@@ -1463,6 +1489,9 @@ export function CheckIn() {
         <CheckInExpressPanel
           sections={expressSections}
           promos={expressPromos}
+          showDate={showDate}
+          taxRatePercent={paymentTaxRate}
+          taxWithServiceCharge={taxWithServiceCharge}
           visible={expressVisible}
           isSubmitting={isExpressSubmitting}
           error={expressError}
@@ -1552,14 +1581,17 @@ export function CheckIn() {
             setAddOpen(false)
             setEditOpen(false)
             setSelectedReservation(null)
+            setExpressWalkupPaymentSeed(null)
           }
         }}
         onSaved={async () => {
+          setExpressWalkupPaymentSeed(null)
           await refreshReservations()
         }}
         reservation={editOpen ? selectedReservation : null}
         showDate={showDate}
-        showTime={showTime}
+        showTime={expressWalkupPaymentSeed?.showTimeId || showTime}
+        expressWalkupSeed={expressWalkupPaymentSeed}
       />
 
       <CancelReservationDialog
@@ -1662,8 +1694,12 @@ export function CheckIn() {
         shows={shows}
         isSubmitting={isExpressSubmitting}
         error={expressError}
+        showExpressPayment={expressPaymentMethodVisible}
+        taxRatePercent={paymentTaxRate}
+        taxWithServiceCharge={taxWithServiceCharge}
         onShowTimeChange={setShowTime}
-        onContinue={handleExpressWalkupContinue}
+        onQuickPaySave={handleExpressWalkupQuickPay}
+        onOpenReservationPayment={handleExpressWalkupOpenPayment}
       />
 
       <PartialCheckInDialog

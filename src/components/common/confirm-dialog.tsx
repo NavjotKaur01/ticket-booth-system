@@ -22,6 +22,8 @@ type ConfirmDialogProps = {
   /** Open above another dialog (Assign Seats / Payment). */
   nested?: boolean
   onConfirm: () => void | Promise<void>
+  /** Called when Cancel/No is clicked (before close). */
+  onCancel?: () => void | Promise<void>
 }
 
 /**
@@ -39,6 +41,7 @@ export function ConfirmDialog({
   isPending = false,
   nested = false,
   onConfirm,
+  onCancel,
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -62,7 +65,10 @@ export function ConfirmDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              void onCancel?.()
+              onOpenChange(false)
+            }}
             disabled={isPending}
           >
             {cancelLabel}
