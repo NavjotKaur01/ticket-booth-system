@@ -4,6 +4,7 @@ import {
   calculateReservationTotals,
   parseReservationMoney,
 } from "@/lib/calculate-reservation-totals"
+import { calculateExpressWalkupServiceCharge } from "@/features/check-in/service/express-panel.service"
 import { EXPRESS_WALKUP_CUSTOMER_ID } from "@/lib/express-walkup-customer"
 import { EMPTY_RESERVATION_CUSTOMER_SEARCH_CRITERIA } from "@/lib/reservation-customer-search-criteria"
 import { createEmptyReservationPaymentFields } from "@/types/reservation-payment"
@@ -25,6 +26,9 @@ type SaveExpressWalkupParams = {
   dinner?: boolean
   notes?: string
   checkInAfterSave?: boolean
+  showDate?: string
+  taxRatePercent?: number
+  taxWithServiceCharge?: string
 }
 
 /** Create a walk-up reservation with payment (express panel / express walkup). */
@@ -42,7 +46,17 @@ export async function saveExpressWalkupReservation({
   dinner = false,
   notes = "",
   checkInAfterSave = false,
+  showDate,
+  taxRatePercent = 0,
+  taxWithServiceCharge,
 }: SaveExpressWalkupParams) {
+  const baseSvcAmount = calculateExpressWalkupServiceCharge({
+    walkUpFee: section.walkUpFee ?? 0,
+    dayOfShowFee: section.dayOfShowFee ?? 0,
+    quantity: party,
+    showDate,
+  })
+
   const totals = calculateReservationTotals({
     sectionPrice: section.showPrice || section.price,
     sectionShowPrice: section.showPrice,
@@ -50,7 +64,9 @@ export async function saveExpressWalkupReservation({
     party,
     passes,
     promo,
-    baseSvcAmount: section.walkUpFee || undefined,
+    baseSvcAmount: party > 0 ? baseSvcAmount : undefined,
+    systemTaxRate: taxRatePercent,
+    taxWithServiceCharge,
   })
 
   if (paymentAmount + 0.001 < totals.total) {
@@ -68,8 +84,8 @@ export async function saveExpressWalkupReservation({
     customerId: EXPRESS_WALKUP_CUSTOMER_ID,
     searchCriteria: {
       ...EMPTY_RESERVATION_CUSTOMER_SEARCH_CRITERIA,
-      lastName: "WALKUP",
-      firstName: "EXPRESS",
+      lastName: "ZzzExpress",
+      firstName: "ZzzCustomer",
     },
     selectedSection: section,
     origin: "walkup",

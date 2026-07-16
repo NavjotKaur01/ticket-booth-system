@@ -42,6 +42,9 @@ export type ExpressPanelSalePayload = {
 type CheckInExpressPanelProps = {
   sections: ReservationSectionOption[]
   promos: ReservationPromo[]
+  showDate?: string
+  taxRatePercent?: number
+  taxWithServiceCharge?: string
   visible?: boolean
   isSubmitting?: boolean
   error?: string | null
@@ -51,6 +54,9 @@ type CheckInExpressPanelProps = {
 export function CheckInExpressPanel({
   sections,
   promos,
+  showDate,
+  taxRatePercent = 0,
+  taxWithServiceCharge,
   visible = true,
   isSubmitting = false,
   error = null,
@@ -95,20 +101,44 @@ export function CheckInExpressPanel({
       calculateExpressPanelTotalsFromSection({
         sectionPrice: selectedSection?.showPrice ?? 0,
         walkUpFee: selectedSection?.walkUpFee ?? 0,
+        dayOfShowFee: selectedSection?.dayOfShowFee ?? 0,
+        showDate,
         quantity: passQuantity,
+        passes: passQuantity,
         promo: selectedPromo,
+        taxRatePercent,
+        taxWithServiceCharge,
       }),
-    [passQuantity, selectedPromo, selectedSection]
+    [
+      passQuantity,
+      selectedPromo,
+      selectedSection,
+      showDate,
+      taxRatePercent,
+      taxWithServiceCharge,
+    ]
   )
   const transactionTotals = useMemo(
     () =>
       calculateExpressPanelTotalsFromSection({
         sectionPrice: selectedSection?.showPrice ?? 0,
         walkUpFee: selectedSection?.walkUpFee ?? 0,
+        dayOfShowFee: selectedSection?.dayOfShowFee ?? 0,
+        showDate,
         quantity: activeTransaction?.quantity ?? 0,
+        passes: activeTransaction?.quantity ?? 0,
         promo: selectedPromo,
+        taxRatePercent,
+        taxWithServiceCharge,
       }),
-    [activeTransaction?.quantity, selectedPromo, selectedSection]
+    [
+      activeTransaction?.quantity,
+      selectedPromo,
+      selectedSection,
+      showDate,
+      taxRatePercent,
+      taxWithServiceCharge,
+    ]
   )
 
   if (!visible) {
@@ -129,7 +159,7 @@ export function CheckInExpressPanel({
     setActiveTransaction({ paymentType, quantity })
   }
 
-  async function handleSalesTransactionOk() {
+  async function handleSalesTransactionOk(paymentAmount: number) {
     if (!selectedSection || !activeTransaction) {
       return
     }
@@ -141,7 +171,7 @@ export function CheckInExpressPanel({
       passes: activeTransaction.quantity,
       paymentType:
         activeTransaction.paymentType === "Cash" ? "cash" : "credit-card",
-      paymentAmount: transactionTotals.paymentDue,
+      paymentAmount: Math.max(paymentAmount, transactionTotals.paymentDue),
     })
   }
 
@@ -285,8 +315,8 @@ export function CheckInExpressPanel({
             }}
             paymentType={activeTransaction.paymentType}
             paymentDue={transactionTotals.paymentDue}
-            onOk={() => {
-              void handleSalesTransactionOk()
+            onOk={(paymentAmount) => {
+              void handleSalesTransactionOk(paymentAmount)
             }}
           />
         ) : (
@@ -301,7 +331,7 @@ export function CheckInExpressPanel({
             quantity={activeTransaction.quantity}
             paymentAmount={transactionTotals.total}
             onOk={() => {
-              void handleSalesTransactionOk()
+              void handleSalesTransactionOk(transactionTotals.paymentDue)
             }}
           />
         )
