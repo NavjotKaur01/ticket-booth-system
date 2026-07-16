@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { savePrePrivateSetupLink } from "@/lib/api/private-show-links"
 import { buildSavePrePrivateSetupLinkRequest } from "@/lib/build-private-show-link-request"
 import {
@@ -172,11 +173,14 @@ export function AddPreSaleDialog({
   async function handleSave() {
     const validationError = validateForm(form)
     if (validationError) {
-      setError(validationError)
+      reportErrorMessage(setError, validationError)
       return
     }
     if (!isReady || !connectionName || !locationId) {
-      setError("Location is required before saving a private show link.")
+      reportErrorMessage(
+        setError,
+        "Location is required before saving a private show link."
+      )
       return
     }
 
@@ -192,14 +196,11 @@ export function AddPreSaleDialog({
           form,
         })
       )
+      toastSuccess("Private show link saved")
       await onSaved?.()
       onOpenChange(false)
     } catch (saveError) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : getClubmanErrorMessage(saveError)
-      )
+      reportError(setError, saveError, "Failed to save private show link")
     } finally {
       setSaving(false)
     }

@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,7 @@ import { AdminUserFiltersCard } from "@/features/users/admin-user-filters-card"
 import { EditUserDialog } from "@/features/users/edit-user-dialog"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useSystemUsers } from "@/hooks/use-system-users"
+import { toastError } from "@/lib/app-toast"
 import { syncFiltersAfterUserEdit } from "@/lib/admin-user-form"
 import { filterAdminUsers } from "@/lib/filter-admin-users"
 import { EMPTY_ADMIN_USER_FILTERS, type AdminUser } from "@/types/user-admin"
@@ -41,6 +42,12 @@ export function Users() {
     () => filterAdminUsers(users, appliedFilters),
     [users, appliedFilters]
   )
+
+  useEffect(() => {
+    if (usersError) {
+      toastError(usersError)
+    }
+  }, [usersError])
 
   const loading = usersLoading
 

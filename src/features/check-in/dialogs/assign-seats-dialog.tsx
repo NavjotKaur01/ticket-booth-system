@@ -11,6 +11,7 @@ import {
   type AssignSeatsSaveResult,
 } from "@/features/assign-seats"
 import { buildPaymentAssignSeatSeed } from "@/features/assign-seats/assign-seats.service"
+import { toastError } from "@/lib/app-toast"
 import type { ApiReservationToAssignSeat } from "@/types/api/assign-seats"
 import type { Reservation } from "@/types/reservation"
 
@@ -166,7 +167,12 @@ export function AssignSeatsDialog({
             seedReservations={seedReservations}
             isSubmitting={isSubmitting}
             error={error ?? panelError}
-            onError={setPanelError}
+            onError={(message) => {
+              setPanelError(message)
+              if (message) {
+                toastError(message)
+              }
+            }}
             onDismiss={() => onOpenChange(false)}
             onSaved={async (result) => {
               await onSaved({

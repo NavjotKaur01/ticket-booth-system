@@ -33,6 +33,11 @@ import {
 } from '@/lib/build-move-reservation-request'
 import { formatReservationMoney, parseReservationMoney } from '@/lib/calculate-reservation-totals'
 import { fetchUpcomingShowDetails, moveReservation } from '@/lib/api/reservations'
+import {
+  reportError,
+  reportErrorMessage,
+  toastSuccess,
+} from '@/lib/app-toast'
 import { mapReservationSourceToOrigin } from '@/lib/reservation-edit'
 import {
   getFirstReservationPaymentError,
@@ -310,10 +315,10 @@ export function MoveReservationDialog({
       })
       .catch(error => {
         if (isCurrent) {
-          setUpcomingError(
-            error instanceof Error
-              ? error.message
-              : 'Failed to load upcoming shows'
+          reportError(
+            setUpcomingError,
+            error,
+            'Failed to load upcoming shows'
           )
         }
       })
@@ -396,7 +401,7 @@ export function MoveReservationDialog({
 
     const validationError = validateMoveSelection(selectedSection)
     if (validationError) {
-      setSubmitError(validationError)
+      reportErrorMessage(setSubmitError, validationError)
       return
     }
 
@@ -412,7 +417,7 @@ export function MoveReservationDialog({
 
       if (paymentError) {
         setPaymentValidationErrors(nextPaymentErrors)
-        setSubmitError(paymentError)
+        reportErrorMessage(setSubmitError, paymentError)
         return
       }
     }
@@ -450,10 +455,9 @@ export function MoveReservationDialog({
       setPaymentDialogOpen(false)
       onOpenChange(false)
       await onMoved?.()
+      toastSuccess('Reservation moved')
     } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : 'Failed to move reservation'
-      )
+      reportError(setSubmitError, error, 'Failed to move reservation')
     } finally {
       setIsSubmitting(false)
     }
@@ -462,7 +466,7 @@ export function MoveReservationDialog({
   function handleMoveClick() {
     const validationError = validateMoveSelection(selectedSection)
     if (validationError) {
-      setSubmitError(validationError)
+      reportErrorMessage(setSubmitError, validationError)
       return
     }
 

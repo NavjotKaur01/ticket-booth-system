@@ -52,6 +52,7 @@ import {
   VENUE_AD_SECTION_OPTIONS,
 } from "@/features/venue-ads/venue-ads.service"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, toastSuccess } from "@/lib/app-toast"
 import type { VenueAdDraft, VenueAdRecord, VenueAdSection } from "@/types/venue-ad"
 
 const ACTIVE_OPTIONS = [
@@ -214,11 +215,7 @@ export function VenueAdsScreen() {
       })
       .catch((requestError: unknown) => {
         if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load venue ads."
-          )
+          reportError(setError, requestError, "Unable to load venue ads.")
         }
       })
       .finally(() => {
@@ -311,7 +308,9 @@ export function VenueAdsScreen() {
           current.map((row) => (row.id === updatedRow.id ? updatedRow : row))
         )
         setSelectedAdId(updatedRow.id)
-        setStatusMessage(`Ad updated for ${locationName}.`)
+        const updateMessage = `Ad updated for ${locationName}.`
+        setStatusMessage(updateMessage)
+        toastSuccess(updateMessage)
       } else {
         const createdRow = await createVenueAd({
           locationId: locationId,
@@ -321,7 +320,9 @@ export function VenueAdsScreen() {
 
         setRows((current) => [createdRow, ...current])
         setSelectedAdId(createdRow.id)
-        setStatusMessage(`New ad created for ${locationName}.`)
+        const createMessage = `New ad created for ${locationName}.`
+        setStatusMessage(createMessage)
+        toastSuccess(createMessage)
       }
 
       setDialogOpen(false)
@@ -329,11 +330,7 @@ export function VenueAdsScreen() {
       setForm(buildEmptyAd())
       setImageFile(null)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to save the venue ad."
-      )
+      reportError(setError, requestError, "Unable to save the venue ad.")
     } finally {
       setSaving(false)
     }
@@ -359,7 +356,9 @@ export function VenueAdsScreen() {
       setSelectedAdId((current) =>
         current === deletingRow.id ? (nextRows[0]?.id ?? "") : current
       )
-      setStatusMessage(`Ad removed from ${locationName}.`)
+      const deleteMessage = `Ad removed from ${locationName}.`
+      setStatusMessage(deleteMessage)
+      toastSuccess(deleteMessage)
       setDeletingRow(null)
 
       if (editingAdId === deletingRow.id) {
@@ -369,11 +368,7 @@ export function VenueAdsScreen() {
         setImageFile(null)
       }
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to delete the venue ad."
-      )
+      reportError(setError, requestError, "Unable to delete the venue ad.")
     } finally {
       setDeleting(false)
     }

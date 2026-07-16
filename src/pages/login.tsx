@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ROUTES } from "@/constants/routes"
+import { reportErrorMessage } from "@/lib/app-toast"
 import { useAuth } from "@/contexts/auth-context"
 
 const REQUIRED_FIELD_MESSAGE = "This field is required"
@@ -49,7 +50,7 @@ export function Login() {
       await login(username, password)
       navigate(ROUTES.dashboard, { replace: true })
     } catch {
-      setError(INVALID_CREDENTIALS_MESSAGE)
+      reportErrorMessage(setError, INVALID_CREDENTIALS_MESSAGE)
     }
   }
 

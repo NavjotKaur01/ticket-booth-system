@@ -1,5 +1,5 @@
 import { FileDown } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { ExportDataDialog } from "@/components/common/export-data-dialog"
 import { PanelCard } from "@/components/common/panel-card"
@@ -10,6 +10,7 @@ import { MarketingFilterDataTable } from "@/features/marketing-filter/marketing-
 import { MarketingFilterFiltersCard } from "@/features/marketing-filter/marketing-filter-filters-card"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useMarketingFilterSearch } from "@/hooks/use-marketing-filter-search"
+import { toastError } from "@/lib/app-toast"
 import { marketingFilterRecordToCustomer } from "@/lib/filter-marketing-records"
 import { exportMarketingFilterRecords } from "@/lib/marketing-filter-export"
 import type { ExportFormat } from "@/lib/export-table-data"
@@ -37,6 +38,12 @@ export function MarketingFilter() {
       locationId,
       enabled: isReady,
     })
+
+  useEffect(() => {
+    if (error) {
+      toastError(error)
+    }
+  }, [error])
 
   function updateDraftField<K extends keyof MarketingFilterForm>(
     key: K,

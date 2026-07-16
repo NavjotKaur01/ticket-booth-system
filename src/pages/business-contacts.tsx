@@ -13,6 +13,7 @@ import {
   archiveBusinessContact,
   getBusinessContactDeleteDetail,
 } from "@/lib/api/business-contacts"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { businessFormToSearchFilters } from "@/lib/map-business-contact-form"
 import {
   EMPTY_BUSINESS_CONTACT_FILTERS,
@@ -117,7 +118,7 @@ export function BusinessContacts() {
       })
 
       if (!detail) {
-        setActionError("Business contact does not exist.")
+        reportErrorMessage(setActionError, "Business contact does not exist.")
         return
       }
 
@@ -125,7 +126,10 @@ export function BusinessContacts() {
         detail.LastUpdateID === username || userRight === "SEC01"
 
       if (!canDelete) {
-        setActionError("You do not have rights to delete this business contact.")
+        reportErrorMessage(
+          setActionError,
+          "You do not have rights to delete this business contact."
+        )
         return
       }
 
@@ -139,12 +143,9 @@ export function BusinessContacts() {
       setDetailsOpen(false)
       setDetailsContact(null)
       await search(draftFilters)
+      toastSuccess("Business contact deleted")
     } catch (requestError) {
-      setActionError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to delete business contact."
-      )
+      reportError(setActionError, requestError, "Unable to delete business contact.")
     }
   }
 

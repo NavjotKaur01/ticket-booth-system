@@ -23,6 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getComicInfo, type ComicInfo } from "@/data/comedian-info"
+import { reportError, toastSuccess } from "@/lib/app-toast"
 import { cn } from "@/lib/utils"
 
 const PREFERRED_CONTACT_OPTIONS = [
@@ -606,11 +607,10 @@ export function ComicInfoDialog({
 
     try {
       await onSave(form)
+      toastSuccess("Comedian saved")
       onOpenChange(false)
     } catch (error) {
-      setSaveError(
-        error instanceof Error ? error.message : "Failed to save comedian"
-      )
+      reportError(setSaveError, error, "Failed to save comedian")
     } finally {
       setIsSaving(false)
     }

@@ -41,6 +41,7 @@ import {
   updateVenueSectionDescription,
 } from "@/features/venue-section-descriptions/venue-section-descriptions.service"
 import { useAppSession } from "@/hooks/use-app-session"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import type { VenueSectionDescriptionRecord } from "@/types/venue-section-description"
 
 function EmptyState({
@@ -224,11 +225,7 @@ export function VenueSectionDescriptionsScreen() {
       })
       .catch((requestError: unknown) => {
         if (isActive) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load section descriptions."
-          )
+          reportError(setError, requestError, "Unable to load section descriptions.")
         }
       })
       .finally(() => {
@@ -279,7 +276,10 @@ export function VenueSectionDescriptionsScreen() {
         row.id !== editingSectionId
     )
     if (duplicateRow) {
-      setError("A section with this name already exists for the selected location.")
+      reportErrorMessage(
+        setError,
+        "A section with this name already exists for the selected location."
+      )
       return
     }
 
@@ -303,7 +303,9 @@ export function VenueSectionDescriptionsScreen() {
         setRows((current) =>
           current.map((row) => (row.id === updatedRow.id ? updatedRow : row))
         )
-        setStatusMessage(`Updated ${updatedRow.sectionName} for ${locationName}.`)
+        const updateMessage = `Updated ${updatedRow.sectionName} for ${locationName}.`
+        setStatusMessage(updateMessage)
+        toastSuccess(updateMessage)
       } else {
         const createdRow = await createVenueSectionDescription({
           locationId,
@@ -312,16 +314,14 @@ export function VenueSectionDescriptionsScreen() {
         })
 
         setRows((current) => [...current, createdRow])
-        setStatusMessage(`Added ${createdRow.sectionName} for ${locationName}.`)
+        const createMessage = `Added ${createdRow.sectionName} for ${locationName}.`
+        setStatusMessage(createMessage)
+        toastSuccess(createMessage)
       }
 
       closeEditor()
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to save the section description."
-      )
+      reportError(setError, requestError, "Unable to save the section description.")
     } finally {
       setSaving(false)
     }
@@ -346,14 +346,12 @@ export function VenueSectionDescriptionsScreen() {
       if (editingSectionId === deletingRow.id) {
         closeEditor()
       }
-      setStatusMessage(`Deleted ${deletingRow.sectionName} from ${locationName}.`)
+      const deleteMessage = `Deleted ${deletingRow.sectionName} from ${locationName}.`
+      setStatusMessage(deleteMessage)
+      toastSuccess(deleteMessage)
       setDeletingRow(null)
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to delete the section description."
-      )
+      reportError(setError, requestError, "Unable to delete the section description.")
     } finally {
       setDeletingId(null)
     }

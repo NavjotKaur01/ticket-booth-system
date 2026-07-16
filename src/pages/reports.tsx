@@ -6,6 +6,7 @@ import { PanelCard } from "@/components/common/panel-card"
 import { ROUTES, reportViewerUrl } from "@/constants/routes"
 import { useAppSession } from "@/hooks/use-app-session"
 import { fetchRecentSalesReport } from "@/lib/api/recent-sales"
+import { reportError, reportErrorMessage } from "@/lib/app-toast"
 import { mapRecentSalesReport } from "@/lib/map-recent-sales-report"
 import { createTodaySalesPdfBlob, buildTodaySalesExportBlob } from "@/features/reports/today-sales-export"
 import { ReportFiltersToolbar } from "@/features/reports/report-filters-toolbar"
@@ -256,7 +257,10 @@ export function Reports() {
     const config = getReportConfig(nextFilters.reportType)
 
     if (config.showComicPicker && !nextFilters.headlinerId) {
-      setGenerateError("Please select a comedian before generating this report.")
+      reportErrorMessage(
+        setGenerateError,
+        "Please select a comedian before generating this report."
+      )
       return
     }
 
@@ -355,13 +359,7 @@ export function Reports() {
       setGeneratedResult(result)
       setIsFilterHeaderOpen(false)
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : typeof error === "object" && error !== null && "error" in error
-            ? String((error as { error: unknown }).error)
-            : "Failed to generate report. Please try again."
-      setGenerateError(message)
+      reportError(setGenerateError, error, "Failed to generate report. Please try again.")
       setGeneratedResult(null)
     } finally {
       setIsGenerating(false)
@@ -401,7 +399,10 @@ export function Reports() {
       const activeLocationId = draftFilters.locationId || locationId
 
       if (!connectionName || !activeLocationId) {
-        setExportError("Location is not ready. Please generate the report first.")
+        reportErrorMessage(
+          setExportError,
+          "Location is not ready. Please generate the report first."
+        )
         return
       }
 
@@ -413,9 +414,7 @@ export function Reports() {
         const blob = buildTodaySalesExportBlob(summary, locationName)
         downloadBlob(blob, buildFilename("Today Sales", "xlsx"))
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Failed to export report. Please try again."
-        setExportError(message)
+        reportError(setExportError, error, "Failed to export report. Please try again.")
       }
 
       return
@@ -440,7 +439,10 @@ export function Reports() {
       const activeLocationId = draftFilters.locationId || locationId
 
       if (!connectionName || !activeLocationId) {
-        setExportError("Location is not ready. Please generate the report first.")
+        reportErrorMessage(
+          setExportError,
+          "Location is not ready. Please generate the report first."
+        )
         return
       }
 
@@ -453,9 +455,7 @@ export function Reports() {
         const blob = await createTodaySalesPdfBlob(summary, locationName)
         downloadBlob(blob, buildFilename("Today Sales", "pdf"))
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Failed to export PDF. Please try again."
-        setExportError(message)
+        reportError(setExportError, error, "Failed to export PDF. Please try again.")
       } finally {
         setIsExportingPdf(false)
       }
@@ -474,9 +474,7 @@ export function Reports() {
       const blob = await createReportPdfBlobAsync(generatedResult, locationName)
       downloadBlob(blob, buildFilename(generatedResult.title, "pdf"))
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to export PDF. Please try again."
-      setExportError(message)
+      reportError(setExportError, error, "Failed to export PDF. Please try again.")
     } finally {
       setIsExportingPdf(false)
     }

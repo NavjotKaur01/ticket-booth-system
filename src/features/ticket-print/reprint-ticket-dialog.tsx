@@ -15,6 +15,11 @@ import {
   getMockTicketPrintData,
   printReservationTicket,
 } from "@/services/ticket-print.service"
+import {
+  reportError,
+  reportErrorMessage,
+  toastSuccess,
+} from "@/lib/app-toast"
 import type { Reservation } from "@/types/reservation"
 import type { TicketPrintData } from "@/types/ticket-print"
 
@@ -99,10 +104,10 @@ export function ReprintTicketDialog({
       })
       .catch((error: unknown) => {
         if (isActive) {
-          setPrintError(
-            error instanceof Error
-              ? error.message
-              : "Failed to load re-print ticket data."
+          reportError(
+            setPrintError,
+            error,
+            "Failed to load re-print ticket data."
           )
         }
       })
@@ -138,16 +143,20 @@ export function ReprintTicketDialog({
       })
 
       if (!didStart) {
-        setPrintError("Unable to start printing. Please try again.")
+        reportErrorMessage(
+          setPrintError,
+          "Unable to start printing. Please try again."
+        )
         return
       }
 
+      toastSuccess("Ticket print started")
       onOpenChange(false)
     } catch (error) {
-      setPrintError(
-        error instanceof Error
-          ? error.message
-          : "Unable to build the ticket QR. Please try again."
+      reportError(
+        setPrintError,
+        error,
+        "Unable to build the ticket QR. Please try again."
       )
     } finally {
       setIsPrinting(false)

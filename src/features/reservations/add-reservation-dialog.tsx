@@ -121,6 +121,12 @@ import {
   type ReservationPaymentValidationErrors
 } from '@/lib/validate-reservation-payment'
 import { todayDateValue } from '@/lib/today-date-value'
+import {
+  getErrorMessage,
+  reportError,
+  reportErrorMessage,
+  toastSuccess,
+} from '@/lib/app-toast'
 import { cn } from '@/lib/utils'
 import { useAppSession } from '@/hooks/use-app-session'
 import { createTicketPrintData } from '@/services/ticket-print.service'
@@ -1977,15 +1983,24 @@ export function AddReservationDialog({
    */
   function handleAssignSeat() {
     if (!reservation?.id) {
-      setAssignSeatError('Save the reservation before assigning seats.')
+      reportErrorMessage(
+        setAssignSeatError,
+        'Save the reservation before assigning seats.'
+      )
       return
     }
     if (!activeShowTime) {
-      setAssignSeatError('Select a show before assigning seats.')
+      reportErrorMessage(
+        setAssignSeatError,
+        'Select a show before assigning seats.'
+      )
       return
     }
     if (!connectionName || !locationId) {
-      setAssignSeatError('Session connection/location is required.')
+      reportErrorMessage(
+        setAssignSeatError,
+        'Session connection/location is required.'
+      )
       return
     }
 
@@ -2041,10 +2056,10 @@ export function AddReservationDialog({
         lastUpdateId: username
       })
     } catch (requestError) {
-      setPaymentActionError(
-        requestError instanceof Error
-          ? requestError.message
-          : `Failed to ${action} payment`
+      reportError(
+        setPaymentActionError,
+        requestError,
+        `Failed to ${action} payment`
       )
     } finally {
       setPaymentActionBusy(null)
@@ -2146,8 +2161,10 @@ export function AddReservationDialog({
           TableNum: null
         }).unwrap()
       } catch (error) {
-        setPaymentActionError(
-          error instanceof Error ? error.message : 'Failed to prepare split reservation.'
+        reportError(
+          setPaymentActionError,
+          error,
+          'Failed to prepare split reservation.'
         )
         setPaymentActionBusy(null)
         return
@@ -2179,12 +2196,9 @@ export function AddReservationDialog({
         })
       )
       setSaveNoteSuccess(true)
+      toastSuccess('Note saved')
     } catch (requestError) {
-      setSaveNoteError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'Failed to save note'
-      )
+      reportError(setSaveNoteError, requestError, 'Failed to save note')
     } finally {
       setIsSavingNote(false)
     }
@@ -2208,12 +2222,9 @@ export function AddReservationDialog({
         form
       })
       await applySavedCustomer(form)
+      toastSuccess('Customer created')
     } catch (requestError) {
-      setCreateCustomerError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'Failed to create customer'
-      )
+      reportError(setCreateCustomerError, requestError, 'Failed to create customer')
     } finally {
       setIsCreatingCustomer(false)
     }
@@ -2380,14 +2391,16 @@ export function AddReservationDialog({
     }
 
     if (sectionsLoading) {
-      setSaveReservationError(
+      reportErrorMessage(
+        setSaveReservationError,
         'Show sections are still loading. Please wait and try again.'
       )
       return
     }
 
     if (saveSection.showId !== activeShowTime) {
-      setSaveReservationError(
+      reportErrorMessage(
+        setSaveReservationError,
         'Selected section does not match the show. Please select the show again.'
       )
       return
@@ -2550,6 +2563,7 @@ export function AddReservationDialog({
           }
 
           await onSaved?.([reservation.id])
+          toastSuccess('Reservation saved')
           onOpenChange(false)
           return
         }
@@ -2571,6 +2585,7 @@ export function AddReservationDialog({
         )
 
         await onSaved?.([reservation.id])
+        toastSuccess('Reservation saved')
         onOpenChange(false)
         return
       }
@@ -2629,13 +2644,15 @@ export function AddReservationDialog({
       })
 
       await onSaved?.([reservationId], ticketData)
+      toastSuccess('Reservation saved')
       onOpenChange(false)
     } catch (requestError) {
-      const rawMessage =
-        requestError instanceof Error
-          ? requestError.message
-          : 'Failed to save reservation'
-      setSaveReservationError(formatReservationPaymentError(rawMessage))
+      reportErrorMessage(
+        setSaveReservationError,
+        formatReservationPaymentError(
+          getErrorMessage(requestError, 'Failed to save reservation')
+        )
+      )
     } finally {
       setIsSavingReservation(false)
     }

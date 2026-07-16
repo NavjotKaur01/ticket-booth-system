@@ -79,6 +79,13 @@ import { mapReservationsToCheckInRecords } from "@/lib/map-check-in-record"
 import { resolveReservationTotalSeats } from "@/lib/resolve-reservation-total-seats"
 import { saveExpressWalkupReservation } from "@/lib/save-express-walkup-reservation"
 import {
+  reportError,
+  reportErrorMessage,
+  toastError,
+  toastSuccess,
+  toastWarning,
+} from "@/lib/app-toast"
+import {
   needsPromoValidation,
   validateReservationCheckIn,
 } from "@/lib/validate-reservation-check-in"
@@ -342,6 +349,12 @@ export function CheckIn() {
   }, [boothSeatDefault, locationId])
 
   useEffect(() => {
+    if (reservationsError) {
+      toastError(reservationsError)
+    }
+  }, [reservationsError])
+
+  useEffect(() => {
     if (showsLoading) {
       return
     }
@@ -500,6 +513,7 @@ export function CheckIn() {
     await refreshReservations()
     setCheckInPromoOpen(false)
     setPendingCheckInDetail(null)
+    toastSuccess("Reservation checked in successfully")
     void maybeAutoPrintAfterCheckIn(reservationId)
   }
 
@@ -520,10 +534,11 @@ export function CheckIn() {
 
       const validation = validateReservationCheckIn(detail)
       if (!validation.canCheckIn) {
-        setWarningMessage(
+        const message =
           validation.error ??
-            "Amount due is greater than zero. Cannot Check-in."
-        )
+          "Amount due is greater than zero. Cannot Check-in."
+        setWarningMessage(message)
+        toastWarning(message)
         return
       }
 
@@ -536,10 +551,10 @@ export function CheckIn() {
 
       await submitReservationCheckIn(record.id)
     } catch (requestError) {
-      setCheckInError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to check in reservation"
+      reportError(
+        setCheckInError,
+        requestError,
+        "Failed to check in reservation"
       )
     } finally {
       setIsCheckingInReservation(false)
@@ -571,10 +586,10 @@ export function CheckIn() {
       await submitReservationCheckIn(reservationId)
       setPromoIntent(null)
     } catch (requestError) {
-      setCheckInError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to check in reservation"
+      reportError(
+        setCheckInError,
+        requestError,
+        "Failed to check in reservation"
       )
     } finally {
       setIsCheckingInReservation(false)
@@ -597,12 +612,9 @@ export function CheckIn() {
         })
       )
       await refreshReservations()
+      toastSuccess("Check-in undone")
     } catch (requestError) {
-      setCheckInError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to undo check-in"
-      )
+      reportError(setCheckInError, requestError, "Failed to undo check-in")
     }
   }
 
@@ -651,7 +663,10 @@ export function CheckIn() {
       const checkedIn = detail.CheckedIn ?? record.seated
 
       if (party > 0 && party === checkedIn) {
-        setCheckInError("Entire party already checked in. Cannot be split")
+        reportErrorMessage(
+          setCheckInError,
+          "Entire party already checked in. Cannot be split"
+        )
         return
       }
 
@@ -665,7 +680,10 @@ export function CheckIn() {
       if (round(total) === round(paid)) {
         const remaining = Math.max(0, party - checkedIn)
         if (remaining <= 0) {
-          setCheckInError("Entire party already checked in. Cannot be split")
+          reportErrorMessage(
+            setCheckInError,
+            "Entire party already checked in. Cannot be split"
+          )
           return
         }
 
@@ -698,10 +716,10 @@ export function CheckIn() {
 
       setSplitOpen(true)
     } catch (requestError) {
-      setCheckInError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to start partial check-in / split"
+      reportError(
+        setCheckInError,
+        requestError,
+        "Failed to start partial check-in / split"
       )
     }
   }
@@ -724,11 +742,12 @@ export function CheckIn() {
       )
       setSplitPromoOpen(false)
       setSplitOpen(true)
+      toastSuccess("Checked in — continue with split")
     } catch (requestError) {
-      setCheckInError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to continue split reservation"
+      reportError(
+        setCheckInError,
+        requestError,
+        "Failed to continue split reservation"
       )
     } finally {
       setIsSplitPromoSubmitting(false)
@@ -744,7 +763,7 @@ export function CheckIn() {
     setPartialError(null)
 
     if ((record.scanner ?? 0) <= 0) {
-      setCheckInError("No party is scanned yet!")
+      reportErrorMessage(setCheckInError, "No party is scanned yet!")
       return
     }
 
@@ -783,11 +802,16 @@ export function CheckIn() {
 
       setPartialOpen(false)
       await refreshReservations()
+      toastSuccess(
+        partialMode === "check-in"
+          ? "Partial check-in saved"
+          : "Partial unscan saved"
+      )
     } catch (requestError) {
-      setPartialError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to update partial check-in"
+      reportError(
+        setPartialError,
+        requestError,
+        "Failed to update partial check-in"
       )
     } finally {
       setIsPartialSubmitting(false)
@@ -799,7 +823,7 @@ export function CheckIn() {
     const paid = parseReservationMoney(record.paid)
 
     if (Math.round(total * 100) === Math.round(paid * 100)) {
-      setCheckInError("No amount due. Cannot 'Quick Pay.'")
+      reportErrorMessage(setCheckInError, "No amount due. Cannot 'Quick Pay.'")
       return
     }
 
@@ -815,7 +839,8 @@ export function CheckIn() {
     }
 
     if (record.source !== "Web" && record.source !== "Phone") {
-      setResendError(
+      reportErrorMessage(
+        setResendError,
         "Resend Ticket is only available for WEB / PHONE-IN sources."
       )
       return
@@ -837,7 +862,10 @@ export function CheckIn() {
 
     const email = payload.email.trim()
     if (!email || !email.includes("@")) {
-      setResendDialogError("Please enter valid email address. ")
+      reportErrorMessage(
+        setResendDialogError,
+        "Please enter valid email address. "
+      )
       return
     }
 
@@ -871,11 +899,12 @@ export function CheckIn() {
 
       setResendOpen(false)
       await refreshReservations()
+      toastSuccess("Ticket email sent")
     } catch (requestError) {
-      setResendDialogError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to resend ticket email"
+      reportError(
+        setResendDialogError,
+        requestError,
+        "Failed to resend ticket email"
       )
     } finally {
       setIsResendSubmitting(false)
@@ -915,12 +944,9 @@ export function CheckIn() {
       }
 
       await refreshReservations()
+      toastSuccess("Express sale saved")
     } catch (requestError) {
-      setExpressError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to save express sale"
-      )
+      reportError(setExpressError, requestError, "Failed to save express sale")
     } finally {
       setIsExpressSubmitting(false)
     }
@@ -975,11 +1001,12 @@ export function CheckIn() {
 
       setExpressWalkupOpen(false)
       await refreshReservations()
+      toastSuccess("Express walkup saved")
     } catch (requestError) {
-      setExpressError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to save express walkup"
+      reportError(
+        setExpressError,
+        requestError,
+        "Failed to save express walkup"
       )
     } finally {
       setIsExpressSubmitting(false)
@@ -1005,12 +1032,15 @@ export function CheckIn() {
   function handlePrintList() {
     const didPrint = printCheckInList(filteredRecords)
     if (!didPrint) {
-      setReservationPrintError(
+      reportErrorMessage(
+        setReservationPrintError,
         filteredRecords.length === 0
           ? "No reservations to print."
           : "Unable to print the Check-in list."
       )
+      return
     }
+    toastSuccess("Check-in list sent to printer")
   }
 
   function handleOpenCancel(record: CheckInRecord) {
@@ -1036,11 +1066,12 @@ export function CheckIn() {
         })
       )
       await refreshReservations()
+      toastSuccess("Reservation uncanceled")
     } catch (requestError) {
-      setUncancelReservationError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to uncancel reservation"
+      reportError(
+        setUncancelReservationError,
+        requestError,
+        "Failed to uncancel reservation"
       )
     }
   }
@@ -1073,11 +1104,12 @@ export function CheckIn() {
       setCancelOpen(false)
       setSelectedReservation(null)
       await refreshReservations()
+      toastSuccess("Reservation cancelled")
     } catch (requestError) {
-      setCancelReservationError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to cancel reservation"
+      reportError(
+        setCancelReservationError,
+        requestError,
+        "Failed to cancel reservation"
       )
     } finally {
       setIsCancellingReservation(false)
@@ -1125,11 +1157,12 @@ export function CheckIn() {
       await refreshReservations()
       setNoteOpen(false)
       setSelectedReservation(null)
+      toastSuccess("Note saved")
     } catch (requestError) {
-      setSaveReservationNoteError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to save reservation note"
+      reportError(
+        setSaveReservationNoteError,
+        requestError,
+        "Failed to save reservation note"
       )
     } finally {
       setIsSavingReservationNote(false)
@@ -1178,11 +1211,12 @@ export function CheckIn() {
           "Unable to start printing. Please allow popups and try again."
         )
       }
+      toastSuccess("Ticket print started")
     } catch (error) {
-      setReservationPrintError(
-        error instanceof Error
-          ? error.message
-          : "Unable to start printing. Please try again."
+      reportError(
+        setReservationPrintError,
+        error,
+        "Unable to start printing. Please try again."
       )
     }
   }
@@ -1224,7 +1258,10 @@ export function CheckIn() {
       )
 
       if (totalPay <= 0 || totalPay !== (resDet.Total ?? 0)) {
-        setSignaturePrintError("No Credit Card payment found to print signature")
+        reportErrorMessage(
+          setSignaturePrintError,
+          "No Credit Card payment found to print signature"
+        )
         return
       }
 
@@ -1239,11 +1276,12 @@ export function CheckIn() {
           "Unable to start printing. Please allow popups and try again."
         )
       }
+      toastSuccess("Signature print started")
     } catch (error) {
-      setSignaturePrintError(
-        error instanceof Error
-          ? error.message
-          : "Unable to print signature. Please try again."
+      reportError(
+        setSignaturePrintError,
+        error,
+        "Unable to print signature. Please try again."
       )
     }
   }
@@ -1276,27 +1314,28 @@ export function CheckIn() {
       })
       const validation = validateReservationCheckIn(detail)
       if (!validation.canCheckIn) {
-        setWarningMessage(
-          validation.error?.includes("Amount due")
-            ? "Amount due greater than zero, Cannot check in"
-            : (validation.error ??
-              "Amount due greater than zero, Cannot check in")
-        )
+        const message = validation.error?.includes("Amount due")
+          ? "Amount due greater than zero, Cannot check in"
+          : (validation.error ??
+            "Amount due greater than zero, Cannot check in")
+        setWarningMessage(message)
+        toastWarning(message)
         return
       }
       openAssignSeats(resolveReservation(record), true)
     } catch (requestError) {
-      setWarningMessage(
+      const message =
         requestError instanceof Error
           ? requestError.message
           : "Payment detail no found"
-      )
+      setWarningMessage(message)
+      toastError(message)
     }
   }
 
   function handleToolbarAssignSeats() {
     if (!showTime) {
-      setCheckInError("Show does not exist")
+      reportErrorMessage(setCheckInError, "Show does not exist")
       return
     }
 
@@ -1338,6 +1377,7 @@ export function CheckIn() {
 
       if (!payload.checkInAfterSave || !targetReservationId) {
         setAssignSeatsOpen(false)
+        toastSuccess("Seats assigned")
         return
       }
 
@@ -1348,12 +1388,12 @@ export function CheckIn() {
       const validation = validateReservationCheckIn(detail)
       if (!validation.canCheckIn) {
         setAssignSeatsOpen(false)
-        setWarningMessage(
-          validation.error?.includes("Amount due")
-            ? "Amount due greater than zero, Cannot check in"
-            : (validation.error ??
-              "Amount due greater than zero, Cannot check in")
-        )
+        const message = validation.error?.includes("Amount due")
+          ? "Amount due greater than zero, Cannot check in"
+          : (validation.error ??
+            "Amount due greater than zero, Cannot check in")
+        setWarningMessage(message)
+        toastWarning(message)
         return
       }
 
@@ -1372,11 +1412,7 @@ export function CheckIn() {
       await submitReservationCheckIn(targetReservationId)
       setAssignSeatsOpen(false)
     } catch (requestError) {
-      setAssignSeatsError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to assign seats"
-      )
+      reportError(setAssignSeatsError, requestError, "Failed to assign seats")
     } finally {
       setIsAssignSeatsSubmitting(false)
     }
@@ -1630,6 +1666,7 @@ export function CheckIn() {
         currentShowId={showTime}
         onMoved={async () => {
           await refreshReservations()
+          toastSuccess("Reservation moved")
         }}
       />
 
@@ -1782,6 +1819,7 @@ export function CheckIn() {
         currentShowId={showTime}
         onSplit={async () => {
           await refreshReservations()
+          toastSuccess("Reservation split")
         }}
       />
 
