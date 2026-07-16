@@ -5,6 +5,7 @@ import {
   type ExportColumn,
   type ExportFormat,
 } from "@/lib/export-table-data"
+import { formatAssignSeatNumbers } from "@/lib/format-assign-seat-numbers"
 import type { CheckInRecord } from "@/types/check-in"
 import * as XLSX from "xlsx-js-style"
 
@@ -31,7 +32,7 @@ const CHECK_IN_EXPORT_COLUMNS: ExportColumn<CheckInRecord>[] = [
   { header: "Promo", value: (row) => row.promo },
   { header: "Din", value: (row) => row.din },
   { header: "Qty", value: (row) => row.qty },
-  { header: "SeatNo", value: (row) => row.seatNo },
+  { header: "SeatNo", value: (row) => formatAssignSeatNumbers(row.seatNo) },
   { header: "Seated", value: (row) => row.seated },
   { header: "Scanner", value: (row) => row.scanner },
   { header: "Phone", value: (row) => row.phoneNo },

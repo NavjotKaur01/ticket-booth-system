@@ -1,9 +1,12 @@
+import { sameReservationId } from "@/features/assign-seats/assign-seats.service"
 import { cn } from "@/lib/utils"
 import type { AssignSeatReservationRow } from "@/features/assign-seats/assign-seats.types"
 
 type AssignSeatsReservationListProps = {
   reservations: AssignSeatReservationRow[]
   selectedReservationId: string | null
+  /** Always show this guest even when Rem is 0 (payment / focused assign). */
+  pinnedReservationId?: string | null
   filter: "dinner" | "all"
   onFilterChange: (filter: "dinner" | "all") => void
   onSelect: (reservationId: string) => void
@@ -37,16 +40,23 @@ const HEADERS = [
 export function AssignSeatsReservationList({
   reservations,
   selectedReservationId,
+  pinnedReservationId = null,
   filter,
   onFilterChange,
   onSelect,
 }: AssignSeatsReservationListProps) {
-  // Desktop AssignSeatsRemainningConverter: hide rows when Rem == 0.
+  // Desktop AssignSeatsRemainningConverter: hide rows when Rem == 0,
+  // but keep the focused payment/check-in guest visible so they can reassign.
   const rows = (
     filter === "dinner"
       ? reservations.filter((row) => row.isDinner)
       : reservations
-  ).filter((row) => Number(row.rem) > 0)
+  ).filter(
+    (row) =>
+      Number(row.rem) > 0 ||
+      sameReservationId(row.id, pinnedReservationId) ||
+      sameReservationId(row.id, selectedReservationId)
+  )
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 bg-background px-3 pb-3 pt-1">
@@ -101,7 +111,10 @@ export function AssignSeatsReservationList({
               </tr>
             ) : (
               rows.map((row) => {
-                const selected = row.id === selectedReservationId
+                const selected = sameReservationId(
+                  row.id,
+                  selectedReservationId
+                )
                 return (
                   <tr
                     key={row.id}

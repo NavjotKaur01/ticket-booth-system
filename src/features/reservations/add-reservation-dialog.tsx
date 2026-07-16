@@ -736,7 +736,7 @@ function TableAssignmentRow({
             readOnly
             disabled
             className={COMPACT_INPUT}
-            placeholder='e.g. 12, 13'
+            placeholder=''
           />
         </div>
         <Button
@@ -1966,18 +1966,18 @@ export function AddReservationDialog({
     reservationId: string | null
   }) {
     const targetId = payload.reservationId ?? reservation?.id ?? null
-    const match = payload.result.tableNumsByReservation.find(
-      row => row.reservationId === targetId
-    )
-    const joined =
-      match?.tableNums ??
-      payload.result.tableNumsByReservation
-        .map(row => row.tableNums)
-        .filter(Boolean)
-        .join(', ')
+    // Only apply this reservation's tables — never fall back to other guests'
+    // seats (that copied clark's 11–14 onto the payment form).
+    const match = targetId
+      ? payload.result.tableNumsByReservation.find(
+          row =>
+            row.reservationId.trim().toLowerCase() ===
+            targetId.trim().toLowerCase()
+        )
+      : undefined
 
-    if (joined) {
-      setTableNums(joined)
+    if (match?.tableNums) {
+      setTableNums(match.tableNums)
     }
     setAssignSeatsOpen(false)
     setAssignSeatError(null)
@@ -3141,6 +3141,27 @@ export function AddReservationDialog({
         showId={activeShowTime}
         username={username}
         reservation={reservation}
+        paymentSeed={
+          reservation
+            ? {
+                qty: partySize > 0 ? partySize : reservation.qty,
+                // Desktop ResAssignSeatNumbers — seat labels, NOT TableNums.
+                // Using tableNums here made Rem=0 and hid the guest.
+                seatNumbers: reservation.seatNo || '',
+                section:
+                  selectedSection?.name ||
+                  selectedSection?.label ||
+                  reservation.section,
+                source: reservation.source,
+                promo:
+                  selectedPromo?.promotionName ||
+                  (effectivePromo !== 'none' ? effectivePromo : '') ||
+                  reservation.promo,
+                notes,
+                dinner
+              }
+            : null
+        }
         checkInAfterSave={false}
         nested
         error={assignSeatError}

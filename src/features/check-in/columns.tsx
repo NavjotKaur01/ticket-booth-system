@@ -4,6 +4,7 @@ import { DataTableColumnHeader } from "@/components/data-table/data-table-column
 import { RowActionsMenu } from "@/components/common/row-actions-menu"
 import { CheckInStatusIcon } from "@/features/check-in/status-legend"
 import type { CheckInRecord } from "@/types/check-in"
+import { formatAssignSeatNumbers } from "@/lib/format-assign-seat-numbers"
 import { cn } from "@/lib/utils"
 
 type CheckInColumnsOptions = {
@@ -161,7 +162,7 @@ export function createCheckInColumns({
       header: "SeatNo",
       cell: ({ row }) => (
         <span className="text-muted-foreground">
-          {row.original.seatNo || ""}
+          {formatAssignSeatNumbers(row.original.seatNo)}
         </span>
       ),
     },
