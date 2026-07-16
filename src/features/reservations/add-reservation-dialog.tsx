@@ -2470,6 +2470,10 @@ export function AddReservationDialog({
         paymentType: getPrintablePaymentType(paymentType),
         source: origin,
         section: saveSection.name,
+        promotion:
+          selectedPromo?.promotionCode?.trim() ||
+          selectedPromo?.promotionName?.trim() ||
+          null,
         showDate,
         showLabel: selectedShowLabel,
         locationName,

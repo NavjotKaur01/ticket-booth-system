@@ -267,6 +267,13 @@ function buildTicketMarkup(
       <div class="divider"></div>
       ${headerBox}
       <div class="customer-name">${escapeHtml(ticket.customer.fullName)}</div>
+      ${
+        ticket.reservation.promotion
+          ? `<div class="promotions">Promotions : ${escapeHtml(
+              ticket.reservation.promotion
+            )}</div>`
+          : ""
+      }
       <div class="show-datetime">${escapeHtml(ticket.show.dateTimeLabel)}</div>
       <div class="ticket-summary">
         ${escapeHtml(
@@ -280,7 +287,9 @@ function buildTicketMarkup(
       <span>${escapeHtml(ticket.reservation.paymentType)}</span>
       </div>
       
-      <div class="back">Back</div>
+      <div class="section">${escapeHtml(
+        ticket.reservation.section || "General"
+      )}</div>
       
       <div class="total-label">Total :${escapeHtml(
         formatCurrency(ticket.reservation.totalAmount)
@@ -359,13 +368,14 @@ async function buildPrintDocument(
       }
       .venue-name,
       .customer-name,
+      .promotions,
       .ticket-summary,
       .source,
       .total-label,
       .notice,
       .footer-text,
       .bottom-text,
-      .back {
+      .section {
         font-weight: 700;
       }
       .venue {
@@ -382,6 +392,10 @@ async function buildPrintDocument(
       }
       .customer-name {
         font-size: 16px;
+      }
+      .promotions {
+        margin-top: 2px;
+        font-size: 13px;
       }
       .ticket-header-box {
         font-size: 14px;
@@ -407,7 +421,7 @@ async function buildPrintDocument(
         margin-top: 3px;
         font-size: 12px;
       }
-      .back {
+      .section {
         margin: 15px 0 5px;
         font-size: 14px;
       }
@@ -529,6 +543,14 @@ export function buildReprintCountOptions(partySize: number) {
   return Array.from({ length: Math.max(1, partySize) }, (_, index) => index + 1)
 }
 
+function normalizeTicketPromotion(value: string | null | undefined) {
+  const text = value?.trim() ?? ""
+  if (!text || text.toLowerCase() === "none") {
+    return null
+  }
+  return text
+}
+
 export function createTicketPrintData({
   reservationId,
   firstName,
@@ -540,6 +562,7 @@ export function createTicketPrintData({
   paymentType,
   source,
   section,
+  promotion,
   showDate,
   showLabel,
   locationName,
@@ -571,6 +594,7 @@ export function createTicketPrintData({
       paymentType,
       source: formatReservationSource(source),
       section: section || "General",
+      promotion: normalizeTicketPromotion(promotion),
       tables: tables || null,
       seatNumbers: seatNumbers || null,
     },
@@ -598,6 +622,7 @@ export async function getMockTicketPrintData({
     paymentType: resolvePaymentType(reservation.source),
     source: reservation.source,
     section: reservation.section || "General",
+    promotion: reservation.promo,
     tables: reservation.tables || null,
     seatNumbers: reservation.seatNo || null,
     showDate,
