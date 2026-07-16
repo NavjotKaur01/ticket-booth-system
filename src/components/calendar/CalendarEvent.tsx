@@ -42,7 +42,7 @@ export default function CalendarEventCard({ event, onActionSelect }: CalendarEve
         </div>
         <div className={`truncate ${event.cancelled ? "text-destructive" : "text-muted-foreground"}`}>
           <span className="hidden sm:inline">
-            {event.seats.sold}/{event.seats.comp}/{event.seats.capacity}{" "}
+            {event.seats.comp}/{event.seats.sold}/{event.seats.capacity}{" "}
           </span>
           {event.time}
         </div>

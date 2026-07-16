@@ -5,14 +5,18 @@ import type {
 } from "@/types/calendar-show"
 import { formatDateForDisplay } from "@/lib/date-display-format"
 import { formatShowTime } from "@/lib/format-show-time"
+import { weekdayIndexToName } from "@/lib/recurrence/recurrence-date-utils"
 
 const AGE_RESTRICTIONS = [
   { value: "", label: "Blank", description: "Do not show age on web" },
-  { value: "A", label: "A - All ages", description: "All ages" },
-  { value: "Y", label: "Y - Over 21", description: "Over 21" },
-  { value: "N", label: "N - Over 18", description: "Over 18" },
-  { value: "S", label: "S - Special case", description: "Special case set min age" },
+  { value: "A", label: "A - (All ages)", description: "All ages" },
+  { value: "Y", label: "Y (21 and over)", description: "Over 21" },
+  { value: "N", label: "N (18 and over)", description: "Over 18" },
+  { value: "S", label: "S (custom)", description: "Special case set min age" },
 ]
+
+const WEEKDAY_NAME_PATTERN =
+  /^(sunday|monday|tuesday|wednesday|thursday|friday|saturday)$/i
 
 function formatTimeRange(showTim: string | null, showArrival: string | null) {
   const format = (value: string | null) => {
@@ -20,30 +24,41 @@ function formatTimeRange(showTim: string | null, showArrival: string | null) {
       return ""
     }
 
-    return formatShowTime(value, { seconds: true }) ?? ""
+    return formatShowTime(value, { seconds: false }) ?? ""
   }
 
-  const start = format(showTim)
-  const end = format(showArrival)
-  if (start && end) {
-    return `${start} - ${end}`
+  const arrival = format(showArrival)
+  const showTime = format(showTim)
+  if (arrival && showTime) {
+    return `${arrival} - ${showTime}`
   }
 
-  return start || end || "Show time"
+  return arrival || showTime || "Show time"
 }
 
 function yn(value: string | null | undefined) {
   return value?.trim().toUpperCase() === "Y"
 }
 
+/** Prefer weekday name (e.g. Tuesday); never a calendar date. */
 function formatShowDayLabel(
   showDay: string | null | undefined,
-  showDate: string | null | undefined
+  weekDay: number | null | undefined
 ) {
-  const formattedDate =
-    formatDateForDisplay(showDate, "") || formatDateForDisplay(showDay, "")
+  const dayName = showDay?.trim() ?? ""
+  if (dayName && WEEKDAY_NAME_PATTERN.test(dayName)) {
+    return dayName
+  }
 
-  return formattedDate || showDay || "Show"
+  if (typeof weekDay === "number" && weekDay >= 0 && weekDay <= 6) {
+    return weekdayIndexToName(weekDay)
+  }
+
+  if (dayName && !formatDateForDisplay(dayName, "")) {
+    return dayName
+  }
+
+  return dayName || "Show"
 }
 
 export function mapDefaultShowSectionsToDialogData(
@@ -55,9 +70,16 @@ export function mapDefaultShowSectionsToDialogData(
       return left.WeekDay - right.WeekDay
     }
 
+    // Latest arrival/show times first (e.g. 9:45, then 9:30, then 7:35)
+    const leftArrival = new Date(left.ShowArrival ?? left.ShowTim ?? 0).getTime()
+    const rightArrival = new Date(right.ShowArrival ?? right.ShowTim ?? 0).getTime()
+    if (leftArrival !== rightArrival) {
+      return rightArrival - leftArrival
+    }
+
     const leftTime = new Date(left.ShowTim ?? 0).getTime()
     const rightTime = new Date(right.ShowTim ?? 0).getTime()
-    return leftTime - rightTime
+    return rightTime - leftTime
   })
 
   const grouped = new Map<string, ApiDefaultShowSection[]>()
@@ -74,7 +96,7 @@ export function mapDefaultShowSectionsToDialogData(
       const first = rows[0]
       return {
         id: showDefId,
-        dayLabel: formatShowDayLabel(first.ShowDay, first.ShowDate),
+        dayLabel: formatShowDayLabel(first.ShowDay, first.WeekDay),
         timeRange: formatTimeRange(first.ShowTim, first.ShowArrival),
         enabled: true,
         sections: rows.map((row) => ({
