@@ -30,7 +30,7 @@ type BuildReservationRequestParams = {
   customerId: string
   searchCriteria: ReservationCustomerSearchCriteria
   selectedSection: ReservationSectionOption
-  origin: 'phone' | 'walkup'
+  origin: 'phone' | 'walkup' | 'web'
   party: number
   origParty?: number
   passes: number

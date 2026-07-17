@@ -25,7 +25,9 @@ export function mapReservationPromo(
     tixMax: item.TixMax,
     dollarMax: item.DollarMax,
     discountType: item.DiscountType ?? '',
-    useShowFees: item.UseShowFees === 'N' ? 'N' : 'Y',
+    // Desktop: null/empty UseShowFees means apply the SVC differential (same as 'N').
+    // Only an explicit 'Y' skips the differential and uses show fees directly.
+    useShowFees: item.UseShowFees?.trim().toUpperCase() === 'Y' ? 'Y' : 'N',
     phoneInFee: item.PhoneInFee ?? 0,
     walkUpFee: item.WalkUpFee ?? 0,
     webFee: item.WebFee ?? 0,

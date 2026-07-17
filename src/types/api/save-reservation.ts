@@ -89,9 +89,28 @@ export type SaveReservationRequest = {
   CustomerModel?: SaveReservationCustomerRequest
   BusinessCustomerModel?: SaveReservationBusinessCustomerRequest
   PaymentModel?: SaveReservationPaymentRequest
+  IsSplitReservation?: boolean
+  SplitCustomerFirstName?: string
+  SplitCustomerLastName?: string
+  SplitParty?: number
 }
 
-export type SaveSplitReservationRequestModel = SaveReservationRequest & {
+export type RemoveReservationPromoRequest = {
+  ConnectionString: string
+  ReservationId: string
+}
+
+export type MultiplePromoModel = {
+  PromotionCode: string
+  Passes: number
+  Discount: number
+  PromoTix: number
+}
+
+export type SaveSplitReservationRequestModel = Omit<
+  SaveReservationRequest,
+  'TixPaid' | 'TixComp' | 'TixDisc'
+> & {
   TaxRate?: number
   SplitSubTotal?: number
   SplitServiceChage?: number
@@ -101,6 +120,12 @@ export type SaveSplitReservationRequestModel = SaveReservationRequest & {
   SplitParty?: number
   SplitPasses?: number
   SvcDiffAmount?: number
+  IsMultiplePromo?: boolean
+  MultiplePromoList?: MultiplePromoModel[]
+  /** Omitted on partial split payments so parent ticket counts are not overwritten. */
+  TixPaid?: number
+  TixComp?: number
+  TixDisc?: number
 }
 
 export type UpdateSplitReservationRequestModel = {
