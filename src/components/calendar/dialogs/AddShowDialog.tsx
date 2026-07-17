@@ -1,5 +1,5 @@
 import { ArrowLeft, PlusCircle, Search } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import dayjs from "dayjs"
 
 import CalendarSelectControl from "../controls/CalendarSelectControl"
@@ -30,6 +30,7 @@ import { fetchAddShowDialogData, saveShowRequest } from "@/lib/api/add-show"
 // import { buildSaveShowRequest } from "@/lib/build-save-show-request"
 import { buildUpdateShowRequest } from "@/lib/build-update-show-request"
 import { useGetShowDataQuery, useGetShowPropertiesQuery, useUpdateShowMutation } from "@/store/api/clubmanApi"
+import type { ApiShowData } from "@/types/api/get-show-data"
 import SaveVerifyDialog from "./SaveVerifyDialog"
 import ComedianSearchDialog, {
   type ComedianSearchSelection,
@@ -182,8 +183,12 @@ function getAddShowValidationErrors(
   }
 
   const dayOfShowVal = Number.parseFloat(formValues.dayOfShowFee)
-  if (!formValues.dayOfShowFee || !Number.isFinite(dayOfShowVal) || dayOfShowVal <= 0) {
-    errors.dayOfShowFee = "Day of Show Fee must be greater than 0."
+  if (
+    !formValues.dayOfShowFee ||
+    !Number.isInteger(dayOfShowVal) ||
+    dayOfShowVal <= 0
+  ) {
+    errors.dayOfShowFee = "Day of Show Fee must be a whole number greater than 0."
   }
 
   const phoneVal = Number.parseFloat(formValues.phoneFee)
@@ -204,9 +209,31 @@ function getAddShowValidationErrors(
   return errors
 }
 
-function normalizeMinimumNumberValue(value: string, minimum: number) {
+function normalizeDecimalFeeValue(value: string, minimum: number) {
   const parsed = Number.parseFloat(value)
-  return Number.isFinite(parsed) && parsed >= minimum ? String(parsed) : String(minimum)
+  return Number.isFinite(parsed) && parsed >= minimum
+    ? parsed.toFixed(2)
+    : minimum.toFixed(2)
+}
+
+function normalizeIntegerFeeValue(value: string, minimum: number) {
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed >= minimum
+    ? String(parsed)
+    : String(minimum)
+}
+
+function isApiBooleanTrue(value: unknown) {
+  if (typeof value === "boolean") return value
+  if (typeof value === "number") return value !== 0
+  if (typeof value !== "string") return false
+
+  const normalized = value.trim().toUpperCase()
+  return normalized === "Y" || normalized === "YES" || normalized === "TRUE" || normalized === "1"
+}
+
+function getIsShowSoldOut(show: ApiShowData) {
+  return isApiBooleanTrue(show.IsShowSoldOut ?? show.IsShowSolidOut)
 }
 
 /** Normalize API/display times to CalendarTimeControl format (e.g. "7:35 am"). */
@@ -259,6 +286,7 @@ function combineDateAndCalendarTime(dateYmd: string, timeValue: string) {
 type AddShowDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   onBack?: () => void
   onSave?: (values: AddShowFormValues) => void
   recurrence: RecurrenceState | null
@@ -281,6 +309,8 @@ function PerformerSelect({
   performers,
   onValueChange,
   onSearchClick,
+  open,
+  onOpenChange,
   error,
 }: {
   id: string
@@ -289,19 +319,24 @@ function PerformerSelect({
   performers: PerformerOption[]
   onValueChange: (value: string) => void
   onSearchClick?: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
   error?: string
 }) {
   const REDIRECT_TO_DASHBOARD_STANDUP_MEDIA = "https://dashboard.standup-media.com/"
   return (
     <div className="grid gap-1.5 sm:grid-cols-[7rem_minmax(0,1fr)_auto_auto] sm:items-start sm:gap-2">
-      <Label htmlFor={id} className="text-sm">
+      <span className="text-sm">
         {label}
-      </Label>
+      </span>
       <div className="min-w-0">
         <CalendarSelectControl
           id={id}
           value={value}
           onChange={onValueChange}
+          open={open}
+          onOpenChange={onOpenChange}
+          ariaLabel={label}
           placeholder="Select"
           className={cn(error && "border-destructive ring-2 ring-destructive/20")}
           options={performers.map((performer) => ({
@@ -331,6 +366,9 @@ function FeeInput({
   label,
   value,
   onChange,
+  minimum,
+  decimalOnly = false,
+  integerOnly = false,
   error,
 }: {
   id: string
@@ -338,10 +376,12 @@ function FeeInput({
   value: string
   onChange: (value: string) => void
   minimum: number
+  decimalOnly?: boolean
+  integerOnly?: boolean
   error?: boolean
 }) {
   return (
-    <div className="grid gap-1.5 sm:grid-cols-[auto_3rem] items-center sm:gap-2">
+    <div className="grid gap-1.5 sm:grid-cols-[auto_4rem] items-center sm:gap-2">
       <Label htmlFor={id} className="shrink-0">
         {label}
       </Label>
@@ -349,7 +389,24 @@ function FeeInput({
         <Input
           id={id}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          inputMode={decimalOnly ? "decimal" : integerOnly ? "numeric" : undefined}
+          onChange={(event) => {
+            const nextValue = event.target.value
+            if (
+              (!decimalOnly && !integerOnly) ||
+              (decimalOnly && /^\d*(?:\.\d{0,2})?$/.test(nextValue)) ||
+              (integerOnly && /^\d*$/.test(nextValue))
+            ) {
+              onChange(nextValue)
+            }
+          }}
+          onBlur={() => {
+            if (decimalOnly) {
+              onChange(normalizeDecimalFeeValue(value, minimum))
+            } else if (integerOnly) {
+              onChange(normalizeIntegerFeeValue(value, minimum))
+            }
+          }}
           onFocus={(event) => event.currentTarget.select()}
           onClick={(event) => event.currentTarget.select()}
           autoComplete="off"
@@ -504,6 +561,7 @@ function ShowTimesTable({
 export default function AddShowDialog({
   open,
   onOpenChange,
+  onAfterClose,
   onBack,
   onSave,
   recurrence,
@@ -527,6 +585,45 @@ export default function AddShowDialog({
   const [isComedianSearchOpen, setIsComedianSearchOpen] = useState(false)
   const [searchTargetField, setSearchTargetField] =
     useState<PerformerSearchField | null>(null)
+  const [openPerformerSelect, setOpenPerformerSelect] =
+    useState<PerformerSearchField | null>(null)
+  const sessionGenerationRef = useRef(0)
+
+  useEffect(() => {
+    if (open) {
+      sessionGenerationRef.current += 1
+    }
+  }, [open])
+
+  function handleDialogOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      sessionGenerationRef.current += 1
+    }
+    onOpenChange(nextOpen)
+  }
+
+  function handleBack() {
+    sessionGenerationRef.current += 1
+    onBack?.()
+  }
+
+  function resetDialogSession() {
+    sessionGenerationRef.current += 1
+    setDialogData(null)
+    setIsLoading(true)
+    setIsSaving(false)
+    setErrorMessage(null)
+    setFormValues(emptyFormValues)
+    setIsShowDetailsVisible(false)
+    setIsVerifyOpen(false)
+    setVerifyRows([])
+    setHasSubmitted(false)
+    setPerformers([])
+    setIsComedianSearchOpen(false)
+    setSearchTargetField(null)
+    setOpenPerformerSelect(null)
+    onAfterClose?.()
+  }
 
   const isEditMode = Boolean(initialEvent?.showId)
   const showId = initialEvent?.showId || ""
@@ -614,10 +711,10 @@ export default function AddShowDialog({
         vipSeating: mainShowData.VIP === "Y",
         hub: mainShowData.Hub === "Y",
         showOnWeb: mainShowData.IsShowAvailableOnWeb,
-        dayOfShowFee: normalizeMinimumNumberValue(String(mainShowData.DayOfShowCharge), 1),
-        phoneFee: normalizeMinimumNumberValue(String(mainShowData.PhoneCharge), 0),
-        walkupFee: normalizeMinimumNumberValue(String(mainShowData.WalkupCharge), 0),
-        webFee: normalizeMinimumNumberValue(String(mainShowData.WebCharge), 0),
+        dayOfShowFee: normalizeIntegerFeeValue(String(mainShowData.DayOfShowCharge), 1),
+        phoneFee: normalizeDecimalFeeValue(String(mainShowData.PhoneCharge), 0),
+        walkupFee: normalizeDecimalFeeValue(String(mainShowData.WalkupCharge), 0),
+        webFee: normalizeDecimalFeeValue(String(mainShowData.WebCharge), 0),
         ageRestriction: parseAgeRestrictionValue(showProperties.Over21),
         minAge:
           showProperties.MinAge?.trim() ||
@@ -625,7 +722,7 @@ export default function AddShowDialog({
           "",
         useSectionFee: mainShowData.IsUseSectionFee,
         preSalePrivateShow: mainShowData.IsPrivateShow,
-        isShowSoldOut: mainShowData.IsShowSolidOut,
+        isShowSoldOut: getIsShowSoldOut(mainShowData),
         selectedShowTimeIds: ["edit-show-time"],
         startDate: dayjs(mainShowData.ShowDate).isValid()
           ? dayjs(mainShowData.ShowDate).format("YYYY-MM-DD")
@@ -700,6 +797,7 @@ export default function AddShowDialog({
   }
 
   function openComedianSearch(field: PerformerSearchField) {
+    setOpenPerformerSelect(null)
     setSearchTargetField(field)
     setIsComedianSearchOpen(true)
   }
@@ -803,6 +901,7 @@ export default function AddShowDialog({
       return
     }
 
+    const sessionGeneration = sessionGenerationRef.current
     setIsSaving(true)
     setErrorMessage(null)
 
@@ -848,16 +947,25 @@ export default function AddShowDialog({
         }
       }
 
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
+
       onSave?.(valuesToSave)
       onSaved?.()
       setIsVerifyOpen(false)
-      onOpenChange(false)
+      handleDialogOpenChange(false)
     } catch (error) {
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
       setErrorMessage(
         error instanceof Error ? error.message : "Unable to save show."
       )
     } finally {
-      setIsSaving(false)
+      if (sessionGeneration === sessionGenerationRef.current) {
+        setIsSaving(false)
+      }
     }
   }
 
@@ -895,11 +1003,12 @@ export default function AddShowDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <DialogContent
           disableOutsideDismiss
+          onAfterClose={resetDialogSession}
           className={cn(
-            "fixed top-[max(0.5rem,env(safe-area-inset-top))] right-auto bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[50%] flex max-h-none w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] translate-x-[-50%] translate-y-0 flex-col overflow-hidden p-0 sm:top-[50%] sm:bottom-auto sm:max-h-[min(90dvh,48rem)] sm:w-[calc(100vw-2rem)] sm:max-w-6xl sm:translate-y-[-50%]"
+            "fixed top-[max(0.5rem,env(safe-area-inset-top))] right-auto bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[50%] flex max-h-none w-full max-w-[calc(100vw-1rem)] translate-x-[-50%] translate-y-0 flex-col overflow-hidden p-0 sm:top-[50%] sm:bottom-auto sm:max-h-[min(90dvh,48rem)] sm:max-w-6xl sm:translate-y-[-50%]"
           )}
         >
           <DialogHeader className="shrink-0 border-b px-4 py-3 pr-12 sm:px-5 sm:py-4">
@@ -909,7 +1018,7 @@ export default function AddShowDialog({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  onClick={onBack}
+                  onClick={handleBack}
                   className="size-8 shrink-0"
                   aria-label="Back to recurrence"
                 >
@@ -981,6 +1090,10 @@ export default function AddShowDialog({
                         performers={performers}
                         onValueChange={(value) => updateField("headlinerId", value)}
                         onSearchClick={() => openComedianSearch("headlinerId")}
+                        open={openPerformerSelect === "headlinerId"}
+                        onOpenChange={(nextOpen) =>
+                          setOpenPerformerSelect(nextOpen ? "headlinerId" : null)
+                        }
                         error={visibleValidationErrors.headlinerId}
                       />
                       <PerformerSelect
@@ -990,6 +1103,10 @@ export default function AddShowDialog({
                         performers={performers}
                         onValueChange={(value) => updateField("featureId", value)}
                         onSearchClick={() => openComedianSearch("featureId")}
+                        open={openPerformerSelect === "featureId"}
+                        onOpenChange={(nextOpen) =>
+                          setOpenPerformerSelect(nextOpen ? "featureId" : null)
+                        }
                       />
                       <PerformerSelect
                         id="show-opener"
@@ -998,6 +1115,10 @@ export default function AddShowDialog({
                         performers={performers}
                         onValueChange={(value) => updateField("openerId", value)}
                         onSearchClick={() => openComedianSearch("openerId")}
+                        open={openPerformerSelect === "openerId"}
+                        onOpenChange={(nextOpen) =>
+                          setOpenPerformerSelect(nextOpen ? "openerId" : null)
+                        }
                       />
                     </div>
 
@@ -1009,6 +1130,10 @@ export default function AddShowDialog({
                         performers={performers}
                         onValueChange={(value) => updateField("headliner2Id", value)}
                         onSearchClick={() => openComedianSearch("headliner2Id")}
+                        open={openPerformerSelect === "headliner2Id"}
+                        onOpenChange={(nextOpen) =>
+                          setOpenPerformerSelect(nextOpen ? "headliner2Id" : null)
+                        }
                       />
                       <PerformerSelect
                         id="show-feature-2"
@@ -1017,6 +1142,10 @@ export default function AddShowDialog({
                         performers={performers}
                         onValueChange={(value) => updateField("feature2Id", value)}
                         onSearchClick={() => openComedianSearch("feature2Id")}
+                        open={openPerformerSelect === "feature2Id"}
+                        onOpenChange={(nextOpen) =>
+                          setOpenPerformerSelect(nextOpen ? "feature2Id" : null)
+                        }
                       />
                       <div className="grid gap-2 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-center">
                         <Label htmlFor="show-special-note">Special Note</Label>
@@ -1172,6 +1301,7 @@ export default function AddShowDialog({
                           value={formValues.dayOfShowFee}
                           onChange={(value) => updateField("dayOfShowFee", value)}
                           minimum={1}
+                          integerOnly
                           error={hasSubmitted && Boolean(validationErrors.dayOfShowFee)}
                         />
                         <FeeInput
@@ -1180,6 +1310,7 @@ export default function AddShowDialog({
                           value={formValues.phoneFee}
                           onChange={(value) => updateField("phoneFee", value)}
                           minimum={0}
+                          decimalOnly
                           error={hasSubmitted && Boolean(validationErrors.phoneFee)}
                         />
                         <FeeInput
@@ -1188,6 +1319,7 @@ export default function AddShowDialog({
                           value={formValues.walkupFee}
                           onChange={(value) => updateField("walkupFee", value)}
                           minimum={0}
+                          decimalOnly
                           error={hasSubmitted && Boolean(validationErrors.walkupFee)}
                         />
                         <FeeInput
@@ -1196,6 +1328,7 @@ export default function AddShowDialog({
                           value={formValues.webFee}
                           onChange={(value) => updateField("webFee", value)}
                           minimum={0}
+                          decimalOnly
                           error={hasSubmitted && Boolean(validationErrors.webFee)}
                         />
                         {isEditMode ? (
@@ -1315,7 +1448,7 @@ export default function AddShowDialog({
               type="button"
               variant="ghost"
               className="flex-1 sm:flex-none"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleDialogOpenChange(false)}
             >
               Cancel
             </Button>

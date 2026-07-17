@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -34,6 +34,7 @@ type AdjustHubDialogProps = {
   open: boolean
   event: CalendarEvent | null
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   onSave?: (values: AdjustHubFormValues) => void
 }
 
@@ -115,12 +116,35 @@ export default function AdjustHubDialog({
   open,
   event,
   onOpenChange,
+  onAfterClose,
   onSave,
 }: AdjustHubDialogProps) {
   const [dialogData, setDialogData] = useState<AdjustHubDialogData | null>(null)
   const [formValues, setFormValues] = useState<AdjustHubFormValues | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const sessionGenerationRef = useRef(0)
+
+  function resetDialogSession() {
+    setDialogData(null)
+    setFormValues(null)
+    setIsLoading(false)
+    setIsSaving(false)
+    onAfterClose?.()
+  }
+
+  useEffect(() => {
+    if (open) {
+      sessionGenerationRef.current += 1
+    }
+  }, [open])
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      sessionGenerationRef.current += 1
+    }
+    onOpenChange(nextOpen)
+  }
 
   useEffect(() => {
     if (!open || !event) {
@@ -128,17 +152,18 @@ export default function AdjustHubDialog({
     }
 
     let isCurrent = true
+    const generation = sessionGenerationRef.current
 
     setIsLoading(true)
     getAdjustHubDialogData(event)
       .then((data) => {
-        if (isCurrent) {
+        if (isCurrent && generation === sessionGenerationRef.current) {
           setDialogData(data)
           setFormValues(createAdjustHubFormValues(data))
         }
       })
       .finally(() => {
-        if (isCurrent) {
+        if (isCurrent && generation === sessionGenerationRef.current) {
           setIsLoading(false)
         }
       })
@@ -158,21 +183,26 @@ export default function AdjustHubDialog({
     }
 
     setIsSaving(true)
+    const generation = sessionGenerationRef.current
 
     try {
       await saveAdjustHubFormValues(dialogData.eventId, formValues)
+      if (generation !== sessionGenerationRef.current) return
       onSave?.(formValues)
-      onOpenChange(false)
+      handleOpenChange(false)
     } finally {
-      setIsSaving(false)
+      if (generation === sessionGenerationRef.current) {
+        setIsSaving(false)
+      }
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         disableOutsideDismiss
-        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-3xl"
+        className="flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden sm:max-w-3xl"
+        onAfterClose={resetDialogSession}
       >
         <DialogHeader className="shrink-0 border-b px-5 py-4">
           <DialogTitle className="text-lg">Adjust Hub</DialogTitle>
@@ -201,7 +231,7 @@ export default function AdjustHubDialog({
           >
             Save
           </Button>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
         </DialogFooter>

@@ -1,5 +1,5 @@
 import { ArrowLeft } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { FormField } from "@/components/forms/form-fields"
 import {
@@ -67,6 +67,7 @@ function formatDobDayYear(value: string, month: string) {
 type AddCustomerDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   connectionName: string
   locationId: string
   lastUpdateId: string
@@ -81,6 +82,7 @@ type AddCustomerDialogProps = {
 export function AddCustomerDialog({
   open,
   onOpenChange,
+  onAfterClose,
   connectionName,
   locationId,
   lastUpdateId,
@@ -96,13 +98,16 @@ export function AddCustomerDialog({
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const sessionGenerationRef = useRef(0)
+
+  useEffect(() => {
+    if (open) {
+      sessionGenerationRef.current += 1
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) {
-      setForm(EMPTY_CUSTOMER_FORM)
-      setLoadingDetails(false)
-      setSaving(false)
-      setError(null)
       return
     }
 
@@ -226,6 +231,7 @@ export function AddCustomerDialog({
       return
     }
 
+    const sessionGeneration = sessionGenerationRef.current
     setSaving(true)
     setError(null)
 
@@ -248,16 +254,45 @@ export function AddCustomerDialog({
       }
 
       toastSuccess(isEditMode ? "Customer updated" : "Customer saved")
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
+
       await onSaved?.(form)
-      onOpenChange(false)
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
+      handleDialogOpenChange(false)
     } catch (requestError) {
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
       reportError(setError, requestError, "Failed to save customer")
     } finally {
-      setSaving(false)
+      if (sessionGeneration === sessionGenerationRef.current) {
+        setSaving(false)
+      }
     }
   }
 
+  function resetDialogSession() {
+    sessionGenerationRef.current += 1
+    setForm(EMPTY_CUSTOMER_FORM)
+    setLoadingDetails(false)
+    setSaving(false)
+    setError(null)
+    onAfterClose?.()
+  }
+
+  function handleDialogOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      sessionGenerationRef.current += 1
+    }
+    onOpenChange(nextOpen)
+  }
+
   function handleClose() {
+    sessionGenerationRef.current += 1
     if (onBack) {
       onBack()
       return
@@ -270,7 +305,7 @@ export function AddCustomerDialog({
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
-        onOpenChange(nextOpen)
+        handleDialogOpenChange(nextOpen)
         if (!nextOpen) {
           onBack?.()
         }
@@ -280,7 +315,8 @@ export function AddCustomerDialog({
         nested={nested}
         disableOutsideDismiss={nested}
         showCloseButton
-        className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col overflow-hidden sm:max-h-[88vh] sm:w-[calc(100vw-2rem)] sm:max-w-4xl"
+        onAfterClose={resetDialogSession}
+        className="flex max-h-[calc(100dvh-1rem)] w-full max-w-[calc(100vw-1rem)] flex-col overflow-hidden sm:max-h-[88vh] sm:max-w-4xl"
       >
         <DialogHeader className="shrink-0 gap-0 border-b px-3 py-2.5 pr-12 sm:px-4">
           <div className="flex items-center gap-2">

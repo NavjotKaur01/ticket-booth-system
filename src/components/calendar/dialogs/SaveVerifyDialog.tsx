@@ -85,7 +85,7 @@ export default function SaveVerifyDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         disableOutsideDismiss
-        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-3xl"
+        className="flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden sm:max-w-3xl"
       >
         <DialogHeader className="shrink-0 border-b px-5 py-4">
           <DialogTitle className="text-lg">Verify Prices</DialogTitle>

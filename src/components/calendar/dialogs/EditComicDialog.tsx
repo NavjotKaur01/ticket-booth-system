@@ -18,6 +18,7 @@ type EditComicDialogProps = {
   open: boolean
   event: CalendarEvent | null
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   connectionName?: string
   locationId?: string
   username?: string
@@ -27,6 +28,7 @@ export default function EditComicDialog({
   open,
   event,
   onOpenChange,
+  onAfterClose,
   connectionName = "",
   locationId = "",
   username = "",
@@ -55,7 +57,7 @@ export default function EditComicDialog({
     return mapApiComedianToComicInfo(comedianInfo, event.performer)
   }, [comedianInfo, event])
 
-  if (!open || !event) {
+  if (!event) {
     return null
   }
 
@@ -63,6 +65,7 @@ export default function EditComicDialog({
     <ComicInfoDialog
       open={open}
       onOpenChange={onOpenChange}
+      onAfterClose={onAfterClose}
       comic={mappedInfo}
       stageName={mappedInfo?.stageName ?? event.performer}
       nested

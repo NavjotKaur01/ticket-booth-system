@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -33,6 +33,7 @@ type AdjustAgeDialogProps = {
   open: boolean
   event: CalendarEvent | null
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   onSave?: (values: AdjustAgeFormValues) => void
 }
 
@@ -60,10 +61,12 @@ export default function AdjustAgeDialog({
   open,
   event,
   onOpenChange,
+  onAfterClose,
   onSave,
 }: AdjustAgeDialogProps) {
   const { connectionName, locationId } = useAppSession()
   const [formValues, setFormValues] = useState<AdjustAgeFormValues | null>(null)
+  const sessionGenerationRef = useRef(0)
 
   const {
     data: showProperties,
@@ -80,18 +83,29 @@ export default function AdjustAgeDialog({
     return parseInitialAgeValues(showProperties)
   }, [showProperties])
 
+  function resetDialogSession() {
+    setFormValues(null)
+    onAfterClose?.()
+  }
+
+  useEffect(() => {
+    if (open) {
+      sessionGenerationRef.current += 1
+    }
+  }, [open])
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      sessionGenerationRef.current += 1
+    }
+    onOpenChange(nextOpen)
+  }
+
   useEffect(() => {
     if (open && initialAgeValues) {
       setFormValues(initialAgeValues)
     }
   }, [open, initialAgeValues])
-
-  // Clear state when closed
-  useEffect(() => {
-    if (!open) {
-      setFormValues(null)
-    }
-  }, [open])
 
   function handleModeChange(mode: AdjustAgeMode) {
     setFormValues((current) => (current ? applyAdjustAgeModeChange(current, mode) : current))
@@ -113,6 +127,7 @@ export default function AdjustAgeDialog({
 
     const selectedAgeParam = getSelectedAgeParam(formValues.ageFlag, formValues.mode)
     const specialAgeParam = formValues.mode === "minAge" ? formValues.minAge : null
+    const generation = sessionGenerationRef.current
 
     try {
       await adjustShowAge({
@@ -123,9 +138,11 @@ export default function AdjustAgeDialog({
         SpecialAge: specialAgeParam,
       }).unwrap()
 
+      if (generation !== sessionGenerationRef.current) return
       onSave?.(formValues)
-      onOpenChange(false)
+      handleOpenChange(false)
     } catch {
+      if (generation !== sessionGenerationRef.current) return
       // silently ignore save errors
     }
   }
@@ -137,9 +154,10 @@ export default function AdjustAgeDialog({
   const isLoading = isFetching || !formValues
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         disableOutsideDismiss
+        onAfterClose={resetDialogSession}
         className="flex w-full max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-2xl"
       >
         <DialogHeader className="shrink-0 border-b px-5 py-4">
@@ -216,7 +234,7 @@ export default function AdjustAgeDialog({
           <Button type="button" onClick={handleSave} disabled={isLoading || isSaving}>
             {isSaving ? "Saving..." : "Save"}
           </Button>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>
+          <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} disabled={isSaving}>
             Cancel
           </Button>
         </DialogFooter>

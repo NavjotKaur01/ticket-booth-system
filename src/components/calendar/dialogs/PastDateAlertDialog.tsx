@@ -13,15 +13,23 @@ import {
 type PastDateAlertDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
+  message?: string | null
 }
 
 export default function PastDateAlertDialog({
   open,
   onOpenChange,
+  onAfterClose,
+  message,
 }: PastDateAlertDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" showCloseButton={false}>
+      <DialogContent
+        className="w-full sm:max-w-md"
+        showCloseButton={false}
+        onAfterClose={onAfterClose}
+      >
         <DialogHeader className="shrink-0 border-b px-6 py-4">
           <DialogTitle className="text-lg">Alert</DialogTitle>
         </DialogHeader>
@@ -31,7 +39,7 @@ export default function PastDateAlertDialog({
             <CircleAlert className="size-6" aria-hidden="true" />
           </div>
           <DialogDescription className="pt-2 text-sm text-foreground">
-            Date is prior to today, cannot be modified.
+            {message || "Date is prior to today, cannot be modified."}
           </DialogDescription>
         </div>
 

@@ -32,9 +32,15 @@ import {
   validateRecurrenceForm,
 } from "@/lib/recurrence/map-recurrence-form"
 import { mapCalendarEventToRecurrenceState } from "@/lib/recurrence/map-calendar-event-to-recurrence"
+import { getClubmanErrorMessage } from "@/store/api/baseQuery"
 import type { CalendarEvent } from "@/types/calendar-event"
 import type { RecurrenceFormValue, RecurrenceState } from "@/types/recurrence"
-import { useUnCancelShowMutation } from "@/store/api/clubmanApi"
+import {
+  useMarkShowSoldOutMutation,
+  useMarkShowUnavailableOnWebMutation,
+  useUnCancelShowMutation,
+} from "@/store/api/clubmanApi"
+import { buildMarkShowUnavailableOnWebRequest } from "./service/showStatus.service"
 
 const localizer = dayjsLocalizer(dayjs)
 const DEFAULT_REFRESH_SECONDS = 30
@@ -122,8 +128,15 @@ export default function EventCalendar() {
   const [isRecurrenceOpen, setIsRecurrenceOpen] = useState(false)
   const [isAddShowOpen, setIsAddShowOpen] = useState(false)
   const [isPastDateAlertOpen, setIsPastDateAlertOpen] = useState(false)
+  const [calendarActionError, setCalendarActionError] = useState<string | null>(
+    null
+  )
   const suppressNextSlotSelectionRef = useRef(false)
   const [unCancelShow] = useUnCancelShowMutation()
+  const [markShowSoldOut, { isLoading: isMarkingSoldOut }] =
+    useMarkShowSoldOutMutation()
+  const [markShowUnavailableOnWeb, { isLoading: isMarkingUnavailable }] =
+    useMarkShowUnavailableOnWebMutation()
 
   const { events, loading, refetch } = useCalendarEvents(
     connectionName,
@@ -169,7 +182,7 @@ export default function EventCalendar() {
 
 
   const handleCalendarActionSelect = useCallback(
-    (actionId: CalendarActionId, event: CalendarEvent) => {
+    async (actionId: CalendarActionId, event: CalendarEvent) => {
       const action = getCalendarAction(actionId)
 
       if (!action) {
@@ -179,7 +192,50 @@ export default function EventCalendar() {
       const actionDate = getStartOfDay(event.start)
 
       if (!isTodayOrFuture(actionDate) && shouldBlockPastDateAction(action)) {
+        setCalendarActionError(null)
         setIsPastDateAlertOpen(true)
+        return
+      }
+
+      if (
+        action.id === "mark-sold-out" ||
+        action.id === "mark-unavailable-web"
+      ) {
+        if (isMarkingSoldOut || isMarkingUnavailable) {
+          return
+        }
+
+        const calendarShowId = event.showId || event.id
+
+        try {
+          setCalendarActionError(null)
+
+          const didUpdate =
+            action.id === "mark-sold-out"
+              ? await markShowSoldOut({
+                  ConnectionString: connectionName,
+                  CalendarShowId: calendarShowId,
+                  IsShowSoldOut: true,
+                }).unwrap()
+              : await markShowUnavailableOnWeb(
+                  buildMarkShowUnavailableOnWebRequest({
+                    connectionString: connectionName,
+                    calendarShowId,
+                    username,
+                  })
+                ).unwrap()
+
+          if (!didUpdate) {
+            setCalendarActionError("Unable to update show status.")
+            setIsPastDateAlertOpen(true)
+            return
+          }
+
+          refetch()
+        } catch (error: unknown) {
+          setCalendarActionError(getClubmanErrorMessage(error))
+          setIsPastDateAlertOpen(true)
+        }
         return
       }
 
@@ -278,7 +334,17 @@ export default function EventCalendar() {
         setIsRecurrenceOpen(true)
       }
     },
-    []
+    [
+      connectionName,
+      isMarkingSoldOut,
+      isMarkingUnavailable,
+      locationId,
+      markShowSoldOut,
+      markShowUnavailableOnWeb,
+      refetch,
+      unCancelShow,
+      username,
+    ]
   )
 
   const handleDoubleClickEvent = useCallback(
@@ -304,22 +370,20 @@ export default function EventCalendar() {
   }, [])
 
   const handleAddShowSaved = useCallback(() => {
-    setRecurrenceState(null)
     refetch()
   }, [refetch])
 
   const handleEditShowSaved = useCallback(() => {
-    setEditShowEvent(null)
-    setEditShowRecurrence(null)
     refetch()
   }, [refetch])
 
   const handleEditShowOpenChange = useCallback((open: boolean) => {
     setIsEditShowOpen(open)
-    if (!open) {
-      setEditShowEvent(null)
-      setEditShowRecurrence(null)
-    }
+  }, [])
+
+  const handleEditShowAfterClose = useCallback(() => {
+    setEditShowEvent(null)
+    setEditShowRecurrence(null)
   }, [])
 
   const eventPropGetter = useCallback(
@@ -417,9 +481,9 @@ export default function EventCalendar() {
         localizer={localizer}
         events={events}
         date={calendarDate}
-        onNavigate={(newDate) => {
+        onNavigate={(newDate, _view, action) => {
           setCalendarDate(newDate)
-          setHasNavigated(true)
+          setHasNavigated(action !== "TODAY")
         }}
         view={calendarView}
         onView={setCalendarView}
@@ -440,61 +504,80 @@ export default function EventCalendar() {
         isAddEditPackageOpen={isAddEditPackageOpen}
         setIsAddEditPackageOpen={setIsAddEditPackageOpen}
         packageEvent={packageEvent}
+        onAddEditPackageAfterClose={() => setPackageEvent(null)}
         isAddReservationOpen={isAddReservationOpen}
         setIsAddReservationOpen={setIsAddReservationOpen}
         reservationEvent={reservationEvent}
         onAddReservationSaved={refetch}
+        onAddReservationAfterClose={() => setReservationEvent(null)}
         isAdjustAgeOpen={isAdjustAgeOpen}
         setIsAdjustAgeOpen={setIsAdjustAgeOpen}
         adjustAgeEvent={adjustAgeEvent}
         onAdjustAgeSaved={refetch}
+        onAdjustAgeAfterClose={() => setAdjustAgeEvent(null)}
         isAdjustHubOpen={isAdjustHubOpen}
         setIsAdjustHubOpen={setIsAdjustHubOpen}
         adjustHubEvent={adjustHubEvent}
+        onAdjustHubAfterClose={() => setAdjustHubEvent(null)}
         isAdjustPromoOpen={isAdjustPromoOpen}
         setIsAdjustPromoOpen={setIsAdjustPromoOpen}
         adjustPromoEvent={adjustPromoEvent}
+        onAdjustPromoSaved={refetch}
+        onAdjustPromoAfterClose={() => setAdjustPromoEvent(null)}
         isAdjustSeatsOpen={isAdjustSeatsOpen}
         setIsAdjustSeatsOpen={setIsAdjustSeatsOpen}
         adjustSeatsEvent={adjustSeatsEvent}
+        onAdjustSeatsAfterClose={() => setAdjustSeatsEvent(null)}
         isCancelShowOpen={isCancelShowOpen}
         setIsCancelShowOpen={setIsCancelShowOpen}
         cancelShowEvent={cancelShowEvent}
+        onCancelShowAfterClose={() => setCancelShowEvent(null)}
         isEditComicOpen={isEditComicOpen}
         setIsEditComicOpen={setIsEditComicOpen}
         editComicEvent={editComicEvent}
+        onEditComicAfterClose={() => setEditComicEvent(null)}
         isEditShowOpen={isEditShowOpen}
         onEditShowOpenChange={handleEditShowOpenChange}
         editShowRecurrence={editShowRecurrence}
         editShowEvent={editShowEvent}
         onEditShowSaved={handleEditShowSaved}
+        onEditShowAfterClose={handleEditShowAfterClose}
         isMoveShowOpen={isMoveShowOpen}
         setIsMoveShowOpen={setIsMoveShowOpen}
         moveShowEvent={moveShowEvent}
         onMoveShowSaved={refetch}
+        onMoveShowAfterClose={() => setMoveShowEvent(null)}
         isPrivatePreSaleOpen={isPrivatePreSaleOpen}
         setIsPrivatePreSaleOpen={setIsPrivatePreSaleOpen}
         privatePreSaleEvent={privatePreSaleEvent}
+        onPrivatePreSaleSaved={refetch}
+        onPrivatePreSaleAfterClose={() => setPrivatePreSaleEvent(null)}
         isShowHistoryOpen={isShowHistoryOpen}
         setIsShowHistoryOpen={setIsShowHistoryOpen}
         showHistoryEvent={showHistoryEvent}
+        onShowHistoryAfterClose={() => setShowHistoryEvent(null)}
         isShowDetailHistoryOpen={isShowDetailHistoryOpen}
         setIsShowDetailHistoryOpen={setIsShowDetailHistoryOpen}
         showDetailHistoryEvent={showDetailHistoryEvent}
+        onShowDetailHistoryAfterClose={() => setShowDetailHistoryEvent(null)}
         isPastDateAlertOpen={isPastDateAlertOpen}
         setIsPastDateAlertOpen={setIsPastDateAlertOpen}
+        calendarActionError={calendarActionError}
+        onPastDateAlertAfterClose={() => setCalendarActionError(null)}
         isRecurrenceOpen={isRecurrenceOpen}
         setIsRecurrenceOpen={setIsRecurrenceOpen}
         recurrenceDate={recurrenceDate}
         recurrenceError={recurrenceError}
         recurrenceState={recurrenceState}
         onRecurrenceSave={handleRecurrenceSave}
+        onRecurrenceAfterClose={() => setRecurrenceError(null)}
         isAddShowOpen={isAddShowOpen}
         setIsAddShowOpen={setIsAddShowOpen}
         connectionString={connectionName}
         locationId={locationId}
         username={username}
         onAddShowSaved={handleAddShowSaved}
+        onAddShowAfterClose={() => setRecurrenceState(null)}
       />
     </div>
   )

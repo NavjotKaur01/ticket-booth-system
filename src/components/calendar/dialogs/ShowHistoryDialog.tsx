@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useMemo } from "react"
 
 import {
   Dialog,
@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -15,18 +14,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { mapShowHistory } from "@/lib/map-show-history"
+import { getClubmanErrorMessage } from "@/store/api/baseQuery"
+import { useGetShowHistoryQuery } from "@/store/api/clubmanApi"
 import type { CalendarEvent } from "@/types/calendar-event"
 
-import {
-  getShowHistoryDialogData,
-  type ShowHistoryDialogData,
-  type ShowHistoryRow,
-} from "../service/showHistory.service"
+import ShowHistoryTableSkeleton from "./ShowHistoryTableSkeleton"
+import type { ShowHistoryRow } from "../service/showHistory.service"
 
 type ShowHistoryDialogProps = {
   open: boolean
   event: CalendarEvent | null
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
+  connectionString: string
+  locationId: string
 }
 
 const COLUMNS: { key: keyof ShowHistoryRow; label: string }[] = [
@@ -45,17 +47,6 @@ const COLUMNS: { key: keyof ShowHistoryRow; label: string }[] = [
   { key: "vip", label: "VIP" },
   { key: "updatedOn", label: "Updated On" },
 ]
-
-function ShowHistorySkeleton() {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col px-5 py-5" aria-label="Loading show history">
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden border">
-        <Skeleton className="h-10 w-full shrink-0" />
-        <Skeleton className="min-h-0 flex-1 w-full" />
-      </div>
-    </div>
-  )
-}
 
 function ShowHistoryTable({ records }: { records: ShowHistoryRow[] }) {
   const isEmpty = records.length === 0
@@ -110,53 +101,51 @@ export default function ShowHistoryDialog({
   open,
   event,
   onOpenChange,
+  onAfterClose,
+  connectionString,
+  locationId,
 }: ShowHistoryDialogProps) {
-  const [dialogData, setDialogData] = useState<ShowHistoryDialogData | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const showId = event?.showId || event?.id || ""
+  const shouldSkip =
+    !open || !event || !connectionString || !locationId || !showId
 
-  useEffect(() => {
-    if (!open) {
-      setDialogData(null)
-      return
-    }
+  const { data, isLoading, isFetching, error } = useGetShowHistoryQuery(
+    {
+      connectionName: connectionString,
+      locationId,
+      showId,
+    },
+    { skip: shouldSkip }
+  )
 
-    if (!event) {
-      return
-    }
+  const records = useMemo(() => mapShowHistory(data), [data])
 
-    let isCurrent = true
-
-    setIsLoading(true)
-    getShowHistoryDialogData(event)
-      .then((data) => {
-        if (isCurrent) {
-          setDialogData(data)
-        }
-      })
-      .finally(() => {
-        if (isCurrent) {
-          setIsLoading(false)
-        }
-      })
-
-    return () => {
-      isCurrent = false
-    }
-  }, [event, open])
+  const errorMessage = error ? getClubmanErrorMessage(error) : null
+  const showLoading = !shouldSkip && (isLoading || isFetching)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[min(90vh,48rem)] max-h-[calc(100vh-2rem)] flex-col overflow-hidden sm:max-w-6xl">
+      <DialogContent
+        className="flex w-full h-[min(90vh,48rem)] max-h-[calc(100vh-2rem)] flex-col overflow-hidden sm:max-w-6xl"
+        onAfterClose={onAfterClose}
+      >
         <DialogHeader className="shrink-0 border-b px-5 py-4">
           <DialogTitle className="text-lg">Show History</DialogTitle>
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {isLoading || !dialogData ? (
-            <ShowHistorySkeleton />
+          {showLoading ? (
+            <ShowHistoryTableSkeleton
+              columnCount={COLUMNS.length}
+              minWidthClassName="min-w-[80rem]"
+              aria-label="Loading show history"
+            />
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col px-5 py-5">
-              <ShowHistoryTable records={dialogData.records} />
+            <div className="flex min-h-0 flex-1 flex-col gap-3 px-5 py-5">
+              {errorMessage ? (
+                <p className="text-sm text-destructive">{errorMessage}</p>
+              ) : null}
+              <ShowHistoryTable records={records} />
             </div>
           )}
         </div>

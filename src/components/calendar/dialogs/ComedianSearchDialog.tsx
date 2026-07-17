@@ -124,6 +124,18 @@ export default function ComedianSearchDialog({
   const previousShowInactive = useRef(filters.showInactive)
   const hasInitializedRef = useRef(false)
   const lastFetchedKeyRef = useRef<string | null>(null)
+  const isDialogOpenRef = useRef(false)
+
+  function resetDialogSession() {
+    setFilters(EMPTY_FILTERS)
+    setRows([])
+    setHighlightedId(null)
+    setError(null)
+    previousShowInactive.current = EMPTY_FILTERS.showInactive
+    hasInitializedRef.current = false
+    lastFetchedKeyRef.current = null
+    isDialogOpenRef.current = false
+  }
 
   const runSearch = useCallback(
     async (nextFilters: ComedianSearchFilters) => {
@@ -158,9 +170,11 @@ export default function ComedianSearchDialog({
 
         const mapped = mapComedianRows(data ?? [])
         comedianSearchCache.set(cacheKey, mapped)
+        if (!isDialogOpenRef.current) return
         lastFetchedKeyRef.current = cacheKey
         setRows(mapped)
       } catch (requestError) {
+        if (!isDialogOpenRef.current) return
         setRows([])
         setError(getClubmanErrorMessage(requestError))
       }
@@ -170,10 +184,11 @@ export default function ComedianSearchDialog({
 
   useEffect(() => {
     if (!open) {
-      hasInitializedRef.current = false
-      setHighlightedId(null)
+      isDialogOpenRef.current = false
       return
     }
+
+    isDialogOpenRef.current = true
 
     if (hasInitializedRef.current) {
       return
@@ -215,15 +230,18 @@ export default function ComedianSearchDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[min(90vh,40rem)] max-h-[calc(100vh-2rem)] flex-col overflow-hidden sm:max-w-4xl">
-        <DialogHeader className="shrink-0 border-b px-5 py-4">
+      <DialogContent
+        onAfterClose={resetDialogSession}
+        className="flex h-[min(90vh,40rem)] max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden sm:max-w-4xl"
+      >
+        <DialogHeader className="sticky top-0 z-20 shrink-0 border-b bg-background px-5 py-4">
           <DialogTitle className="text-lg">Comedian Information</DialogTitle>
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-5 py-4">
           <div className="flex shrink-0 flex-col gap-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-              <div className="grid gap-1.5 sm:max-w-40">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+              <div className="grid min-w-0 gap-1.5">
                 <Label htmlFor="comedian-search-last-name">Last Name</Label>
                 <Input
                   id="comedian-search-last-name"
@@ -237,7 +255,7 @@ export default function ComedianSearchDialog({
                   }}
                 />
               </div>
-              <div className="grid gap-1.5 sm:max-w-40">
+              <div className="grid min-w-0 gap-1.5">
                 <Label htmlFor="comedian-search-first-name">First Name</Label>
                 <Input
                   id="comedian-search-first-name"
@@ -251,7 +269,7 @@ export default function ComedianSearchDialog({
                   }}
                 />
               </div>
-              <div className="grid min-w-0 flex-1 gap-1.5">
+              <div className="grid min-w-0 gap-1.5">
                 <Label htmlFor="comedian-search-stage-name">Stage Name</Label>
                 <Input
                   id="comedian-search-stage-name"
@@ -267,7 +285,7 @@ export default function ComedianSearchDialog({
               </div>
               <Button
                 type="button"
-                className="shrink-0 gap-1.5"
+                className="shrink-0 gap-1.5 sm:self-end"
                 onClick={() => void runSearch(filters)}
                 disabled={isLoading}
               >
@@ -294,20 +312,23 @@ export default function ComedianSearchDialog({
             {isLoading ? (
               <ComedianSearchTableSkeleton />
             ) : (
-              <div className="min-h-0 flex-1 overflow-auto">
-                <Table className="min-w-[40rem] border-collapse">
-                  <TableHeader className="sticky top-0 z-10 bg-muted text-muted-foreground">
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <Table
+                  className="min-w-[44rem] table-fixed border-collapse"
+                  containerClassName="h-full overflow-auto"
+                >
+                  <TableHeader className="text-muted-foreground shadow-sm">
                     <TableRow>
-                      <TableHead className="border px-3 py-2 font-semibold">
+                      <TableHead className="sticky top-0 z-10 w-56 border bg-muted px-3 py-2 font-semibold">
                         Comic Name
                       </TableHead>
-                      <TableHead className="border px-3 py-2 font-semibold">
+                      <TableHead className="sticky top-0 z-10 w-36 border bg-muted px-3 py-2 font-semibold">
                         Last Name
                       </TableHead>
-                      <TableHead className="border px-3 py-2 font-semibold">
+                      <TableHead className="sticky top-0 z-10 w-36 border bg-muted px-3 py-2 font-semibold">
                         First Name
                       </TableHead>
-                      <TableHead className="border px-3 py-2 font-semibold">
+                      <TableHead className="sticky top-0 z-10 w-48 border bg-muted px-3 py-2 font-semibold">
                         Stage Name
                       </TableHead>
                     </TableRow>
@@ -339,33 +360,37 @@ export default function ComedianSearchDialog({
                           >
                             <TableCell
                               className={cn(
-                                "border px-3 py-2 whitespace-nowrap",
+                                "max-w-56 truncate border px-3 py-2 whitespace-nowrap",
                                 isSelected && "bg-primary/20"
                               )}
+                              title={row.comicName}
                             >
                               {row.comicName}
                             </TableCell>
                             <TableCell
                               className={cn(
-                                "border px-3 py-2 whitespace-nowrap",
+                                "max-w-36 truncate border px-3 py-2 whitespace-nowrap",
                                 isSelected && "bg-primary/20"
                               )}
+                              title={row.lastName}
                             >
                               {row.lastName}
                             </TableCell>
                             <TableCell
                               className={cn(
-                                "border px-3 py-2 whitespace-nowrap",
+                                "max-w-36 truncate border px-3 py-2 whitespace-nowrap",
                                 isSelected && "bg-primary/20"
                               )}
+                              title={row.firstName}
                             >
                               {row.firstName}
                             </TableCell>
                             <TableCell
                               className={cn(
-                                "border px-3 py-2 whitespace-nowrap",
+                                "max-w-48 truncate border px-3 py-2 whitespace-nowrap",
                                 isSelected && "bg-primary/20"
                               )}
+                              title={row.stageName}
                             >
                               {row.stageName}
                             </TableCell>

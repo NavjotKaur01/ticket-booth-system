@@ -40,7 +40,22 @@ import type {
 } from "@/types/api/save-show"
 import type { UpdateShowRequestModel } from "@/types/api/update-show"
 import type { AdjustShowAgeRequest } from "@/types/api/adjust-show-age"
+import type {
+  ApiShowPromotionItem,
+  GetShowPromotionRequest,
+  SaveShowPromotionRequest,
+} from "@/types/api/show-promotion"
+import type {
+  ApiMoveShowByIdItem,
+  ApiMoveShowSectionItem,
+  MoveShowToUpcomingDateRequest,
+} from "@/types/api/move-show"
+import type {
+  MarkShowSoldOutRequest,
+  MarkShowUnavailableOnWebRequest,
+} from "@/types/api/show-status"
 import type { ApiShowData, ApiShowProperties } from "@/types/api/get-show-data"
+import type { ApiShowHistoryItem } from "@/types/api/show-history"
 import type { ApiCustomerSearchItem } from "@/types/api/customer-search"
 import type { ApiComedianInfo, ComedianRequestModel } from "@/types/api/comedian-info"
 import type { ApiDefShowItem, ShowDefRequestModel } from "@/types/api/show-def"
@@ -1957,6 +1972,32 @@ export const clubmanApi = createApi({
       providesTags: ["Calendar"],
     }),
 
+    getShowHistory: builder.query<
+      ApiShowHistoryItem[],
+      { connectionName: string; locationId: string; showId: string }
+    >({
+      query: ({ connectionName, locationId, showId }) =>
+        calendarApiPath(connectionName, locationId, showId, "GetShowHistory"),
+      transformResponse: (response: ApiShowHistoryItem[] | null | undefined) =>
+        response ?? [],
+      providesTags: (_result, _error, arg) => [
+        { type: "Calendar", id: `show-history:${arg.showId}` },
+      ],
+    }),
+
+    getShowHistoryDetail: builder.query<
+      ApiShowHistoryItem[],
+      { connectionName: string; showId: string }
+    >({
+      query: ({ connectionName, showId }) =>
+        calendarApiPath(connectionName, showId, "GetShowHistoryDetail"),
+      transformResponse: (response: ApiShowHistoryItem[] | null | undefined) =>
+        response ?? [],
+      providesTags: (_result, _error, arg) => [
+        { type: "Calendar", id: `show-history-detail:${arg.showId}` },
+      ],
+    }),
+
     updateShow: builder.mutation<unknown, UpdateShowRequestModel>({
       query: (body) => ({
         url: calendarApiPath("UpdateShow"),
@@ -1986,6 +2027,87 @@ export const clubmanApi = createApi({
         body,
       }),
       invalidatesTags: ["Calendar"],
+    }),
+
+    getShowPromotion: builder.mutation<
+      ApiShowPromotionItem[],
+      GetShowPromotionRequest
+    >({
+      query: (body) => ({
+        url: calendarApiPath("GetShowPromotion"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: ApiShowPromotionItem[] | null | undefined) =>
+        response ?? [],
+    }),
+
+    saveShowPromotion: builder.mutation<boolean, SaveShowPromotionRequest>({
+      query: (body) => ({
+        url: calendarApiPath("SaveShowPromotion"),
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["Calendar"],
+    }),
+
+    getShowById: builder.query<
+      ApiMoveShowByIdItem[],
+      { connectionName: string; locationId: string; showId: string }
+    >({
+      query: ({ connectionName, locationId, showId }) =>
+        calendarApiPath(connectionName, locationId, showId, "GetShowById"),
+      transformResponse: (
+        response: ApiMoveShowByIdItem[] | null | undefined
+      ) => response ?? [],
+    }),
+
+    getShowSectionList: builder.query<
+      ApiMoveShowSectionItem[],
+      { connectionName: string; showId: string }
+    >({
+      query: ({ connectionName, showId }) =>
+        calendarApiPath(connectionName, showId, "GetShowSectionList"),
+      transformResponse: (
+        response: ApiMoveShowSectionItem[] | null | undefined
+      ) => response ?? [],
+    }),
+
+    moveShowToUpcomingDate: builder.mutation<
+      boolean,
+      MoveShowToUpcomingDateRequest
+    >({
+      query: (body) => ({
+        url: calendarApiPath("MoveShowToUpcomingDate"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["Calendar"],
+    }),
+
+    markShowSoldOut: builder.mutation<boolean, MarkShowSoldOutRequest>({
+      query: (body) => ({
+        url: calendarApiPath("MarkShowSoldOut"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["Calendar", "ShowDetails"],
+    }),
+
+    markShowUnavailableOnWeb: builder.mutation<
+      boolean,
+      MarkShowUnavailableOnWebRequest
+    >({
+      query: (body) => ({
+        url: calendarApiPath("MarkShowUnavailableOnWeb"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["Calendar", "ShowDetails"],
     }),
 
     getGiftCertificates: builder.mutation<GiftCertificate[], GetGiftCertificatesRequest>({
@@ -2127,10 +2249,19 @@ export const {
   useUnCancelShowMutation,
   useGetShowDataQuery,
   useLazyGetShowDataQuery,
+  useGetShowHistoryQuery,
+  useGetShowHistoryDetailQuery,
   useGetShowPropertiesQuery,
   useLazyGetShowPropertiesQuery,
   useUpdateShowMutation,
   useAdjustShowAgeMutation,
+  useGetShowPromotionMutation,
+  useSaveShowPromotionMutation,
+  useGetShowByIdQuery,
+  useGetShowSectionListQuery,
+  useMoveShowToUpcomingDateMutation,
+  useMarkShowSoldOutMutation,
+  useMarkShowUnavailableOnWebMutation,
   useGetEmploymentPositionsQuery,
   useAddUpdateEmploymentPositionMutation,
   useDeleteEmploymentPositionMutation,
