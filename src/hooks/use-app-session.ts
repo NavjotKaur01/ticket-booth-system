@@ -49,6 +49,8 @@ export function useAppSession() {
     credentials,
     username: session?.username ?? "",
     connectionName: session?.organization ?? credentials?.ConnectionName ?? "",
+    /** Desktop UserCredentials.DBName — used by SendReservationEmails. */
+    dbName: credentials?.DBName?.trim() || session?.organization || credentials?.ConnectionName || "",
     clubSlug,
     locationId,
     locationName: locSName,

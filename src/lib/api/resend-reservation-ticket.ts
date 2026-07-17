@@ -3,19 +3,24 @@ import { buildUpdateCustomerEmailRequest } from "@/lib/build-update-customer-ema
 import { clubmanApi } from "@/store/api/clubmanApi"
 
 /**
- * Desktop resend ticket email uses a separate host (not ClubmanWebApi).
- * Success = HTTP 2xx (desktop does not parse GenericResponseModel).
+ * Desktop: ReservationApi.ResendReservationTicketConfirmation
+ * GET https://apireservation.standupmedia.com/api/Ticket/SendReservationEmails/
+ *   {reservationId}/{locationId}/{email}/{dbName}
+ *
+ * Last segment is UserCredentials.DBName (not ConnectionName).
+ * Success = HTTP 2xx (desktop does not parse response body).
  */
 export async function resendReservationTicketEmail({
   reservationId,
   locationId,
   email,
-  connectionName,
+  dbName,
 }: {
   reservationId: string
   locationId: string
   email: string
-  connectionName: string
+  /** Desktop UserCredentials.DBName */
+  dbName: string
 }) {
   const trimmedEmail = email.trim()
   if (!trimmedEmail) {
@@ -26,12 +31,18 @@ export async function resendReservationTicketEmail({
     throw new Error("Please enter valid email address. ")
   }
 
+  const trimmedDb = dbName.trim()
+  if (!trimmedDb) {
+    throw new Error("Missing database name for ticket email.")
+  }
+
+  // Match desktop HttpClient path segments (email may contain @).
   const url =
     `https://apireservation.standupmedia.com/api/Ticket/SendReservationEmails/` +
     `${encodeURIComponent(reservationId)}/` +
     `${encodeURIComponent(locationId)}/` +
     `${encodeURIComponent(trimmedEmail)}/` +
-    `${encodeURIComponent(connectionName)}`
+    `${encodeURIComponent(trimmedDb)}`
 
   const response = await fetch(url, { method: "GET" })
   if (!response.ok) {
@@ -53,22 +64,26 @@ export async function resendReservationTicketEmail({
   return true
 }
 
+/**
+ * Desktop overwrite path: AdminstratorApi.UpdateCustomerEmail(CustomerRequestModel
+ * with ReservationId + Email1 — not CustomerId).
+ */
 export async function updateCustomerEmail({
   connectionName,
-  customerId,
+  locationId,
+  reservationId,
   email,
-  lastUpdateId,
 }: {
   connectionName: string
-  customerId: string
+  locationId: string
+  reservationId: string
   email: string
-  lastUpdateId: string
 }) {
   const request = buildUpdateCustomerEmailRequest({
     connectionName,
-    customerId,
+    locationId,
+    reservationId,
     email,
-    lastUpdateId,
   })
 
   return dispatchEndpoint(

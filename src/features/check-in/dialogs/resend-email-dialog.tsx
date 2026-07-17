@@ -42,9 +42,10 @@ export function ResendEmailDialog({
       return
     }
 
+    // Desktop OpenResendEmailPopup sets IsEmailSendToNewAddress = true.
     setEmail("")
-    setOverwriteEmail(false)
-  }, [open])
+    setOverwriteEmail(Boolean(trimmedExisting))
+  }, [open, trimmedExisting])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -160,6 +160,7 @@ export function CheckIn() {
   const {
     credentials,
     connectionName,
+    dbName,
     locationId,
     locationName,
     username,
@@ -880,8 +881,22 @@ export function CheckIn() {
       return
     }
 
-    const email = payload.email.trim()
+    // Desktop: overwrite checked → ResendEmailText; unchecked → existing Email1.
+    const existingEmail = selectedReservation.email?.trim() ?? ""
+    const typedEmail = payload.email.trim()
+    const email = payload.overwriteEmail
+      ? typedEmail
+      : typedEmail || existingEmail
+
     if (!email || !email.includes("@")) {
+      reportErrorMessage(
+        setResendDialogError,
+        "Please enter valid email address. "
+      )
+      return
+    }
+
+    if (payload.overwriteEmail && !typedEmail) {
       reportErrorMessage(
         setResendDialogError,
         "Please enter valid email address. "
@@ -894,31 +909,26 @@ export function CheckIn() {
     setResendError(null)
 
     try {
+      // Desktop uses UserCredentials.DBName (not ConnectionName) in the URL.
       await resendReservationTicketEmail({
         reservationId: selectedReservation.id,
         locationId,
         email,
-        connectionName,
+        dbName: dbName || connectionName,
       })
 
+      // Desktop: UpdateCustomerEmail only when overwrite checkbox is checked.
       if (payload.overwriteEmail) {
-        const detail = await fetchReservationDetailById({
+        await updateCustomerEmail({
           connectionName,
+          locationId,
           reservationId: selectedReservation.id,
+          email,
         })
-        const customerId = detail.CustomerID?.trim() ?? ""
-        if (customerId) {
-          await updateCustomerEmail({
-            connectionName,
-            customerId,
-            email,
-            lastUpdateId: username,
-          })
-        }
+        await refreshReservations()
       }
 
       setResendOpen(false)
-      await refreshReservations()
       toastSuccess("Ticket email sent")
     } catch (requestError) {
       reportError(
