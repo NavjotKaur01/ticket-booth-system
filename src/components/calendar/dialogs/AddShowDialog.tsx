@@ -183,8 +183,12 @@ function getAddShowValidationErrors(
   }
 
   const dayOfShowVal = Number.parseFloat(formValues.dayOfShowFee)
-  if (!formValues.dayOfShowFee || !Number.isFinite(dayOfShowVal) || dayOfShowVal <= 0) {
-    errors.dayOfShowFee = "Day of Show Fee must be greater than 0."
+  if (
+    !formValues.dayOfShowFee ||
+    !Number.isInteger(dayOfShowVal) ||
+    dayOfShowVal <= 0
+  ) {
+    errors.dayOfShowFee = "Day of Show Fee must be a whole number greater than 0."
   }
 
   const phoneVal = Number.parseFloat(formValues.phoneFee)
@@ -205,9 +209,18 @@ function getAddShowValidationErrors(
   return errors
 }
 
-function normalizeMinimumNumberValue(value: string, minimum: number) {
+function normalizeDecimalFeeValue(value: string, minimum: number) {
   const parsed = Number.parseFloat(value)
-  return Number.isFinite(parsed) && parsed >= minimum ? String(parsed) : String(minimum)
+  return Number.isFinite(parsed) && parsed >= minimum
+    ? parsed.toFixed(2)
+    : minimum.toFixed(2)
+}
+
+function normalizeIntegerFeeValue(value: string, minimum: number) {
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed >= minimum
+    ? String(parsed)
+    : String(minimum)
 }
 
 function isApiBooleanTrue(value: unknown) {
@@ -313,9 +326,9 @@ function PerformerSelect({
   const REDIRECT_TO_DASHBOARD_STANDUP_MEDIA = "https://dashboard.standup-media.com/"
   return (
     <div className="grid gap-1.5 sm:grid-cols-[7rem_minmax(0,1fr)_auto_auto] sm:items-start sm:gap-2">
-      <Label htmlFor={id} className="text-sm">
+      <span className="text-sm">
         {label}
-      </Label>
+      </span>
       <div className="min-w-0">
         <CalendarSelectControl
           id={id}
@@ -323,6 +336,7 @@ function PerformerSelect({
           onChange={onValueChange}
           open={open}
           onOpenChange={onOpenChange}
+          ariaLabel={label}
           placeholder="Select"
           className={cn(error && "border-destructive ring-2 ring-destructive/20")}
           options={performers.map((performer) => ({
@@ -352,6 +366,9 @@ function FeeInput({
   label,
   value,
   onChange,
+  minimum,
+  decimalOnly = false,
+  integerOnly = false,
   error,
 }: {
   id: string
@@ -359,10 +376,12 @@ function FeeInput({
   value: string
   onChange: (value: string) => void
   minimum: number
+  decimalOnly?: boolean
+  integerOnly?: boolean
   error?: boolean
 }) {
   return (
-    <div className="grid gap-1.5 sm:grid-cols-[auto_3rem] items-center sm:gap-2">
+    <div className="grid gap-1.5 sm:grid-cols-[auto_4rem] items-center sm:gap-2">
       <Label htmlFor={id} className="shrink-0">
         {label}
       </Label>
@@ -370,7 +389,24 @@ function FeeInput({
         <Input
           id={id}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          inputMode={decimalOnly ? "decimal" : integerOnly ? "numeric" : undefined}
+          onChange={(event) => {
+            const nextValue = event.target.value
+            if (
+              (!decimalOnly && !integerOnly) ||
+              (decimalOnly && /^\d*(?:\.\d{0,2})?$/.test(nextValue)) ||
+              (integerOnly && /^\d*$/.test(nextValue))
+            ) {
+              onChange(nextValue)
+            }
+          }}
+          onBlur={() => {
+            if (decimalOnly) {
+              onChange(normalizeDecimalFeeValue(value, minimum))
+            } else if (integerOnly) {
+              onChange(normalizeIntegerFeeValue(value, minimum))
+            }
+          }}
           onFocus={(event) => event.currentTarget.select()}
           onClick={(event) => event.currentTarget.select()}
           autoComplete="off"
@@ -675,10 +711,10 @@ export default function AddShowDialog({
         vipSeating: mainShowData.VIP === "Y",
         hub: mainShowData.Hub === "Y",
         showOnWeb: mainShowData.IsShowAvailableOnWeb,
-        dayOfShowFee: normalizeMinimumNumberValue(String(mainShowData.DayOfShowCharge), 1),
-        phoneFee: normalizeMinimumNumberValue(String(mainShowData.PhoneCharge), 0),
-        walkupFee: normalizeMinimumNumberValue(String(mainShowData.WalkupCharge), 0),
-        webFee: normalizeMinimumNumberValue(String(mainShowData.WebCharge), 0),
+        dayOfShowFee: normalizeIntegerFeeValue(String(mainShowData.DayOfShowCharge), 1),
+        phoneFee: normalizeDecimalFeeValue(String(mainShowData.PhoneCharge), 0),
+        walkupFee: normalizeDecimalFeeValue(String(mainShowData.WalkupCharge), 0),
+        webFee: normalizeDecimalFeeValue(String(mainShowData.WebCharge), 0),
         ageRestriction: parseAgeRestrictionValue(showProperties.Over21),
         minAge:
           showProperties.MinAge?.trim() ||
@@ -1265,6 +1301,7 @@ export default function AddShowDialog({
                           value={formValues.dayOfShowFee}
                           onChange={(value) => updateField("dayOfShowFee", value)}
                           minimum={1}
+                          integerOnly
                           error={hasSubmitted && Boolean(validationErrors.dayOfShowFee)}
                         />
                         <FeeInput
@@ -1273,6 +1310,7 @@ export default function AddShowDialog({
                           value={formValues.phoneFee}
                           onChange={(value) => updateField("phoneFee", value)}
                           minimum={0}
+                          decimalOnly
                           error={hasSubmitted && Boolean(validationErrors.phoneFee)}
                         />
                         <FeeInput
@@ -1281,6 +1319,7 @@ export default function AddShowDialog({
                           value={formValues.walkupFee}
                           onChange={(value) => updateField("walkupFee", value)}
                           minimum={0}
+                          decimalOnly
                           error={hasSubmitted && Boolean(validationErrors.walkupFee)}
                         />
                         <FeeInput
@@ -1289,6 +1328,7 @@ export default function AddShowDialog({
                           value={formValues.webFee}
                           onChange={(value) => updateField("webFee", value)}
                           minimum={0}
+                          decimalOnly
                           error={hasSubmitted && Boolean(validationErrors.webFee)}
                         />
                         {isEditMode ? (

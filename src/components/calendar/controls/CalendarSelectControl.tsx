@@ -31,6 +31,7 @@ type CalendarSelectControlProps = {
   tabIndex?: number
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  ariaLabel?: string
 }
 
 export default function CalendarSelectControl({
@@ -48,6 +49,7 @@ export default function CalendarSelectControl({
   tabIndex,
   open,
   onOpenChange,
+  ariaLabel,
 }: CalendarSelectControlProps) {
   const [internalOpen, setInternalOpen] = useState(false)
   const isOpen = open ?? internalOpen
@@ -81,6 +83,7 @@ export default function CalendarSelectControl({
           variant="outline"
           disabled={disabled}
           tabIndex={tabIndex}
+          aria-label={ariaLabel}
           onKeyDown={onTriggerKeyDown}
           className={cn(
             "h-9 w-full justify-between px-3 font-normal",

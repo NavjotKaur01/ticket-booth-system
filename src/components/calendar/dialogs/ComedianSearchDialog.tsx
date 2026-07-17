@@ -312,8 +312,11 @@ export default function ComedianSearchDialog({
             {isLoading ? (
               <ComedianSearchTableSkeleton />
             ) : (
-              <div className="min-h-0 flex-1 overflow-auto">
-                <Table className="min-w-[44rem] table-fixed border-collapse">
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <Table
+                  className="min-w-[44rem] table-fixed border-collapse"
+                  containerClassName="h-full overflow-auto"
+                >
                   <TableHeader className="text-muted-foreground shadow-sm">
                     <TableRow>
                       <TableHead className="sticky top-0 z-10 w-56 border bg-muted px-3 py-2 font-semibold">

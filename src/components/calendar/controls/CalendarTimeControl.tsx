@@ -126,7 +126,7 @@ export default function CalendarTimeControl({
   }
 
   return (
-    <div className={cn("flex w-full max-w-48 items-stretch", className)}>
+    <div className={cn("flex w-full max-w-48 sm:max-w-full items-stretch", className)}>
       <Popover
         open={isOpen && !disabled}
         onOpenChange={(open) => setIsOpen(disabled ? false : open)}
