@@ -36,6 +36,7 @@ type CalendarDialogsProps = {
   isAdjustPromoOpen: boolean
   setIsAdjustPromoOpen: (open: boolean) => void
   adjustPromoEvent: CalendarEvent | null
+  onAdjustPromoSaved?: () => void
   isAdjustSeatsOpen: boolean
   setIsAdjustSeatsOpen: (open: boolean) => void
   adjustSeatsEvent: CalendarEvent | null
@@ -97,6 +98,7 @@ export default function CalendarDialogs({
   isAdjustPromoOpen,
   setIsAdjustPromoOpen,
   adjustPromoEvent,
+  onAdjustPromoSaved,
   isAdjustSeatsOpen,
   setIsAdjustSeatsOpen,
   adjustSeatsEvent,
@@ -169,8 +171,8 @@ export default function CalendarDialogs({
       <AdjustPromoDialog
         open={isAdjustPromoOpen}
         event={adjustPromoEvent}
-        username={username}
         onOpenChange={setIsAdjustPromoOpen}
+        onSave={onAdjustPromoSaved}
       />
       <AdjustSeatsDialog
         open={isAdjustSeatsOpen}
@@ -216,11 +218,14 @@ export default function CalendarDialogs({
         open={isShowHistoryOpen}
         event={showHistoryEvent}
         onOpenChange={setIsShowHistoryOpen}
+        connectionString={connectionString}
+        locationId={locationId}
       />
       <ShowDetailHistoryDialog
         open={isShowDetailHistoryOpen}
         event={showDetailHistoryEvent}
         onOpenChange={setIsShowDetailHistoryOpen}
+        connectionString={connectionString}
       />
       <PastDateAlertDialog
         open={isPastDateAlertOpen}

@@ -40,7 +40,13 @@ import type {
 } from "@/types/api/save-show"
 import type { UpdateShowRequestModel } from "@/types/api/update-show"
 import type { AdjustShowAgeRequest } from "@/types/api/adjust-show-age"
+import type {
+  ApiShowPromotionItem,
+  GetShowPromotionRequest,
+  SaveShowPromotionRequest,
+} from "@/types/api/show-promotion"
 import type { ApiShowData, ApiShowProperties } from "@/types/api/get-show-data"
+import type { ApiShowHistoryItem } from "@/types/api/show-history"
 import type { ApiCustomerSearchItem } from "@/types/api/customer-search"
 import type { ApiComedianInfo, ComedianRequestModel } from "@/types/api/comedian-info"
 import type { ApiDefShowItem, ShowDefRequestModel } from "@/types/api/show-def"
@@ -1789,6 +1795,32 @@ export const clubmanApi = createApi({
       providesTags: ["Calendar"],
     }),
 
+    getShowHistory: builder.query<
+      ApiShowHistoryItem[],
+      { connectionName: string; locationId: string; showId: string }
+    >({
+      query: ({ connectionName, locationId, showId }) =>
+        calendarApiPath(connectionName, locationId, showId, "GetShowHistory"),
+      transformResponse: (response: ApiShowHistoryItem[] | null | undefined) =>
+        response ?? [],
+      providesTags: (_result, _error, arg) => [
+        { type: "Calendar", id: `show-history:${arg.showId}` },
+      ],
+    }),
+
+    getShowHistoryDetail: builder.query<
+      ApiShowHistoryItem[],
+      { connectionName: string; showId: string }
+    >({
+      query: ({ connectionName, showId }) =>
+        calendarApiPath(connectionName, showId, "GetShowHistoryDetail"),
+      transformResponse: (response: ApiShowHistoryItem[] | null | undefined) =>
+        response ?? [],
+      providesTags: (_result, _error, arg) => [
+        { type: "Calendar", id: `show-history-detail:${arg.showId}` },
+      ],
+    }),
+
     updateShow: builder.mutation<unknown, UpdateShowRequestModel>({
       query: (body) => ({
         url: calendarApiPath("UpdateShow"),
@@ -1817,6 +1849,29 @@ export const clubmanApi = createApi({
         method: "PUT",
         body,
       }),
+      invalidatesTags: ["Calendar"],
+    }),
+
+    getShowPromotion: builder.mutation<
+      ApiShowPromotionItem[],
+      GetShowPromotionRequest
+    >({
+      query: (body) => ({
+        url: calendarApiPath("GetShowPromotion"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: ApiShowPromotionItem[] | null | undefined) =>
+        response ?? [],
+    }),
+
+    saveShowPromotion: builder.mutation<boolean, SaveShowPromotionRequest>({
+      query: (body) => ({
+        url: calendarApiPath("SaveShowPromotion"),
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
       invalidatesTags: ["Calendar"],
     }),
 
@@ -1944,10 +1999,14 @@ export const {
   useUnCancelShowMutation,
   useGetShowDataQuery,
   useLazyGetShowDataQuery,
+  useGetShowHistoryQuery,
+  useGetShowHistoryDetailQuery,
   useGetShowPropertiesQuery,
   useLazyGetShowPropertiesQuery,
   useUpdateShowMutation,
   useAdjustShowAgeMutation,
+  useGetShowPromotionMutation,
+  useSaveShowPromotionMutation,
   useGetEmploymentPositionsQuery,
   useAddUpdateEmploymentPositionMutation,
   useDeleteEmploymentPositionMutation,

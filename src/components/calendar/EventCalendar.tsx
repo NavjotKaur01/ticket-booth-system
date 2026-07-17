@@ -454,6 +454,7 @@ export default function EventCalendar() {
         isAdjustPromoOpen={isAdjustPromoOpen}
         setIsAdjustPromoOpen={setIsAdjustPromoOpen}
         adjustPromoEvent={adjustPromoEvent}
+        onAdjustPromoSaved={refetch}
         isAdjustSeatsOpen={isAdjustSeatsOpen}
         setIsAdjustSeatsOpen={setIsAdjustSeatsOpen}
         adjustSeatsEvent={adjustSeatsEvent}
