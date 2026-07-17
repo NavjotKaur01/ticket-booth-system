@@ -41,6 +41,7 @@ import { useAppSession } from "@/hooks/use-app-session"
 import { useCachedReservationShowData } from "@/hooks/use-cached-reservation-show-data"
 import { useReservationData } from "@/hooks/use-reservation-data"
 import { useShowDetailsByDate } from "@/hooks/use-show-details-by-date"
+import { useSubmitInFlight } from "@/hooks/use-submit-in-flight"
 import {
   resendReservationTicketEmail,
   updateCustomerEmail,
@@ -240,6 +241,9 @@ export function CheckIn() {
 
   const [checkInError, setCheckInError] = useState<string | null>(null)
   const [isCheckingInReservation, setIsCheckingInReservation] = useState(false)
+  const checkInSubmitGuard = useSubmitInFlight()
+  const expressSubmitGuard = useSubmitInFlight()
+  const resendSubmitGuard = useSubmitInFlight()
   const [cancelReservationError, setCancelReservationError] = useState<
     string | null
   >(null)
@@ -543,43 +547,45 @@ export function CheckIn() {
       return
     }
 
-    setIsCheckingInReservation(true)
-    setCheckInError(null)
-    setSelectedReservation(resolveReservation(record))
+    await checkInSubmitGuard.run(async () => {
+      setIsCheckingInReservation(true)
+      setCheckInError(null)
+      setSelectedReservation(resolveReservation(record))
 
-    try {
-      const detail = await fetchReservationDetailById({
-        connectionName,
-        reservationId: record.id,
-      })
+      try {
+        const detail = await fetchReservationDetailById({
+          connectionName,
+          reservationId: record.id,
+        })
 
-      const validation = validateReservationCheckIn(detail)
-      if (!validation.canCheckIn) {
-        const message =
-          validation.error ??
-          "Amount due is greater than zero. Cannot Check-in."
-        setWarningMessage(message)
-        toastWarning(message)
-        return
+        const validation = validateReservationCheckIn(detail)
+        if (!validation.canCheckIn) {
+          const message =
+            validation.error ??
+            "Amount due is greater than zero. Cannot Check-in."
+          setWarningMessage(message)
+          toastWarning(message)
+          return
+        }
+
+        if (needsPromoValidation(detail)) {
+          setPendingCheckInDetail(detail)
+          setPromoIntent("check-in")
+          setCheckInPromoOpen(true)
+          return
+        }
+
+        await submitReservationCheckIn(record.id)
+      } catch (requestError) {
+        reportError(
+          setCheckInError,
+          requestError,
+          "Failed to check in reservation"
+        )
+      } finally {
+        setIsCheckingInReservation(false)
       }
-
-      if (needsPromoValidation(detail)) {
-        setPendingCheckInDetail(detail)
-        setPromoIntent("check-in")
-        setCheckInPromoOpen(true)
-        return
-      }
-
-      await submitReservationCheckIn(record.id)
-    } catch (requestError) {
-      reportError(
-        setCheckInError,
-        requestError,
-        "Failed to check in reservation"
-      )
-    } finally {
-      setIsCheckingInReservation(false)
-    }
+    })
   }
 
   async function handleConfirmCheckInPromo() {
@@ -904,41 +910,43 @@ export function CheckIn() {
       return
     }
 
-    setIsResendSubmitting(true)
-    setResendDialogError(null)
-    setResendError(null)
+    await resendSubmitGuard.run(async () => {
+      setIsResendSubmitting(true)
+      setResendDialogError(null)
+      setResendError(null)
 
-    try {
-      // Desktop uses UserCredentials.DBName (not ConnectionName) in the URL.
-      await resendReservationTicketEmail({
-        reservationId: selectedReservation.id,
-        locationId,
-        email,
-        dbName: dbName || connectionName,
-      })
-
-      // Desktop: UpdateCustomerEmail only when overwrite checkbox is checked.
-      if (payload.overwriteEmail) {
-        await updateCustomerEmail({
-          connectionName,
-          locationId,
+      try {
+        // Desktop uses UserCredentials.DBName (not ConnectionName) in the URL.
+        await resendReservationTicketEmail({
           reservationId: selectedReservation.id,
+          locationId,
           email,
+          dbName: dbName || connectionName,
         })
-        await refreshReservations()
-      }
 
-      setResendOpen(false)
-      toastSuccess("Ticket email sent")
-    } catch (requestError) {
-      reportError(
-        setResendDialogError,
-        requestError,
-        "Failed to resend ticket email"
-      )
-    } finally {
-      setIsResendSubmitting(false)
-    }
+        // Desktop: UpdateCustomerEmail only when overwrite checkbox is checked.
+        if (payload.overwriteEmail) {
+          await updateCustomerEmail({
+            connectionName,
+            locationId,
+            reservationId: selectedReservation.id,
+            email,
+          })
+          await refreshReservations()
+        }
+
+        setResendOpen(false)
+        toastSuccess("Ticket email sent")
+      } catch (requestError) {
+        reportError(
+          setResendDialogError,
+          requestError,
+          "Failed to resend ticket email"
+        )
+      } finally {
+        setIsResendSubmitting(false)
+      }
+    })
   }
 
   async function handleExpressSale(payload: ExpressPanelSalePayload) {
@@ -960,41 +968,47 @@ export function CheckIn() {
       return
     }
 
-    setIsExpressSubmitting(true)
-    setExpressError(null)
-
-    try {
-      const { reservationIds } = await saveExpressWalkupReservation({
-        connectionName,
-        locationId,
-        userRights: userRight,
-        username,
-        section: payload.section,
-        party: payload.party,
-        passes: payload.passes,
-        promo: payload.promo,
-        paymentType: payload.paymentType,
-        paymentAmount: payload.paymentAmount,
-        cardType: payload.cardType,
-        showDate,
-        taxRatePercent: paymentTaxRate,
-        taxWithServiceCharge,
-        // Desktop SaveSalesTransaction auto check-in for express cash/CC pad.
-        checkInAfterSave: true,
-      })
-
-      const reservationId = reservationIds[0]
-      if (reservationId) {
-        void maybeAutoPrintAfterCheckIn(reservationId)
-      }
-
-      await refreshReservations()
-      toastSuccess("Express sale saved")
-    } catch (requestError) {
-      reportError(setExpressError, requestError, "Failed to save express sale")
-    } finally {
-      setIsExpressSubmitting(false)
+    if (isExpressSubmitting) {
+      return
     }
+
+    await expressSubmitGuard.run(async () => {
+      setIsExpressSubmitting(true)
+      setExpressError(null)
+
+      try {
+        const { reservationIds } = await saveExpressWalkupReservation({
+          connectionName,
+          locationId,
+          userRights: userRight,
+          username,
+          section: payload.section,
+          party: payload.party,
+          passes: payload.passes,
+          promo: payload.promo,
+          paymentType: payload.paymentType,
+          paymentAmount: payload.paymentAmount,
+          cardType: payload.cardType,
+          showDate,
+          taxRatePercent: paymentTaxRate,
+          taxWithServiceCharge,
+          // Desktop SaveSalesTransaction auto check-in for express cash/CC pad.
+          checkInAfterSave: true,
+        })
+
+        const reservationId = reservationIds[0]
+        if (reservationId) {
+          void maybeAutoPrintAfterCheckIn(reservationId)
+        }
+
+        await refreshReservations()
+        toastSuccess("Express sale saved")
+      } catch (requestError) {
+        reportError(setExpressError, requestError, "Failed to save express sale")
+      } finally {
+        setIsExpressSubmitting(false)
+      }
+    })
   }
 
   async function handleExpressWalkupQuickPay(payload: {

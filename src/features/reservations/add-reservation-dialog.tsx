@@ -136,6 +136,7 @@ import {
 } from '@/lib/app-toast'
 import { cn } from '@/lib/utils'
 import { useAppSession } from '@/hooks/use-app-session'
+import { useSubmitInFlight } from '@/hooks/use-submit-in-flight'
 import { createTicketPrintData } from '@/services/ticket-print.service'
 import type { CustomerFormValues } from '@/types/customer-form'
 import type { Customer } from '@/types/customer'
@@ -1296,6 +1297,7 @@ export function AddReservationDialog({
     () => createEmptyReservationPaymentFields()
   )
   const [isSavingReservation, setIsSavingReservation] = useState(false)
+  const saveReservationGuard = useSubmitInFlight()
   const [checkInConfirmOpen, setCheckInConfirmOpen] = useState(false)
   const [saveReservationError, setSaveReservationError] = useState<
     string | null
@@ -2522,36 +2524,41 @@ export function AddReservationDialog({
     if (!effectiveCustomerId || isSavingReservation) {
       return
     }
-    const sessionGeneration = sessionGenerationRef.current
 
-    const booking = resolveReservationBooking({
-      sectionId: section,
-      partyBySection,
-      sections: availableSections
-    })
-    const saveSection = booking.selectedSection
-    const saveParty = booking.partySize
-    const savePromo =
-      effectivePromo === 'none' ? null : promoById.get(effectivePromo) ?? null
-    const saveTotals = isEditMode
-      ? calculateReservationTotals({
-        sectionPrice: saveSection?.price ?? '$0.00',
-        sectionShowPrice: saveSection?.showPrice,
-        sectionPriceMultiplier: saveSection?.priceMultiplier ?? 1,
-        party: saveParty,
-        passes,
-        promo: savePromo,
-        existingServiceCharge: reservationDetail?.SVC,
-        existingDiscount: reservationDetail?.Discount,
-        existingSalesTax: reservationDetail?.SalesTax,
-        systemTaxRate: Number(systemDefaults?.lblTaxes || 0),
-        taxWithServiceCharge:
-          systemDefaults?.lblTaxWithServiceCharge ?? undefined,
-        ccFeePercent: Number(systemDefaults?.cboCC || 0)
+    await saveReservationGuard.run(async () => {
+      if (!effectiveCustomerId || isSavingReservation) {
+        return
+      }
+      const sessionGeneration = sessionGenerationRef.current
+
+      const booking = resolveReservationBooking({
+        sectionId: section,
+        partyBySection,
+        sections: availableSections
       })
-      : totals
-    const savePaymentAmount =
-      paymentAmountOverride ??
+      const saveSection = booking.selectedSection
+      const saveParty = booking.partySize
+      const savePromo =
+        effectivePromo === 'none' ? null : promoById.get(effectivePromo) ?? null
+      const saveTotals = isEditMode
+        ? calculateReservationTotals({
+          sectionPrice: saveSection?.price ?? '$0.00',
+          sectionShowPrice: saveSection?.showPrice,
+          sectionPriceMultiplier: saveSection?.priceMultiplier ?? 1,
+          party: saveParty,
+          passes,
+          promo: savePromo,
+          existingServiceCharge: reservationDetail?.SVC,
+          existingDiscount: reservationDetail?.Discount,
+          existingSalesTax: reservationDetail?.SalesTax,
+          systemTaxRate: Number(systemDefaults?.lblTaxes || 0),
+          taxWithServiceCharge:
+            systemDefaults?.lblTaxWithServiceCharge ?? undefined,
+          ccFeePercent: Number(systemDefaults?.cboCC || 0)
+        })
+        : totals
+      const savePaymentAmount =
+        paymentAmountOverride ??
       formatReservationMoney(
         isEditMode
           ? Math.max(
@@ -2766,6 +2773,7 @@ export function AddReservationDialog({
         setIsSavingReservation(false)
       }
     }
+    })
   }
 
   async function selectSavedCustomer(

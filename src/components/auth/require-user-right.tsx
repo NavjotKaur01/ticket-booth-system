@@ -21,6 +21,9 @@ type RequireUserRightProps = {
 
 /**
  * Route guard for UserRights (Phase 2). Nest under ProtectedLayout.
+ * Desktop parity:
+ * - Administrator: blocked for SEC02 User only
+ * - Venue Manager: available to any user with a rights code
  * Additive UX only — does not replace server authorization.
  */
 export function RequireUserRight({
