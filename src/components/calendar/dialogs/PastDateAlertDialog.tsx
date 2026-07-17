@@ -13,11 +13,13 @@ import {
 type PastDateAlertDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  message?: string | null
 }
 
 export default function PastDateAlertDialog({
   open,
   onOpenChange,
+  message,
 }: PastDateAlertDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -31,7 +33,7 @@ export default function PastDateAlertDialog({
             <CircleAlert className="size-6" aria-hidden="true" />
           </div>
           <DialogDescription className="pt-2 text-sm text-foreground">
-            Date is prior to today, cannot be modified.
+            {message || "Date is prior to today, cannot be modified."}
           </DialogDescription>
         </div>
 

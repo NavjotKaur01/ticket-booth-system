@@ -12,13 +12,19 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useAppSession } from "@/hooks/use-app-session"
+import { getClubmanErrorMessage } from "@/store/api/baseQuery"
+import {
+  useGetShowByIdQuery,
+  useGetShowSectionListQuery,
+  useMoveShowToUpcomingDateMutation,
+} from "@/store/api/clubmanApi"
 import type { CalendarEvent } from "@/types/calendar-event"
 
 import {
+  buildMoveShowRequest,
   createMoveShowFormValues,
-  getMoveShowDialogData,
-  moveShow,
-  type MoveShowDialogData,
+  isSameCalendarDay,
   type MoveShowFormValues,
 } from "../service/moveShow.service"
 
@@ -53,67 +59,106 @@ export default function MoveShowDialog({
   onOpenChange,
   onMoved,
 }: MoveShowDialogProps) {
-  const [dialogData, setDialogData] = useState<MoveShowDialogData | null>(null)
+  const { connectionName, locationId, username } = useAppSession()
   const [formValues, setFormValues] = useState<MoveShowFormValues | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const showId = event?.showId || event?.id || ""
+  const shouldSkip =
+    !open || !event || !connectionName || !locationId || !showId
+
+  const showQuery = useGetShowByIdQuery(
+    { connectionName, locationId, showId },
+    { skip: shouldSkip, refetchOnMountOrArgChange: true }
+  )
+  const sectionQuery = useGetShowSectionListQuery(
+    { connectionName, showId },
+    { skip: shouldSkip, refetchOnMountOrArgChange: true }
+  )
+  const [moveShowToUpcomingDate, { isLoading: isSubmitting }] =
+    useMoveShowToUpcomingDateMutation()
+
+  const show = showQuery.data?.[0]
 
   useEffect(() => {
     if (!open) {
-      setDialogData(null)
       setFormValues(null)
+      setSubmitError(null)
       return
     }
 
-    if (!event) {
-      return
+    if (show) {
+      setFormValues(createMoveShowFormValues(show))
+    } else {
+      setFormValues(null)
     }
-
-    let isCurrent = true
-
-    setIsLoading(true)
-    getMoveShowDialogData(event)
-      .then((data) => {
-        if (isCurrent) {
-          setDialogData(data)
-          setFormValues(createMoveShowFormValues(data))
-        }
-      })
-      .finally(() => {
-        if (isCurrent) {
-          setIsLoading(false)
-        }
-      })
-
-    return () => {
-      isCurrent = false
-    }
-  }, [event, open])
+  }, [open, show, showId])
 
   function updateField<K extends keyof MoveShowFormValues>(
     field: K,
     value: MoveShowFormValues[K]
   ) {
+    setSubmitError(null)
     setFormValues((current) => (current ? { ...current, [field]: value } : current))
   }
 
   async function handleMove() {
-    if (!formValues || !dialogData || !formValues.moveDate) {
+    if (!formValues || !show || !showId) {
       return
     }
 
-    setIsSubmitting(true)
+    if (isSameCalendarDay(formValues.moveDate, show.ShowDate)) {
+      setSubmitError("Select a date other than the show's current date.")
+      return
+    }
 
     try {
-      await moveShow(dialogData.eventId, formValues)
+      setSubmitError(null)
+      const request = buildMoveShowRequest({
+        connectionString: connectionName,
+        locationId,
+        calendarShowId: showId,
+        username,
+        values: formValues,
+      })
+      const didMove = await moveShowToUpcomingDate(request).unwrap()
+      if (!didMove) {
+        setSubmitError("Unable to move show.")
+        return
+      }
       onMoved?.()
       onOpenChange(false)
-    } finally {
-      setIsSubmitting(false)
+    } catch (error: unknown) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : getClubmanErrorMessage(error)
+      )
     }
   }
 
-  const canMove = Boolean(formValues?.moveDate) && !isLoading && !isSubmitting
+  const loadError = showQuery.error ?? sectionQuery.error
+  const noShowError =
+    !shouldSkip && showQuery.isSuccess && !show
+      ? "No show details found."
+      : null
+  const errorMessage =
+    submitError ??
+    (loadError ? getClubmanErrorMessage(loadError) : noShowError)
+  const isLoading =
+    !shouldSkip && (showQuery.isFetching || sectionQuery.isFetching)
+  const isFetching = showQuery.isFetching || sectionQuery.isFetching
+  const canMove =
+    Boolean(
+      formValues?.moveDate &&
+        formValues.showTime &&
+        formValues.arrivalTime &&
+        show
+    ) &&
+    !isLoading &&
+    !isFetching &&
+    !isSubmitting &&
+    !loadError
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -126,39 +171,45 @@ export default function MoveShowDialog({
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {isLoading || !formValues || !dialogData ? (
+          {isLoading ? (
             <MoveShowSkeleton />
           ) : (
             <div className="px-5 py-5">
+              {errorMessage ? (
+                <p className="mb-4 text-sm text-destructive">{errorMessage}</p>
+              ) : null}
               <fieldset className="rounded-md border p-4">
                 <legend className="px-2 text-sm font-medium">Select date to move show</legend>
-                <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
-                  <div className="grid min-w-[12rem] flex-1 gap-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-x-6">
+                  <div className="grid min-w-0 gap-2">
                     <Label htmlFor="move-show-date">Select Date</Label>
                     <CalendarDatePickerControl
                       id="move-show-date"
-                      value={formValues.moveDate}
+                      value={formValues?.moveDate ?? ""}
                       onChange={(value) => updateField("moveDate", value)}
                       disablePastDates
                       placeholder="Select a date"
+                      disabled={!formValues || isSubmitting}
                     />
                   </div>
 
-                  <div className="grid min-w-[12rem] flex-1 gap-2">
+                  <div className="grid min-w-0 gap-2">
                     <Label htmlFor="move-show-time">Show Time</Label>
                     <CalendarTimeControl
                       id="move-show-time"
-                      value={formValues.showTime}
+                      value={formValues?.showTime ?? ""}
                       onChange={(value) => updateField("showTime", value)}
+                      disabled={!formValues || isSubmitting}
                     />
                   </div>
 
-                  <div className="grid min-w-[12rem] flex-1 gap-2">
+                  <div className="grid min-w-0 gap-2">
                     <Label htmlFor="move-show-arrival-time">Arrival Time</Label>
                     <CalendarTimeControl
                       id="move-show-arrival-time"
-                      value={formValues.arrivalTime}
+                      value={formValues?.arrivalTime ?? ""}
                       onChange={(value) => updateField("arrivalTime", value)}
+                      disabled={!formValues || isSubmitting}
                     />
                   </div>
                 </div>
@@ -168,10 +219,15 @@ export default function MoveShowDialog({
         </div>
 
         <DialogFooter className="!flex-row flex-wrap justify-start border-t px-5 py-4">
-          <Button type="button" onClick={handleMove} disabled={!canMove}>
-            Move
+          <Button type="button" onClick={() => void handleMove()} disabled={!canMove}>
+            {isSubmitting ? "Moving…" : "Move"}
           </Button>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
         </DialogFooter>

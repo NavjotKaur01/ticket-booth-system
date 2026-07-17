@@ -58,6 +58,7 @@ type CalendarDialogsProps = {
   isPrivatePreSaleOpen: boolean
   setIsPrivatePreSaleOpen: (open: boolean) => void
   privatePreSaleEvent: CalendarEvent | null
+  onPrivatePreSaleSaved?: () => void | Promise<void>
   isShowHistoryOpen: boolean
   setIsShowHistoryOpen: (open: boolean) => void
   showHistoryEvent: CalendarEvent | null
@@ -66,6 +67,7 @@ type CalendarDialogsProps = {
   showDetailHistoryEvent: CalendarEvent | null
   isPastDateAlertOpen: boolean
   setIsPastDateAlertOpen: (open: boolean) => void
+  calendarActionError?: string | null
   isRecurrenceOpen: boolean
   setIsRecurrenceOpen: (open: boolean) => void
   recurrenceDate: Date | null
@@ -120,6 +122,7 @@ export default function CalendarDialogs({
   isPrivatePreSaleOpen,
   setIsPrivatePreSaleOpen,
   privatePreSaleEvent,
+  onPrivatePreSaleSaved,
   isShowHistoryOpen,
   setIsShowHistoryOpen,
   showHistoryEvent,
@@ -128,6 +131,7 @@ export default function CalendarDialogs({
   showDetailHistoryEvent,
   isPastDateAlertOpen,
   setIsPastDateAlertOpen,
+  calendarActionError,
   isRecurrenceOpen,
   setIsRecurrenceOpen,
   recurrenceDate,
@@ -213,6 +217,7 @@ export default function CalendarDialogs({
         open={isPrivatePreSaleOpen}
         event={privatePreSaleEvent}
         onOpenChange={setIsPrivatePreSaleOpen}
+        onSaved={onPrivatePreSaleSaved}
       />
       <ShowHistoryDialog
         open={isShowHistoryOpen}
@@ -230,6 +235,7 @@ export default function CalendarDialogs({
       <PastDateAlertDialog
         open={isPastDateAlertOpen}
         onOpenChange={setIsPastDateAlertOpen}
+        message={calendarActionError}
       />
       <RecurrenceDialog
         open={isRecurrenceOpen}

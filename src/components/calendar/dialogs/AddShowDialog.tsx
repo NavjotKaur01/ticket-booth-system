@@ -30,6 +30,7 @@ import { fetchAddShowDialogData, saveShowRequest } from "@/lib/api/add-show"
 // import { buildSaveShowRequest } from "@/lib/build-save-show-request"
 import { buildUpdateShowRequest } from "@/lib/build-update-show-request"
 import { useGetShowDataQuery, useGetShowPropertiesQuery, useUpdateShowMutation } from "@/store/api/clubmanApi"
+import type { ApiShowData } from "@/types/api/get-show-data"
 import SaveVerifyDialog from "./SaveVerifyDialog"
 import ComedianSearchDialog, {
   type ComedianSearchSelection,
@@ -207,6 +208,19 @@ function getAddShowValidationErrors(
 function normalizeMinimumNumberValue(value: string, minimum: number) {
   const parsed = Number.parseFloat(value)
   return Number.isFinite(parsed) && parsed >= minimum ? String(parsed) : String(minimum)
+}
+
+function isApiBooleanTrue(value: unknown) {
+  if (typeof value === "boolean") return value
+  if (typeof value === "number") return value !== 0
+  if (typeof value !== "string") return false
+
+  const normalized = value.trim().toUpperCase()
+  return normalized === "Y" || normalized === "YES" || normalized === "TRUE" || normalized === "1"
+}
+
+function getIsShowSoldOut(show: ApiShowData) {
+  return isApiBooleanTrue(show.IsShowSoldOut ?? show.IsShowSolidOut)
 }
 
 /** Normalize API/display times to CalendarTimeControl format (e.g. "7:35 am"). */
@@ -625,7 +639,7 @@ export default function AddShowDialog({
           "",
         useSectionFee: mainShowData.IsUseSectionFee,
         preSalePrivateShow: mainShowData.IsPrivateShow,
-        isShowSoldOut: mainShowData.IsShowSolidOut,
+        isShowSoldOut: getIsShowSoldOut(mainShowData),
         selectedShowTimeIds: ["edit-show-time"],
         startDate: dayjs(mainShowData.ShowDate).isValid()
           ? dayjs(mainShowData.ShowDate).format("YYYY-MM-DD")

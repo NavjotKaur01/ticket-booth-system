@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import CalendarDatePickerControl from "../controls/CalendarDatePickerControl"
 import CalendarSelectControl from "../controls/CalendarSelectControl"
@@ -14,13 +14,20 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useAppSession } from "@/hooks/use-app-session"
+import { buildSavePrePrivateSetupLinkRequest } from "@/lib/build-private-show-link-request"
+import { getClubmanErrorMessage } from "@/store/api/baseQuery"
+import {
+  useGetShowDetailsByDateQuery,
+  useSavePrePrivateSetupLinkMutation,
+} from "@/store/api/clubmanApi"
 import type { CalendarEvent } from "@/types/calendar-event"
 
 import {
+  buildSelectedPrivateShowOptions,
   createPrivatePreSaleFormValues,
-  getPrivatePreSaleDialogData,
-  savePrivatePreSale,
-  type PrivatePreSaleDialogData,
+  findSelectedPrivateShow,
+  validatePrivatePreSaleForm,
   type PrivatePreSaleFormValues,
 } from "../service/privatePreSale.service"
 
@@ -28,7 +35,7 @@ type PrivatePreSaleDialogProps = {
   open: boolean
   event: CalendarEvent | null
   onOpenChange: (open: boolean) => void
-  onSaved?: () => void
+  onSaved?: () => void | Promise<void>
 }
 
 const FIELD_ROW_CLASS = "grid gap-2 sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:items-center"
@@ -54,65 +61,154 @@ export default function PrivatePreSaleDialog({
   onOpenChange,
   onSaved,
 }: PrivatePreSaleDialogProps) {
-  const [dialogData, setDialogData] = useState<PrivatePreSaleDialogData | null>(null)
+  const { connectionName, locationId, username, isReady } = useAppSession()
   const [formValues, setFormValues] = useState<PrivatePreSaleFormValues | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  const selectedShowId = event?.showId || event?.id || ""
+  const shouldLoadShows = Boolean(
+    open &&
+      isReady &&
+      connectionName &&
+      locationId &&
+      formValues?.showDate
+  )
+  const showDetailsQuery = useGetShowDetailsByDateQuery(
+    {
+      connectionString: connectionName,
+      locationId,
+      showDate: formValues?.showDate ?? "",
+      isCancelledShow: false,
+    },
+    {
+      skip: !shouldLoadShows,
+      refetchOnMountOrArgChange: true,
+    }
+  )
+  const [savePrePrivateSetupLink, { isLoading: isSubmitting }] =
+    useSavePrePrivateSetupLinkMutation()
+
+  const privateShow = useMemo(
+    () =>
+      findSelectedPrivateShow(
+        showDetailsQuery.data ?? [],
+        selectedShowId
+      ),
+    [selectedShowId, showDetailsQuery.data]
+  )
+  const options = useMemo(
+    () => buildSelectedPrivateShowOptions(privateShow),
+    [privateShow]
+  )
 
   useEffect(() => {
     if (!open) {
-      setDialogData(null)
       setFormValues(null)
+      setFormError(null)
       return
     }
 
-    if (!event) {
-      return
-    }
-
-    let isCurrent = true
-
-    setIsLoading(true)
-    getPrivatePreSaleDialogData(event)
-      .then((data) => {
-        if (isCurrent) {
-          setDialogData(data)
-          setFormValues(createPrivatePreSaleFormValues(data))
-        }
-      })
-      .finally(() => {
-        if (isCurrent) {
-          setIsLoading(false)
-        }
-      })
-
-    return () => {
-      isCurrent = false
+    if (event) {
+      setFormValues(createPrivatePreSaleFormValues(event))
+      setFormError(null)
     }
   }, [event, open])
+
+  useEffect(() => {
+    if (!open || showDetailsQuery.isFetching || !showDetailsQuery.isSuccess) {
+      return
+    }
+
+    setFormValues((current) => {
+      if (!current) return current
+      const showId = privateShow?.ShowId ?? ""
+      const comicId = privateShow?.ComicId ?? ""
+      if (current.showId === showId && current.comicId === comicId) {
+        return current
+      }
+      return { ...current, showId, comicId }
+    })
+  }, [
+    open,
+    privateShow,
+    showDetailsQuery.isFetching,
+    showDetailsQuery.isSuccess,
+  ])
 
   function updateField<K extends keyof PrivatePreSaleFormValues>(
     field: K,
     value: PrivatePreSaleFormValues[K]
   ) {
-    setFormValues((current) => (current ? { ...current, [field]: value } : current))
+    setFormError(null)
+    setFormValues((current) => {
+      if (!current) return current
+      if (field === "showDate") {
+        return {
+          ...current,
+          showDate: value as string,
+          showId: "",
+          comicId: "",
+        }
+      }
+      return { ...current, [field]: value }
+    })
   }
 
   async function handleSave() {
-    if (!formValues || !dialogData) {
+    if (!formValues) {
       return
     }
 
-    setIsSubmitting(true)
+    const validationError = validatePrivatePreSaleForm(
+      formValues,
+      privateShow
+    )
+    if (validationError) {
+      setFormError(validationError)
+      return
+    }
+    if (!isReady || !connectionName || !locationId) {
+      setFormError("Location is required before saving a private show link.")
+      return
+    }
 
     try {
-      await savePrivatePreSale(dialogData.eventId, formValues)
-      onSaved?.()
+      setFormError(null)
+      const didSave = await savePrePrivateSetupLink(
+        buildSavePrePrivateSetupLinkRequest({
+          connectionName,
+          locationId,
+          lastUpdateId: username,
+          form: formValues,
+        })
+      ).unwrap()
+      if (!didSave) {
+        setFormError("Unable to save the private pre-sale link.")
+        return
+      }
+      await onSaved?.()
       onOpenChange(false)
-    } finally {
-      setIsSubmitting(false)
+    } catch (error: unknown) {
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : getClubmanErrorMessage(error)
+      )
     }
   }
+
+  const isLoading =
+    shouldLoadShows &&
+    (showDetailsQuery.isLoading || showDetailsQuery.isFetching)
+  const queryError = showDetailsQuery.error
+    ? getClubmanErrorMessage(showDetailsQuery.error)
+    : null
+  const privateShowError =
+    showDetailsQuery.isSuccess && !privateShow
+      ? "Selected show is not configured as a private show."
+      : null
+  const errorMessage = formError ?? queryError ?? privateShowError
+  const formDisabled = isLoading || isSubmitting
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,10 +221,13 @@ export default function PrivatePreSaleDialog({
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {isLoading || !formValues || !dialogData ? (
+          {isLoading || !formValues ? (
             <PrivatePreSaleSkeleton />
           ) : (
             <div className="px-5 py-5">
+              {errorMessage ? (
+                <p className="mb-4 text-sm text-destructive">{errorMessage}</p>
+              ) : null}
               <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
                 <div className={FIELD_ROW_CLASS}>
                   <Label htmlFor="private-pre-sale-show-date">Show Date</Label>
@@ -137,6 +236,7 @@ export default function PrivatePreSaleDialog({
                     value={formValues.showDate}
                     onChange={(value) => updateField("showDate", value)}
                     disablePastDates
+                    disabled={formDisabled}
                   />
                 </div>
 
@@ -147,7 +247,8 @@ export default function PrivatePreSaleDialog({
                     value={formValues.comicId}
                     onChange={(value) => updateField("comicId", value)}
                     placeholder="Select Comic"
-                    options={dialogData.comicOptions}
+                    options={options.comicOptions}
+                    disabled={formDisabled || !privateShow}
                   />
                 </div>
 
@@ -158,7 +259,8 @@ export default function PrivatePreSaleDialog({
                     value={formValues.showId}
                     onChange={(value) => updateField("showId", value)}
                     placeholder="Select Show"
-                    options={dialogData.showOptions}
+                    options={options.showOptions}
+                    disabled={formDisabled || !privateShow}
                   />
                 </div>
 
@@ -171,6 +273,7 @@ export default function PrivatePreSaleDialog({
                       updateField("accessCode", changeEvent.target.value)
                     }
                     className="h-9"
+                    disabled={formDisabled || !privateShow}
                   />
                 </div>
 
@@ -180,6 +283,7 @@ export default function PrivatePreSaleDialog({
                     id="private-pre-sale-start-date"
                     value={formValues.startDate}
                     onChange={(value) => updateField("startDate", value)}
+                    disabled={formDisabled}
                   />
                 </div>
 
@@ -189,6 +293,7 @@ export default function PrivatePreSaleDialog({
                     id="private-pre-sale-start-time"
                     value={formValues.startTime}
                     onChange={(value) => updateField("startTime", value)}
+                    disabled={formDisabled}
                   />
                 </div>
 
@@ -198,6 +303,7 @@ export default function PrivatePreSaleDialog({
                     id="private-pre-sale-end-date"
                     value={formValues.endDate}
                     onChange={(value) => updateField("endDate", value)}
+                    disabled={formDisabled}
                   />
                 </div>
 
@@ -207,6 +313,7 @@ export default function PrivatePreSaleDialog({
                     id="private-pre-sale-end-time"
                     value={formValues.endTime}
                     onChange={(value) => updateField("endTime", value)}
+                    disabled={formDisabled}
                   />
                 </div>
               </div>
@@ -217,12 +324,22 @@ export default function PrivatePreSaleDialog({
         <DialogFooter className="!flex-row flex-wrap justify-start border-t px-5 py-4">
           <Button
             type="button"
-            onClick={handleSave}
-            disabled={!formValues || isLoading || isSubmitting}
+            onClick={() => void handleSave()}
+            disabled={
+              !formValues ||
+              !privateShow ||
+              formDisabled ||
+              Boolean(queryError)
+            }
           >
-            Save
+            {isSubmitting ? "Saving…" : "Save"}
           </Button>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
         </DialogFooter>

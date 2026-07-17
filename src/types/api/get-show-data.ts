@@ -31,7 +31,9 @@ export type ApiShowData = {
   Hub: string
   MinAge: string | null
   IsUseSectionFee: boolean
-  IsShowSolidOut: boolean
+  /** Canonical API field; some legacy responses use the misspelled Solid variant. */
+  IsShowSoldOut?: boolean | string | null
+  IsShowSolidOut?: boolean | string | null
   IsShowAvailableOnWeb: boolean
   specialnotes: string | null
   IsPrivateShow: boolean

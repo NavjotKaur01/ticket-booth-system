@@ -99,6 +99,7 @@ type CalendarTimeControlProps = {
   value: string
   onChange: (value: string) => void
   className?: string
+  disabled?: boolean
 }
 
 export default function CalendarTimeControl({
@@ -106,6 +107,7 @@ export default function CalendarTimeControl({
   value,
   onChange,
   className,
+  disabled = false,
 }: CalendarTimeControlProps) {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -125,13 +127,17 @@ export default function CalendarTimeControl({
 
   return (
     <div className={cn("flex w-full max-w-48 items-stretch", className)}>
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <Popover
+        open={isOpen && !disabled}
+        onOpenChange={(open) => setIsOpen(disabled ? false : open)}
+      >
         <PopoverTrigger asChild>
           <Button
             id={id}
             type="button"
             variant="outline"
             className="h-9 flex-1 justify-between rounded-r-none border-r-0 px-3 font-normal"
+            disabled={disabled}
           >
             <span>{value}</span>
             <ChevronDown className="size-3.5 text-muted-foreground" />
@@ -153,6 +159,7 @@ export default function CalendarTimeControl({
           className="h-1/2 rounded-none p-0 hover:bg-primary/10"
           aria-label="Move time fifteen minutes forward"
           onClick={() => onChange(stepTimeValue(value, 1))}
+          disabled={disabled}
         >
           <ChevronUp className="size-3" />
         </Button>
@@ -162,6 +169,7 @@ export default function CalendarTimeControl({
           className="h-1/2 rounded-none border-t p-0 hover:bg-primary/10"
           aria-label="Move time fifteen minutes backward"
           onClick={() => onChange(stepTimeValue(value, -1))}
+          disabled={disabled}
         >
           <ChevronDown className="size-3" />
         </Button>

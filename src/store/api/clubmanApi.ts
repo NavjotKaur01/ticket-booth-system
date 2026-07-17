@@ -45,6 +45,15 @@ import type {
   GetShowPromotionRequest,
   SaveShowPromotionRequest,
 } from "@/types/api/show-promotion"
+import type {
+  ApiMoveShowByIdItem,
+  ApiMoveShowSectionItem,
+  MoveShowToUpcomingDateRequest,
+} from "@/types/api/move-show"
+import type {
+  MarkShowSoldOutRequest,
+  MarkShowUnavailableOnWebRequest,
+} from "@/types/api/show-status"
 import type { ApiShowData, ApiShowProperties } from "@/types/api/get-show-data"
 import type { ApiShowHistoryItem } from "@/types/api/show-history"
 import type { ApiCustomerSearchItem } from "@/types/api/customer-search"
@@ -2043,6 +2052,64 @@ export const clubmanApi = createApi({
       invalidatesTags: ["Calendar"],
     }),
 
+    getShowById: builder.query<
+      ApiMoveShowByIdItem[],
+      { connectionName: string; locationId: string; showId: string }
+    >({
+      query: ({ connectionName, locationId, showId }) =>
+        calendarApiPath(connectionName, locationId, showId, "GetShowById"),
+      transformResponse: (
+        response: ApiMoveShowByIdItem[] | null | undefined
+      ) => response ?? [],
+    }),
+
+    getShowSectionList: builder.query<
+      ApiMoveShowSectionItem[],
+      { connectionName: string; showId: string }
+    >({
+      query: ({ connectionName, showId }) =>
+        calendarApiPath(connectionName, showId, "GetShowSectionList"),
+      transformResponse: (
+        response: ApiMoveShowSectionItem[] | null | undefined
+      ) => response ?? [],
+    }),
+
+    moveShowToUpcomingDate: builder.mutation<
+      boolean,
+      MoveShowToUpcomingDateRequest
+    >({
+      query: (body) => ({
+        url: calendarApiPath("MoveShowToUpcomingDate"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["Calendar"],
+    }),
+
+    markShowSoldOut: builder.mutation<boolean, MarkShowSoldOutRequest>({
+      query: (body) => ({
+        url: calendarApiPath("MarkShowSoldOut"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["Calendar", "ShowDetails"],
+    }),
+
+    markShowUnavailableOnWeb: builder.mutation<
+      boolean,
+      MarkShowUnavailableOnWebRequest
+    >({
+      query: (body) => ({
+        url: calendarApiPath("MarkShowUnavailableOnWeb"),
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
+      invalidatesTags: ["Calendar", "ShowDetails"],
+    }),
+
     getGiftCertificates: builder.mutation<GiftCertificate[], GetGiftCertificatesRequest>({
       query: (body) => ({
         url: "/clubman/api/GetGiftCertificates",
@@ -2190,6 +2257,11 @@ export const {
   useAdjustShowAgeMutation,
   useGetShowPromotionMutation,
   useSaveShowPromotionMutation,
+  useGetShowByIdQuery,
+  useGetShowSectionListQuery,
+  useMoveShowToUpcomingDateMutation,
+  useMarkShowSoldOutMutation,
+  useMarkShowUnavailableOnWebMutation,
   useGetEmploymentPositionsQuery,
   useAddUpdateEmploymentPositionMutation,
   useDeleteEmploymentPositionMutation,
