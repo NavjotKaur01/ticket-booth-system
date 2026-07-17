@@ -47,7 +47,7 @@ export type ReconcileReportRow = {
   Deferredrevenueamountasofreportdate: number
 }
 
-type DrillTarget = { drillType: string; label: string }
+type DrillTarget = { drillType: string; label: string; isZero: boolean }
 
 // ─── Drill labels (must match WPF ReconcileConverter / API) ───────────────────
 
@@ -66,6 +66,7 @@ const DRILL_TYPE: Record<string, string> = {
   amexrefunded:    "AMEX Refunds",
   cashpaid:        "Cash Purchases",
   cashrefunded:    "Cash Refunds",
+  giftcardredeemed: "Gift Card/Cert",
   webgiftcertpaid: "Gift Card/Cert",
   defrev:          "Deferred Revenue Used",
   defbalance:      "Beginning Balance",
@@ -75,19 +76,29 @@ const DRILL_TYPE: Record<string, string> = {
 }
 
 const DRILL_COLUMNS: DrillColumn[] = [
-  { key: "ShowDate",      label: "Show Date" },
+  {
+    key: "ShowDate",
+    keys: ["StartDate", "ShowDate"],
+    label: "Start Date",
+    format: "datetime",
+  },
   { key: "ShowTm",        label: "Show Time" },
-  { key: "ComicName",     label: "Comic" },
+  { key: "ComicName",     label: "Comic Name" },
   { key: "LastName",      label: "Last Name" },
   { key: "FirstName",     label: "First Name" },
   { key: "Business",      label: "Business" },
-  { key: "PymtLastName",  label: "Pymt Last" },
-  { key: "PymtFirstName", label: "Pymt First" },
+  { key: "PymtLastName",  label: "Pymt LastName" },
+  { key: "PymtFirstName", label: "Pymt FirstName" },
   { key: "Status",        label: "Status" },
   { key: "PymtType",      label: "Pymt Type" },
   { key: "CCType",        label: "CC Type" },
   { key: "Amount",        label: "Amount", right: true },
-  { key: "PymtDate",      label: "Pymt Date" },
+  {
+    key: "PymtDate",
+    keys: ["PymtDate", "PaymentDate"],
+    label: "Pymt Date",
+    format: "datetime",
+  },
 ]
 
 // ─── Data normalization + computed totals (mirrors ReportVM.GetReconcileData) ─
@@ -204,20 +215,20 @@ type AmountCellProps = {
   value: number
   drillKey?: keyof typeof DRILL_TYPE
   canDrill: boolean
-  onDrill: (key: keyof typeof DRILL_TYPE) => void
+  onDrill: (key: keyof typeof DRILL_TYPE, value: number) => void
   bold?: boolean
 }
 
 function AmountCell({ value, drillKey, canDrill, onDrill, bold }: AmountCellProps) {
-  const clickable = canDrill && drillKey && value !== 0
+  const clickable = Boolean(canDrill && drillKey)
   return (
     <td
       className={cn(
         "border border-border px-3 py-2 text-right text-xs tabular-nums whitespace-nowrap",
         bold && "font-semibold",
-        clickable && "cursor-pointer text-blue-600 underline hover:text-blue-800"
+        clickable && "cursor-pointer text-blue-600 hover:text-blue-800"
       )}
-      onClick={() => clickable && drillKey && onDrill(drillKey)}
+      onClick={() => clickable && drillKey && onDrill(drillKey, value)}
     >
       {fmtAmount(value)}
     </td>
@@ -263,7 +274,7 @@ function EmptyCell() {
 type ReportDocumentProps = {
   row: ReconcileReportRow
   canDrill: boolean
-  onDrill: (key: keyof typeof DRILL_TYPE) => void
+  onDrill: (key: keyof typeof DRILL_TYPE, value: number) => void
 }
 
 function ReportDocument({ row, canDrill, onDrill }: ReportDocumentProps) {
@@ -299,8 +310,8 @@ function ReportDocument({ row, canDrill, onDrill }: ReportDocumentProps) {
               </th>
             </tr>
             <tr className="border-b border-border bg-muted/40">
-              <th className="px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Type</th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Description</th>
+              <th className="px-3 py-2 text-left font-semibold tracking-wide ">Type</th>
+              <th className="px-3 py-2 text-left font-semibold tracking-wide ">Description</th>
               <th className="px-3 py-2" />
               <th className="px-3 py-2" />
             </tr>
@@ -345,8 +356,8 @@ function ReportDocument({ row, canDrill, onDrill }: ReportDocumentProps) {
             <tr>
               <TypeCell>Gross Sales</TypeCell>
               <DescCell>Daily sales for report date (includes past and current deferred revenue)</DescCell>
-              <AmountCell value={row.grossale} drillKey="grossale" canDrill={canDrill} onDrill={onDrill} />
               <EmptyCell />
+              <AmountCell value={row.grossale} drillKey="grossale" canDrill={canDrill} onDrill={onDrill} />
             </tr>
             <tr>
               <TypeCell bold>Total</TypeCell>
@@ -364,8 +375,8 @@ function ReportDocument({ row, canDrill, onDrill }: ReportDocumentProps) {
               </th>
             </tr>
             <tr className="border-b border-border bg-muted/40">
-              <th className="px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Type</th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-muted-foreground">Description</th>
+              <th className="px-3 py-2 text-left font-semibold tracking-wide">Type</th>
+              <th className="px-3 py-2 text-left font-semibold tracking-wide">Description</th>
               <th className="px-3 py-2" />
               <th className="px-3 py-2" />
             </tr>
@@ -446,7 +457,7 @@ function ReportDocument({ row, canDrill, onDrill }: ReportDocumentProps) {
             <tr>
               <TypeCell>Gift Card/Cert</TypeCell>
               <DescCell>Gift Card and Certificates redeemed for report date</DescCell>
-              <AmountCell value={0} canDrill={false} onDrill={onDrill} />
+              <AmountCell value={0} drillKey="giftcardredeemed" canDrill={canDrill} onDrill={onDrill} />
               <EmptyCell />
             </tr>
             <tr>
@@ -470,8 +481,8 @@ function ReportDocument({ row, canDrill, onDrill }: ReportDocumentProps) {
             <tr>
               <TypeCell>Deferred Revenue Used</TypeCell>
               <DescCell>Deferred Revenue used for report date</DescCell>
-              <AmountCell value={row.defrev} drillKey="defrev" canDrill={canDrill} onDrill={onDrill} />
               <EmptyCell />
+              <AmountCell value={row.defrev} drillKey="defrev" canDrill={canDrill} onDrill={onDrill} />
             </tr>
             <tr>
               <TypeCell bold>Total</TypeCell>
@@ -511,9 +522,9 @@ function ReportDocument({ row, canDrill, onDrill }: ReportDocumentProps) {
                   <span
                     className={cn(
                       "tabular-nums",
-                      canDrill && row.defbalance !== 0 && "cursor-pointer text-blue-600 underline"
+                      canDrill && "cursor-pointer text-blue-600 hover:text-blue-800"
                     )}
-                    onClick={() => canDrill && row.defbalance !== 0 && onDrill("defbalance")}
+                    onClick={() => canDrill && onDrill("defbalance", row.defbalance)}
                   >
                     {fmtAmount(row.defbalance)}
                   </span>
@@ -525,9 +536,9 @@ function ReportDocument({ row, canDrill, onDrill }: ReportDocumentProps) {
                   <span
                     className={cn(
                       "tabular-nums",
-                      canDrill && row.defpurch !== 0 && "cursor-pointer text-blue-600 underline"
+                      canDrill && "cursor-pointer text-blue-600 hover:text-blue-800"
                     )}
-                    onClick={() => canDrill && row.defpurch !== 0 && onDrill("defpurch")}
+                    onClick={() => canDrill && onDrill("defpurch", row.defpurch)}
                   >
                     {fmtAmount(row.defpurch)}
                   </span>
@@ -539,9 +550,9 @@ function ReportDocument({ row, canDrill, onDrill }: ReportDocumentProps) {
                   <span
                     className={cn(
                       "tabular-nums",
-                      canDrill && row.defrev !== 0 && "cursor-pointer text-blue-600 underline"
+                      canDrill && "cursor-pointer text-blue-600 hover:text-blue-800"
                     )}
-                    onClick={() => canDrill && row.defrev !== 0 && onDrill("defrevProof")}
+                    onClick={() => canDrill && onDrill("defrevProof", row.defrev)}
                   >
                     {fmtAmount(row.defrev)}
                   </span>
@@ -553,9 +564,9 @@ function ReportDocument({ row, canDrill, onDrill }: ReportDocumentProps) {
                   <span
                     className={cn(
                       "tabular-nums",
-                      canDrill && row.defrefunds !== 0 && "cursor-pointer text-blue-600 underline"
+                      canDrill && "cursor-pointer text-blue-600 hover:text-blue-800"
                     )}
-                    onClick={() => canDrill && row.defrefunds !== 0 && onDrill("defrefunds")}
+                    onClick={() => canDrill && onDrill("defrefunds", row.defrefunds)}
                   >
                     {fmtAmount(row.defrefunds)}
                   </span>
@@ -597,10 +608,10 @@ export function ReconcileReportView({ rawData, subtitle, generatedAt, drillConte
     return <ReportEmpty />
   }
 
-  function handleDrill(key: keyof typeof DRILL_TYPE) {
+  function handleDrill(key: keyof typeof DRILL_TYPE, value: number) {
     const drillType = DRILL_TYPE[key]
     if (!drillType) return
-    setDrillTarget({ drillType, label: drillType })
+    setDrillTarget({ drillType, label: drillType, isZero: value === 0 })
   }
 
   return (
@@ -624,7 +635,7 @@ export function ReconcileReportView({ rawData, subtitle, generatedAt, drillConte
 
       {drillTarget && drillContext && (
         <ReportDrillDialog
-          title={`Reconcile Drill Down — ${drillTarget.label}`}
+          title={`Reconcile Drill Down`}
           endpoint="GetReconcileDrillDown"
           body={{
             Connection: drillContext.connectionName,
@@ -634,6 +645,8 @@ export function ReconcileReportView({ rawData, subtitle, generatedAt, drillConte
             DrillType: drillTarget.drillType,
           }}
           columns={DRILL_COLUMNS}
+          footerTotals
+          isZero={drillTarget.isZero}
           onClose={() => setDrillTarget(null)}
         />
       )}

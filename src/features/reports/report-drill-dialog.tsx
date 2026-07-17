@@ -18,6 +18,7 @@ import {
   ReportTh,
   reportRowClass,
 } from "@/features/reports/report-ui"
+import ShowHistoryTableSkeleton from "@/components/calendar/dialogs/ShowHistoryTableSkeleton"
 
 export type DrillColumn = {
   key: string
@@ -135,9 +136,11 @@ export function ReportDrillDialog({
         </DialogHeader>
 
         {isLoading && (
-          <div className="flex items-center justify-center px-5 py-12 text-sm text-muted-foreground">
-            Loading…
-          </div>
+          <ShowHistoryTableSkeleton
+                        columnCount={columns.length}
+                        minWidthClassName="min-w-[72rem]"
+                        aria-label="Loading show detail history"
+                      />
         )}
 
         {error && (

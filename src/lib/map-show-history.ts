@@ -119,7 +119,7 @@ export function mapShowDetailHistoryItem(
     assignSeats: normalizeText(item.AssignSeats),
     web: normalizeText(item.Web),
     lastUpdateId: normalizeText(item.LastUpdateID),
-    updatedOn: formatDateTime(item.LastUpdateDt),
+    updatedOn: formatShortDate(item.LastUpdateDt),
   }
 }
 
