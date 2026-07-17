@@ -84,27 +84,26 @@ export function validateReservationPaymentFields ({
 
   if (layout === 'full-credit-card' || layout === 'compact-credit-card') {
     if (!fields.cardNumber.trim()) {
-      errors.cardNumber = 'Credit card number is required.'
+      errors.cardNumber = 'Please enter a credit card number.'
     } else if (getCardBrandCandidates(fields.cardNumber).length === 0) {
-      errors.cardNumber =
-        'Card provider was not found. Please check the card number.'
+      errors.cardNumber = 'Please enter a valid credit card number.'
     } else if (!hasValidCardBrandLength(fields.cardNumber)) {
-      errors.cardNumber = 'Credit card number is not valid.'
+      errors.cardNumber = 'Please enter a valid credit card number.'
     }
 
-    if (!fields.expMonth || !fields.expYear) {
-      errors.expiration = 'Expiration date is required.'
+    if (!fields.expMonth && !fields.expYear) {
+      errors.expiration = 'Please enter an expiration date.'
     } else if (!isValidExpirationDate(fields.expMonth, fields.expYear)) {
-      errors.expiration = 'Expiration date is not valid.'
+      errors.expiration = 'Please enter a valid expiration date.'
     }
 
     const cvvPattern = new RegExp(
       `^\\d{${getExpectedCvvLength(fields.cardNumber)}}$`
     )
     if (isCvvRequired(fields.cardNumber) && !fields.cvv.trim()) {
-      errors.cvv = 'CVV is required.'
+      errors.cvv = 'Please enter a CVV.'
     } else if (fields.cvv.trim() && !cvvPattern.test(fields.cvv)) {
-      errors.cvv = 'CVV is not valid.'
+      errors.cvv = 'Please enter a valid CVV.'
     }
 
   }

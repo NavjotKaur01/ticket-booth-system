@@ -37,7 +37,7 @@ export function useReservationTransactions({
       return []
     }
 
-    console.log(paymentList)
+   
 
     if (paymentList && paymentList.length > 0) {
       return paymentList.map((payment, index) => ({

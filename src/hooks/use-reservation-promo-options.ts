@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
 
+import type { ReservationPromoOrigin } from '@/lib/build-get-reservation-promotions-request'
 import {
   mapReservationPromo,
   mapReservationPromoOptions
 } from '@/lib/map-reservation-promo'
 import { getClubmanErrorMessage } from '@/store/api/baseQuery'
 import { useGetReservationPromotionsQuery } from '@/store/api/clubmanApi'
-// import type { ReservationPromo } from '@/types/reservation-promo'
 
 type UseReservationPromoOptionsParams = {
   connectionName: string
@@ -14,6 +14,8 @@ type UseReservationPromoOptionsParams = {
   showId: string
   showDate: string
   enabled?: boolean
+  isManager?: boolean
+  origin?: ReservationPromoOrigin
 }
 
 export function useReservationPromoOptions({
@@ -21,19 +23,29 @@ export function useReservationPromoOptions({
   locationId,
   showId,
   showDate,
-  enabled = true
+  enabled = true,
+  isManager,
+  origin = 'walkup'
 }: UseReservationPromoOptionsParams) {
-  const shouldSkip = !enabled || !connectionName || !locationId || !showId || !showDate
+  const shouldSkip =
+    !enabled || !connectionName || !locationId || !showId || !showDate
 
-  const { data, isLoading, isFetching, error, refetch } = useGetReservationPromotionsQuery(
-    {
-      connectionName,
-      locationId,
-      showId,
-      showDate
-    },
-    { skip: shouldSkip }
-  )
+  const { data, isLoading, isFetching, error, refetch } =
+    useGetReservationPromotionsQuery(
+      {
+        connectionName,
+        locationId,
+        showId,
+        showDate,
+        isManager,
+        origin
+      },
+      {
+        skip: shouldSkip,
+        // Origin switches change channel flags — always refetch.
+        refetchOnMountOrArgChange: true
+      }
+    )
 
   const promos = useMemo(() => {
     if (shouldSkip || !data) {
@@ -47,10 +59,7 @@ export function useReservationPromoOptions({
       )
   }, [data, shouldSkip])
 
-  const options = useMemo(
-    () => mapReservationPromoOptions(promos),
-    [promos]
-  )
+  const options = useMemo(() => mapReservationPromoOptions(promos), [promos])
 
   const promoById = useMemo(
     () => new Map(promos.map(promo => [promo.id, promo])),

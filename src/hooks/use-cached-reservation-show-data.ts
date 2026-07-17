@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'rea
 
 import { useReservationPromoOptions } from '@/hooks/use-reservation-promo-options'
 import { useShowSections } from '@/hooks/use-show-sections'
+import type { ReservationPromoOrigin } from '@/lib/build-get-reservation-promotions-request'
 import { mapReservationPromoOptions } from '@/lib/map-reservation-promo'
 import type { ReservationSectionOption } from '@/types/reservation'
 
@@ -16,6 +17,8 @@ type UseCachedReservationShowDataParams = {
   showDate: string
   showId: string
   enabled?: boolean
+  isManager?: boolean
+  origin?: ReservationPromoOrigin
 }
 
 function clearCacheScope(
@@ -36,7 +39,9 @@ export function useCachedReservationShowData({
   locationId,
   showDate,
   showId,
-  enabled = true
+  enabled = true,
+  isManager,
+  origin = 'walkup'
 }: UseCachedReservationShowDataParams) {
   const cacheRef = useRef<{
     scopeKey: string
@@ -78,7 +83,9 @@ export function useCachedReservationShowData({
     locationId,
     showId,
     showDate,
-    enabled: shouldLoad
+    enabled: shouldLoad,
+    isManager,
+    origin
   })
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+import type { ReservationPromoOrigin } from '@/lib/build-get-reservation-promotions-request'
 import { dispatchEndpoint } from '@/lib/api/dispatch-endpoint'
 import { clubmanApi } from '@/store/api/clubmanApi'
 import type { ApiPromotionSearchItem } from '@/types/api/promotion-search'
@@ -8,6 +9,7 @@ type FetchReservationPromotionsParams = {
   showId: string
   showDate: string
   isManager?: boolean
+  origin?: ReservationPromoOrigin
 }
 
 export function fetchReservationPromotions ({
@@ -15,7 +17,8 @@ export function fetchReservationPromotions ({
   locationId,
   showId,
   showDate,
-  isManager
+  isManager,
+  origin
 }: FetchReservationPromotionsParams) {
   return dispatchEndpoint<
     ApiPromotionSearchItem[],
@@ -25,6 +28,7 @@ export function fetchReservationPromotions ({
     locationId,
     showId,
     showDate,
-    isManager
+    isManager,
+    origin
   })
 }

@@ -640,12 +640,14 @@ export const clubmanApi = createApi({
         showId,
         showDate,
         isManager,
+        origin
       }: {
         connectionName: string
         locationId: string
         showId: string
         showDate: string
         isManager?: boolean
+        origin?: 'phone' | 'walkup' | 'web'
       }) => ({
         url: reservationApiPath("GetPromotions"),
         method: "PUT",
@@ -655,6 +657,7 @@ export const clubmanApi = createApi({
           showId,
           showDate,
           isManager,
+          origin
         }),
       }),
       transformResponse: (response: { Data?: ApiPromotionSearchItem[] } | ApiPromotionSearchItem[]) => {
@@ -664,7 +667,10 @@ export const clubmanApi = createApi({
         return Array.isArray(response) ? response : []
       },
       providesTags: (_result, _error, arg) => [
-        { type: "Promotion", id: arg.locationId },
+        {
+          type: "Promotion",
+          id: `${arg.locationId}:${arg.showId}:${arg.origin ?? 'walkup'}:${arg.isManager ? 'Y' : 'N'}`,
+        },
       ],
     }),
 
@@ -997,6 +1003,15 @@ export const clubmanApi = createApi({
         body,
       }),
       invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    removeReservationPromo: builder.mutation({
+      query: (body: import("@/types/api/save-reservation").RemoveReservationPromoRequest) => ({
+        url: reservationApiPath("RemoveReservationPromo"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation"],
     }),
 
 
@@ -2310,4 +2325,5 @@ export const {
   useGetLocationsForLoggedInUserQuery,
   useUpdateSplitReservationMutation,
   useSaveSplitReservationMutation,
+  useRemoveReservationPromoMutation,
 } = clubmanApi

@@ -46,6 +46,7 @@ export type ShowOption = {
   headliner?: string
   /** Headliner comedian GUID from GetShowDetailsByDate (Comic Info). */
   comicId?: string
+  noPasses?: string
 }
 
 export type SectionTone = 'regular' | 'vip'
