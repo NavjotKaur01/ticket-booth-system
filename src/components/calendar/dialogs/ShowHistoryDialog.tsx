@@ -26,6 +26,7 @@ type ShowHistoryDialogProps = {
   open: boolean
   event: CalendarEvent | null
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   connectionString: string
   locationId: string
 }
@@ -100,6 +101,7 @@ export default function ShowHistoryDialog({
   open,
   event,
   onOpenChange,
+  onAfterClose,
   connectionString,
   locationId,
 }: ShowHistoryDialogProps) {
@@ -116,17 +118,17 @@ export default function ShowHistoryDialog({
     { skip: shouldSkip }
   )
 
-  const records = useMemo(
-    () => (shouldSkip ? [] : mapShowHistory(data)),
-    [data, shouldSkip]
-  )
+  const records = useMemo(() => mapShowHistory(data), [data])
 
   const errorMessage = error ? getClubmanErrorMessage(error) : null
   const showLoading = !shouldSkip && (isLoading || isFetching)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex w-full h-[min(90vh,48rem)] max-h-[calc(100vh-2rem)] flex-col overflow-hidden sm:max-w-6xl">
+      <DialogContent
+        className="flex w-full h-[min(90vh,48rem)] max-h-[calc(100vh-2rem)] flex-col overflow-hidden sm:max-w-6xl"
+        onAfterClose={onAfterClose}
+      >
         <DialogHeader className="shrink-0 border-b px-5 py-4">
           <DialogTitle className="text-lg">Show History</DialogTitle>
         </DialogHeader>

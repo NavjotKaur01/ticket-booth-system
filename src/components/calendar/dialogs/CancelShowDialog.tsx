@@ -1,5 +1,5 @@
 import { CircleAlert } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -24,6 +24,7 @@ type CancelShowDialogProps = {
   open: boolean
   event: CalendarEvent | null
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   onCancelShow?: (eventId: string) => void
 }
 
@@ -55,6 +56,7 @@ export default function CancelShowDialog({
   open,
   event,
   onOpenChange,
+  onAfterClose,
   onCancelShow,
 }: CancelShowDialogProps) {
   const { connectionName } = useAppSession()
@@ -62,13 +64,33 @@ export default function CancelShowDialog({
   const [step, setStep] = useState<CancelShowStep>("confirm")
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const sessionGenerationRef = useRef(0)
 
   const [cancelShow] = useCancelShowMutation()
 
+  function resetDialogSession() {
+    setDialogData(null)
+    setStep("confirm")
+    setIsLoading(false)
+    setIsSubmitting(false)
+    onAfterClose?.()
+  }
+
+  useEffect(() => {
+    if (open) {
+      sessionGenerationRef.current += 1
+    }
+  }, [open])
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      sessionGenerationRef.current += 1
+    }
+    onOpenChange(nextOpen)
+  }
+
   useEffect(() => {
     if (!open) {
-      setStep("confirm")
-      setDialogData(null)
       return
     }
 
@@ -77,17 +99,18 @@ export default function CancelShowDialog({
     }
 
     let isCurrent = true
+    const generation = sessionGenerationRef.current
 
     setIsLoading(true)
     getCancelShowDialogData(event)
       .then((data) => {
-        if (isCurrent) {
+        if (isCurrent && generation === sessionGenerationRef.current) {
           setDialogData(data)
           setStep("confirm")
         }
       })
       .finally(() => {
-        if (isCurrent) {
+        if (isCurrent && generation === sessionGenerationRef.current) {
           setIsLoading(false)
         }
       })
@@ -103,6 +126,7 @@ export default function CancelShowDialog({
     }
 
     setIsSubmitting(true)
+    const generation = sessionGenerationRef.current
 
     try {
       await cancelShow({
@@ -111,12 +135,16 @@ export default function CancelShowDialog({
         IsSoftDelete: dialogData.reservationCount > 0,
       }).unwrap()
 
+      if (generation !== sessionGenerationRef.current) return
       onCancelShow?.(dialogData.eventId)
-      onOpenChange(false)
+      handleOpenChange(false)
     } catch (err) {
+      if (generation !== sessionGenerationRef.current) return
       console.error("Failed to cancel show", err)
     } finally {
-      setIsSubmitting(false)
+      if (generation === sessionGenerationRef.current) {
+        setIsSubmitting(false)
+      }
     }
   }
 
@@ -134,14 +162,19 @@ export default function CancelShowDialog({
   }
 
   function handleNo() {
-    onOpenChange(false)
+    handleOpenChange(false)
   }
 
   const isReservationsStep = step === "reservations"
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg" disableOutsideDismiss showCloseButton={false}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className="w-full sm:max-w-lg"
+        disableOutsideDismiss
+        showCloseButton={false}
+        onAfterClose={resetDialogSession}
+      >
         <DialogHeader className="shrink-0 border-b px-6 py-4">
           <DialogTitle className="text-lg">Cancel Warning</DialogTitle>
         </DialogHeader>

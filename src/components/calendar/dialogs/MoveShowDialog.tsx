@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import CalendarDatePickerControl from "../controls/CalendarDatePickerControl"
 import CalendarTimeControl from "../controls/CalendarTimeControl"
@@ -32,6 +32,7 @@ type MoveShowDialogProps = {
   open: boolean
   event: CalendarEvent | null
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   onMoved?: () => void
 }
 
@@ -57,11 +58,13 @@ export default function MoveShowDialog({
   open,
   event,
   onOpenChange,
+  onAfterClose,
   onMoved,
 }: MoveShowDialogProps) {
   const { connectionName, locationId, username } = useAppSession()
   const [formValues, setFormValues] = useState<MoveShowFormValues | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const sessionGenerationRef = useRef(0)
 
   const showId = event?.showId || event?.id || ""
   const shouldSkip =
@@ -80,10 +83,27 @@ export default function MoveShowDialog({
 
   const show = showQuery.data?.[0]
 
+  function resetDialogSession() {
+    setFormValues(null)
+    setSubmitError(null)
+    onAfterClose?.()
+  }
+
+  useEffect(() => {
+    if (open) {
+      sessionGenerationRef.current += 1
+    }
+  }, [open])
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      sessionGenerationRef.current += 1
+    }
+    onOpenChange(nextOpen)
+  }
+
   useEffect(() => {
     if (!open) {
-      setFormValues(null)
-      setSubmitError(null)
       return
     }
 
@@ -112,6 +132,8 @@ export default function MoveShowDialog({
       return
     }
 
+    const generation = sessionGenerationRef.current
+
     try {
       setSubmitError(null)
       const request = buildMoveShowRequest({
@@ -122,13 +144,15 @@ export default function MoveShowDialog({
         values: formValues,
       })
       const didMove = await moveShowToUpcomingDate(request).unwrap()
+      if (generation !== sessionGenerationRef.current) return
       if (!didMove) {
         setSubmitError("Unable to move show.")
         return
       }
       onMoved?.()
-      onOpenChange(false)
+      handleOpenChange(false)
     } catch (error: unknown) {
+      if (generation !== sessionGenerationRef.current) return
       setSubmitError(
         error instanceof Error
           ? error.message
@@ -161,10 +185,11 @@ export default function MoveShowDialog({
     !loadError
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         disableOutsideDismiss
-        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-3xl"
+        onAfterClose={resetDialogSession}
+        className="flex w-full max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-3xl"
       >
         <DialogHeader className="shrink-0 border-b px-5 py-4">
           <DialogTitle className="text-lg">Move Show</DialogTitle>
@@ -225,7 +250,7 @@ export default function MoveShowDialog({
           <Button
             type="button"
             variant="ghost"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleOpenChange(false)}
             disabled={isSubmitting}
           >
             Cancel

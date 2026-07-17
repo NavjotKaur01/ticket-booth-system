@@ -25,6 +25,7 @@ type AddEditPackageDialogProps = {
   open: boolean
   event: CalendarEvent | null
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   onSave?: (value: AddEditPackageDialogData) => void
 }
 
@@ -48,10 +49,17 @@ export default function AddEditPackageDialog({
   open,
   event,
   onOpenChange,
+  onAfterClose,
   onSave,
 }: AddEditPackageDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [formValues, setFormValues] = useState<AddEditPackageDialogData | null>(null)
+
+  function resetDialogSession() {
+    setIsLoading(false)
+    setFormValues(null)
+    onAfterClose?.()
+  }
 
   useEffect(() => {
     if (!open || !event) {
@@ -97,7 +105,8 @@ export default function AddEditPackageDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         disableOutsideDismiss
-        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-6xl"
+        className="flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden sm:max-w-6xl"
+        onAfterClose={resetDialogSession}
       >
         <DialogHeader className="shrink-0 border-b px-5 py-4">
           <DialogTitle className="text-lg">Add Package</DialogTitle>

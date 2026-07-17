@@ -29,6 +29,8 @@ type CalendarSelectControlProps = {
   onTriggerKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void
   allowClear?: boolean
   tabIndex?: number
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 export default function CalendarSelectControl({
@@ -44,8 +46,18 @@ export default function CalendarSelectControl({
   onTriggerKeyDown,
   allowClear = false,
   tabIndex,
+  open,
+  onOpenChange,
 }: CalendarSelectControlProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isOpen = open ?? internalOpen
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (open === undefined) {
+      setInternalOpen(nextOpen)
+    }
+    onOpenChange?.(nextOpen)
+  }
 
   const selectedOption = useMemo(
     () => options.find((option) => option.value === value),
@@ -56,11 +68,11 @@ export default function CalendarSelectControl({
 
   function handleSelect(nextValue: string) {
     onChange(nextValue)
-    setIsOpen(false)
+    handleOpenChange(false)
   }
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           ref={triggerRef}

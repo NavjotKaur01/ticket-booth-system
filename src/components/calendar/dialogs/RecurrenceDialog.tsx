@@ -1,5 +1,5 @@
 import { CalendarIcon } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -33,6 +33,7 @@ type RecurrenceDialogProps = {
   open: boolean
   startDate: Date | null
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   onSave?: (value: RecurrenceFormValue) => void
   errorMessage?: string | null
 }
@@ -161,6 +162,7 @@ export default function RecurrenceDialog({
   open,
   startDate,
   onOpenChange,
+  onAfterClose,
   onSave,
   errorMessage,
 }: RecurrenceDialogProps) {
@@ -196,20 +198,37 @@ export default function RecurrenceDialog({
     months[normalizedStartDate.getMonth()]
   )
 
+  const initializeDialogSession = useCallback(() => {
+    setPattern("daily")
+    setDialogStartDate(normalizedStartDate)
+    setSelectedWeekdays([normalizedStartDate.getDay()])
+    setDailyWeekdays([normalizedStartDate.getDay()])
+    setMonthlyMode("day")
+    setYearlyMode("date")
+    setInterval(1)
+    setOccurrences(1)
+    setEndMode("after")
+    setEndDate(normalizedStartDate)
+    setMonthlyOrdinal("Fourth")
+    setMonthlyWeekday(weekdays[normalizedStartDate.getDay()])
+    setYearlyMonth(months[normalizedStartDate.getMonth()])
+    setYearlyOrdinal("Fourth")
+    setYearlyWeekday(weekdays[normalizedStartDate.getDay()])
+    setYearlyWeekdayMonth(months[normalizedStartDate.getMonth()])
+  }, [normalizedStartDate])
+
+  const resetDialogSession = useCallback(() => {
+    initializeDialogSession()
+    onAfterClose?.()
+  }, [initializeDialogSession, onAfterClose])
+
   useEffect(() => {
     if (!open) {
       return
     }
 
-    setDialogStartDate(normalizedStartDate)
-    setSelectedWeekdays([normalizedStartDate.getDay()])
-    setDailyWeekdays([normalizedStartDate.getDay()])
-    setEndDate(normalizedStartDate)
-    setMonthlyWeekday(weekdays[normalizedStartDate.getDay()])
-    setYearlyMonth(months[normalizedStartDate.getMonth()])
-    setYearlyWeekday(weekdays[normalizedStartDate.getDay()])
-    setYearlyWeekdayMonth(months[normalizedStartDate.getMonth()])
-  }, [normalizedStartDate, open])
+    initializeDialogSession()
+  }, [open, initializeDialogSession])
 
   const startDay = dialogStartDate.getDate()
   const weekdayOptions = useMemo(() => toSelectOptions(weekdays), [])
@@ -257,7 +276,8 @@ export default function RecurrenceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         disableOutsideDismiss
-        className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col overflow-hidden sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:max-w-5xl"
+        className="flex max-h-[calc(100dvh-1rem)] w-full max-w-[calc(100vw-1rem)] flex-col overflow-hidden sm:max-h-[calc(100dvh-2rem)] sm:max-w-5xl"
+        onAfterClose={resetDialogSession}
       >
         <DialogHeader className="shrink-0 border-b px-4 py-3 sm:px-6 sm:py-4">
           <DialogTitle className="text-lg">Recurrence</DialogTitle>

@@ -13,17 +13,23 @@ import {
 type PastDateAlertDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   message?: string | null
 }
 
 export default function PastDateAlertDialog({
   open,
   onOpenChange,
+  onAfterClose,
   message,
 }: PastDateAlertDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" showCloseButton={false}>
+      <DialogContent
+        className="w-full sm:max-w-md"
+        showCloseButton={false}
+        onAfterClose={onAfterClose}
+      >
         <DialogHeader className="shrink-0 border-b px-6 py-4">
           <DialogTitle className="text-lg">Alert</DialogTitle>
         </DialogHeader>

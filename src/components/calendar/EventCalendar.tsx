@@ -370,22 +370,20 @@ export default function EventCalendar() {
   }, [])
 
   const handleAddShowSaved = useCallback(() => {
-    setRecurrenceState(null)
     refetch()
   }, [refetch])
 
   const handleEditShowSaved = useCallback(() => {
-    setEditShowEvent(null)
-    setEditShowRecurrence(null)
     refetch()
   }, [refetch])
 
   const handleEditShowOpenChange = useCallback((open: boolean) => {
     setIsEditShowOpen(open)
-    if (!open) {
-      setEditShowEvent(null)
-      setEditShowRecurrence(null)
-    }
+  }, [])
+
+  const handleEditShowAfterClose = useCallback(() => {
+    setEditShowEvent(null)
+    setEditShowRecurrence(null)
   }, [])
 
   const eventPropGetter = useCallback(
@@ -506,64 +504,80 @@ export default function EventCalendar() {
         isAddEditPackageOpen={isAddEditPackageOpen}
         setIsAddEditPackageOpen={setIsAddEditPackageOpen}
         packageEvent={packageEvent}
+        onAddEditPackageAfterClose={() => setPackageEvent(null)}
         isAddReservationOpen={isAddReservationOpen}
         setIsAddReservationOpen={setIsAddReservationOpen}
         reservationEvent={reservationEvent}
         onAddReservationSaved={refetch}
+        onAddReservationAfterClose={() => setReservationEvent(null)}
         isAdjustAgeOpen={isAdjustAgeOpen}
         setIsAdjustAgeOpen={setIsAdjustAgeOpen}
         adjustAgeEvent={adjustAgeEvent}
         onAdjustAgeSaved={refetch}
+        onAdjustAgeAfterClose={() => setAdjustAgeEvent(null)}
         isAdjustHubOpen={isAdjustHubOpen}
         setIsAdjustHubOpen={setIsAdjustHubOpen}
         adjustHubEvent={adjustHubEvent}
+        onAdjustHubAfterClose={() => setAdjustHubEvent(null)}
         isAdjustPromoOpen={isAdjustPromoOpen}
         setIsAdjustPromoOpen={setIsAdjustPromoOpen}
         adjustPromoEvent={adjustPromoEvent}
         onAdjustPromoSaved={refetch}
+        onAdjustPromoAfterClose={() => setAdjustPromoEvent(null)}
         isAdjustSeatsOpen={isAdjustSeatsOpen}
         setIsAdjustSeatsOpen={setIsAdjustSeatsOpen}
         adjustSeatsEvent={adjustSeatsEvent}
+        onAdjustSeatsAfterClose={() => setAdjustSeatsEvent(null)}
         isCancelShowOpen={isCancelShowOpen}
         setIsCancelShowOpen={setIsCancelShowOpen}
         cancelShowEvent={cancelShowEvent}
+        onCancelShowAfterClose={() => setCancelShowEvent(null)}
         isEditComicOpen={isEditComicOpen}
         setIsEditComicOpen={setIsEditComicOpen}
         editComicEvent={editComicEvent}
+        onEditComicAfterClose={() => setEditComicEvent(null)}
         isEditShowOpen={isEditShowOpen}
         onEditShowOpenChange={handleEditShowOpenChange}
         editShowRecurrence={editShowRecurrence}
         editShowEvent={editShowEvent}
         onEditShowSaved={handleEditShowSaved}
+        onEditShowAfterClose={handleEditShowAfterClose}
         isMoveShowOpen={isMoveShowOpen}
         setIsMoveShowOpen={setIsMoveShowOpen}
         moveShowEvent={moveShowEvent}
         onMoveShowSaved={refetch}
+        onMoveShowAfterClose={() => setMoveShowEvent(null)}
         isPrivatePreSaleOpen={isPrivatePreSaleOpen}
         setIsPrivatePreSaleOpen={setIsPrivatePreSaleOpen}
         privatePreSaleEvent={privatePreSaleEvent}
         onPrivatePreSaleSaved={refetch}
+        onPrivatePreSaleAfterClose={() => setPrivatePreSaleEvent(null)}
         isShowHistoryOpen={isShowHistoryOpen}
         setIsShowHistoryOpen={setIsShowHistoryOpen}
         showHistoryEvent={showHistoryEvent}
+        onShowHistoryAfterClose={() => setShowHistoryEvent(null)}
         isShowDetailHistoryOpen={isShowDetailHistoryOpen}
         setIsShowDetailHistoryOpen={setIsShowDetailHistoryOpen}
         showDetailHistoryEvent={showDetailHistoryEvent}
+        onShowDetailHistoryAfterClose={() => setShowDetailHistoryEvent(null)}
         isPastDateAlertOpen={isPastDateAlertOpen}
         setIsPastDateAlertOpen={setIsPastDateAlertOpen}
         calendarActionError={calendarActionError}
+        onPastDateAlertAfterClose={() => setCalendarActionError(null)}
         isRecurrenceOpen={isRecurrenceOpen}
         setIsRecurrenceOpen={setIsRecurrenceOpen}
         recurrenceDate={recurrenceDate}
         recurrenceError={recurrenceError}
         recurrenceState={recurrenceState}
         onRecurrenceSave={handleRecurrenceSave}
+        onRecurrenceAfterClose={() => setRecurrenceError(null)}
         isAddShowOpen={isAddShowOpen}
         setIsAddShowOpen={setIsAddShowOpen}
         connectionString={connectionName}
         locationId={locationId}
         username={username}
         onAddShowSaved={handleAddShowSaved}
+        onAddShowAfterClose={() => setRecurrenceState(null)}
       />
     </div>
   )

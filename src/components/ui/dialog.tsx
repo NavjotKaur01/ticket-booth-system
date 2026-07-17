@@ -116,6 +116,7 @@ function DialogContent({
   onFocusOutside,
   onEscapeKeyDown,
   onCloseAutoFocus,
+  onAfterClose,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
@@ -123,6 +124,8 @@ function DialogContent({
   nested?: boolean
   /** Hides overlay + content while a nested child dialog is shown on top. */
   suppressPresentation?: boolean
+  /** Runs after Radix finishes the close animation and tears down the content. */
+  onAfterClose?: () => void
 }) {
   const dialogLayer: DialogLayer = nested ? "nested" : "base"
   const stackClass = nested ? "z-[90]" : "z-50"
@@ -168,6 +171,7 @@ function DialogContent({
         }}
         onCloseAutoFocus={(event) => {
           onCloseAutoFocus?.(event)
+          onAfterClose?.()
           if (nested) {
             event.preventDefault()
           }

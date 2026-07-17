@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import CalendarDatePickerControl from "../controls/CalendarDatePickerControl"
 import CalendarSelectControl from "../controls/CalendarSelectControl"
@@ -35,6 +35,7 @@ type PrivatePreSaleDialogProps = {
   open: boolean
   event: CalendarEvent | null
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   onSaved?: () => void | Promise<void>
 }
 
@@ -59,11 +60,13 @@ export default function PrivatePreSaleDialog({
   open,
   event,
   onOpenChange,
+  onAfterClose,
   onSaved,
 }: PrivatePreSaleDialogProps) {
   const { connectionName, locationId, username, isReady } = useAppSession()
   const [formValues, setFormValues] = useState<PrivatePreSaleFormValues | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const sessionGenerationRef = useRef(0)
 
   const selectedShowId = event?.showId || event?.id || ""
   const shouldLoadShows = Boolean(
@@ -101,10 +104,27 @@ export default function PrivatePreSaleDialog({
     [privateShow]
   )
 
+  function resetDialogSession() {
+    setFormValues(null)
+    setFormError(null)
+    onAfterClose?.()
+  }
+
+  useEffect(() => {
+    if (open) {
+      sessionGenerationRef.current += 1
+    }
+  }, [open])
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      sessionGenerationRef.current += 1
+    }
+    onOpenChange(nextOpen)
+  }
+
   useEffect(() => {
     if (!open) {
-      setFormValues(null)
-      setFormError(null)
       return
     }
 
@@ -172,6 +192,8 @@ export default function PrivatePreSaleDialog({
       return
     }
 
+    const generation = sessionGenerationRef.current
+
     try {
       setFormError(null)
       const didSave = await savePrePrivateSetupLink(
@@ -182,13 +204,16 @@ export default function PrivatePreSaleDialog({
           form: formValues,
         })
       ).unwrap()
+      if (generation !== sessionGenerationRef.current) return
       if (!didSave) {
         setFormError("Unable to save the private pre-sale link.")
         return
       }
       await onSaved?.()
-      onOpenChange(false)
+      if (generation !== sessionGenerationRef.current) return
+      handleOpenChange(false)
     } catch (error: unknown) {
+      if (generation !== sessionGenerationRef.current) return
       setFormError(
         error instanceof Error
           ? error.message
@@ -211,10 +236,11 @@ export default function PrivatePreSaleDialog({
   const formDisabled = isLoading || isSubmitting
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         disableOutsideDismiss
-        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-3xl"
+        onAfterClose={resetDialogSession}
+        className="flex w-full max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-3xl"
       >
         <DialogHeader className="shrink-0 border-b px-5 py-4">
           <DialogTitle className="text-lg">Private Pre-sale Setup</DialogTitle>
@@ -337,7 +363,7 @@ export default function PrivatePreSaleDialog({
           <Button
             type="button"
             variant="ghost"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleOpenChange(false)}
             disabled={isSubmitting}
           >
             Cancel

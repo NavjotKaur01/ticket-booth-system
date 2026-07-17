@@ -1,5 +1,5 @@
 import { ArrowLeft, PlusCircle, Search } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import dayjs from "dayjs"
 
 import CalendarSelectControl from "../controls/CalendarSelectControl"
@@ -273,6 +273,7 @@ function combineDateAndCalendarTime(dateYmd: string, timeValue: string) {
 type AddShowDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   onBack?: () => void
   onSave?: (values: AddShowFormValues) => void
   recurrence: RecurrenceState | null
@@ -295,6 +296,8 @@ function PerformerSelect({
   performers,
   onValueChange,
   onSearchClick,
+  open,
+  onOpenChange,
   error,
 }: {
   id: string
@@ -303,6 +306,8 @@ function PerformerSelect({
   performers: PerformerOption[]
   onValueChange: (value: string) => void
   onSearchClick?: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
   error?: string
 }) {
   const REDIRECT_TO_DASHBOARD_STANDUP_MEDIA = "https://dashboard.standup-media.com/"
@@ -316,6 +321,8 @@ function PerformerSelect({
           id={id}
           value={value}
           onChange={onValueChange}
+          open={open}
+          onOpenChange={onOpenChange}
           placeholder="Select"
           className={cn(error && "border-destructive ring-2 ring-destructive/20")}
           options={performers.map((performer) => ({
@@ -518,6 +525,7 @@ function ShowTimesTable({
 export default function AddShowDialog({
   open,
   onOpenChange,
+  onAfterClose,
   onBack,
   onSave,
   recurrence,
@@ -541,6 +549,45 @@ export default function AddShowDialog({
   const [isComedianSearchOpen, setIsComedianSearchOpen] = useState(false)
   const [searchTargetField, setSearchTargetField] =
     useState<PerformerSearchField | null>(null)
+  const [openPerformerSelect, setOpenPerformerSelect] =
+    useState<PerformerSearchField | null>(null)
+  const sessionGenerationRef = useRef(0)
+
+  useEffect(() => {
+    if (open) {
+      sessionGenerationRef.current += 1
+    }
+  }, [open])
+
+  function handleDialogOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      sessionGenerationRef.current += 1
+    }
+    onOpenChange(nextOpen)
+  }
+
+  function handleBack() {
+    sessionGenerationRef.current += 1
+    onBack?.()
+  }
+
+  function resetDialogSession() {
+    sessionGenerationRef.current += 1
+    setDialogData(null)
+    setIsLoading(true)
+    setIsSaving(false)
+    setErrorMessage(null)
+    setFormValues(emptyFormValues)
+    setIsShowDetailsVisible(false)
+    setIsVerifyOpen(false)
+    setVerifyRows([])
+    setHasSubmitted(false)
+    setPerformers([])
+    setIsComedianSearchOpen(false)
+    setSearchTargetField(null)
+    setOpenPerformerSelect(null)
+    onAfterClose?.()
+  }
 
   const isEditMode = Boolean(initialEvent?.showId)
   const showId = initialEvent?.showId || ""
@@ -714,6 +761,7 @@ export default function AddShowDialog({
   }
 
   function openComedianSearch(field: PerformerSearchField) {
+    setOpenPerformerSelect(null)
     setSearchTargetField(field)
     setIsComedianSearchOpen(true)
   }
@@ -817,6 +865,7 @@ export default function AddShowDialog({
       return
     }
 
+    const sessionGeneration = sessionGenerationRef.current
     setIsSaving(true)
     setErrorMessage(null)
 
@@ -862,16 +911,25 @@ export default function AddShowDialog({
         }
       }
 
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
+
       onSave?.(valuesToSave)
       onSaved?.()
       setIsVerifyOpen(false)
-      onOpenChange(false)
+      handleDialogOpenChange(false)
     } catch (error) {
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
       setErrorMessage(
         error instanceof Error ? error.message : "Unable to save show."
       )
     } finally {
-      setIsSaving(false)
+      if (sessionGeneration === sessionGenerationRef.current) {
+        setIsSaving(false)
+      }
     }
   }
 
@@ -909,11 +967,12 @@ export default function AddShowDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <DialogContent
           disableOutsideDismiss
+          onAfterClose={resetDialogSession}
           className={cn(
-            "fixed top-[max(0.5rem,env(safe-area-inset-top))] right-auto bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[50%] flex max-h-none w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] translate-x-[-50%] translate-y-0 flex-col overflow-hidden p-0 sm:top-[50%] sm:bottom-auto sm:max-h-[min(90dvh,48rem)] sm:w-[calc(100vw-2rem)] sm:max-w-6xl sm:translate-y-[-50%]"
+            "fixed top-[max(0.5rem,env(safe-area-inset-top))] right-auto bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-[50%] flex max-h-none w-full max-w-[calc(100vw-1rem)] translate-x-[-50%] translate-y-0 flex-col overflow-hidden p-0 sm:top-[50%] sm:bottom-auto sm:max-h-[min(90dvh,48rem)] sm:max-w-6xl sm:translate-y-[-50%]"
           )}
         >
           <DialogHeader className="shrink-0 border-b px-4 py-3 pr-12 sm:px-5 sm:py-4">
@@ -923,7 +982,7 @@ export default function AddShowDialog({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  onClick={onBack}
+                  onClick={handleBack}
                   className="size-8 shrink-0"
                   aria-label="Back to recurrence"
                 >
@@ -995,6 +1054,10 @@ export default function AddShowDialog({
                         performers={performers}
                         onValueChange={(value) => updateField("headlinerId", value)}
                         onSearchClick={() => openComedianSearch("headlinerId")}
+                        open={openPerformerSelect === "headlinerId"}
+                        onOpenChange={(nextOpen) =>
+                          setOpenPerformerSelect(nextOpen ? "headlinerId" : null)
+                        }
                         error={visibleValidationErrors.headlinerId}
                       />
                       <PerformerSelect
@@ -1004,6 +1067,10 @@ export default function AddShowDialog({
                         performers={performers}
                         onValueChange={(value) => updateField("featureId", value)}
                         onSearchClick={() => openComedianSearch("featureId")}
+                        open={openPerformerSelect === "featureId"}
+                        onOpenChange={(nextOpen) =>
+                          setOpenPerformerSelect(nextOpen ? "featureId" : null)
+                        }
                       />
                       <PerformerSelect
                         id="show-opener"
@@ -1012,6 +1079,10 @@ export default function AddShowDialog({
                         performers={performers}
                         onValueChange={(value) => updateField("openerId", value)}
                         onSearchClick={() => openComedianSearch("openerId")}
+                        open={openPerformerSelect === "openerId"}
+                        onOpenChange={(nextOpen) =>
+                          setOpenPerformerSelect(nextOpen ? "openerId" : null)
+                        }
                       />
                     </div>
 
@@ -1023,6 +1094,10 @@ export default function AddShowDialog({
                         performers={performers}
                         onValueChange={(value) => updateField("headliner2Id", value)}
                         onSearchClick={() => openComedianSearch("headliner2Id")}
+                        open={openPerformerSelect === "headliner2Id"}
+                        onOpenChange={(nextOpen) =>
+                          setOpenPerformerSelect(nextOpen ? "headliner2Id" : null)
+                        }
                       />
                       <PerformerSelect
                         id="show-feature-2"
@@ -1031,6 +1106,10 @@ export default function AddShowDialog({
                         performers={performers}
                         onValueChange={(value) => updateField("feature2Id", value)}
                         onSearchClick={() => openComedianSearch("feature2Id")}
+                        open={openPerformerSelect === "feature2Id"}
+                        onOpenChange={(nextOpen) =>
+                          setOpenPerformerSelect(nextOpen ? "feature2Id" : null)
+                        }
                       />
                       <div className="grid gap-2 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-center">
                         <Label htmlFor="show-special-note">Special Note</Label>
@@ -1329,7 +1408,7 @@ export default function AddShowDialog({
               type="button"
               variant="ghost"
               className="flex-1 sm:flex-none"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleDialogOpenChange(false)}
             >
               Cancel
             </Button>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -38,6 +38,7 @@ type AdjustPromoDialogProps = {
   open: boolean
   event: CalendarEvent | null
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   onSave?: () => void
 }
 
@@ -157,23 +158,42 @@ export default function AdjustPromoDialog({
   open,
   event,
   onOpenChange,
+  onAfterClose,
   onSave,
 }: AdjustPromoDialogProps) {
   const { connectionName, locationId, username } = useAppSession()
   const [rows, setRows] = useState<AdjustPromoRow[]>([])
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [hasLoaded, setHasLoaded] = useState(false)
+  const sessionGenerationRef = useRef(0)
 
   const [getShowPromotion, { isLoading: isLoadingPromos }] =
     useGetShowPromotionMutation()
   const [saveShowPromotion, { isLoading: isSaving }] =
     useSaveShowPromotionMutation()
 
+  function resetDialogSession() {
+    setRows([])
+    setErrorMessage(null)
+    setHasLoaded(false)
+    onAfterClose?.()
+  }
+
+  useEffect(() => {
+    if (open) {
+      sessionGenerationRef.current += 1
+    }
+  }, [open])
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      sessionGenerationRef.current += 1
+    }
+    onOpenChange(nextOpen)
+  }
+
   useEffect(() => {
     if (!open) {
-      setRows([])
-      setErrorMessage(null)
-      setHasLoaded(false)
       return
     }
 
@@ -185,6 +205,7 @@ export default function AdjustPromoDialog({
     if (!showId) return
 
     let isCurrent = true
+    const generation = sessionGenerationRef.current
 
     setErrorMessage(null)
     setHasLoaded(false)
@@ -197,12 +218,12 @@ export default function AdjustPromoDialog({
     })
       .unwrap()
       .then((items) => {
-        if (!isCurrent) return
+        if (!isCurrent || generation !== sessionGenerationRef.current) return
         setRows(initializePromoSelections(items, event.start))
         setHasLoaded(true)
       })
       .catch((error: unknown) => {
-        if (!isCurrent) return
+        if (!isCurrent || generation !== sessionGenerationRef.current) return
         setRows([])
         setErrorMessage(getClubmanErrorMessage(error))
         setHasLoaded(true)
@@ -224,6 +245,7 @@ export default function AdjustPromoDialog({
     if (!showId) return
 
     setErrorMessage(null)
+    const generation = sessionGenerationRef.current
 
     try {
       await saveShowPromotion(
@@ -235,9 +257,11 @@ export default function AdjustPromoDialog({
           rows,
         })
       ).unwrap()
+      if (generation !== sessionGenerationRef.current) return
       onSave?.()
-      onOpenChange(false)
+      handleOpenChange(false)
     } catch (error: unknown) {
+      if (generation !== sessionGenerationRef.current) return
       setErrorMessage(getClubmanErrorMessage(error))
     }
   }
@@ -247,8 +271,11 @@ export default function AdjustPromoDialog({
   const canInteract = hasLoaded && !isSaving && !isLoadingPromos
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[min(90vh,48rem)] max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden sm:max-w-6xl">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        onAfterClose={resetDialogSession}
+        className="flex h-[min(90vh,48rem)] max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden sm:max-w-6xl"
+      >
         <DialogHeader className="shrink-0 border-b px-5 py-4">
           <DialogTitle className="text-lg">Show Promotion</DialogTitle>
         </DialogHeader>
@@ -278,7 +305,7 @@ export default function AdjustPromoDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleOpenChange(false)}
             disabled={isSaving}
           >
             Cancel

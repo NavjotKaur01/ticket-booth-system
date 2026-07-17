@@ -149,6 +149,7 @@ import type { TicketPrintData } from '@/types/ticket-print'
 type AddReservationDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   onSaved?: (
     reservationIds: string[],
     ticketData?: TicketPrintData
@@ -1211,6 +1212,7 @@ function ShowMetaRow({
 export function AddReservationDialog({
   open,
   onOpenChange,
+  onAfterClose,
   onSaved,
   reservation = null,
   showDate: initialShowDate,
@@ -1242,6 +1244,12 @@ export function AddReservationDialog({
   const origOriginRef = useRef<'phone' | 'walkup'>('phone')
   const origPassesRef = useRef(1)
   const origDinnerRef = useRef(false)
+  const sessionGenerationRef = useRef(0)
+  useEffect(() => {
+    if (open) {
+      sessionGenerationRef.current += 1
+    }
+  }, [open])
   const bookingFormCacheRef = useRef<
     Map<
       string,
@@ -2045,6 +2053,7 @@ export function AddReservationDialog({
       return
     }
 
+    const sessionGeneration = sessionGenerationRef.current
     setPaymentActionBusy(action)
     setPaymentActionError(null)
 
@@ -2056,13 +2065,18 @@ export function AddReservationDialog({
         lastUpdateId: username
       })
     } catch (requestError) {
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
       reportError(
         setPaymentActionError,
         requestError,
         `Failed to ${action} payment`
       )
     } finally {
-      setPaymentActionBusy(null)
+      if (sessionGeneration === sessionGenerationRef.current) {
+        setPaymentActionBusy(null)
+      }
     }
   }
 
@@ -2135,6 +2149,8 @@ export function AddReservationDialog({
       }
     }
 
+    const sessionGeneration = sessionGenerationRef.current
+
     if (isEditMode) {
       setPaymentActionBusy('split')
       try {
@@ -2161,12 +2177,18 @@ export function AddReservationDialog({
           TableNum: null
         }).unwrap()
       } catch (error) {
+        if (sessionGeneration !== sessionGenerationRef.current) {
+          return
+        }
         reportError(
           setPaymentActionError,
           error,
           'Failed to prepare split reservation.'
         )
         setPaymentActionBusy(null)
+        return
+      }
+      if (sessionGeneration !== sessionGenerationRef.current) {
         return
       }
       setPaymentActionBusy(null)
@@ -2181,6 +2203,7 @@ export function AddReservationDialog({
       return
     }
 
+    const sessionGeneration = sessionGenerationRef.current
     setIsSavingNote(true)
     setSaveNoteError(null)
     setSaveNoteSuccess(false)
@@ -2195,12 +2218,20 @@ export function AddReservationDialog({
           reservationNote: notes
         })
       )
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
       setSaveNoteSuccess(true)
       toastSuccess('Note saved')
     } catch (requestError) {
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
       reportError(setSaveNoteError, requestError, 'Failed to save note')
     } finally {
-      setIsSavingNote(false)
+      if (sessionGeneration === sessionGenerationRef.current) {
+        setIsSavingNote(false)
+      }
     }
   }
 
@@ -2209,6 +2240,7 @@ export function AddReservationDialog({
       return
     }
 
+    const sessionGeneration = sessionGenerationRef.current
     const form = mapReservationSearchCriteriaToCustomerForm(searchCriteria)
 
     setIsCreatingCustomer(true)
@@ -2221,12 +2253,20 @@ export function AddReservationDialog({
         lastUpdateId: username,
         form
       })
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
       await applySavedCustomer(form)
       toastSuccess('Customer created')
     } catch (requestError) {
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
       reportError(setCreateCustomerError, requestError, 'Failed to create customer')
     } finally {
-      setIsCreatingCustomer(false)
+      if (sessionGeneration === sessionGenerationRef.current) {
+        setIsCreatingCustomer(false)
+      }
     }
   }
 
@@ -2437,6 +2477,7 @@ export function AddReservationDialog({
     if (!effectiveCustomerId || isSavingReservation) {
       return
     }
+    const sessionGeneration = sessionGenerationRef.current
 
     const booking = resolveReservationBooking({
       sectionId: section,
@@ -2562,9 +2603,15 @@ export function AddReservationDialog({
             )
           }
 
+          if (sessionGeneration !== sessionGenerationRef.current) {
+            return
+          }
           await onSaved?.([reservation.id])
+          if (sessionGeneration !== sessionGenerationRef.current) {
+            return
+          }
           toastSuccess('Reservation saved')
-          onOpenChange(false)
+          handleDialogOpenChange(false)
           return
         }
 
@@ -2584,9 +2631,15 @@ export function AddReservationDialog({
           })
         )
 
+        if (sessionGeneration !== sessionGenerationRef.current) {
+          return
+        }
         await onSaved?.([reservation.id])
+        if (sessionGeneration !== sessionGenerationRef.current) {
+          return
+        }
         toastSuccess('Reservation saved')
-        onOpenChange(false)
+        handleDialogOpenChange(false)
         return
       }
 
@@ -2616,6 +2669,10 @@ export function AddReservationDialog({
       )
       const reservationId = reservationIds[0]
 
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
+
       if (!reservationId) {
         throw new Error('Reservation was created but no reservation id was returned.')
       }
@@ -2644,9 +2701,15 @@ export function AddReservationDialog({
       })
 
       await onSaved?.([reservationId], ticketData)
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
       toastSuccess('Reservation saved')
-      onOpenChange(false)
+      handleDialogOpenChange(false)
     } catch (requestError) {
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
       reportErrorMessage(
         setSaveReservationError,
         formatReservationPaymentError(
@@ -2654,7 +2717,9 @@ export function AddReservationDialog({
         )
       )
     } finally {
-      setIsSavingReservation(false)
+      if (sessionGeneration === sessionGenerationRef.current) {
+        setIsSavingReservation(false)
+      }
     }
   }
 
@@ -2763,53 +2828,65 @@ export function AddReservationDialog({
     })
   }
 
+  function resetDialogSession() {
+    sessionGenerationRef.current += 1
+    setSpecialNotesOpen(true)
+    setComicInfoOpen(false)
+    setIsAddCustomerOpen(false)
+    setAddCustomerInitialValues(null)
+    setIsCreatingCustomer(false)
+    setCreateCustomerError(null)
+    setNotes('')
+    setDinner(false)
+    setShowDate(todayDateValue())
+    setShowTime('')
+    setSection('')
+    setPartyBySection({})
+    setPasses(1)
+    setOrigin('phone')
+    setPromo('none')
+    setPaymentAmountOverride(null)
+    setPaymentType('credit-card')
+    setPaymentFields(createEmptyReservationPaymentFields())
+    setIsSavingReservation(false)
+    setCheckInConfirmOpen(false)
+    setSaveReservationError(null)
+    setPaymentValidationErrors({})
+    setShowPartyRequiredError(false)
+    setEditCustomerId(null)
+    setTableNums('')
+    setAssignSeatsOpen(false)
+    setAssignSeatError(null)
+    setPaymentActionBusy(null)
+    setPaymentActionError(null)
+    setIsSavingNote(false)
+    setSaveNoteError(null)
+    setSaveNoteSuccess(false)
+    setSelectedTransaction(null)
+    origPartyRef.current = 0
+    origShowIdRef.current = ''
+    origSectionIdRef.current = ''
+    origPromoIdRef.current = 'none'
+    origOriginRef.current = 'phone'
+    origPassesRef.current = 1
+    origDinnerRef.current = false
+    editPrefillDoneRef.current = false
+    expressWalkupSeedAppliedRef.current = false
+    sectionsInitializedForShowRef.current = ''
+    bookingFormCacheRef.current.clear()
+    clearCustomerSearch()
+    onAfterClose?.()
+  }
+
+  function handleDialogOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      sessionGenerationRef.current += 1
+    }
+    onOpenChange(nextOpen)
+  }
+
   useEffect(() => {
     if (!open) {
-      setSpecialNotesOpen(true)
-      setComicInfoOpen(false)
-      setIsAddCustomerOpen(false)
-      setAddCustomerInitialValues(null)
-      setIsCreatingCustomer(false)
-      setCreateCustomerError(null)
-      setNotes('')
-      setDinner(false)
-      setShowDate(todayDateValue())
-      setShowTime('')
-      setSection('')
-      setPartyBySection({})
-      setPasses(1)
-      setOrigin('phone')
-      setPromo('none')
-      setPaymentAmountOverride(null)
-      setPaymentType('credit-card')
-      setPaymentFields(createEmptyReservationPaymentFields())
-      setIsSavingReservation(false)
-      setCheckInConfirmOpen(false)
-      setSaveReservationError(null)
-      setPaymentValidationErrors({})
-      setShowPartyRequiredError(false)
-      setEditCustomerId(null)
-      setTableNums('')
-      setAssignSeatsOpen(false)
-      setAssignSeatError(null)
-      setPaymentActionBusy(null)
-      setPaymentActionError(null)
-      setIsSavingNote(false)
-      setSaveNoteError(null)
-      setSaveNoteSuccess(false)
-      setSelectedTransaction(null)
-      origPartyRef.current = 0
-      origShowIdRef.current = ''
-      origSectionIdRef.current = ''
-      origPromoIdRef.current = 'none'
-      origOriginRef.current = 'phone'
-      origPassesRef.current = 1
-      origDinnerRef.current = false
-      editPrefillDoneRef.current = false
-      expressWalkupSeedAppliedRef.current = false
-      sectionsInitializedForShowRef.current = ''
-      bookingFormCacheRef.current.clear()
-      clearCustomerSearch()
       return
     }
 
@@ -2915,6 +2992,7 @@ export function AddReservationDialog({
   }
 
   async function applySavedCustomer(customer: CustomerFormValues) {
+    const sessionGeneration = sessionGenerationRef.current
     const { area, prefix, line } = customer.phone
     const nextCriteria: ReservationCustomerSearchCriteria = {
       lastName: customer.lastName,
@@ -2928,7 +3006,6 @@ export function AddReservationDialog({
     setSearchType('customer')
     setSearchCriteria(nextCriteria)
     setIsAddCustomerOpen(false)
-    setAddCustomerInitialValues(null)
     setSearchRowSelection({})
 
     // The backend may not have committed the new customer record to the search
@@ -2940,14 +3017,24 @@ export function AddReservationDialog({
       nextCriteria
     )) as ReservationCustomerSearchResult[]
 
+    if (sessionGeneration !== sessionGenerationRef.current) {
+      return
+    }
+
     if (!results || results.length === 0) {
       await new Promise<void>(resolve => setTimeout(resolve, 800))
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
       results = (await searchReservationCustomers(
         'customer',
         nextCriteria
       )) as ReservationCustomerSearchResult[]
     }
 
+    if (sessionGeneration !== sessionGenerationRef.current) {
+      return
+    }
     await selectSavedCustomer(customer, results ?? [])
   }
 
@@ -3010,7 +3097,7 @@ export function AddReservationDialog({
           if (!nextOpen && (comicInfoOpen || isAddCustomerOpen || assignSeatsOpen)) {
             return
           }
-          onOpenChange(nextOpen)
+          handleDialogOpenChange(nextOpen)
         }}
       >
         <TooltipProvider delayDuration={200}>
@@ -3018,8 +3105,9 @@ export function AddReservationDialog({
             ref={dialogContentRef}
             disableOutsideDismiss
             showCloseButton
+            onAfterClose={resetDialogSession}
             suppressPresentation={comicInfoOpen || isAddCustomerOpen || assignSeatsOpen}
-            className='flex max-h-[82vh] w-[min(calc(100vw-2rem),84rem)] max-w-[84rem] flex-col overflow-hidden sm:max-w-[84rem]'
+            className='flex max-h-[82vh] w-full max-w-[min(calc(100vw-2rem),84rem)] flex-col overflow-hidden sm:max-w-[84rem]'
             onOpenAutoFocus={event => {
               event.preventDefault()
             }}
@@ -3293,7 +3381,7 @@ export function AddReservationDialog({
 
                   <div className='shrink-0 border-t border-border/50 pt-3 pb-1'>
                     <ReservationPaymentActions
-                      onCancel={() => onOpenChange(false)}
+                      onCancel={() => handleDialogOpenChange(false)}
                       onSave={() => void handleSaveReservation()}
                       saveDisabled={!canSave}
                       saving={isSavingReservation}
@@ -3351,16 +3439,11 @@ export function AddReservationDialog({
 
       <AddCustomerDialog
         open={isAddCustomerOpen}
-        onOpenChange={open => {
-          setIsAddCustomerOpen(open)
-          if (!open) {
-            setAddCustomerInitialValues(null)
-          }
-        }}
+        onOpenChange={setIsAddCustomerOpen}
+        onAfterClose={() => setAddCustomerInitialValues(null)}
         nested
         onBack={() => {
           setIsAddCustomerOpen(false)
-          setAddCustomerInitialValues(null)
         }}
         connectionName={connectionName}
         locationId={locationId}

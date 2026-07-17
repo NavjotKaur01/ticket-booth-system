@@ -65,6 +65,7 @@ type ComicInfoTab = (typeof COMIC_TABS)[number]["id"]
 type ComicInfoDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   stageName?: string
   comic?: ComicInfo | null
   nested?: boolean
@@ -551,6 +552,7 @@ function ContactAddressPanel({
 export function ComicInfoDialog({
   open,
   onOpenChange,
+  onAfterClose,
   stageName,
   comic,
   nested = false,
@@ -617,6 +619,17 @@ export function ComicInfoDialog({
   }
 
   const dialogTitle = title ?? (onSave ? "Edit Comedian" : "Show Comedian")
+  function resetDialogSession() {
+    setForm(getComicInfo(""))
+    setActiveTab("info")
+    setHasInitialized(false)
+    onAfterClose?.()
+  }
+
+  // async function handleSave() {
+  //   await onSave?.(form)
+  //   onOpenChange(false)
+  // }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -624,7 +637,8 @@ export function ComicInfoDialog({
         nested={nested}
         disableOutsideDismiss={nested}
         showCloseButton
-        className="flex max-h-[90vh] max-w-5xl flex-col overflow-hidden p-0 sm:max-w-5xl"
+        onAfterClose={resetDialogSession}
+        className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden p-0 sm:max-w-5xl"
       >
         <DialogHeader className="shrink-0 gap-0 border-b px-5 py-4 pr-12">
           <DialogTitle className="text-lg font-semibold text-foreground">

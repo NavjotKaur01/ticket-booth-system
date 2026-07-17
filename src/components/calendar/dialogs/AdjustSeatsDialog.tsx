@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import CalendarSelectControl from "../controls/CalendarSelectControl"
 import { Button } from "@/components/ui/button"
@@ -39,6 +39,7 @@ type AdjustSeatsDialogProps = {
   open: boolean
   event: CalendarEvent | null
   onOpenChange: (open: boolean) => void
+  onAfterClose?: () => void
   onSaved?: () => void
 }
 
@@ -102,17 +103,38 @@ export default function AdjustSeatsDialog({
   open,
   event,
   onOpenChange,
+  onAfterClose,
   onSaved,
 }: AdjustSeatsDialogProps) {
   const [dialogData, setDialogData] = useState<AdjustSeatsDialogData | null>(null)
   const [formValues, setFormValues] = useState<AdjustSeatsFormValues | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const sessionGenerationRef = useRef(0)
+
+  function resetDialogSession() {
+    setDialogData(null)
+    setFormValues(null)
+    setIsLoading(false)
+    setIsSubmitting(false)
+    onAfterClose?.()
+  }
+
+  useEffect(() => {
+    if (open) {
+      sessionGenerationRef.current += 1
+    }
+  }, [open])
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      sessionGenerationRef.current += 1
+    }
+    onOpenChange(nextOpen)
+  }
 
   useEffect(() => {
     if (!open) {
-      setDialogData(null)
-      setFormValues(null)
       return
     }
 
@@ -121,17 +143,18 @@ export default function AdjustSeatsDialog({
     }
 
     let isCurrent = true
+    const generation = sessionGenerationRef.current
 
     setIsLoading(true)
     getAdjustSeatsDialogData(event)
       .then((data) => {
-        if (isCurrent) {
+        if (isCurrent && generation === sessionGenerationRef.current) {
           setDialogData(data)
           setFormValues(createAdjustSeatsFormValues(data))
         }
       })
       .finally(() => {
-        if (isCurrent) {
+        if (isCurrent && generation === sessionGenerationRef.current) {
           setIsLoading(false)
         }
       })
@@ -175,21 +198,26 @@ export default function AdjustSeatsDialog({
     }
 
     setIsSubmitting(true)
+    const generation = sessionGenerationRef.current
 
     try {
       await saveAdjustSeats(dialogData.eventId, formValues)
+      if (generation !== sessionGenerationRef.current) return
       onSaved?.()
-      onOpenChange(false)
+      handleOpenChange(false)
     } finally {
-      setIsSubmitting(false)
+      if (generation === sessionGenerationRef.current) {
+        setIsSubmitting(false)
+      }
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         disableOutsideDismiss
-        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-4xl"
+        onAfterClose={resetDialogSession}
+        className="flex w-full max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-4xl"
       >
         <DialogHeader className="shrink-0 border-b px-5 py-4">
           <DialogTitle className="text-lg">Adjust Seats</DialogTitle>
@@ -304,7 +332,7 @@ export default function AdjustSeatsDialog({
           >
             Save
           </Button>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
         </DialogFooter>

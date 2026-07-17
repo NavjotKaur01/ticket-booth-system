@@ -118,13 +118,14 @@ export default function AddReservationDialog({
   const hasFocusedInitialInputRef = useRef(false)
   const { connectionName, locationId, username } = useAppSession()
 
-  useEffect(() => {
-    if (!open) {
-      setIsComicInfoOpen(false)
-      setIsAddCustomerOpen(false)
-      hasFocusedInitialInputRef.current = false
-    }
-  }, [open])
+  function resetDialogSession() {
+    setDialogData(null)
+    setFormValues(null)
+    setIsLoading(false)
+    setIsComicInfoOpen(false)
+    setIsAddCustomerOpen(false)
+    hasFocusedInitialInputRef.current = false
+  }
 
   useEffect(() => {
     if (!open || !event) {
@@ -335,7 +336,8 @@ export default function AddReservationDialog({
       >
         <DialogContent
           disableOutsideDismiss
-          className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col overflow-hidden sm:max-h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:max-w-6xl"
+          className="flex max-h-[calc(100dvh-1rem)] w-full max-w-[calc(100vw-1rem)] flex-col overflow-hidden sm:max-h-[calc(100dvh-2rem)] sm:max-w-6xl"
+          onAfterClose={resetDialogSession}
           onOpenAutoFocus={(autoFocusEvent) => {
             autoFocusEvent.preventDefault()
             focusInitialPartyInput()
