@@ -48,6 +48,27 @@ function formatVerifyTimeRange(row: ApiDefaultShowSection) {
   return arrival || showTime
 }
 
+function getVerifyTimestamp(row: ApiDefaultShowSection) {
+  const showDate = row.ShowDate ? new Date(row.ShowDate) : null
+  const showTime = row.ShowTim ? new Date(row.ShowTim) : null
+  const hasValidDate = showDate && Number.isFinite(showDate.getTime())
+  const hasValidTime = showTime && Number.isFinite(showTime.getTime())
+
+  if (hasValidDate) {
+    if (hasValidTime) {
+      showDate.setHours(
+        showTime.getHours(),
+        showTime.getMinutes(),
+        showTime.getSeconds(),
+        showTime.getMilliseconds()
+      )
+    }
+    return showDate.getTime()
+  }
+
+  return hasValidTime ? showTime.getTime() : 0
+}
+
 export default function SaveVerifyDialog({
   open,
   onOpenChange,
@@ -58,15 +79,14 @@ export default function SaveVerifyDialog({
 }: SaveVerifyDialogProps) {
   const sortedRows = useMemo(
     () =>
-      [...rows].sort((left, right) => {
-        if (left.ShowDay !== right.ShowDay) {
-          return (left.ShowDay ?? "").localeCompare(right.ShowDay ?? "")
-        }
-
-        const leftTime = new Date(left.ShowTim ?? 0).getTime()
-        const rightTime = new Date(right.ShowTim ?? 0).getTime()
-        return leftTime - rightTime
-      }),
+      rows
+        .map((row, index) => ({ row, index }))
+        .sort(
+          (left, right) =>
+            getVerifyTimestamp(right.row) - getVerifyTimestamp(left.row) ||
+            left.index - right.index
+        )
+        .map(({ row }) => row),
     [rows]
   )
 

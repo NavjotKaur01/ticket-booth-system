@@ -698,6 +698,9 @@ export default function AddShowDialog({
 
     if (isEditMode && showData && showData.length > 0 && showProperties) {
       const mainShowData = showData[0]
+      const selectedEditShowIds = showData
+        .filter((row) => row.IsSelected)
+        .map((row) => row.ShowDetID)
       setFormValues({
         ...emptyFormValues,
         headlinerId: mainShowData.Headliner ?? resolveInitialHeadlinerId(dialogData.performers, initialEvent),
@@ -723,7 +726,10 @@ export default function AddShowDialog({
         useSectionFee: mainShowData.IsUseSectionFee,
         preSalePrivateShow: mainShowData.IsPrivateShow,
         isShowSoldOut: getIsShowSoldOut(mainShowData),
-        selectedShowTimeIds: ["edit-show-time"],
+        selectedShowTimeIds:
+          selectedEditShowIds.length > 0
+            ? selectedEditShowIds
+            : showData.map((row) => row.ShowDetID),
         startDate: dayjs(mainShowData.ShowDate).isValid()
           ? dayjs(mainShowData.ShowDate).format("YYYY-MM-DD")
           : "",
@@ -751,16 +757,15 @@ export default function AddShowDialog({
     const arrivalTime = formValues.arrivalTime || toCalendarTimeControlValue(mainShowData.ShowArrival)
     const showTime = formValues.showTime || toCalendarTimeControlValue(mainShowData.ShowTim)
 
-    showTimes = [
-      {
-        id: "edit-show-time",
+    showTimes = showData.map((row) => ({
+        id: row.ShowDetID,
         dayLabel: dayjs(mainShowData.ShowDate).format("dddd"),
         timeRange:
           arrivalTime && showTime
             ? `${arrivalTime} - ${showTime}`
             : arrivalTime || showTime || "",
         enabled: true,
-        sections: showData.map(row => ({
+        sections: [{
           id: row.ShowDetID,
           section: row.Section ?? "",
           price: row.ShowPrice ?? 0,
@@ -770,9 +775,8 @@ export default function AddShowDialog({
           walkupFee: row.ShowDefDetwalkupsvc ?? 0,
           phoneFee: row.ShowDefDetphonesvc ?? 0,
           webFee: row.ShowDefDetwebsvc ?? 0,
-        }))
-      }
-    ]
+        }]
+      }))
   }
 
   const selectedCount = useMemo(
@@ -837,30 +841,33 @@ export default function AddShowDialog({
     let filteredRows: ApiDefaultShowSection[] = []
 
     if (isEditMode && showData) {
-      filteredRows = showData.map(row => ({
-        ShowId: row.ShowId,
-        ShowDetID: row.ShowDetID,
-        ShowDefID: "",
-        ShowDay: "",
-        WeekDay: 0,
-        ShowDate: row.ShowDate,
-        ShowArrival: row.ShowArrival,
-        ShowTim: row.ShowTim,
-        Section: row.Section,
-        ShowPrice: row.ShowPrice,
-        ShowNon: row.ShowNon,
-        ShowSmoking: null,
-        Web: row.Web,
-        Hub: null,
-        NoPasses: null,
-        VIP: null,
-        Over21: null,
-        ShowDinner: null,
-        ShowDetRestrictPromo: row.ShowDetRestrictPromo,
-        ShowDefDetwalkupsvc: row.ShowDefDetwalkupsvc,
-        ShowDefDetphonesvc: row.ShowDefDetphonesvc,
-        ShowDefDetwebsvc: row.ShowDefDetwebsvc,
-      }))
+      const selectedIds = new Set(formValues.selectedShowTimeIds)
+      filteredRows = showData
+        .filter((row) => selectedIds.has(row.ShowDetID))
+        .map(row => ({
+          ShowId: row.ShowId,
+          ShowDetID: row.ShowDetID,
+          ShowDefID: "",
+          ShowDay: "",
+          WeekDay: 0,
+          ShowDate: row.ShowDate,
+          ShowArrival: row.ShowArrival,
+          ShowTim: row.ShowTim,
+          Section: row.Section,
+          ShowPrice: row.ShowPrice,
+          ShowNon: row.ShowNon,
+          ShowSmoking: null,
+          Web: row.Web,
+          Hub: null,
+          NoPasses: null,
+          VIP: null,
+          Over21: null,
+          ShowDinner: null,
+          ShowDetRestrictPromo: row.ShowDetRestrictPromo,
+          ShowDefDetwalkupsvc: row.ShowDefDetwalkupsvc,
+          ShowDefDetphonesvc: row.ShowDefDetphonesvc,
+          ShowDefDetwebsvc: row.ShowDefDetwebsvc,
+        }))
     } else {
       filteredRows = buildSaveShowFilterList(
         dialogData.sectionRows,
