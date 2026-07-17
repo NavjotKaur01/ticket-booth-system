@@ -264,15 +264,10 @@ export function AddCustomerDialog({
       }
       handleDialogOpenChange(false)
     } catch (requestError) {
-      reportError(setError, requestError, "Failed to save customer")
       if (sessionGeneration !== sessionGenerationRef.current) {
         return
       }
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to save customer"
-      )
+      reportError(setError, requestError, "Failed to save customer")
     } finally {
       if (sessionGeneration === sessionGenerationRef.current) {
         setSaving(false)

@@ -619,17 +619,13 @@ export function ComicInfoDialog({
   }
 
   const dialogTitle = title ?? (onSave ? "Edit Comedian" : "Show Comedian")
+
   function resetDialogSession() {
     setForm(getComicInfo(""))
     setActiveTab("info")
     setHasInitialized(false)
     onAfterClose?.()
   }
-
-  // async function handleSave() {
-  //   await onSave?.(form)
-  //   onOpenChange(false)
-  // }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
