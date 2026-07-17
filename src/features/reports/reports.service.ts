@@ -1405,18 +1405,18 @@ function transformReceipts(
   drillContext?: ReportDrillContext
 ): ReportViewerResult {
   const columns: ReportViewerColumn[] = [
-    { key: "paymentDate", label: "Payment Date" },
-    { key: "cash", label: "Cash", align: "right" },
+    { key: "paymentDate", label: "Date" },
+    { key: "totalPaid", label: "Today", align: "right" },
+    { key: "deferedPaid", label: "Deferred", align: "right" },
+    { key: "refund", label: "Refund", align: "right" },
     { key: "american", label: "AmEx", align: "right" },
     { key: "discover", label: "Discover", align: "right" },
     { key: "masterCard", label: "MasterCard", align: "right" },
     { key: "visa", label: "Visa", align: "right" },
+    { key: "cash", label: "Cash", align: "right" },
     // { key: "creditCard", label: "Credit Card", align: "right" },
     { key: "giftCard", label: "Gift Card", align: "right" },
     { key: "webGiftCard", label: "Gift Cert", align: "right" },
-    { key: "refund", label: "Refund", align: "right" },
-    { key: "deferedPaid", label: "Deferred", align: "right" },
-    { key: "totalPaid", label: "Total Paid", align: "right" },
     { key: "salesTax", label: "Sales Tax", align: "right" },
     { key: "total", label: "Total", align: "right" },
   ]
