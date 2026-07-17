@@ -45,7 +45,7 @@ export function createCustomerColumns({
           <CircleHelp className="size-3.5 text-muted-foreground" aria-hidden />
         </div>
       ),
-      cell: ({ row }) => row.original.password || "\u00A0",
+      cell: ({ row }) => row.original.password || "********",
     },    {
       accessorKey: "address",
       header: ({ column }) => (

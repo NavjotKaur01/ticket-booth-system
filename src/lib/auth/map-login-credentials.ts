@@ -1,3 +1,4 @@
+import { parseLoginCredentials } from "@/lib/api-schema/login-and-reservation"
 import { createEmptyGuid } from "@/lib/auth/credentials-storage"
 import type { ApiUserCredentials } from "@/types/api/account-login"
 import type { AppLocation } from "@/types/api/locations"
@@ -17,23 +18,18 @@ function normalizeText(value: string | null | undefined) {
   return value.replace(/\s+/g, " ").trim()
 }
 
-function isLoginDataObject(value: unknown): value is ApiUserCredentials {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false
-  }
-
-  const record = value as ApiUserCredentials
-  return Boolean(normalizeText(record.UserID) || normalizeText(record.UserName))
-}
-
 export function assertLoginResponseData(data: unknown): ApiUserCredentials {
-  if (!isLoginDataObject(data)) {
+  const slim = parseLoginCredentials(data)
+  if (
+    !slim ||
+    !(normalizeText(slim.UserID) || normalizeText(slim.UserName))
+  ) {
     throw new Error(
       "Login failed. The server did not return user credentials."
     )
   }
 
-  return data
+  return slim
 }
 
 export function mapLoginResponseToCredentials(

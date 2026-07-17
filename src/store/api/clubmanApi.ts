@@ -107,7 +107,6 @@ export type ApiReportComedian = {
   FirstName?: string
   LastName?: string
 }
-import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { ReservationCustomerSearchItem } from "@/types/api/reservation-customer-search"
 import type {
   SaveReservationRequest,
@@ -138,6 +137,9 @@ import type {
 } from "@/types/api/private-show-link"
 import type { ReservationNoteRequest } from "@/types/api/reservation-note"
 import { mapReservationDetail } from "@/lib/map-reservation-detail"
+import { mapReservationData } from "@/lib/map-reservation-data"
+import { mapReservationPrintProperties } from "@/lib/map-reservation-print-properties"
+import type { Reservation } from "@/types/reservation"
 import { mapUpcomingShowDetails } from "@/lib/map-upcoming-show-details"
 import type { ReservationHistoryItem } from "@/types/api/reservation-history"
 import type { DailyTransactionItem } from "@/types/api/daily-transaction"
@@ -245,8 +247,8 @@ export const clubmanApi = createApi({
         ),
         headers: { Accept: "application/json" },
       }),
-      transformResponse: (response: { Data: ReservationPrintProperties } | ReservationPrintProperties) =>
-        'Data' in response ? response.Data : response,
+      transformResponse: (response: unknown) =>
+        mapReservationPrintProperties(response),
     }),
 
 
@@ -323,7 +325,19 @@ export const clubmanApi = createApi({
           pageNumber,
         }),
       }),
-      transformResponse: (response: ApiCustomerSearchItem[]) => response,
+      transformResponse: (response: unknown): ApiCustomerSearchItem[] => {
+        const items = Array.isArray(response) ? response : []
+        return items.map((item) => {
+          if (!item || typeof item !== "object") {
+            return item as ApiCustomerSearchItem
+          }
+          const record = { ...(item as Record<string, unknown>) }
+          delete record.Passwd
+          delete record.SecurityQuestion
+          delete record.SecurityAnswer
+          return record as ApiCustomerSearchItem
+        })
+      },
       invalidatesTags: (_result, _error, arg) => [
         { type: "Customer", id: arg.locationId },
       ],
@@ -786,19 +800,22 @@ export const clubmanApi = createApi({
       ],
     }),
 
-    getReservationData: builder.query({
+    getReservationData: builder.query<
+      Reservation[],
+      {
+        connectionString: string
+        showId: string
+        includeCancelledReservations: boolean
+        isCheckedIn: boolean
+        isReservationForm: boolean
+      }
+    >({
       query: ({
         connectionString,
         showId,
         includeCancelledReservations,
         isCheckedIn,
         isReservationForm,
-      }: {
-        connectionString: string
-        showId: string
-        includeCancelledReservations: boolean
-        isCheckedIn: boolean
-        isReservationForm: boolean
       }) => ({
         url: reservationApiPath(
           connectionString,
@@ -810,8 +827,7 @@ export const clubmanApi = createApi({
         ),
         headers: { Accept: "application/json" },
       }),
-      transformResponse: (response: unknown) =>
-        coerceApiArray<ReservationDataItem>(response),
+      transformResponse: (response: unknown) => mapReservationData(response),
       providesTags: (_result, _error, arg) => [
         {
           type: "Reservation",
@@ -1622,7 +1638,6 @@ export const clubmanApi = createApi({
     >({
       query: ({ connectionString, locationId }) =>
         systemApiPath(connectionString, locationId, "GetEmploymentPosition"),
-      extraOptions: { useNewApi: true },
       transformResponse: (response: { Data: EmploymentPosition[] } | EmploymentPosition[]) =>
         'Data' in response ? response.Data : response,
     }),
@@ -1632,10 +1647,7 @@ export const clubmanApi = createApi({
         url: systemApiPath("AddUpdateEmploymentPosition"),
         method: "POST",
         body,
-
-
       }),
-      extraOptions: { useNewApi: true },
     }),
 
     getEmploymentQuestions: builder.query<

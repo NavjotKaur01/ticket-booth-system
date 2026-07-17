@@ -539,7 +539,7 @@ export function CheckIn() {
   }
 
   async function handleCheckIn(record: CheckInRecord) {
-    if (!isReady || record.isCancelled) {
+    if (!isReady || record.isCancelled || isCheckingInReservation) {
       return
     }
 

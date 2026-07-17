@@ -12,13 +12,14 @@ import {
 } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { CalendarEvent } from "@/data/calendarEvents"
+import { useAppSession } from "@/hooks/use-app-session"
+import { getErrorMessage, toastError } from "@/lib/app-toast"
+import { useCancelShowMutation } from "@/store/api/clubmanApi"
 
 import {
   getCancelShowDialogData,
   type CancelShowDialogData,
 } from "../service/cancelShow.service"
-import { useCancelShowMutation } from "@/store/api/clubmanApi"
-import { useAppSession } from "@/hooks/use-app-session"
 
 type CancelShowDialogProps = {
   open: boolean
@@ -121,7 +122,7 @@ export default function CancelShowDialog({
   }, [event, open])
 
   async function handleConfirmCancel() {
-    if (!dialogData) {
+    if (!dialogData || isSubmitting) {
       return
     }
 
@@ -140,7 +141,7 @@ export default function CancelShowDialog({
       handleOpenChange(false)
     } catch (err) {
       if (generation !== sessionGenerationRef.current) return
-      console.error("Failed to cancel show", err)
+      toastError(getErrorMessage(err, "Failed to cancel show"))
     } finally {
       if (generation === sessionGenerationRef.current) {
         setIsSubmitting(false)

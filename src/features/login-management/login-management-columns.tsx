@@ -1,4 +1,5 @@
-import { ClipboardCopy } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
+import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type { StandardRowAction } from "@/components/common/standard-row-actions-menu"
@@ -6,12 +7,13 @@ import { DataTableColumnHeader } from "@/components/data-table/data-table-column
 import { dataTableActionsColumn } from "@/components/data-table/data-table-actions-column"
 import { Button } from "@/components/ui/button"
 import { formatCustomerLoginYn } from "@/lib/filter-customer-logins"
-import { copyTextToClipboard } from "@/lib/export-table-data"
 import type { CustomerLogin } from "@/types/customer-login"
 
 type GetLoginManagementColumnsParams = {
   onEdit: (record: CustomerLogin) => void
 }
+
+const MASKED_PASSWORD = "********"
 
 export function getLoginManagementColumns({
   onEdit,
@@ -57,19 +59,7 @@ export function getLoginManagementColumns({
       header: "Password",
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="flex items-center gap-1.5">
-          <span className="font-mono text-sm tabular-nums">{row.original.password}</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-7 shrink-0"
-            aria-label={`Copy password for ${row.original.email}`}
-            onClick={() => void copyTextToClipboard(row.original.password)}
-          >
-            <ClipboardCopy className="size-3.5" />
-          </Button>
-        </div>
+        <LoginPasswordCell password={row.original.password} />
       ),
     },
     {
@@ -105,4 +95,33 @@ export function getLoginManagementColumns({
       },
     }),
   ]
+}
+
+/** Phase 0: passwords masked by default; reveal is explicit and local to the row. */
+function LoginPasswordCell({ password }: { password: string }) {
+  const [revealed, setRevealed] = useState(false)
+  const hasPassword = Boolean(password?.trim())
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="font-mono text-sm tabular-nums">
+        {revealed && hasPassword ? password : MASKED_PASSWORD}
+      </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="size-7 shrink-0"
+        disabled={!hasPassword}
+        aria-label={revealed ? "Hide password" : "Reveal password"}
+        onClick={() => setRevealed((current) => !current)}
+      >
+        {revealed ? (
+          <EyeOff className="size-3.5" />
+        ) : (
+          <Eye className="size-3.5" />
+        )}
+      </Button>
+    </div>
+  )
 }

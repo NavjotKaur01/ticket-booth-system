@@ -42,36 +42,6 @@ const rawBaseQuery = fetchBaseQuery({
   },
 })
 
-const newRawBaseQuery = fetchBaseQuery({
-  baseUrl: appConfig.newApiBaseUrl.replace(/\/$/, ""),
-  prepareHeaders: (headers, { getState }) => {
-    if (!headers.has("Content-Type")) {
-      headers.set("Content-Type", "application/json")
-    }
-    const state = getState() as { auth?: { credentials?: { UserID: string; LocationID: string | null; LocationName: string; UserName: string } | null } }
-    const credentials = state.auth?.credentials
-    if (credentials) {
-      if (credentials.LocationID) {
-        headers.set("LocationId", credentials.LocationID)
-      }
-      if (credentials.LocationName) {
-        headers.set("LocationName", credentials.LocationName)
-      }
-      if (credentials.UserID) {
-        headers.set("UserId", credentials.UserID)
-      }
-      if (credentials.UserName) {
-        headers.set("UserName", credentials.UserName)
-      }
-    }
-    // temporary-for-tunnel
-    if (import.meta.env.DEV && import.meta.env.VITE_NEW_API_BASE_URL) {
-      headers.set("ngrok-skip-browser-warning", "true")
-    }
-    return headers
-  },
-})
-
 function isApiEnvelope(value: unknown): value is ApiResponse<unknown> {
   return (
     typeof value === "object" &&
@@ -84,11 +54,9 @@ function isApiEnvelope(value: unknown): value is ApiResponse<unknown> {
 export const clubmanBaseQuery: BaseQueryFn<
   string | FetchArgs,
   unknown,
-  ClubmanQueryError,
-  { useNewApi?: boolean }
+  ClubmanQueryError
 > = async (args, api, extraOptions) => {
-  const queryFn = extraOptions?.useNewApi ? newRawBaseQuery : rawBaseQuery
-  const result = await queryFn(args, api, extraOptions)
+  const result = await rawBaseQuery(args, api, extraOptions)
 
   if (result.error) {
     return { error: result.error }

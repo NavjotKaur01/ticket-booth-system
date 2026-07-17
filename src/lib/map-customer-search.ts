@@ -29,11 +29,6 @@ function formatPhoneNumber(
   return [area, part1, part2].filter(Boolean).join(" ")
 }
 
-function mapPasswordDisplay(password: string | null | undefined) {
-  const normalized = normalizeText(password)
-  return normalized || "********"
-}
-
 function mapAddress(item: ApiCustomerSearchItem) {
   const address1 = normalizeText(item.Addr1)
   const address2 = normalizeText(item.Addr2)
@@ -62,7 +57,8 @@ export function mapCustomerSearchResults(
     lastName: normalizeText(item.LastName),
     firstName: normalizeText(item.FirstName),
     email: normalizeText(item.Email1),
-    password: mapPasswordDisplay(item.Passwd),
+    // UI column only — API must not return Passwd (BE-0.2); never read it if present.
+    password: "********",
     address: mapAddress(item),
     phoneNo: formatPhoneNumber(item.AreaCode, item.Phone1, item.Phone2),
     city: normalizeText(item.City),

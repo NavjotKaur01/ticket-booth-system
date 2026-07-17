@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { sanitizeHtml } from "@/lib/sanitize-html"
 import { cn } from "@/lib/utils"
 
 type RichTextMode = "design" | "html" | "preview"
@@ -350,7 +351,9 @@ export function RichTextEditor({
               "[&_p]:my-3 [&_ul]:my-3 [&_ol]:my-3"
             )}
             dangerouslySetInnerHTML={{
-              __html: value || "<p class=\"text-muted-foreground\">No content available.</p>",
+              __html: sanitizeHtml(
+                value || '<p class="text-muted-foreground">No content available.</p>'
+              ),
             }}
           />
         </div>

@@ -48,7 +48,7 @@ export type ApiCustomerDetail = {
   CustomerNote: string | null
   LastUpdateID: string | null
   LastUpdateDt: string | null
-  Passwd: string | null
+  // Passwd omitted (BE-0.2) — not part of web customer detail contract
   CustomerShowBookedCount?: number | null
   CustomerOldShowBookedCount?: number | null
 }

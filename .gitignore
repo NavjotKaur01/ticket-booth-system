@@ -23,7 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .env
-.env.example
+# Keep .env.example committed as the env contract (Phase 0).
+# .env.example
 
 /ClubMan
 

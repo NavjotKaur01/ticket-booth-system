@@ -90,7 +90,8 @@ export function mapCustomerExportRows(
         row.AltPhone2_2
       ),
       email: text(row.Email1),
-      password: text(row.Passwd),
+      // Phase 0: never export plaintext passwords.
+      password: "********",
       birthMo: row.BirthMonth ?? 0,
       birthYr: row.BirthYear ?? 0,
       dob: text(row.Birthday),

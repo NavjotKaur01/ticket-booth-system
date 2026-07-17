@@ -411,9 +411,7 @@ export function buildReportViewerOptionsFromPermissions(
   return options
 }
 
-/** Minimum options we expect when permissions API is working (desktop has ~19+). */
-const MIN_API_REPORT_OPTIONS = 12
-
+/** Prefer API-scoped list. Do not widen a short role list to the full desktop catalog (Phase 2). */
 export function resolveReportViewerOptions(
   permissions: Array<{ PermDesc?: string }> | undefined,
   userRight: string,
@@ -423,25 +421,15 @@ export function resolveReportViewerOptions(
 
   const fromApi = buildReportViewerOptionsFromPermissions(permissions ?? [], userRight)
 
-  // API returned rows but none mapped — use full desktop list
-  if (!fromApi.length && (permissions?.length ?? 0) > 0) {
-    return ensureTodaySalesOption(DEFAULT_REPORT_VIEWER_OPTIONS)
-  }
-
-  // API returned too few mapped reports vs raw rows — mapping miss
-  if (fromApi.length > 0 && (permissions?.length ?? 0) > fromApi.length + 2) {
-    return ensureTodaySalesOption(DEFAULT_REPORT_VIEWER_OPTIONS)
-  }
-
-  // API returned a partial list (e.g. only 3 role-scoped rows) — use full desktop list.
-  // WPF shows all PermDesc entries from the API; when the web API returns too few,
-  // fall back so the dropdown matches the desktop Report Viewer.
-  if (fromApi.length > 0 && fromApi.length < MIN_API_REPORT_OPTIONS) {
-    return ensureTodaySalesOption(DEFAULT_REPORT_VIEWER_OPTIONS)
-  }
-
+  // Role-scoped list from API (including short lists) — keep as-is.
   if (fromApi.length > 0) return ensureTodaySalesOption(fromApi)
 
+  // Unmapped rows only: API returned permission rows but none mapped to known reports.
+  if ((permissions?.length ?? 0) > 0) {
+    return ensureTodaySalesOption(DEFAULT_REPORT_VIEWER_OPTIONS)
+  }
+
+  // Empty / missing permissions — full catalog fallback for booth continuity.
   return ensureTodaySalesOption(DEFAULT_REPORT_VIEWER_OPTIONS)
 }
 

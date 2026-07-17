@@ -5,6 +5,7 @@ import { Outlet } from "react-router-dom"
 import { AppFooter } from "@/components/layout/app-footer"
 import { AppHeader } from "@/components/layout/app-header"
 import { AppSidebar } from "@/components/layout/app-sidebar"
+import { OfflineBanner } from "@/components/layout/offline-banner"
 import { AdjustFeesDialog } from "@/features/administrator/adjust-fees-dialog"
 import { PaymentHistoryDialog } from "@/features/search/payment-history-dialog"
 import { SearchReservationDialog } from "@/features/search/search-reservation-dialog"
@@ -100,6 +101,7 @@ export function AppLayout({ session }: AppLayoutProps) {
           session={session}
           onMenuClick={() => setMobileOpen((prev) => !prev)}
         />
+        <OfflineBanner />
 
         <main className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto flex h-full min-h-0 max-w-[1600px] flex-col px-3 py-3 sm:px-4 md:px-5 lg:p-4">

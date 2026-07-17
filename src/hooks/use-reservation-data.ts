@@ -1,12 +1,12 @@
 import { useCallback, useMemo } from "react"
 
-import { mapReservationData } from "@/lib/map-reservation-data"
 import { parseTransactionRefreshMs } from "@/lib/parse-refresh-interval"
 import { getClubmanErrorMessage } from "@/store/api/baseQuery"
 import { useGetReservationDataQuery } from "@/store/api/clubmanApi"
+import type { Reservation } from "@/types/reservation"
 
 type UseReservationDataResult = {
-  reservations: ReturnType<typeof mapReservationData>
+  reservations: Reservation[]
   loading: boolean
   error: string | null
   refresh: () => Promise<void>
@@ -40,7 +40,7 @@ export function useReservationData(
     )
 
   const reservations = useMemo(
-    () => (shouldSkip ? [] : mapReservationData(data)),
+    () => (shouldSkip ? [] : (data ?? [])),
     [data, shouldSkip]
   )
 

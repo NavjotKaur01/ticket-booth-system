@@ -15,12 +15,9 @@ function mapActiveStatus(active: string) {
   return "Inactive"
 }
 
-function mapPasswordDisplay(user: ApiSystemUser) {
-  if (user.PasswordForUser.trim().toLowerCase() !== "visible") {
-    return "**********"
-  }
-
-  return normalizeText(user.Password)
+function mapPasswordDisplay(_user: ApiSystemUser) {
+  // Phase 0: never show plaintext system-user passwords in the grid.
+  return "**********"
 }
 
 export function mapSystemUsers(users: ApiSystemUser[]): AdminUser[] {

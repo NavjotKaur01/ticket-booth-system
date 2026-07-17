@@ -107,20 +107,10 @@ export function getStoredLocationsCookie(
 
 export function getStoredLocations(clubSlug?: string): AppLocation[] {
   const stored = getStoredLocationsCookie(clubSlug)
-  
-  // temporary returning standup media data
-  
+
   if (!stored) {
-    return [
-      {
-        id: "0d12ceb8-9f0e-4b02-b8ac-fedd02c60708",
-        label: "Standupmedia",
-        name: "Standupmedia",
-        shortName: "Standupmedia",
-        dbName: "Standupmedia",
-        city: "", // or whatever default city you want
-      },
-    ]
+    // Phase 2: never inject a hardcoded Standupmedia GUID (esp. production).
+    return []
   }
 
   return stored.locations.map(mapLocation)

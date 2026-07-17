@@ -7,12 +7,25 @@ import {
 } from "@/lib/auth/cookie-utils"
 import { mapLoginResponseToCredentials } from "@/lib/auth/map-login-credentials"
 import { enrichCredentialsWithLocationCookie } from "@/lib/auth/resolve-session-location"
-import type {
-  ApiUserCredentials,
-  StoredLoginCookie,
+import {
+  LOGIN_SESSION_KEYS,
+  toSlimLoginCredentials,
+  type ApiUserCredentials,
+  type StoredLoginCookie,
 } from "@/types/api/account-login"
 import type { AppLocation } from "@/types/api/locations"
 import type { UserCredentials } from "@/types/auth"
+
+export { toSlimLoginCredentials }
+
+const LOGIN_SESSION_KEY_SET = new Set<string>(LOGIN_SESSION_KEYS)
+
+/** True when cookie login object still has keys outside the web session contract. */
+function loginHasSensitiveFields(login: ApiUserCredentials) {
+  return Object.keys(login as Record<string, unknown>).some(
+    (key) => !LOGIN_SESSION_KEY_SET.has(key)
+  )
+}
 
 function isStoredLoginCookie(value: unknown): value is StoredLoginCookie {
   if (!value || typeof value !== "object") {
@@ -23,7 +36,8 @@ function isStoredLoginCookie(value: unknown): value is StoredLoginCookie {
   return (
     typeof record.login === "object" &&
     record.login !== null &&
-    typeof record.connectionName === "string"
+    typeof record.connectionName === "string" &&
+    typeof (record.login as ApiUserCredentials).UserName === "string"
   )
 }
 
@@ -85,12 +99,15 @@ function migrateLegacyUserCookie(raw: string): StoredLoginCookie | null {
   try {
     const parsed: unknown = JSON.parse(raw)
     if (isStoredLoginCookie(parsed)) {
-      return parsed
+      return {
+        ...parsed,
+        login: toSlimLoginCredentials(parsed.login),
+      }
     }
 
     if (isLegacyUserCredentials(parsed)) {
       return {
-        login: {
+        login: toSlimLoginCredentials({
           UserID: parsed.UserID,
           LocationID: parsed.LocationID ?? undefined,
           UserName: parsed.UserName,
@@ -98,7 +115,7 @@ function migrateLegacyUserCookie(raw: string): StoredLoginCookie | null {
           LastName: parsed.LastName,
           UserRights: parsed.UserRights,
           Email: parsed.Email,
-        },
+        }),
         connectionName: parsed.ConnectionName,
         locationName: parsed.LocationName,
         locationShortName: parsed.LocationName,
@@ -111,6 +128,17 @@ function migrateLegacyUserCookie(raw: string): StoredLoginCookie | null {
   }
 
   return null
+}
+
+function persistStoredLoginCookie(payload: StoredLoginCookie) {
+  const slimPayload: StoredLoginCookie = {
+    ...payload,
+    login: toSlimLoginCredentials(payload.login),
+  }
+  setCookie(authConfig.userDataCookieName, JSON.stringify(slimPayload))
+  deleteCookie(authConfig.legacyUserDataCookieName)
+  clearLegacyAuthCookies()
+  return slimPayload
 }
 
 export function getStoredLoginCookie(): StoredLoginCookie | null {
@@ -126,7 +154,13 @@ export function getStoredLoginCookie(): StoredLoginCookie | null {
   try {
     const parsed: unknown = JSON.parse(raw)
     if (isStoredLoginCookie(parsed)) {
-      return parsed
+      if (loginHasSensitiveFields(parsed.login)) {
+        return persistStoredLoginCookie(parsed)
+      }
+      return {
+        ...parsed,
+        login: toSlimLoginCredentials(parsed.login),
+      }
     }
   } catch {
     return migrateLegacyUserCookie(raw)
@@ -181,14 +215,15 @@ export function saveLoginSession(
     location: AppLocation
   }
 ): UserCredentials {
-  const credentials = mapLoginResponseToCredentials(login, {
+  const slimLogin = toSlimLoginCredentials(login)
+  const credentials = mapLoginResponseToCredentials(slimLogin, {
     connectionString: context.connectionString,
-    userName: login.UserName ?? "",
+    userName: slimLogin.UserName ?? "",
     location: context.location,
   })
 
   const payload: StoredLoginCookie = {
-    login,
+    login: slimLogin,
     connectionName: context.connectionString,
     locationName: context.location.name || context.location.label,
     locationShortName: context.location.shortName || context.location.label,

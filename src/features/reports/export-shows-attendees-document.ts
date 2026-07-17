@@ -1,5 +1,5 @@
 import dayjs from "dayjs"
-import * as XLSX from "xlsx"
+import { XLSX } from "@/lib/xlsx-write"
 
 export type ShowsAttendeesDocumentRow = {
   showDateTime: string

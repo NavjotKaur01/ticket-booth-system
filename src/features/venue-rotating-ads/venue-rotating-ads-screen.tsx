@@ -13,6 +13,7 @@ import { RichTextEditor } from "@/components/common/rich-text-editor"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import CalendarDatePickerControl from "@/components/calendar/controls/CalendarDatePickerControl"
 import { Button } from "@/components/ui/button"
+import { sanitizeHtml } from "@/lib/sanitize-html"
 import {
   Card,
   CardContent,
@@ -705,7 +706,9 @@ export function VenueRotatingAdsScreen() {
                 <div className="rounded-md border border-border/70 bg-muted/20 p-4">
                   <div
                     className="prose prose-sm max-w-none dark:prose-invert"
-                    dangerouslySetInnerHTML={{ __html: previewAd.adText }}
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeHtml(previewAd.adText),
+                    }}
                   />
                 </div>
               </div>

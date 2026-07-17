@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx"
+import { XLSX } from "@/lib/xlsx-write"
 
 import { CUSTOMER_REPORT_STYLES, escapeHtml } from "@/features/reports/customer-reports-shared"
 import {

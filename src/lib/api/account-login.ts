@@ -1,4 +1,5 @@
 import { appConfig } from "@/config/app-config"
+import { parseLoginCredentials } from "@/lib/api-schema/login-and-reservation"
 import type {
   AccountLoginRequest,
   AccountLoginResponse,
@@ -8,18 +9,6 @@ import type {
 function buildApiUrl(path: string) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`
   return `${appConfig.apiBaseUrl.replace(/\/$/, "")}${normalizedPath}`
-}
-
-function isLoginDataObject(value: unknown): value is ApiUserCredentials {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false
-  }
-
-  const record = value as ApiUserCredentials
-  const userId = record.UserID?.trim() ?? ""
-  const userName = record.UserName?.trim() ?? ""
-
-  return Boolean(userId || userName)
 }
 
 export async function executeAccountLogin(
@@ -43,12 +32,16 @@ export async function executeAccountLogin(
     throw new Error(body.Message || "Login failed")
   }
 
-  if (!isLoginDataObject(body.Data)) {
+  const slim = parseLoginCredentials(body.Data)
+  if (
+    !slim ||
+    !(slim.UserID?.trim() || slim.UserName?.trim())
+  ) {
     throw new Error(
       body.Message?.trim() ||
         "Login failed. The server did not return user credentials."
     )
   }
 
-  return body.Data
+  return slim
 }

@@ -1,7 +1,6 @@
 import { dispatchEndpoint } from "@/lib/api/dispatch-endpoint"
 import { buildUpcomingShowDetailsRequest } from "@/lib/map-upcoming-show-details"
 import { clubmanApi } from "@/store/api/clubmanApi"
-import type { ReservationDataItem } from "@/types/api/reservation-data"
 import type { CancelReservationRequest } from "@/types/api/cancel-reservation"
 import type { ReservationNoteRequest } from "@/types/api/reservation-note"
 import type { MoveReservationRequest } from "@/types/api/move-reservation"
@@ -15,6 +14,7 @@ import type { ReservationHistoryItem } from "@/types/api/reservation-history"
 import type { SaveReservationRequest } from "@/types/api/save-reservation"
 import type { ShowDetailsByDateItem } from "@/types/api/show-details"
 import type { ShowSectionItem } from "@/types/api/show-sections"
+import type { Reservation } from "@/types/reservation"
 
 type FetchReservationDataParams = {
   connectionString: string
@@ -31,7 +31,7 @@ export function fetchReservationData({
   isCheckedIn,
   isReservationForm,
 }: FetchReservationDataParams) {
-  return dispatchEndpoint<ReservationDataItem[], FetchReservationDataParams>(
+  return dispatchEndpoint<Reservation[], FetchReservationDataParams>(
     clubmanApi.endpoints.getReservationData,
     {
       connectionString,

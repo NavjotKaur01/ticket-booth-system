@@ -1,3 +1,5 @@
+import { parseReservationDetailWire } from '@/lib/api-schema/login-and-reservation'
+import { maskCardNumber } from '@/lib/mask-card-number'
 import type {
   ReservationDetail,
   ReservationDetailPaymentItem,
@@ -100,7 +102,10 @@ export function mapReservationDetailPayment(
     PymtStatus: readString(record, ['PymtStatus', 'pymtStatus']) || null,
     PymtType: readString(record, ['PymtType', 'pymtType']) || null,
     CCType: readString(record, ['CCType', 'ccType', 'cCType']) || null,
-    CardNum: readString(record, ['CardNum', 'cardNum']) || null,
+    CardNum: (() => {
+      const raw = readString(record, ['CardNum', 'cardNum'])
+      return raw ? maskCardNumber(raw) : null
+    })(),
     Amount: readNumber(record, ['Amount', 'amount']),
     Auth: auth || null,
     PNREF: pnref || null,
@@ -111,6 +116,13 @@ export function mapReservationDetailPayment(
     PaymentStatusCode:
       readString(record, ['PaymentStatusCode', 'paymentStatusCode']) || null,
     IsSelected: readBoolean(record, ['IsSelected', 'isSelected']),
+    dueAmt:
+      readNumber(record, [
+        'dueAmt',
+        'DueAmt',
+        'DueAmount',
+        'dueAmount',
+      ]) ?? undefined,
     ExpYr: readString(record, ['ExpYr', 'expYr', 'ExpYear', 'expYear', 'ExpirationYear', 'expirationYear', 'CCExpYear', 'ccExpYear']) || '',
     BillZip: readString(record, ['BillZip', 'billZip', 'ZipCode', 'zipCode', 'BillingZip', 'billingZip']) || '',
     BillAddr: readString(record, ['BillAddr', 'billAddr', 'BillingAddress', 'billingAddress', 'Address', 'address']) || '',
@@ -119,11 +131,12 @@ export function mapReservationDetailPayment(
 }
 
 export function mapReservationDetail(response: unknown): ReservationDetail {
-  if (!response || typeof response !== 'object') {
+  const wire = parseReservationDetailWire(response)
+  if (!wire) {
     return {}
   }
 
-  const record = response as Record<string, unknown>
+  const record = wire
   const paymentListRaw = readRecordValue(record, [
     'PaymentList',
     'paymentList',
@@ -160,6 +173,53 @@ export function mapReservationDetail(response: unknown): ReservationDetail {
     Note: readString(record, ['Note', 'note']) || null,
     ReservationNotes:
       readString(record, ['ReservationNotes', 'reservationNotes']) || null,
+    Price: readNumber(record, ['Price', 'price', 'ShowPrice', 'showPrice']),
+    // ClubMan detail uses *Charge; save/split requests use *Fee — accept both.
+    DayOfShowFee: readNumber(record, [
+      'DayOfShowFee',
+      'dayOfShowFee',
+      'DayOfShowCharge',
+      'dayOfShowCharge',
+      'DayOfShow',
+      'dayOfShow',
+    ]),
+    PhoneInFee: readNumber(record, [
+      'PhoneInFee',
+      'phoneInFee',
+      'PhoneCharge',
+      'phoneCharge',
+      'PhoneFee',
+      'phoneFee',
+    ]),
+    WalkUpFee: readNumber(record, [
+      'WalkUpFee',
+      'walkUpFee',
+      'WalkupCharge',
+      'walkupCharge',
+      'WalkUpCharge',
+      'WalkupFee',
+      'walkupFee',
+    ]),
+    WebFee: readNumber(record, [
+      'WebFee',
+      'webFee',
+      'WebCharge',
+      'webCharge',
+    ]),
+    CreatedDate:
+      readString(record, [
+        'CreatedDate',
+        'createdDate',
+        'CreateDt',
+        'createDt',
+        'CreatedDt',
+        'createdDt',
+      ]) || null,
+    LookupSDescSource:
+      readString(record, ['LookupSDescSource', 'lookupSDescSource']) || null,
+    ResStatus: readString(record, ['ResStatus', 'resStatus']) || null,
+    Memo: readString(record, ['Memo', 'memo']) || null,
+    TableNum: readString(record, ['TableNum', 'tableNum', 'TableNums', 'tableNums']) || null,
     PaymentList: Array.isArray(paymentListRaw)
       ? paymentListRaw.map(mapReservationDetailPayment)
       : [],

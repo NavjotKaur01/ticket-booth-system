@@ -63,4 +63,5 @@ export type ReservationDetail = {
   TixComp?: number | null
   TixDisc?: number | null
   TableNum?: string | null
+  CreatedDate?: string | null
 }

@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom"
 
 import { GiftFeatureGuard } from "@/components/auth/gift-feature-guard"
 import { ProtectedLayout } from "@/components/auth/protected-layout"
+import { RequireUserRight } from "@/components/auth/require-user-right"
 import { Dashboard } from "@/components/dashboard/dashboard"
 import { BusinessContacts } from "@/pages/business-contacts"
 import { ChangePassword } from "@/pages/change-password"
@@ -86,7 +87,7 @@ function App() {
             <Route path="change-password" element={<ChangePassword />} />
           </Route>
 
-          <Route path="administrator">
+          <Route path="administrator" element={<RequireUserRight area="administrator" />}>
             <Route path="customers" element={<SearchCustomer />} />
             <Route path="performers" element={<Performers />} />
             <Route path="marketing-filter" element={<MarketingFilter />} />
@@ -139,7 +140,7 @@ function App() {
             <Route path="events" element={<Events />} />
           </Route>
 
-          <Route path="venue">
+          <Route path="venue" element={<RequireUserRight area="venue" />}>
             <Route path="venue-info" element={<VenueInfo />} />
             <Route path="venue-show-times" element={<VenueShowTimes />} />
             <Route path="food-menu" element={<FoodMenu />} />

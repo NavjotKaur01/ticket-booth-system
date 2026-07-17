@@ -42,9 +42,7 @@ export type ApiCustomerSearchItem = {
   LastUpdateDt: string | null
   Encrypted: string | null
   UserName: string | null
-  Passwd: string | null
-  SecurityQuestion: string | null
-  SecurityAnswer: string | null
+  // Passwd / SecurityQuestion / SecurityAnswer omitted (BE-0.2) — not part of web contract
   DateCreated: string | null
   AltAreaCode_2: string | null
   AltPhone1_2: string | null

@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx"
+import { XLSX } from "@/lib/xlsx-write"
 
 export type ExportColumn<T> = {
   header: string
