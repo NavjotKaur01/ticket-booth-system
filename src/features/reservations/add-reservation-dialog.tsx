@@ -16,6 +16,8 @@ import type { RowSelectionState } from '@tanstack/react-table'
 import { DatePickerCalendarPanel } from '@/components/calendar/controls/date-picker-calendar-panel'
 import { CalendarScrollSelectList } from '@/components/calendar/controls/CalendarScrollSelectList'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
+import { ReservationSearchResultsTable } from '@/features/reservations/reservation-search-results-table'
+
 import {
   FormField,
   IconActionButton
@@ -58,8 +60,8 @@ import {
   ReservationPaymentActions,
   ReservationPaymentPanel,
 } from '@/features/reservations/reservation-payment-panel'
-import { ReservationSearchResultsTable } from '@/features/reservations/reservation-search-results-table'
 import { ReservationTransactionsTable } from '@/features/reservations/reservation-transactions-table'
+import { SplitPromoAlertDialog } from '@/features/reservations/split-promo-alert-dialog'
 import { useCachedReservationShowData } from '@/hooks/use-cached-reservation-show-data'
 import { useReservationCustomerSearch } from '@/hooks/use-reservation-customer-search'
 import { useReservationDetail } from '@/hooks/use-reservation-detail'
@@ -99,7 +101,7 @@ import {
   buildSaveReservationWithPaymentRequest,
   buildUpdateReservationPaymentRequest
 } from '@/lib/build-save-reservation-request'
-import { useUpdateSplitReservationMutation, useGetShowDataQuery, useGetSystemDefaultsQuery } from '@/store/api/clubmanApi'
+import { useUpdateSplitReservationMutation, useRemoveReservationPromoMutation, useGetShowDataQuery, useGetSystemDefaultsQuery } from '@/store/api/clubmanApi'
 import { mapReservationSearchCriteriaToCustomerForm } from '@/lib/map-reservation-search-to-customer-form'
 import { parsePhoneSearchParts, normalizePhoneSearchParts } from '@/lib/parse-phone-search-parts'
 import { resolveReservationBooking } from '@/lib/resolve-reservation-booking'
@@ -112,7 +114,12 @@ import {
   mapReservationSourceToOrigin,
   resolveReservationEditCustomerId
 } from '@/lib/reservation-edit'
-import { EMPTY_GUID } from '@/lib/reservation-lookup-codes'
+import {
+  EMPTY_GUID,
+  PAYMENT_STATUS_PAYMENT,
+  PAYMENT_STATUS_REFUND,
+  PAYMENT_STATUS_PROMO
+} from '@/lib/reservation-lookup-codes'
 import { syncReservationCustomerIfChanged, syncReservationCustomerSearchResultIfChanged } from '@/lib/sync-reservation-customer'
 import { validateReservationParty } from '@/lib/validate-reservation-party'
 import {
@@ -160,6 +167,8 @@ type AddReservationDialogProps = {
   preferredShowTimeLabel?: string
   /** Edit mode only — opens SplitReservationDialog (lifted to the page) for this reservation. */
   onSplitReservation?: (reservation: Reservation) => void
+  /** Edit mode only — opens SplitPartyDialog (lifted to the page) for this reservation. */
+  onSplitParty?: (reservation: Reservation) => void
   /** Edit mode only — the reservation is already fully paid, so splitting isn't possible. */
   onAlreadyPaidAlert?: () => void
   /** Edit mode only — reprints the reservation ticket using the existing print pipeline. */
@@ -1219,6 +1228,7 @@ export function AddReservationDialog({
   showTime: initialShowTime,
   preferredShowTimeLabel,
   onSplitReservation,
+  onSplitParty,
   onAlreadyPaidAlert,
   onReprintTicket,
   expressWalkupSeed = null
@@ -1322,6 +1332,8 @@ export function AddReservationDialog({
   const [saveNoteSuccess, setSaveNoteSuccess] = useState(false)
   const [selectedTransaction, setSelectedTransaction] =
     useState<ReservationTransactionRow | null>(null)
+  const [splitPromoAlertOpen, setSplitPromoAlertOpen] = useState(false)
+  const [pendingSplitType, setPendingSplitType] = useState<'payment' | 'party' | null>(null)
 
   const { detail: reservationDetail } = useReservationDetail(
     connectionName,
@@ -1330,6 +1342,7 @@ export function AddReservationDialog({
   )
 
   const [updateSplitReservation] = useUpdateSplitReservationMutation()
+  const [removeReservationPromo] = useRemoveReservationPromoMutation()
 
   const { data: rawSystemDefaults } = useGetSystemDefaultsQuery(
     { connectionName, locationId },
@@ -1406,7 +1419,9 @@ export function AddReservationDialog({
     locationId,
     showDate,
     showId: activeShowTime,
-    enabled: open && isReady && Boolean(activeShowTime)
+    enabled: open && isReady && Boolean(activeShowTime),
+    isManager: showDataPayload?.[0]?.NoPasses === 'Y',
+    origin: origin === 'phone' ? 'phone' : 'walkup'
   })
 
   useEffect(() => {
@@ -1707,7 +1722,7 @@ export function AddReservationDialog({
         excludePhoneDayOfShow: systemDefaults?.txtDayOfShow2 === 'Y',
         excludeWebDayOfShow: systemDefaults?.txtDayOfShow3 === 'Y'
       }) * (selectedSection?.priceMultiplier ?? 1)
-      
+
       const { applicableTickets } = getPromoApplicableTickets({
         promo: selectedPromo,
         ticketCount: partySize * (selectedSection?.priceMultiplier ?? 1),
@@ -1758,7 +1773,7 @@ export function AddReservationDialog({
             ticketCount: oldParty * (selectedSection?.priceMultiplier ?? 1),
             passes
           })
-          
+
           const addedPromoFeeAdjustment = calculatePromoFeeAdjustment({
             promo: selectedPromo,
             applicableTickets: Math.max(0, applicableTickets - oldApplicableTickets),
@@ -1823,9 +1838,21 @@ export function AddReservationDialog({
     ]
   )
 
-  const alreadyPaid = isEditMode
-    ? parseReservationMoney(reservation?.paid ?? '$0.00')
-    : 0
+  const alreadyPaid = useMemo(() => {
+    if (!isEditMode || !reservation) return 0
+    const payments = reservationDetail?.PaymentList
+    if (payments && payments.length > 0) {
+      const ELIGIBLE = new Set([
+        PAYMENT_STATUS_PAYMENT,
+        PAYMENT_STATUS_REFUND,
+        PAYMENT_STATUS_PROMO
+      ])
+      return payments
+        .filter((p: any) => p.ReservationID?.trim() === reservation.id && ELIGIBLE.has(p.PaymentStatusCode?.trim() ?? ''))
+        .reduce((sum: number, p: any) => sum + (p.Amount ?? 0), 0)
+    }
+    return parseReservationMoney(reservation.paid ?? '$0.00')
+  }, [isEditMode, reservation, reservationDetail?.PaymentList])
   const balanceDue = Math.max(0, totals.total - alreadyPaid)
   const defaultPaymentAmount = formatReservationMoney(
     isEditMode
@@ -1891,11 +1918,11 @@ export function AddReservationDialog({
     ? `Payment :- ${[editCustomerLastName, editCustomerFirstName].filter(Boolean).join(',') || 'Guest'}  ${formatShowDate(showDate)}`
     : isExpressWalkupPayment
       ? `Payment :- ${[
-          expressWalkupSeed?.customer.lastName,
-          expressWalkupSeed?.customer.firstName
-        ]
-          .filter(Boolean)
-          .join(',') || 'Guest'}  ${formatShowDate(showDate)}`
+        expressWalkupSeed?.customer.lastName,
+        expressWalkupSeed?.customer.firstName
+      ]
+        .filter(Boolean)
+        .join(',') || 'Guest'}  ${formatShowDate(showDate)}`
       : 'Add Reservation'
 
   function focusSelectedPartyInput(sectionId = section) {
@@ -2027,10 +2054,10 @@ export function AddReservationDialog({
     // seats (that copied clark's 11–14 onto the payment form).
     const match = targetId
       ? payload.result.tableNumsByReservation.find(
-          row =>
-            row.reservationId.trim().toLowerCase() ===
-            targetId.trim().toLowerCase()
-        )
+        row =>
+          row.reservationId.trim().toLowerCase() ===
+          targetId.trim().toLowerCase()
+      )
       : undefined
 
     if (match?.tableNums) {
@@ -2125,7 +2152,7 @@ export function AddReservationDialog({
     setPaymentActionError(null)
   }
 
-  async function handleSplitReservationClick() {
+  async function handleSplitReservationClick(type: 'payment' | 'party') {
     if (!reservation) {
       return
     }
@@ -2143,39 +2170,51 @@ export function AddReservationDialog({
     }
 
     if (promo !== 'none' && promoOptions.some(option => option.value === promo)) {
-      const confirmPromo = window.confirm("Promo will be removed from the whole party. Continue?")
-      if (!confirmPromo) {
-        return
-      }
+      setPendingSplitType(type)
+      setSplitPromoAlertOpen(true)
+      return
     }
+
+    await executeSplitReservationClick(type)
+  }
+
+  async function executeSplitReservationClick(type: 'payment' | 'party') {
+    if (!reservation) return
 
     const sessionGeneration = sessionGenerationRef.current
 
     if (isEditMode) {
       setPaymentActionBusy('split')
       try {
-        await updateSplitReservation({
-          ConnectionString: connectionName,
-          ReservationId: reservation.id,
-          ShowID: activeShowTime,
-          ShowDetID: reservationDetail?.ShowDetID ?? '',
-          ShowSec: selectedSection?.name ?? '',
-          ShowPrice: parseReservationMoney(selectedSection?.price ?? '0'),
-          DayOfShowFee: reservationDetail?.DayOfShowFee ?? 0,
-          PhoneInFee: reservationDetail?.PhoneInFee ?? 0,
-          WalkUpFee: reservationDetail?.WalkUpFee ?? 0,
-          WebFee: reservationDetail?.WebFee ?? 0,
-          SourceLookUpCode: origin === 'phone' ? 'SRC01' : origin === 'walkup' ? 'SRC02' : origin === 'web' ? 'SRC03' : 'SRC01',
-          Party: partySize,
-          SubTotal: totals.subtotal,
-          ServiceChage: totals.serviceCharge,
-          Discount: 0, // Force clear promo side effects
-          Taxes: totals.taxes,
-          Total: totals.total,
-          LastUpdateDt: formatUsDateTime(new Date()),
-          LastUpdateId: username,
-          TableNum: null
-        }).unwrap()
+        if (type === 'party') {
+          await removeReservationPromo({
+            ConnectionString: connectionName,
+            ReservationId: reservation.id
+          }).unwrap()
+        } else {
+          await updateSplitReservation({
+            ConnectionString: connectionName,
+            ReservationId: reservation.id,
+            ShowID: activeShowTime,
+            ShowDetID: reservationDetail?.ShowDetID ?? '',
+            ShowSec: selectedSection?.name ?? '',
+            ShowPrice: parseReservationMoney(selectedSection?.price ?? '0'),
+            DayOfShowFee: reservationDetail?.DayOfShowFee ?? 0,
+            PhoneInFee: reservationDetail?.PhoneInFee ?? 0,
+            WalkUpFee: reservationDetail?.WalkUpFee ?? 0,
+            WebFee: reservationDetail?.WebFee ?? 0,
+            SourceLookUpCode: origin === 'phone' ? 'SRC01' : 'SRC02',
+            Party: partySize,
+            SubTotal: totals.subtotal,
+            ServiceChage: totals.serviceCharge,
+            Discount: 0,
+            Taxes: totals.taxes,
+            Total: totals.total,
+            LastUpdateDt: formatUsDateTime(new Date()),
+            LastUpdateId: username,
+            TableNum: null
+          }).unwrap()
+        }
       } catch (error) {
         if (sessionGeneration !== sessionGenerationRef.current) {
           return
@@ -2183,7 +2222,9 @@ export function AddReservationDialog({
         reportError(
           setPaymentActionError,
           error,
-          'Failed to prepare split reservation.'
+          type === 'party'
+            ? 'Failed to remove reservation promo.'
+            : 'Failed to prepare split reservation.'
         )
         setPaymentActionBusy(null)
         return
@@ -2194,8 +2235,12 @@ export function AddReservationDialog({
       setPaymentActionBusy(null)
     }
 
-    setPromo('none') // Clear in UI memory
-    onSplitReservation?.(reservation)
+    setPromo('none')
+    if (type === 'party') {
+      onSplitParty?.(reservation)
+    } else {
+      onSplitReservation?.(reservation)
+    }
   }
 
   async function handleSaveNoteClick() {
@@ -2337,29 +2382,29 @@ export function AddReservationDialog({
     // Use live UI totals for new bookings so Save matches the payment screen.
     const saveTotals = isEditMode
       ? calculateReservationTotals({
-          sectionPrice: saveSection?.price ?? '$0.00',
-          sectionShowPrice: saveSection?.showPrice,
-          sectionPriceMultiplier: saveSection?.priceMultiplier ?? 1,
-          party: saveParty,
-          passes,
-          promo: savePromo,
-          existingServiceCharge: reservationDetail?.SVC,
-          existingDiscount: reservationDetail?.Discount,
-          existingSalesTax: reservationDetail?.SalesTax,
-          systemTaxRate: Number(systemDefaults?.lblTaxes || 0),
-          taxWithServiceCharge:
-            systemDefaults?.lblTaxWithServiceCharge ?? undefined,
-          ccFeePercent: Number(systemDefaults?.cboCC || 0)
-        })
+        sectionPrice: saveSection?.price ?? '$0.00',
+        sectionShowPrice: saveSection?.showPrice,
+        sectionPriceMultiplier: saveSection?.priceMultiplier ?? 1,
+        party: saveParty,
+        passes,
+        promo: savePromo,
+        existingServiceCharge: reservationDetail?.SVC,
+        existingDiscount: reservationDetail?.Discount,
+        existingSalesTax: reservationDetail?.SalesTax,
+        systemTaxRate: Number(systemDefaults?.lblTaxes || 0),
+        taxWithServiceCharge:
+          systemDefaults?.lblTaxWithServiceCharge ?? undefined,
+        ccFeePercent: Number(systemDefaults?.cboCC || 0)
+      })
       : totals
+
     const savePaymentAmount =
       paymentAmountOverride ??
       formatReservationMoney(
         isEditMode
           ? Math.max(
             0,
-            saveTotals.total -
-            parseReservationMoney(reservation?.paid ?? '$0.00')
+            saveTotals.total - alreadyPaid
           )
           : saveTotals.total > 0
             ? saveTotals.total
@@ -2449,7 +2494,7 @@ export function AddReservationDialog({
     const isFullPayment =
       !shouldApplyPayment ||
       editPaymentAmount + 0.001 >= saveTotals.total -
-        (isEditMode ? parseReservationMoney(reservation?.paid ?? '$0.00') : 0)
+      (isEditMode ? parseReservationMoney(reservation?.paid ?? '$0.00') : 0)
     const isCashLike = paymentType === 'cash' || paymentType === 'pos'
 
     // Desktop ReservationPayment check-in popup rules (Express Walkup → Payment):
@@ -2490,20 +2535,20 @@ export function AddReservationDialog({
       effectivePromo === 'none' ? null : promoById.get(effectivePromo) ?? null
     const saveTotals = isEditMode
       ? calculateReservationTotals({
-          sectionPrice: saveSection?.price ?? '$0.00',
-          sectionShowPrice: saveSection?.showPrice,
-          sectionPriceMultiplier: saveSection?.priceMultiplier ?? 1,
-          party: saveParty,
-          passes,
-          promo: savePromo,
-          existingServiceCharge: reservationDetail?.SVC,
-          existingDiscount: reservationDetail?.Discount,
-          existingSalesTax: reservationDetail?.SalesTax,
-          systemTaxRate: Number(systemDefaults?.lblTaxes || 0),
-          taxWithServiceCharge:
-            systemDefaults?.lblTaxWithServiceCharge ?? undefined,
-          ccFeePercent: Number(systemDefaults?.cboCC || 0)
-        })
+        sectionPrice: saveSection?.price ?? '$0.00',
+        sectionShowPrice: saveSection?.showPrice,
+        sectionPriceMultiplier: saveSection?.priceMultiplier ?? 1,
+        party: saveParty,
+        passes,
+        promo: savePromo,
+        existingServiceCharge: reservationDetail?.SVC,
+        existingDiscount: reservationDetail?.Discount,
+        existingSalesTax: reservationDetail?.SalesTax,
+        systemTaxRate: Number(systemDefaults?.lblTaxes || 0),
+        taxWithServiceCharge:
+          systemDefaults?.lblTaxWithServiceCharge ?? undefined,
+        ccFeePercent: Number(systemDefaults?.cboCC || 0)
+      })
       : totals
     const savePaymentAmount =
       paymentAmountOverride ??
@@ -2930,7 +2975,7 @@ export function AddReservationDialog({
     const partySize = Math.max(1, expressWalkupSeed.party)
     const promoId =
       expressWalkupSeed.promoId !== 'none' &&
-      promoOptions.some((option) => option.value === expressWalkupSeed.promoId)
+        promoOptions.some((option) => option.value === expressWalkupSeed.promoId)
         ? expressWalkupSeed.promoId
         : 'none'
 
@@ -2938,8 +2983,8 @@ export function AddReservationDialog({
     setPasses(Math.max(0, expressWalkupSeed.passes) || partySize)
     setDinner(
       expressWalkupSeed.dinner &&
-        availableSections.find((option) => option.id === sectionId)
-          ?.showDinner === 'Y'
+      availableSections.find((option) => option.id === sectionId)
+        ?.showDinner === 'Y'
     )
     setSection(sectionId)
     setPartyBySection(
@@ -3141,6 +3186,8 @@ export function AddReservationDialog({
                     onOriginChange={id => {
                       handleReservationInputChange()
                       setOrigin(id as (typeof ORIGIN_OPTIONS)[number]['id'])
+                      setPromo('none')
+                      setPasses(1)
                     }}
                     originDisabled={Boolean(expressWalkupSeed?.lockOrigin)}
                     onOpenComicInfo={() => setComicInfoOpen(true)}
@@ -3199,7 +3246,7 @@ export function AddReservationDialog({
                           type='button'
                           size='sm'
                           variant='outline'
-                          onClick={handleSplitReservationClick}
+                          onClick={() => handleSplitReservationClick('payment')}
                         >
                           Split Payment
                         </Button>
@@ -3392,7 +3439,7 @@ export function AddReservationDialog({
                               type='button'
                               size='sm'
                               variant='outline'
-                              onClick={handleSplitReservationClick}
+                              onClick={() => handleSplitReservationClick('party')}
                             >
                               Split Party
                             </Button>
@@ -3470,22 +3517,22 @@ export function AddReservationDialog({
         paymentSeed={
           reservation
             ? {
-                qty: partySize > 0 ? partySize : reservation.qty,
-                // Desktop ResAssignSeatNumbers — seat labels, NOT TableNums.
-                // Using tableNums here made Rem=0 and hid the guest.
-                seatNumbers: reservation.seatNo || '',
-                section:
-                  selectedSection?.name ||
-                  selectedSection?.label ||
-                  reservation.section,
-                source: reservation.source,
-                promo:
-                  selectedPromo?.promotionName ||
-                  (effectivePromo !== 'none' ? effectivePromo : '') ||
-                  reservation.promo,
-                notes,
-                dinner
-              }
+              qty: partySize > 0 ? partySize : reservation.qty,
+              // Desktop ResAssignSeatNumbers — seat labels, NOT TableNums.
+              // Using tableNums here made Rem=0 and hid the guest.
+              seatNumbers: reservation.seatNo || '',
+              section:
+                selectedSection?.name ||
+                selectedSection?.label ||
+                reservation.section,
+              source: reservation.source,
+              promo:
+                selectedPromo?.promotionName ||
+                (effectivePromo !== 'none' ? effectivePromo : '') ||
+                reservation.promo,
+              notes,
+              dinner
+            }
             : null
         }
         checkInAfterSave={false}
@@ -3509,6 +3556,16 @@ export function AddReservationDialog({
         onCancel={() => {
           void executeSaveReservation(false)
         }}
+      />
+      <SplitPromoAlertDialog
+        open={splitPromoAlertOpen}
+        onOpenChange={setSplitPromoAlertOpen}
+        onConfirm={() => {
+          if (pendingSplitType) {
+            void executeSplitReservationClick(pendingSplitType)
+          }
+        }}
+        nested
       />
     </>
   )

@@ -17,6 +17,7 @@ import { ReservationHistoryDialog } from "@/features/reservations/reservation-hi
 import { ReservationFiltersCard } from "@/features/reservations/reservation-filters-card"
 import { exportReservations } from "@/features/reservations/reservation-export"
 import { SplitReservationDialog } from "@/features/reservations/split-reservation-dialog"
+import { SplitPartyDialog } from "@/features/reservations/split-party-dialog"
 import { getMockTicketPrintData, printReservationTicket, printSignatureTicket } from "@/services/ticket-print.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useReservationData } from "@/hooks/use-reservation-data"
@@ -85,6 +86,7 @@ export function Reservations() {
   const [cancelOpen, setCancelOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
   const [splitOpen, setSplitOpen] = useState(false)
+  const [splitPartyOpen, setSplitPartyOpen] = useState(false)
   const [alreadyPaidAlertOpen, setAlreadyPaidAlertOpen] = useState(false)
   const [checkInPromoOpen, setCheckInPromoOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -303,6 +305,18 @@ export function Reservations() {
 
   function handleSplitDialogOpenChange(open: boolean) {
     setSplitOpen(open)
+    if (!open && !editOpen) {
+      setSelectedReservation(null)
+    }
+  }
+
+  function handleOpenSplitParty(reservation: Reservation) {
+    setSelectedReservation(reservation)
+    setSplitPartyOpen(true)
+  }
+
+  function handleSplitPartyDialogOpenChange(open: boolean) {
+    setSplitPartyOpen(open)
     if (!open && !editOpen) {
       setSelectedReservation(null)
     }
@@ -842,6 +856,7 @@ export function Reservations() {
         showDate={showDate}
         showTime={showTime}
         onSplitReservation={handleOpenSplitReservation}
+        onSplitParty={handleOpenSplitParty}
         onAlreadyPaidAlert={handleOpenAlreadyPaidAlert}
         onReprintTicket={(reservation) =>
           void handlePrintReservation(reservation, {
@@ -876,6 +891,18 @@ export function Reservations() {
       <SplitReservationDialog
         open={splitOpen}
         onOpenChange={handleSplitDialogOpenChange}
+        reservation={selectedReservation}
+        connectionName={connectionName}
+        locationId={locationId}
+        username={username}
+        showDate={showDate}
+        currentShowId={showTime}
+        onSplit={handleReservationSplit}
+        nested={editOpen}
+      />
+      <SplitPartyDialog
+        open={splitPartyOpen}
+        onOpenChange={handleSplitPartyDialogOpenChange}
         reservation={selectedReservation}
         connectionName={connectionName}
         locationId={locationId}

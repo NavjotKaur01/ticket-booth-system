@@ -1,5 +1,7 @@
 import { buildReservationDayRange } from '@/lib/reservation-date-range'
 
+export type ReservationPromoOrigin = 'phone' | 'walkup' | 'web'
+
 export type GetReservationPromotionsRequest = {
   ConnectionString: string
   LocationId: string
@@ -19,6 +21,8 @@ type BuildGetReservationPromotionsRequestParams = {
   showId: string
   showDate: string
   isManager?: boolean
+  /** Exactly one channel flag is set from this origin. */
+  origin?: ReservationPromoOrigin
 }
 
 function getPromoDayOfWeek(isoDate: string) {
@@ -30,14 +34,24 @@ function getPromoDayOfWeek(isoDate: string) {
   return String(date.getDay() + 1)
 }
 
+export function mapPromoOriginFlags(origin: ReservationPromoOrigin = 'walkup') {
+  return {
+    IsPhoneIn: origin === 'phone',
+    IsWalkup: origin === 'walkup',
+    IsWeb: origin === 'web'
+  }
+}
+
 export function buildGetReservationPromotionsRequest({
   connectionName,
   locationId,
   showId,
   showDate,
-  isManager = false
+  isManager = false,
+  origin = 'walkup'
 }: BuildGetReservationPromotionsRequestParams): GetReservationPromotionsRequest {
   const { startDate, endDate } = buildReservationDayRange(showDate)
+  const channelFlags = mapPromoOriginFlags(origin)
 
   return {
     ConnectionString: connectionName,
@@ -46,9 +60,7 @@ export function buildGetReservationPromotionsRequest({
     PromoStartDate: startDate,
     PromoEmdDate: endDate,
     IsManager: isManager,
-    IsPhoneIn: true,
-    IsWalkup: true,
-    IsWeb: false,
+    ...channelFlags,
     Day: getPromoDayOfWeek(showDate)
   }
 }

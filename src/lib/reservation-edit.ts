@@ -10,12 +10,19 @@ import type { ReservationPromoOption } from '@/types/reservation-promo'
 const GATEWAY_TEST_ERROR_PATTERN =
   /test gateways are working|activate production gateways/i
 
-export function formatReservationPaymentError (message: string) {
-  if (!GATEWAY_TEST_ERROR_PATTERN.test(message)) {
-    return message
+const CREDIT_CARD_PAYMENT_FAILED_PATTERN =
+  /invalid account number|invalid expiration|expiration date|cvv|csc|declined|failed avs|avs (check )?fail|acct value|check credit card/i
+
+export function formatReservationPaymentError(message: string) {
+  if (GATEWAY_TEST_ERROR_PATTERN.test(message)) {
+    return `${message} Credit card charges require production payment gateways to be enabled for this location. On the test API, use Cash to complete reservation updates with a balance due.`
   }
 
-  return `${message} Credit card charges require production payment gateways to be enabled for this location. On the test API, use Cash to complete reservation updates with a balance due.`
+  if (CREDIT_CARD_PAYMENT_FAILED_PATTERN.test(message)) {
+    return 'Credit card payment failed.'
+  }
+
+  return message
 }
 
 type ReservationChangeSnapshot = {
@@ -27,8 +34,8 @@ type ReservationChangeSnapshot = {
   origParty: number
   promoId: string
   origPromoId: string
-  origin: 'phone' | 'walkup'
-  origOrigin: 'phone' | 'walkup'
+  origin: 'phone' | 'walkup' | 'web'
+  origOrigin: 'phone' | 'walkup' | 'web'
   passes: number
   origPasses: number
   dinner: boolean
@@ -39,7 +46,7 @@ type ReservationChangeSnapshot = {
 }
 
 /** Mirrors desktop ReservationVM.IsReservationChange(). */
-export function isReservationChanged ({
+export function isReservationChanged({
   showId,
   origShowId,
   sectionId,
@@ -91,17 +98,16 @@ export function isReservationChanged ({
   return false
 }
 
-export function mapReservationSourceToOrigin (
+export function mapReservationSourceToOrigin(
   source: Reservation['source']
 ): 'phone' | 'walkup' {
   if (source === 'Walkup') {
     return 'walkup'
   }
-
   return 'phone'
 }
 
-export function findReservationSection (
+export function findReservationSection(
   sections: ReservationSectionOption[],
   sectionLabel: string
 ) {
@@ -124,7 +130,7 @@ export function findReservationSection (
   })
 }
 
-export function findReservationPromoId (
+export function findReservationPromoId(
   promoOptions: ReservationPromoOption[],
   promoLabel: string
 ) {
@@ -143,7 +149,7 @@ export function findReservationPromoId (
   return match?.value ?? 'none'
 }
 
-export function buildReservationEditSearchCriteria (reservation: Reservation) {
+export function buildReservationEditSearchCriteria(reservation: Reservation) {
   const phone = parsePhoneSearchParts(reservation.phoneNo)
 
   if (reservation.businessName.trim()) {
@@ -175,7 +181,7 @@ export function buildReservationEditSearchCriteria (reservation: Reservation) {
   }
 }
 
-export function resolveReservationEditCustomerId (
+export function resolveReservationEditCustomerId(
   detail: ReservationDetail | undefined,
   results: ReservationCustomerSearchResult[]
 ) {

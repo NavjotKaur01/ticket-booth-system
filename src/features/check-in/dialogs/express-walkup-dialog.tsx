@@ -190,6 +190,11 @@ export function ExpressWalkupDialog({
   const suppressNextParentCloseRef = useRef(false)
 
   const selectedShowTimeId = formValues?.showTimeId || showTimeId
+  
+  const selectedShow = useMemo(
+    () => shows.find((show) => show.id === selectedShowTimeId) ?? shows[0],
+    [shows, selectedShowTimeId]
+  )
 
   const {
     sections,
@@ -202,14 +207,11 @@ export function ExpressWalkupDialog({
     showDate,
     showId: selectedShowTimeId,
     enabled: open && Boolean(connectionName && locationId && selectedShowTimeId),
+    origin: 'walkup',
+    isManager: selectedShow?.noPasses === 'Y'
   })
 
   const promos = useMemo(() => Array.from(promoById.values()), [promoById])
-
-  const selectedShow = useMemo(
-    () => shows.find((show) => show.id === selectedShowTimeId) ?? shows[0],
-    [selectedShowTimeId, shows]
-  )
 
   const comicId = selectedShow?.comicId ?? ""
   const canLoadComic = isUsableComicId(comicId)
