@@ -51,7 +51,8 @@ export function useReservationTransactions({
         amount: payment.Amount ?? 0,
         authorization: payment.Auth ?? '',
         pnref: payment.PNREF ?? '',
-        isSplit: payment.Split?.trim().toUpperCase() === 'Y',
+        // API Split flag: "X" = split payment → display Y; null/empty → N
+        isSplit: payment.Split?.trim().toUpperCase() === 'X',
         dueAmt: payment?.dueAmt ?? 0,
         billAddr: payment.BillAddr ?? '',
         billZip: payment.BillZip ?? '',

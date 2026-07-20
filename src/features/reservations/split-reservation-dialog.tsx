@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 import type { ReservationPaymentType } from '@/data/reservation-payment-options'
 import { ReservationPaymentPanel } from '@/features/reservations/reservation-payment-panel'
 import { SplitReservationTicketPicker } from '@/features/reservations/split-reservation-ticket-picker'
@@ -135,6 +136,7 @@ export function SplitReservationDialog({
   const [multiplePromosOpen, setMultiplePromosOpen] = useState(false)
   const [paymentDue, setPaymentDue] = useState(0)
   const [paymentAmountInput, setPaymentAmountInput] = useState('')
+  const [notes, setNotes] = useState('')
   const [saveSplitReservation] = useSaveSplitReservationMutation()
 
   const showId = detail?.ShowId?.trim() || currentShowId
@@ -260,8 +262,28 @@ export function SplitReservationDialog({
       setPaymentAmountInput('')
       setSplitSelectedPromo('none')
       setSplitMultiplePromos([])
+      setNotes('')
     }
   }, [open])
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+    const existingNote =
+      detail?.Memo?.trim() ||
+      detail?.ReservationNotes?.trim() ||
+      detail?.Note?.trim() ||
+      reservation?.notes?.trim() ||
+      ''
+    setNotes(existingNote)
+  }, [
+    open,
+    detail?.Memo,
+    detail?.ReservationNotes,
+    detail?.Note,
+    reservation?.notes,
+  ])
 
   useEffect(() => {
     if (!isSplitFlag) {
@@ -366,7 +388,8 @@ export function SplitReservationDialog({
           paymentAmount: inputAmount,
           promoId: splitSelectedPromo !== 'none' ? splitSelectedPromo : undefined,
           taxRate: impliedTaxRate,
-          detail
+          detail,
+          reservationNote: notes.trim()
         })
       ).unwrap()
 
@@ -553,6 +576,15 @@ export function SplitReservationDialog({
                   }}
                   showAuthFields
                   validationErrors={paymentValidationErrors}
+                />
+              </SectionCard>
+
+              <SectionCard title='Notes / Request'>
+                <Textarea
+                  value={notes}
+                  onChange={event => setNotes(event.target.value)}
+                  placeholder='Enter notes or special requests...'
+                  className='min-h-20 w-full resize-y text-sm shadow-xs'
                 />
               </SectionCard>
 

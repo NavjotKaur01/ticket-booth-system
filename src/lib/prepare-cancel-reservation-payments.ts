@@ -32,7 +32,8 @@ export function prepareCancelReservationPayments(
       amount: payment.Amount ?? 0,
       auth: normalizeText(payment.Auth),
       pnref: normalizeText(payment.PNREF),
-      split: normalizeText(payment.Split),
+      // API Split flag: "X" → Y; null/empty → N
+      split: payment.Split?.trim().toUpperCase() === 'X' ? 'Y' : 'N',
       paymentStatusCode: normalizeText(payment.PaymentStatusCode),
       canSelect: allowSelection
     }))

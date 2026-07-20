@@ -293,7 +293,8 @@ export function buildSplitReservationRequest({
   paymentAmount,
   promoId,
   taxRate,
-  detail
+  detail,
+  reservationNote
 }: {
   connectionName: string
   locationId: string
@@ -309,6 +310,8 @@ export function buildSplitReservationRequest({
   promoId?: string
   taxRate: number
   detail?: ReservationDetail | null
+  /** Optional override; defaults to detail.Memo. */
+  reservationNote?: string
 }): SaveSplitReservationRequestModel {
   if (!detail) {
     throw new Error('Reservation detail is missing')
@@ -345,7 +348,7 @@ export function buildSplitReservationRequest({
     ReservationStatus: detail.ResStatus ?? '',
     IsDinner: detail.Dinner?.toUpperCase() === 'Y',
     IsVIP: false,
-    ReservationNote: detail.Memo ?? '',
+    ReservationNote: reservationNote ?? detail.Memo ?? '',
     Action: 'CMDSaveSplitPayment',
     ActionForm: 'fromReservation',
     IsReservationCheckedIn: (detail.CheckedIn ?? 0) > 0,
