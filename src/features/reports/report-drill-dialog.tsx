@@ -171,65 +171,71 @@ export function ReportDrillDialog({
         )}
 
         {!isLoading && !error && rows && (
-          <div ref={tableRef} className={REPORT_DRILL_BODY_CLASS}>
-            <ReportTable>
-              <thead className="sticky top-0 z-10">
-                <tr>
-                  {columns.map((col) => (
-                    <ReportTh key={col.key} right={col.right}>
-                      {col.label}
-                    </ReportTh>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 ? (
+          <div ref={tableRef} className={`${REPORT_DRILL_BODY_CLASS} flex overflow-hidden p-0`}>
+            <div className="mx-1 my-1 min-h-0 flex-1 overflow-auto">
+              <ReportTable className="min-w-max border-separate border-spacing-0">
+                <thead>
                   <tr>
-                    <ReportTd colSpan={columns.length} center className="py-6 text-muted-foreground">
-                      No records found
-                    </ReportTd>
+                    {columns.map((col) => (
+                      <ReportTh
+                        key={col.key}
+                        right={col.right}
+                        className="sticky top-0 z-20 bg-muted"
+                      >
+                        {col.label}
+                      </ReportTh>
+                    ))}
                   </tr>
-                ) : (
-                  rows.map((row, i) => (
-                    <tr key={i} className={reportRowClass(i)}>
-                      {columns.map((col) => (
-                        <ReportTd key={col.key} right={col.right}>
-                          {fmtCell(col, cellValue(row, col))}
-                        </ReportTd>
-                      ))}
+                </thead>
+                <tbody>
+                  {rows.length === 0 ? (
+                    <tr>
+                      <ReportTd colSpan={columns.length} center className="py-6 text-muted-foreground">
+                        No records found
+                      </ReportTd>
                     </tr>
-                  ))
-                )}
-              </tbody>
-              {footerTotals && rows.length > 0 ? (
-                <tfoot>
-                  <tr className="bg-muted/30 font-bold">
-                    {columns.map((col, index) => {
-                      const isNumeric =
-                        col.format === "number" ||
-                        col.format === "currency" ||
-                        col.format === "decimal" ||
-                        Boolean(col.right)
-                      if (index === 0) {
+                  ) : (
+                    rows.map((row, i) => (
+                      <tr key={i} className={reportRowClass(i)}>
+                        {columns.map((col) => (
+                          <ReportTd key={col.key} right={col.right}>
+                            {fmtCell(col, cellValue(row, col))}
+                          </ReportTd>
+                        ))}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                {footerTotals && rows.length > 0 ? (
+                  <tfoot>
+                    <tr className="bg-muted/30 font-bold">
+                      {columns.map((col, index) => {
+                        const isNumeric =
+                          col.format === "number" ||
+                          col.format === "currency" ||
+                          col.format === "decimal" ||
+                          Boolean(col.right)
+                        if (index === 0) {
+                          return (
+                            <ReportTd key={col.key} bold>
+                              Total:
+                            </ReportTd>
+                          )
+                        }
+                        if (!isNumeric) {
+                          return <ReportTd key={col.key} />
+                        }
                         return (
-                          <ReportTd key={col.key} bold>
-                            Total:
+                          <ReportTd key={col.key} right bold>
+                            {fmtCell(col, sumColumn(rows, col))}
                           </ReportTd>
                         )
-                      }
-                      if (!isNumeric) {
-                        return <ReportTd key={col.key} />
-                      }
-                      return (
-                        <ReportTd key={col.key} right bold>
-                          {fmtCell(col, sumColumn(rows, col))}
-                        </ReportTd>
-                      )
-                    })}
-                  </tr>
-                </tfoot>
-              ) : null}
-            </ReportTable>
+                      })}
+                    </tr>
+                  </tfoot>
+                ) : null}
+              </ReportTable>
+            </div>
           </div>
         )}
       </DialogContent>
