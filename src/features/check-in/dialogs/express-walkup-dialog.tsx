@@ -50,6 +50,7 @@ import { cn } from "@/lib/utils"
 import {
   useDeleteComedianImageMutation,
   useGetComedianInfoQuery,
+  useGetShowDataQuery,
   useUpdateComedianImageMutation,
   useUpdateComedianMutation,
 } from "@/store/api/clubmanApi"
@@ -130,6 +131,7 @@ export type ExpressWalkupContinuePayload = {
   passes: number
   promo: ReservationPromo | null
   dinner: boolean
+  isVip: boolean
   paymentType: "cash" | "credit-card"
   paymentAmount: number
 }
@@ -196,6 +198,15 @@ export function ExpressWalkupDialog({
     [shows, selectedShowTimeId]
   )
 
+  const { data: showDataPayload } = useGetShowDataQuery(
+    { connectionName, showId: selectedShowTimeId },
+    {
+      skip:
+        !open || !connectionName || !selectedShowTimeId,
+    }
+  )
+  const showDataReady = showDataPayload != null
+
   const {
     sections,
     sectionsLoading,
@@ -206,9 +217,13 @@ export function ExpressWalkupDialog({
     locationId,
     showDate,
     showId: selectedShowTimeId,
-    enabled: open && Boolean(connectionName && locationId && selectedShowTimeId),
+    enabled:
+      open &&
+      Boolean(connectionName && locationId && selectedShowTimeId) &&
+      showDataReady,
     origin: 'walkup',
-    isManager: selectedShow?.noPasses === 'Y'
+    // Desktop: NoPasses == "Y" → IsManager on GetPromotions
+    isManager: showDataPayload?.[0]?.NoPasses === 'Y',
   })
 
   const promos = useMemo(() => Array.from(promoById.values()), [promoById])
@@ -450,6 +465,8 @@ export function ExpressWalkupDialog({
     }
   }
 
+  const isShowVip = showDataPayload?.[0]?.VIP === 'Y'
+
   async function completeQuickPay() {
     const booking = buildBookingPayload()
     if (!booking) {
@@ -472,6 +489,7 @@ export function ExpressWalkupDialog({
         passes: booking.passes,
         promo: booking.promo,
         dinner: booking.dinner,
+        isVip: isShowVip,
         paymentType: "credit-card",
         paymentAmount: booking.paymentDue,
       })

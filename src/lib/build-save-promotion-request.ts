@@ -60,6 +60,10 @@ export function buildSavePromotionRequest({
   const isDollarOff = isAmount && form.amountDiscountKind === "dollar"
   const isPercOff = isAmount && form.amountDiscountKind === "percentage"
   const isLimitDollar = form.limitPerPassType === "dollar"
+  const isBuyFreeTickets =
+    isFreeTickets && form.freeTicketsKind === "buy"
+  const isSpecialFreeTickets =
+    isFreeTickets && form.freeTicketsKind === "special-promotion"
 
   const request: SavePromotionRequest = {
     Connection: connectionName,
@@ -92,8 +96,8 @@ export function buildSavePromotionRequest({
     IsOverrideCCFee: form.overrideCcFee === "yes",
     IsDiscountAmountDoller: isDollarOff,
     IsDiscountAmountPercentage: isPercOff,
-    IsBuy: isFreeTickets,
-    IsSpecialPromotion: false,
+    IsBuy: isBuyFreeTickets,
+    IsSpecialPromotion: isSpecialFreeTickets,
   }
 
   if (isDollarOff) {
@@ -102,9 +106,13 @@ export function buildSavePromotionRequest({
   if (isPercOff) {
     request.PercOff = parseOptionalNumber(form.percOff)
   }
-  if (isFreeTickets) {
+  if (isBuyFreeTickets) {
     request.BuyTix = parseOptionalNumber(form.buyTix)
     request.BuyTixFree = parseOptionalNumber(form.buyTixFree) ?? 0
+  }
+  if (isSpecialFreeTickets) {
+    // Desktop: SpecialReq only — not used in discount calc; no BuyTix/BuyTixFree.
+    request.SpecialReq = form.specialReq.trim().slice(0, 100) || null
   }
   if (isSetPrice) {
     request.Price = parseOptionalNumber(form.setPrice) ?? 0

@@ -32,7 +32,7 @@ type ApiRow = Record<string, unknown>
 
 const WEB_COUNT_DRILL_COLUMNS: DrillColumn[] = [
   { key: "ShowDate", label: "ShowDate", format: "datetime", keys: ["ShowDate", "showDate"] },
-  { key: "ShowTm", label: "ShowTm", keys: ["ShowTm", "ShowTime", "showTm"] },
+  { key: "ShowTm", label: "ShowTm", format: "time", keys: ["ShowTm", "ShowTime", "showTm"] },
   { key: "ComicName", label: "ComicName", keys: ["ComicName", "comicName"] },
   { key: "LastName", label: "LastName", keys: ["LastName", "lastName"] },
   { key: "FirstName", label: "FirstName", keys: ["FirstName", "firstName"] },

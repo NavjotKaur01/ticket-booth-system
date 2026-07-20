@@ -96,9 +96,8 @@ function renderShowBlock(show: SaleByShowShow): string {
 }
 
 function renderDateGroup(group: SaleByShowDateGroup): string {
-  const locSuffix = group.locName ? ` — ${escapeHtml(group.locName)}` : ""
   return `<div class="date-block">
-    <div class="date-header">Sales Show for : ${escapeHtml(group.showDate)}${locSuffix}</div>
+    <div class="date-header">Sales Show for : ${escapeHtml(group.showDate)}</div>
     <div class="subheader">Number of Items</div>
     ${group.shows.map(renderShowBlock).join("")}
   </div>`
@@ -192,10 +191,7 @@ function appendShowToSheet(sheetRows: (string | number)[][], show: SaleByShowSho
 
 function appendDateGroup(sheetRows: (string | number)[][], group: SaleByShowDateGroup) {
   sheetRows.push([])
-  const header = group.locName
-    ? `Sales Show for : ${group.showDate} — ${group.locName}`
-    : `Sales Show for : ${group.showDate}`
-  sheetRows.push([header])
+  sheetRows.push([`Sales Show for : ${group.showDate}`])
   sheetRows.push(["Number of Items"])
   for (const show of group.shows) {
     appendShowToSheet(sheetRows, show)

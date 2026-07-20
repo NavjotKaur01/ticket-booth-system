@@ -148,6 +148,7 @@ export function ReportViewerResults({
         rawData={result.rawData}
         subtitle={result.subtitle}
         generatedAt={result.generatedAt}
+        drillContext={result.drillContext}
       />
     )
   }

@@ -26,6 +26,8 @@ type SaveExpressWalkupParams = {
   paymentAmount: number
   cardType?: string
   dinner?: boolean
+  /** Show-level VIP flag (GetShowData.VIP === "Y"). */
+  isVip?: boolean
   notes?: string
   checkInAfterSave?: boolean
   showDate?: string
@@ -47,6 +49,7 @@ export async function saveExpressWalkupReservation({
   paymentAmount,
   cardType,
   dinner = false,
+  isVip = false,
   notes = "",
   checkInAfterSave = false,
   showDate,
@@ -103,6 +106,7 @@ export async function saveExpressWalkupReservation({
     totals,
     notes,
     dinner,
+    isVip,
     isReservationCheckedIn: checkInAfterSave,
     // Desktop SaveSalesTransaction / SavePOSTypePayment: PaymentAmount = Total.
     paymentAmount: totals.total,
