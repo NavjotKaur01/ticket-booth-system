@@ -13,7 +13,7 @@ export function adminUserToFormValues(user: AdminUser): AdminUserFormValues {
     userName: user.userName,
     password,
     confirmPassword: password,
-    // Form stores LookUpCode (e.g. SEC01) — same as desktop Security.LookUpCode.
+    // Always keep assigned LookUpCode (locked roles stay SEC01 on save).
     security: normalizeUserRight(user.userRight),
     status: user.status.toLowerCase(),
   }

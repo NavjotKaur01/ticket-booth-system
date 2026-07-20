@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { FormField } from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,7 @@ import {
 } from "@/lib/admin-user-form"
 import { updateSystemUser } from "@/lib/api/system-users"
 import { buildUpdateSystemUserRequest } from "@/lib/build-update-system-user-request"
+import { isSecurityLevelLocked } from "@/lib/security-lookup"
 import {
   EMPTY_ADMIN_USER_FORM,
   type AdminUser,
@@ -57,10 +58,14 @@ export function EditUserDialog({
   const { options: securityOptions, isLoading: securityLoading } =
     useSecurityLevelOptions({
       skip: !open,
-      assigned: user
-        ? { id: user.userRight, label: user.security }
-        : null,
     })
+
+  const securityLocked = useMemo(() => {
+    if (!user || securityLoading) {
+      return false
+    }
+    return isSecurityLevelLocked(user.userRight, securityOptions)
+  }, [user, securityLoading, securityOptions])
 
   useEffect(() => {
     if (!open || !user) {
@@ -79,6 +84,9 @@ export function EditUserDialog({
     field: K,
     value: AdminUserFormValues[K]
   ) {
+    if (field === "security" && securityLocked) {
+      return
+    }
     setForm((current) => ({ ...current, [field]: value }))
   }
 
@@ -229,27 +237,37 @@ export function EditUserDialog({
               />
             </FormField>
 
-            <FormField label="Security">
-              <Select
-                value={form.security || undefined}
-                onValueChange={(value) => updateField("security", value)}
-                disabled={securityLoading || securityOptions.length === 0}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue
-                    placeholder={
-                      securityLoading ? "Loading..." : "Security Level"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {securityOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <FormField label="Security" htmlFor="edit-user-security">
+              {securityLocked ? (
+                <Input
+                  id="edit-user-security"
+                  value={user?.security || form.security}
+                  readOnly
+                  disabled
+                  className="bg-muted"
+                />
+              ) : (
+                <Select
+                  value={form.security || undefined}
+                  onValueChange={(value) => updateField("security", value)}
+                  disabled={securityLoading || securityOptions.length === 0}
+                >
+                  <SelectTrigger id="edit-user-security" className="w-full">
+                    <SelectValue
+                      placeholder={
+                        securityLoading ? "Loading..." : "Security Level"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {securityOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </FormField>
 
             <FormField label="Status">

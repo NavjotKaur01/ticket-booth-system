@@ -2,20 +2,20 @@ import { useMemo } from "react"
 
 import { useAppSession } from "@/hooks/use-app-session"
 import {
-  ensureSecurityOption,
   filterSecurityLookupOptions,
   type SecurityLevelOption,
 } from "@/lib/security-lookup"
 import { useGetSystemLookupQuery } from "@/store/api/clubmanApi"
 
 type UseSecurityLevelOptionsParams = {
-  /** When editing, keep the assigned right visible even if not assignable. */
-  assigned?: { id: string; label: string } | null
   skip?: boolean
 }
 
+/**
+ * Same SECURITY list for Add and Edit (desktop UserVM.GetLookupList).
+ * Managers never see SEC01 — including when editing an Administrator.
+ */
 export function useSecurityLevelOptions({
-  assigned,
   skip = false,
 }: UseSecurityLevelOptionsParams = {}): {
   options: SecurityLevelOption[]
@@ -30,13 +30,14 @@ export function useSecurityLevelOptions({
     }
   )
 
-  const options = useMemo(() => {
-    const filtered = filterSecurityLookupOptions(lookups, {
-      locationId,
-      currentUserRight: userRight,
-    })
-    return ensureSecurityOption(filtered, assigned)
-  }, [lookups, locationId, userRight, assigned])
+  const options = useMemo(
+    () =>
+      filterSecurityLookupOptions(lookups, {
+        locationId,
+        currentUserRight: userRight,
+      }),
+    [lookups, locationId, userRight]
+  )
 
   return { options, isLoading }
 }

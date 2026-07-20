@@ -58,22 +58,18 @@ export function filterSecurityLookupOptions(
     .sort((left, right) => left.label.localeCompare(right.label))
 }
 
-/** Keep an assigned right visible on Edit when it was filtered out of the assignable list. */
-export function ensureSecurityOption(
-  options: SecurityLevelOption[],
-  assigned: { id: string; label: string } | null | undefined
-): SecurityLevelOption[] {
-  const id = normalizeUserRight(assigned?.id)
-  if (!id) {
-    return options
+/**
+ * True when the user's assigned right is not in the assignable SECURITY list
+ * (e.g. Manager editing an Administrator). UI shows read-only; value is preserved on save.
+ */
+export function isSecurityLevelLocked(
+  assignedRight: string | null | undefined,
+  options: SecurityLevelOption[]
+): boolean {
+  const right = normalizeUserRight(assignedRight)
+  if (!right) {
+    return false
   }
 
-  if (options.some((option) => normalizeUserRight(option.id) === id)) {
-    return options
-  }
-
-  const label = assigned?.label?.trim() || id
-  return [...options, { id, label }].sort((left, right) =>
-    left.label.localeCompare(right.label)
-  )
+  return !options.some((option) => normalizeUserRight(option.id) === right)
 }
