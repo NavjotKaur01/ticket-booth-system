@@ -473,6 +473,44 @@ export function CheckIn() {
     })
   }
 
+  /** Draft updates for search fields. Emptying all fields auto-resets the table filter. */
+  function updateSearchField(
+    field: "lastName" | "firstName" | "ccLast4" | "tableNo" | "phoneNo",
+    value: string
+  ) {
+    const next = {
+      lastName,
+      firstName,
+      ccLast4,
+      tableNo,
+      phoneNo,
+      [field]: value,
+    }
+
+    if (field === "lastName") setLastName(value)
+    else if (field === "firstName") setFirstName(value)
+    else if (field === "ccLast4") setCcLast4(value)
+    else if (field === "tableNo") setTableNo(value)
+    else setPhoneNo(value)
+
+    const allEmpty =
+      !next.lastName.trim() &&
+      !next.firstName.trim() &&
+      !next.ccLast4.trim() &&
+      !next.tableNo.trim() &&
+      !next.phoneNo.trim()
+
+    if (allEmpty) {
+      setAppliedSearch({
+        lastName: "",
+        firstName: "",
+        ccLast4: "",
+        tableNo: "",
+        phoneNo: "",
+      })
+    }
+  }
+
   async function handleRefresh() {
     await Promise.all([
       refreshReservations(),
@@ -1578,15 +1616,15 @@ export function CheckIn() {
       <PanelCard>
         <CheckInSearchCriteria
           lastName={lastName}
-          onLastNameChange={setLastName}
+          onLastNameChange={(value) => updateSearchField("lastName", value)}
           firstName={firstName}
-          onFirstNameChange={setFirstName}
+          onFirstNameChange={(value) => updateSearchField("firstName", value)}
           ccLast4={ccLast4}
-          onCcLast4Change={setCcLast4}
+          onCcLast4Change={(value) => updateSearchField("ccLast4", value)}
           tableNo={tableNo}
-          onTableNoChange={setTableNo}
+          onTableNoChange={(value) => updateSearchField("tableNo", value)}
           phoneNo={phoneNo}
-          onPhoneNoChange={setPhoneNo}
+          onPhoneNoChange={(value) => updateSearchField("phoneNo", value)}
           onSearch={applySearch}
           onClear={clearSearch}
         />
