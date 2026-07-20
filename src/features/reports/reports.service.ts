@@ -1071,7 +1071,8 @@ function transformSalesByShow(
   reportType: string,
   title: string,
   subtitle: string,
-  generatedAt: string
+  generatedAt: string,
+  drillContext?: ReportDrillContext
 ): ReportViewerResult {
   return {
     reportType,
@@ -1082,6 +1083,7 @@ function transformSalesByShow(
     emptyMessage: toRows(data).length === 0 ? "No records found" : "",
     generatedAt,
     rawData: data,
+    drillContext,
   }
 }
 
@@ -1673,7 +1675,12 @@ export function transformReportApiResponse({
     case "sales-by-day":
       return transformSalesByDay(data, reportType, config.title, subtitle, generatedAt)
     case "sales-by-show":
-      return transformSalesByShow(data, reportType, config.title, subtitle, generatedAt)
+      return transformSalesByShow(data, reportType, config.title, subtitle, generatedAt, {
+        connectionName,
+        startDate: filters.dateFrom,
+        endDate: filters.dateTo,
+        locationId: filters.locationId,
+      })
     case "manager-checkout":
       return transformManagerCheckout(data, reportType, config.title, subtitle, generatedAt, {
         connectionName,

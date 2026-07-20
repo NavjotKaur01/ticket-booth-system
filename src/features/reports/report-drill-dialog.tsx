@@ -11,7 +11,6 @@ import {
 import {
   REPORT_DRILL_BODY_CLASS,
   REPORT_DRILL_DIALOG_CLASS,
-  REPORT_DRILL_FOOTER_CLASS,
   REPORT_DRILL_HEADER_CLASS,
   ReportTable,
   ReportTd,
@@ -24,7 +23,7 @@ export type DrillColumn = {
   key: string
   label: string
   right?: boolean
-  format?: "text" | "number" | "currency" | "datetime" | "date" | "decimal"
+  format?: "text" | "number" | "currency" | "datetime" | "date" | "time" | "decimal"
   keys?: string[]
 }
 
@@ -63,6 +62,30 @@ function fmtCell(col: DrillColumn, v: unknown): string {
   if (col.format === "date") {
     const d = dayjs(String(v))
     return d.isValid() ? d.format("M/D/YYYY") : String(v)
+  }
+
+  if (col.format === "time") {
+    const str = String(v).trim()
+    // Already US-style (e.g. "7:35PM" / "7:35 PM")
+    if (/^\d{1,2}:\d{2}\s?(AM|PM)$/i.test(str)) {
+      const match = str.match(/^(\d{1,2}:\d{2})\s?(AM|PM)$/i)
+      return match ? `${match[1]} ${match[2].toUpperCase()}` : str
+    }
+    // 24-hour time-only from API (e.g. "19:00:00" / "19:00")
+    const timeOnly = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/)
+    if (timeOnly) {
+      const hours = Number(timeOnly[1])
+      const minutes = Number(timeOnly[2])
+      if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+        const parsed = dayjs().hour(hours).minute(minutes).second(0)
+        return parsed.format("h:mm A")
+      }
+    }
+    const d = dayjs(str)
+    if (d.isValid() && d.year() > 1) {
+      return d.format("h:mm A")
+    }
+    return str || "—"
   }
 
   if (col.format === "currency" || (col.right && col.format !== "number" && col.format !== "decimal")) {
@@ -178,22 +201,37 @@ export function ReportDrillDialog({
                   ))
                 )}
               </tbody>
+              {footerTotals && rows.length > 0 ? (
+                <tfoot>
+                  <tr className="bg-muted/30 font-bold">
+                    {columns.map((col, index) => {
+                      const isNumeric =
+                        col.format === "number" ||
+                        col.format === "currency" ||
+                        col.format === "decimal" ||
+                        Boolean(col.right)
+                      if (index === 0) {
+                        return (
+                          <ReportTd key={col.key} bold>
+                            Total:
+                          </ReportTd>
+                        )
+                      }
+                      if (!isNumeric) {
+                        return <ReportTd key={col.key} />
+                      }
+                      return (
+                        <ReportTd key={col.key} right bold>
+                          {fmtCell(col, sumColumn(rows, col))}
+                        </ReportTd>
+                      )
+                    })}
+                  </tr>
+                </tfoot>
+              ) : null}
             </ReportTable>
           </div>
         )}
-
-        {!isLoading && rows && (() => {
-          const firstRightIdx = columns.findIndex((c) => c.right)
-          return (
-            <div className={REPORT_DRILL_FOOTER_CLASS}>
-              {footerTotals && firstRightIdx !== -1 && (
-                <div className="font-bold text-foreground text-sm">
-                  Total: {fmtCell(columns[firstRightIdx], sumColumn(rows, columns[firstRightIdx]))}
-                </div>
-              )}
-            </div>
-          )
-        })()}
       </DialogContent>
     </Dialog>
   )

@@ -10,6 +10,9 @@ export type DiscountType =
 
 export type AmountDiscountKind = "dollar" | "percentage"
 
+/** Free Tickets sub-mode — Buy X Get Y Free vs Special Promotion (Admit N). */
+export type FreeTicketsKind = "buy" | "special-promotion" | ""
+
 export type PromotionFormValues = {
   promotionName: string
   promotionCode: string
@@ -31,8 +34,11 @@ export type PromotionFormValues = {
   amountDiscountKind: AmountDiscountKind
   dollarOff: string
   percOff: string
+  freeTicketsKind: FreeTicketsKind
   buyTix: string
   buyTixFree: string
+  /** Special Promotion label (SpecialReq) — display/reference only; max 100 chars. */
+  specialReq: string
   setPrice: string
   minimumTickets: string
   limitPerPassType: LimitPerPassType
@@ -78,8 +84,10 @@ export const EMPTY_PROMOTION_FORM: PromotionFormValues = {
   amountDiscountKind: "dollar",
   dollarOff: "",
   percOff: "",
+  freeTicketsKind: "",
   buyTix: "",
   buyTixFree: "",
+  specialReq: "",
   setPrice: "",
   minimumTickets: "",
   limitPerPassType: "dollar",

@@ -38,6 +38,8 @@ type BuildReservationRequestParams = {
   totals: ReservationTotals
   notes: string
   dinner: boolean
+  /** Show-level VIP flag (GetShowData.VIP === "Y"). */
+  isVip?: boolean
   isReservationCheckedIn?: boolean
 }
 
@@ -196,6 +198,7 @@ function buildReservationCore({
   totals,
   notes,
   dinner,
+  isVip,
   isReservationCheckedIn
 }: BuildReservationRequestParams): SaveReservationRequest {
   const originCode = getReservationOriginLookupCode(origin)
@@ -229,7 +232,8 @@ function buildReservationCore({
     Total: roundMoney(totals.total),
     ReservationStatus: RESERVATION_STATUS_ACTIVE,
     IsDinner: dinner,
-    IsVIP: selectedSection.tone === 'vip',
+    // Show VIP flag (Add Show VIP Seating) — also keep section-name VIP heuristic.
+    IsVIP: Boolean(isVip) || selectedSection.tone === 'vip',
     LastUpdateDt: formatApiDateTime(new Date().toISOString()),
     LastUpdateId: lastUpdateId,
     ReservationNote: notes.trim(),

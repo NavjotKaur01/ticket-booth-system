@@ -50,8 +50,10 @@ function mapDiscountType(
   | "amountDiscountKind"
   | "dollarOff"
   | "percOff"
+  | "freeTicketsKind"
   | "buyTix"
   | "buyTixFree"
+  | "specialReq"
   | "setPrice"
 > {
   const code = normalizeText(discountType).toUpperCase()
@@ -60,15 +62,33 @@ function mapDiscountType(
   const hasBuy =
     item.BuyTix != null || item.BuyTixFree != null
   const hasSetPrice = item.Price != null
+  const specialReq = normalizeText(item.SpecialReq)
+  const isSpecialFreeTickets = Boolean(specialReq)
 
-  if (code === "PROMO02" || (!code && hasBuy)) {
+  if (code === "PROMO02" || (!code && (hasBuy || isSpecialFreeTickets))) {
+    if (isSpecialFreeTickets) {
+      return {
+        discountType: "free-tickets",
+        amountDiscountKind: "dollar",
+        dollarOff: "",
+        percOff: "",
+        freeTicketsKind: "special-promotion",
+        buyTix: "",
+        buyTixFree: "",
+        specialReq: specialReq.slice(0, 100),
+        setPrice: "",
+      }
+    }
+
     return {
       discountType: "free-tickets",
       amountDiscountKind: "dollar",
       dollarOff: "",
       percOff: "",
+      freeTicketsKind: "buy",
       buyTix: toNumberString(item.BuyTix),
       buyTixFree: toNumberString(item.BuyTixFree),
+      specialReq: "",
       setPrice: "",
     }
   }
@@ -79,8 +99,10 @@ function mapDiscountType(
       amountDiscountKind: "dollar",
       dollarOff: "",
       percOff: "",
+      freeTicketsKind: "",
       buyTix: "",
       buyTixFree: "",
+      specialReq: "",
       setPrice: toMoneyString(item.Price),
     }
   }
@@ -90,8 +112,10 @@ function mapDiscountType(
     amountDiscountKind: hasPercOff && !hasDollarOff ? "percentage" : "dollar",
     dollarOff: toMoneyString(item.DollarOff),
     percOff: toNumberString(item.PercOff),
+    freeTicketsKind: "",
     buyTix: "",
     buyTixFree: "",
+    specialReq: "",
     setPrice: "",
   }
 }

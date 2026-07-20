@@ -1408,6 +1408,11 @@ export function AddReservationDialog({
     { skip: !open || !isReady || !connectionName || !activeShowTime }
   )
 
+  // Desktop ReservationVM.GetPromotions: NoPasses == "Y" → IsManager = true
+  // Wait for GetShowData so we never fetch promos with the wrong IsManager.
+  const showDataReady = showDataPayload != null
+  const isManagerPromo = showDataPayload?.[0]?.NoPasses === 'Y'
+
   const {
     sections: availableSections,
     sectionsLoading,
@@ -1421,8 +1426,8 @@ export function AddReservationDialog({
     locationId,
     showDate,
     showId: activeShowTime,
-    enabled: open && isReady && Boolean(activeShowTime),
-    isManager: showDataPayload?.[0]?.NoPasses === 'Y',
+    enabled: open && isReady && Boolean(activeShowTime) && showDataReady,
+    isManager: isManagerPromo,
     origin: origin === 'phone' ? 'phone' : 'walkup'
   })
 
@@ -2622,6 +2627,8 @@ export function AddReservationDialog({
       totals: saveTotals,
       notes,
       dinner,
+      // Show-level VIP Seating (GetShowData.VIP === "Y") → SaveReservation IsVIP
+      isVip: showDataPayload?.[0]?.VIP === 'Y',
       isReservationCheckedIn: checkInAfterSave
     }
 
