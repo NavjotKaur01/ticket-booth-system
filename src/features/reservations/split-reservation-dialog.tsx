@@ -90,9 +90,11 @@ function SectionCard({
 
 function SummaryField({ label, value }: { label: string; value: string }) {
   return (
-    <div className='flex min-w-0 items-center gap-2 text-sm'>
-      <span className='shrink-0 font-medium text-foreground'>{label}</span>
-      <span className='truncate text-muted-foreground'>{value}</span>
+    <div className='min-w-0 space-y-0.5'>
+      <div className='text-xs text-muted-foreground'>
+        {label.replace(/:$/, '')}
+      </div>
+      <div className='truncate text-sm font-semibold text-foreground'>{value}</div>
     </div>
   )
 }
@@ -198,8 +200,6 @@ export function SplitReservationDialog({
   const party = detail?.PartyNo ?? reservation?.qty ?? 0
   const remainingTickets = Math.max(0, party - (detail?.CheckedIn ?? 0))
   const unitPrice = parseReservationMoney(matchedSection?.price ?? '0')
-  const promotionCode = detail?.Promo?.trim() ?? reservation?.promo.trim() ?? ''
-
 
   const origTotals = {
     subtotal: detail?.SubTotal ?? 0,
@@ -407,7 +407,7 @@ export function SplitReservationDialog({
         <DialogHeader className='shrink-0 flex-row items-center justify-between gap-4 border-b px-4 py-3'>
           <div className='min-w-0'>
             <DialogTitle className='text-base font-semibold text-foreground'>
-              Split Reservation
+              Split Payment
             </DialogTitle>
             {reservation ? (
               <p className='truncate text-sm text-muted-foreground'>
@@ -451,22 +451,30 @@ export function SplitReservationDialog({
               ) : null}
 
               <SectionCard title='Reservation Details'>
-                <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
-                  <SummaryField label='Origin:' value={reservation?.source ?? '—'} />
-                  <SummaryField label='Party:' value={String(party || '—')} />
-                  <SummaryField label='Promo Code:' value={promotionCode || '—'} />
-                  <SummaryField label='Passes:' value={String(detail?.NumPasses ?? 0)} />
+                <div className='grid gap-3 sm:grid-cols-3 sm:justify-items-center sm:text-center lg:grid-cols-5'>
+                  <SummaryField
+                    label='Origin'
+                    value={reservation?.source ?? '—'}
+                  />
+                  <SummaryField label='Party' value={String(party || '—')} />
+                  <SummaryField
+                    label='Checked In'
+                    value={String(detail?.CheckedIn ?? 0)}
+                  />
+                  <SummaryField
+                    label='Remaining'
+                    value={String(remainingTickets)}
+                  />
+                  <SummaryField
+                    label='Price Per Ticket'
+                    value={formatReservationMoney(unitPrice)}
+                  />
                 </div>
-                <div className='mt-3'>
+                <div className='mt-4 border-t border-border/60 pt-3'>
                   <ReservationTotalsCard
                     selectedSection={matchedSection}
                     partySize={party}
                     totals={origTotals}
-                    summaryFields={[
-                      { label: 'Checked In', value: String(detail?.CheckedIn ?? 0) },
-                      { label: 'Remaining', value: String(remainingTickets) },
-                      { label: 'Price Per Ticket', value: formatReservationMoney(unitPrice) }
-                    ]}
                   />
                 </div>
               </SectionCard>
