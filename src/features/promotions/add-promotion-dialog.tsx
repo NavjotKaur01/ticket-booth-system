@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils"
 import type { Promotion } from "@/types/promotion"
 import {
   createEmptyPromotionForm,
+  type FreeTicketsKind,
   type PromotionFormValues,
   type YesNo,
 } from "@/types/promotion-form"
@@ -360,8 +361,25 @@ export function AddPromotionDialog({
       }
     }
     if (form.discountType === "free-tickets") {
-      if (!form.buyTix.trim() || !form.buyTixFree.trim()) {
-        return "Buy and free ticket counts are required."
+      if (!form.freeTicketsKind) {
+        return "Select Buy or Special Promotion."
+      }
+      if (form.freeTicketsKind === "buy") {
+        if (!form.buyTix.trim() || !form.buyTixFree.trim()) {
+          return "Buy and free ticket counts are required."
+        }
+      }
+      if (
+        form.freeTicketsKind === "special-promotion" &&
+        !form.specialReq.trim()
+      ) {
+        return "Special promotion label is required."
+      }
+      if (
+        form.freeTicketsKind === "special-promotion" &&
+        form.specialReq.trim().length > 100
+      ) {
+        return "Special promotion label must be 100 characters or fewer."
       }
     }
     if (form.discountType === "set-price" && !form.setPrice.trim()) {
@@ -641,12 +659,19 @@ export function AddPromotionDialog({
             <div className="space-y-2">
               <Select
                 value={form.discountType}
-                onValueChange={(value) =>
-                  updateField(
-                    "discountType",
+                onValueChange={(value) => {
+                  const discountType =
                     value as PromotionFormValues["discountType"]
-                  )
-                }
+                  setForm((current) => ({
+                    ...current,
+                    discountType,
+                    // Reset free-ticket sub-mode when switching discount types
+                    freeTicketsKind:
+                      discountType === "free-tickets"
+                        ? current.freeTicketsKind
+                        : "",
+                  }))
+                }}
                 disabled={formDisabled}
               >
                 <SelectTrigger id="add-promo-discount-type" className="w-full max-w-xs">
@@ -708,41 +733,87 @@ export function AddPromotionDialog({
               ) : null}
 
               {form.discountType === "free-tickets" ? (
-                <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-                  <FormField
-                    label="Buy"
-                    htmlFor="add-promo-buy-tix"
-                    className="w-28"
+                <div className="space-y-2">
+                  <RadioGroup
+                    value={form.freeTicketsKind || undefined}
+                    onValueChange={(value) =>
+                      updateField(
+                        "freeTicketsKind",
+                        value as FreeTicketsKind
+                      )
+                    }
+                    className="flex flex-wrap items-center gap-x-4"
+                    disabled={formDisabled}
                   >
-                    <Input
-                      id="add-promo-buy-tix"
-                      type="number"
-                      min={0}
-                      value={form.buyTix}
-                      disabled={formDisabled}
-                      onChange={(event) =>
-                        updateField("buyTix", event.target.value)
-                      }
-                      className="h-9 tabular-nums"
-                    />
-                  </FormField>
-                  <FormField
-                    label="Get Free"
-                    htmlFor="add-promo-buy-tix-free"
-                    className="w-28"
-                  >
-                    <Input
-                      id="add-promo-buy-tix-free"
-                      type="number"
-                      min={0}
-                      value={form.buyTixFree}
-                      disabled={formDisabled}
-                      onChange={(event) =>
-                        updateField("buyTixFree", event.target.value)
-                      }
-                      className="h-9 tabular-nums"
-                    />
-                  </FormField>
+                    <label className="flex cursor-pointer items-center gap-2 text-xs">
+                      <RadioGroupItem value="buy" id="free-tickets-buy" />
+                      Buy
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 text-xs">
+                      <RadioGroupItem
+                        value="special-promotion"
+                        id="free-tickets-special"
+                      />
+                      Special Promotion
+                    </label>
+                  </RadioGroup>
+
+                  {form.freeTicketsKind === "buy" ? (
+                    <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+                      <FormField
+                        label="Buy"
+                        htmlFor="add-promo-buy-tix"
+                        className="w-28"
+                      >
+                        <Input
+                          id="add-promo-buy-tix"
+                          type="number"
+                          min={0}
+                          value={form.buyTix}
+                          disabled={formDisabled}
+                          onChange={(event) =>
+                            updateField("buyTix", event.target.value)
+                          }
+                          className="h-9 tabular-nums"
+                        />
+                      </FormField>
+                      <FormField
+                        label="Get Free"
+                        htmlFor="add-promo-buy-tix-free"
+                        className="w-28"
+                      >
+                        <Input
+                          id="add-promo-buy-tix-free"
+                          type="number"
+                          min={0}
+                          value={form.buyTixFree}
+                          disabled={formDisabled}
+                          onChange={(event) =>
+                            updateField("buyTixFree", event.target.value)
+                          }
+                          className="h-9 tabular-nums"
+                        />
+                      </FormField>
+                    </div>
+                  ) : null}
+
+                  {form.freeTicketsKind === "special-promotion" ? (
+                    <div className="w-56">
+                      <Input
+                        id="add-promo-special-req"
+                        type="text"
+                        maxLength={100}
+                        value={form.specialReq}
+                        disabled={formDisabled}
+                        onChange={(event) =>
+                          updateField("specialReq", event.target.value)
+                        }
+                        className="h-9"
+                        placeholder="e.g. Admit4"
+                        aria-label="Special promotion"
+                      />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
