@@ -1,3 +1,4 @@
+import { normalizeUserRight } from "@/lib/auth/user-rights"
 import type { AdminUser, AdminUserSearchFilters } from "@/types/user-admin"
 
 function matches(value: string, query: string) {
@@ -15,14 +16,8 @@ export function filterAdminUsers(
     if (!matches(user.userName, filters.userName)) return false
 
     if (filters.securityLevel) {
-      const security = user.security.toLowerCase()
-      if (filters.securityLevel === "administrator" && security !== "administrator") {
-        return false
-      }
-      if (filters.securityLevel === "manager" && security !== "manager") {
-        return false
-      }
-      if (filters.securityLevel === "user" && security !== "user") {
+      const filterRight = normalizeUserRight(filters.securityLevel)
+      if (normalizeUserRight(user.userRight) !== filterRight) {
         return false
       }
     }

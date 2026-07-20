@@ -5,7 +5,10 @@ export type AdminUser = {
   userName: string
   email: string
   password: string
+  /** Display label from API Security (e.g. Administrator). */
   security: string
+  /** ClubMan UserRight LookUpCode (e.g. SEC01). */
+  userRight: string
   lastUpdateId: string
   lastUpdateDt: string
   status: string

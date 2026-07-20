@@ -17,7 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { securityLevelOptions, userStatusOptions } from "@/data/users"
+import { userStatusOptions } from "@/data/users"
+import { useSecurityLevelOptions } from "@/hooks/use-security-level-options"
 import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { saveSystemUser } from "@/lib/api/system-users"
 import { buildSaveSystemUserRequest } from "@/lib/build-save-system-user-request"
@@ -46,6 +47,8 @@ export function AddUserDialog({
   const [form, setForm] = useState<AdminUserFormValues>(EMPTY_ADMIN_USER_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { options: securityOptions, isLoading: securityLoading } =
+    useSecurityLevelOptions({ skip: !open })
 
   useEffect(() => {
     if (!open) {
@@ -201,12 +204,17 @@ export function AddUserDialog({
               <Select
                 value={form.security || undefined}
                 onValueChange={(value) => updateField("security", value)}
+                disabled={securityLoading || securityOptions.length === 0}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Security Level" />
+                  <SelectValue
+                    placeholder={
+                      securityLoading ? "Loading..." : "Security Level"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {securityLevelOptions.map((option) => (
+                  {securityOptions.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
                       {option.label}
                     </SelectItem>

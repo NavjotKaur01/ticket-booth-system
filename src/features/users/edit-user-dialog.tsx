@@ -17,7 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { securityLevelOptions, userStatusOptions } from "@/data/users"
+import { userStatusOptions } from "@/data/users"
+import { useSecurityLevelOptions } from "@/hooks/use-security-level-options"
 import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import {
   adminUserToFormValues,
@@ -53,6 +54,13 @@ export function EditUserDialog({
   const [form, setForm] = useState<AdminUserFormValues>(EMPTY_ADMIN_USER_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { options: securityOptions, isLoading: securityLoading } =
+    useSecurityLevelOptions({
+      skip: !open,
+      assigned: user
+        ? { id: user.userRight, label: user.security }
+        : null,
+    })
 
   useEffect(() => {
     if (!open || !user) {
@@ -126,7 +134,12 @@ export function EditUserDialog({
 
       await updateSystemUser(request)
 
-      const updatedUser = formValuesToAdminUser(user, form, lastUpdateId)
+      const updatedUser = formValuesToAdminUser(
+        user,
+        form,
+        lastUpdateId,
+        securityOptions
+      )
       toastSuccess("User updated")
       await onSaved?.(updatedUser)
       onOpenChange(false)
@@ -220,12 +233,17 @@ export function EditUserDialog({
               <Select
                 value={form.security || undefined}
                 onValueChange={(value) => updateField("security", value)}
+                disabled={securityLoading || securityOptions.length === 0}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Security Level" />
+                  <SelectValue
+                    placeholder={
+                      securityLoading ? "Loading..." : "Security Level"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {securityLevelOptions.map((option) => (
+                  {securityOptions.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
                       {option.label}
                     </SelectItem>

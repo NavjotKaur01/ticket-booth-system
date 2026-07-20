@@ -1,26 +1,18 @@
-import type { UserSetupRole } from "@/data/user-setup"
+import type { AdminUserFormValues } from "@/types/user-admin"
+import { EMPTY_ADMIN_USER_FORM } from "@/types/user-admin"
 
-export type CreateUserFormValues = {
-  userName: string
-  password: string
-  confirmPassword: string
-  email: string
-  roles: UserSetupRole[]
-}
+/** ClubMan Create User uses the same fields as Users → Add User. */
+export type CreateUserFormValues = AdminUserFormValues
 
 export const EMPTY_CREATE_USER_FORM: CreateUserFormValues = {
-  userName: "",
-  password: "",
-  confirmPassword: "",
-  email: "",
-  roles: [],
+  ...EMPTY_ADMIN_USER_FORM,
 }
 
 export type ModifyUserFormValues = {
   email: string
   lockedOut: "Y" | "N"
   suspended: "Y" | "N"
-  roles: UserSetupRole[]
+  roles: string[]
 }
 
 export const EMPTY_MODIFY_USER_FORM: ModifyUserFormValues = {

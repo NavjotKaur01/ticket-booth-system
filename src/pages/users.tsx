@@ -8,6 +8,7 @@ import { AdminUserDataTable } from "@/features/users/admin-user-data-table"
 import { AdminUserFiltersCard } from "@/features/users/admin-user-filters-card"
 import { EditUserDialog } from "@/features/users/edit-user-dialog"
 import { useAppSession } from "@/hooks/use-app-session"
+import { useSecurityLevelOptions } from "@/hooks/use-security-level-options"
 import { useSystemUsers } from "@/hooks/use-system-users"
 import { toastError } from "@/lib/app-toast"
 import { syncFiltersAfterUserEdit } from "@/lib/admin-user-form"
@@ -32,6 +33,10 @@ export function Users() {
       userRight,
       enabled: isReady,
     })
+
+  const { options: securityOptions } = useSecurityLevelOptions({
+    skip: !isReady,
+  })
 
   const [draftFilters, setDraftFilters] = useState(EMPTY_ADMIN_USER_FILTERS)
   const [appliedFilters, setAppliedFilters] = useState(EMPTY_ADMIN_USER_FILTERS)
@@ -94,6 +99,7 @@ export function Users() {
 
       <AdminUserFiltersCard
         filters={draftFilters}
+        securityOptions={securityOptions}
         onFilterChange={updateDraftField}
         onSearch={handleSearch}
         onClear={handleClear}

@@ -1,5 +1,5 @@
-import { userRightBySecurityLevel } from "@/data/users"
 import { formatApiDateTime } from "@/lib/format-datetime"
+import { normalizeUserRight } from "@/lib/auth/user-rights"
 import type { UpdateSystemUserRequest } from "@/types/api/system-users"
 import type { AdminUserFormValues } from "@/types/user-admin"
 
@@ -33,7 +33,8 @@ export function buildUpdateSystemUserRequest({
     FirstName: form.firstName.trim(),
     Email: form.email.trim(),
     Password: form.password,
-    UserRight: userRightBySecurityLevel[form.security] ?? "SEC02",
+    // Desktop: reqModel.UserRight = this.Security.LookUpCode
+    UserRight: normalizeUserRight(form.security),
     Active: mapFormStatusToUpdateActive(form.status),
   }
 }

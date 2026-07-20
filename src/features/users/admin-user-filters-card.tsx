@@ -16,11 +16,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { securityLevelOptions, userStatusOptions } from "@/data/users"
+import { userStatusOptions } from "@/data/users"
+import type { SecurityLevelOption } from "@/lib/security-lookup"
 import type { AdminUserSearchFilters } from "@/types/user-admin"
 
 type AdminUserFiltersCardProps = {
   filters: AdminUserSearchFilters
+  securityOptions: SecurityLevelOption[]
   onFilterChange: (field: keyof AdminUserSearchFilters, value: string) => void
   onSearch: () => void
   onClear: () => void
@@ -28,6 +30,7 @@ type AdminUserFiltersCardProps = {
 
 export function AdminUserFiltersCard({
   filters,
+  securityOptions,
   onFilterChange,
   onSearch,
   onClear,
@@ -70,7 +73,7 @@ export function AdminUserFiltersCard({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Levels</SelectItem>
-            {securityLevelOptions.map((option) => (
+            {securityOptions.map((option) => (
               <SelectItem key={option.id} value={option.id}>
                 {option.label}
               </SelectItem>

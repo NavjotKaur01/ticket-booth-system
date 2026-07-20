@@ -29,6 +29,7 @@ export function mapSystemUsers(users: ApiSystemUser[]): AdminUser[] {
     email: user.Email?.trim() ?? "",
     password: mapPasswordDisplay(user),
     security: normalizeText(user.Security),
+    userRight: normalizeText(user.UserRight).toUpperCase(),
     lastUpdateId: normalizeText(user.LastUpdateID),
     lastUpdateDt: formatApiDateTime(user.LastUpdateDt),
     status: mapActiveStatus(user.Active),

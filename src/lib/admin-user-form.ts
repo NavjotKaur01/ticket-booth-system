@@ -1,13 +1,7 @@
-import {
-  securityLevelByLabel,
-  securityLevelOptions,
-} from "@/data/users"
+import { normalizeUserRight } from "@/lib/auth/user-rights"
 import { formatApiDateTime } from "@/lib/format-datetime"
-import type {
-  AdminUser,
-  AdminUserFormValues,
-  AdminUserSearchFilters,
-} from "@/types/user-admin"
+import type { SecurityLevelOption } from "@/lib/security-lookup"
+import type { AdminUser, AdminUserFormValues } from "@/types/user-admin"
 
 export function adminUserToFormValues(user: AdminUser): AdminUserFormValues {
   const password = user.password === "**********" ? "" : user.password
@@ -19,7 +13,8 @@ export function adminUserToFormValues(user: AdminUser): AdminUserFormValues {
     userName: user.userName,
     password,
     confirmPassword: password,
-    security: securityLevelByLabel[user.security] ?? "",
+    // Form stores LookUpCode (e.g. SEC01) — same as desktop Security.LookUpCode.
+    security: normalizeUserRight(user.userRight),
     status: user.status.toLowerCase(),
   }
 }
@@ -27,10 +22,14 @@ export function adminUserToFormValues(user: AdminUser): AdminUserFormValues {
 export function formValuesToAdminUser(
   user: AdminUser,
   form: AdminUserFormValues,
-  lastUpdateId: string
+  lastUpdateId: string,
+  securityOptions: SecurityLevelOption[] = []
 ): AdminUser {
+  const right = normalizeUserRight(form.security)
   const securityLabel =
-    securityLevelOptions.find((option) => option.id === form.security)?.label ??
+    securityOptions.find(
+      (option) => normalizeUserRight(option.id) === right
+    )?.label ??
     user.security
 
   return {
@@ -40,6 +39,7 @@ export function formValuesToAdminUser(
     email: form.email.trim(),
     userName: form.userName.trim(),
     password: form.password,
+    userRight: right,
     security: securityLabel,
     status: form.status === "active" ? "Active" : "Inactive",
     lastUpdateId: lastUpdateId.trim(),
@@ -50,8 +50,14 @@ export function formValuesToAdminUser(
 export function syncFiltersAfterUserEdit(
   previousUser: AdminUser,
   updatedUser: AdminUser,
-  filters: AdminUserSearchFilters
-): AdminUserSearchFilters {
+  filters: {
+    lastName: string
+    firstName: string
+    userName: string
+    securityLevel: string
+    active: string
+  }
+) {
   return {
     ...filters,
     lastName:
