@@ -1,3 +1,4 @@
+import { Eye, EyeOff } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { FormField } from "@/components/forms/form-fields"
@@ -49,12 +50,16 @@ export function AddUserDialog({
   const [error, setError] = useState<string | null>(null)
   const { options: securityOptions, isLoading: securityLoading } =
     useSecurityLevelOptions({ skip: !open })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   useEffect(() => {
     if (!open) {
       setForm(EMPTY_ADMIN_USER_FORM)
       setSaving(false)
       setError(null)
+      setShowPassword(false)
+      setShowConfirmPassword(false)
     }
   }, [open])
 
@@ -179,25 +184,61 @@ export function AddUserDialog({
             </FormField>
 
             <FormField label="Password" htmlFor="add-user-password">
-              <Input
-                id="add-user-password"
-                type="password"
-                value={form.password}
-                onChange={(event) =>
-                  updateField("password", event.target.value)
-                }
-              />
+              <div className="relative">
+                <Input
+                  id="add-user-password"
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(event) =>
+                    updateField("password", event.target.value)
+                  }
+                  className="pr-10"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <Eye className="size-4" aria-hidden="true" />
+                  ) : (
+                    <EyeOff className="size-4" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
             </FormField>
 
             <FormField label="Confirm Password" htmlFor="add-user-confirm-password">
-              <Input
-                id="add-user-confirm-password"
-                type="password"
-                value={form.confirmPassword}
-                onChange={(event) =>
-                  updateField("confirmPassword", event.target.value)
-                }
-              />
+              <div className="relative">
+                <Input
+                  id="add-user-confirm-password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={form.confirmPassword}
+                  onChange={(event) =>
+                    updateField("confirmPassword", event.target.value)
+                  }
+                  className="pr-10"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((current) => !current)}
+                  className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                  aria-label={
+                    showConfirmPassword
+                      ? "Hide confirm password"
+                      : "Show confirm password"
+                  }
+                >
+                  {showConfirmPassword ? (
+                    <Eye className="size-4" aria-hidden="true" />
+                  ) : (
+                    <EyeOff className="size-4" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
             </FormField>
 
             <FormField label="Security">
