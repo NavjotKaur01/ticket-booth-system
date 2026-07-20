@@ -101,6 +101,7 @@ import {
 } from "@/services/ticket-print.service"
 import {
   clubmanApi,
+  useGetShowDataQuery,
   useGetShowSectionsQuery,
   useGetSystemDefaultsQuery,
 } from "@/store/api/clubmanApi"
@@ -287,12 +288,20 @@ export function CheckIn() {
       { skip: !connectionName || !showTime }
     )
 
+  const { data: expressShowData } = useGetShowDataQuery(
+    { connectionName, showId: showTime },
+    { skip: !connectionName || !showTime }
+  )
+  const expressShowDataReady = expressShowData != null
+
   const { sections: expressSections, promoById } = useCachedReservationShowData({
     connectionName,
     locationId,
     showDate,
     showId: showTime,
-    enabled: Boolean(showTime) && isReady,
+    enabled: Boolean(showTime) && isReady && expressShowDataReady,
+    // Desktop: NoPasses == "Y" → IsManager on GetPromotions
+    isManager: expressShowData?.[0]?.NoPasses === "Y",
   })
 
   const expressPromos = useMemo(
@@ -966,6 +975,7 @@ export function CheckIn() {
         paymentType: payload.paymentType,
         paymentAmount: payload.paymentAmount,
         cardType: payload.cardType,
+        isVip: expressShowData?.[0]?.VIP === "Y",
         showDate,
         taxRatePercent: paymentTaxRate,
         taxWithServiceCharge,
@@ -994,6 +1004,7 @@ export function CheckIn() {
     passes: number
     promo: ReservationPromo | null
     dinner: boolean
+    isVip: boolean
     paymentType: "cash" | "credit-card"
     paymentAmount: number
   }) {
@@ -1023,6 +1034,7 @@ export function CheckIn() {
         paymentType: payload.paymentType,
         paymentAmount: payload.paymentAmount,
         dinner: payload.dinner,
+        isVip: payload.isVip,
         showDate,
         taxRatePercent: paymentTaxRate,
         taxWithServiceCharge,

@@ -1,3 +1,4 @@
+import { useState } from "react"
 import dayjs from "dayjs"
 import {
   ReportCard,
@@ -10,6 +11,9 @@ import {
   ReportViewShell,
   reportRowClass,
 } from "@/features/reports/report-ui"
+import { ReportDrillDialog, type DrillColumn } from "@/features/reports/report-drill-dialog"
+import type { ReportDrillContext } from "@/features/reports/reports.service"
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type SaleByShowPromo = {
@@ -50,6 +54,14 @@ export type SaleByShowDateGroup = {
 }
 
 type ApiRow = Record<string, unknown>
+
+type SalesByShowDrillType = "CheckInPaid" | "CheckInComp" | "CheckInDisc"
+
+type SalesByShowDrillTarget = {
+  showId: string
+  drillType: SalesByShowDrillType
+  isZero: boolean
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -92,6 +104,35 @@ function mapPromo(row: ApiRow): SaleByShowPromo {
     checkinComp: toNum(row.CheckinComp),
     checkinDisc: toNum(row.CheckinDisc),
   }
+}
+
+function drillCountKey(drillType: SalesByShowDrillType): string {
+  if (drillType === "CheckInComp") return "CompCount"
+  if (drillType === "CheckInDisc") return "DiscCount"
+  return "PaidCount"
+}
+
+function buildSalesByShowDrillColumns(drillType: SalesByShowDrillType): DrillColumn[] {
+  const countKey = drillCountKey(drillType)
+  return [
+    {
+      key: "CustLName",
+      label: "Cust LName",
+      keys: ["CustLName", "LastName", "Lname"],
+    },
+    {
+      key: "CustFName",
+      label: "Cust FName",
+      keys: ["CustFName", "FirstName", "Fname"],
+    },
+    {
+      key: countKey,
+      label: countKey,
+      format: "number",
+      right: true,
+      keys: [countKey, "Discount", "discount", "Count", "count"],
+    },
+  ]
 }
 
 /** Mirrors WPF ReportVM.GetSalesByShow(). */
@@ -145,9 +186,47 @@ export function buildSalesByShowData(raw: unknown): SaleByShowDateGroup[] {
   })
 }
 
+// ─── Drill cell ───────────────────────────────────────────────────────────────
+
+function DrillCountCell({
+  value,
+  drillType,
+  showId,
+  canDrill,
+  onDrill,
+}: {
+  value: number
+  drillType: SalesByShowDrillType
+  showId: string
+  canDrill: boolean
+  onDrill: (target: SalesByShowDrillTarget) => void
+}) {
+  if (!canDrill || !showId) {
+    return <>{value}</>
+  }
+
+  return (
+    <button
+      type="button"
+      className="font-semibold text-blue-600 transition-colors hover:text-blue-800 focus:outline-none dark:hover:text-blue-300"
+      onClick={() => onDrill({ showId, drillType, isZero: value === 0 })}
+    >
+      {value}
+    </button>
+  )
+}
+
 // ─── Show block ───────────────────────────────────────────────────────────────
 
-function ShowBlock({ show }: { show: SaleByShowShow }) {
+function ShowBlock({
+  show,
+  canDrill,
+  onDrill,
+}: {
+  show: SaleByShowShow
+  canDrill: boolean
+  onDrill: (target: SalesByShowDrillTarget) => void
+}) {
   return (
     <div className="border-b border-border last:border-b-0">
       {/* Main show row */}
@@ -222,9 +301,33 @@ function ShowBlock({ show }: { show: SaleByShowShow }) {
               <ReportTd />
               <ReportTd right bold>{show.partyTotal}</ReportTd>
               <ReportTd right bold>{show.checkedInTotal}</ReportTd>
-              <ReportTd right bold blue>{show.checkinPaidTotal}</ReportTd>
-              <ReportTd right bold blue>{show.checkinCompTotal}</ReportTd>
-              <ReportTd right bold blue>{show.checkinDiscTotal}</ReportTd>
+              <ReportTd right bold blue>
+                <DrillCountCell
+                  value={show.checkinPaidTotal}
+                  drillType="CheckInPaid"
+                  showId={show.showId}
+                  canDrill={canDrill}
+                  onDrill={onDrill}
+                />
+              </ReportTd>
+              <ReportTd right bold blue>
+                <DrillCountCell
+                  value={show.checkinCompTotal}
+                  drillType="CheckInComp"
+                  showId={show.showId}
+                  canDrill={canDrill}
+                  onDrill={onDrill}
+                />
+              </ReportTd>
+              <ReportTd right bold blue>
+                <DrillCountCell
+                  value={show.checkinDiscTotal}
+                  drillType="CheckInDisc"
+                  showId={show.showId}
+                  canDrill={canDrill}
+                  onDrill={onDrill}
+                />
+              </ReportTd>
             </tr>
           </tbody>
         </ReportTable>
@@ -235,17 +338,29 @@ function ShowBlock({ show }: { show: SaleByShowShow }) {
 
 // ─── Date group ───────────────────────────────────────────────────────────────
 
-function DateGroupCard({ group }: { group: SaleByShowDateGroup }) {
+function DateGroupCard({
+  group,
+  canDrill,
+  onDrill,
+}: {
+  group: SaleByShowDateGroup
+  canDrill: boolean
+  onDrill: (target: SalesByShowDrillTarget) => void
+}) {
   return (
     <ReportCard>
       <div className="bg-[#155abb] px-3 py-1.5 text-xs font-semibold text-white">
         Sales Show for : {group.showDate}
-        {group.locName ? ` — ${group.locName}` : ""}
       </div>
       <ReportSectionBar>Number of Items</ReportSectionBar>
       <div className="divide-y divide-border">
         {group.shows.map((show) => (
-          <ShowBlock key={show.showId || `${show.showTm}-${show.comicName}`} show={show} />
+          <ShowBlock
+            key={show.showId || `${show.showTm}-${show.comicName}`}
+            show={show}
+            canDrill={canDrill}
+            onDrill={onDrill}
+          />
         ))}
       </div>
     </ReportCard>
@@ -256,28 +371,66 @@ type Props = {
   rawData: unknown
   subtitle: string
   generatedAt: string
+  drillContext?: ReportDrillContext
 }
 
-export function SalesByShowView({ rawData, subtitle, generatedAt }: Props) {
+export function SalesByShowView({
+  rawData,
+  subtitle,
+  generatedAt,
+  drillContext,
+}: Props) {
   const groups = buildSalesByShowData(rawData)
+  const [drillTarget, setDrillTarget] = useState<SalesByShowDrillTarget | null>(null)
+  const canDrill = Boolean(drillContext)
 
   if (!groups.length || groups.every((g) => !g.shows.length)) {
     return <ReportEmpty />
   }
 
   const showCount = groups.reduce((s, g) => s + g.shows.length, 0)
+  const countKey = drillTarget ? drillCountKey(drillTarget.drillType) : "PaidCount"
 
   return (
     <ReportViewShell>
       <ReportHeader title="Sales By Show" subtitle={subtitle} generatedAt={generatedAt} />
 
       {groups.map((group, i) => (
-        <DateGroupCard key={`${group.showDate}-${i}`} group={group} />
+        <DateGroupCard
+          key={`${group.showDate}-${i}`}
+          group={group}
+          canDrill={canDrill}
+          onDrill={setDrillTarget}
+        />
       ))}
 
       <p className="text-right text-xs text-muted-foreground">
         {showCount} show{showCount !== 1 ? "s" : ""} across {groups.length} date group{groups.length !== 1 ? "s" : ""}
       </p>
+
+      {drillTarget && drillContext && (
+        <ReportDrillDialog
+          title="Sales By Show - Drill Down"
+          endpoint="ManagerCheckOutDrillDown"
+          body={{
+            Connection: drillContext.connectionName,
+            StartDate: drillContext.startDate,
+            EndDate: drillContext.endDate,
+            LocaltionId: drillContext.locationId,
+            ShowId: drillTarget.showId,
+            DrillType: drillTarget.drillType,
+          }}
+          columns={buildSalesByShowDrillColumns(drillTarget.drillType)}
+          footerTotals
+          isZero={drillTarget.isZero}
+          filterRows={(row) => {
+            const val = row[countKey] ?? row.Discount ?? row.discount ?? 0
+            const count = typeof val === "number" ? val : parseFloat(String(val))
+            return Number.isFinite(count) && count !== 0
+          }}
+          onClose={() => setDrillTarget(null)}
+        />
+      )}
     </ReportViewShell>
   )
 }

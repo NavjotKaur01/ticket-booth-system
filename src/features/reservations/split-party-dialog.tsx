@@ -139,13 +139,16 @@ export function SplitPartyDialog({
     { skip: !open || !connectionName || !showId }
   )
 
+  // Desktop: NoPasses == "Y" → IsManager on GetPromotions
+  const showDataReady = showDataPayload != null
+
   const { sections, sectionsLoading, promoOptions, promoById } =
     useCachedReservationShowData({
       connectionName,
       locationId,
       showDate,
       showId,
-      enabled: open && Boolean(showId),
+      enabled: open && Boolean(showId) && showDataReady,
       isManager: showDataPayload?.[0]?.NoPasses === 'Y',
       origin: promoOrigin
     })
