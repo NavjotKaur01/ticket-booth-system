@@ -1,5 +1,6 @@
 import QRCode from "qrcode"
 
+import { fetchReservationPrintProperties } from "@/lib/api/reservations"
 import type {
   CreateTicketPrintDataParams,
   GetMockTicketPrintDataParams,
@@ -117,7 +118,7 @@ function buildShowData(showDate: string, showLabel?: string): TicketPrintShow {
 
   if (Number.isNaN(baseDate.getTime())) {
     return {
-      title,
+      title: formatShowTitleForTicket(title),
       dateLabel: showDate,
       timeLabel,
       dateTimeLabel: [showDate, timeLabel].filter(Boolean).join(" "),
@@ -139,7 +140,7 @@ function buildShowData(showDate: string, showLabel?: string): TicketPrintShow {
   }
 
   return {
-    title,
+    title: formatShowTitleForTicket(title),
     dateLabel: baseDate.toLocaleDateString("en-US", {
       weekday: "long",
       month: "long",
@@ -167,7 +168,7 @@ function resolvePaymentType(source: string) {
   }
 
   if (normalized === "phone") {
-    return "Credit Card"
+    return "Credit Card Payment"
   }
 
   return "Web"
@@ -176,12 +177,12 @@ function resolvePaymentType(source: string) {
 function formatReservationSource(source: string) {
   const normalized = source.trim().toLowerCase()
 
-  if (normalized === "walkup") {
+  if (normalized === "walkup" || normalized === "walk-up" || normalized === "walk up") {
     return "Walkup"
   }
 
-  if (normalized === "phone") {
-    return "Phone"
+  if (normalized === "phone" || normalized === "phone-in" || normalized.includes("phone")) {
+    return "Phone-In"
   }
 
   if (normalized === "web") {
@@ -191,9 +192,40 @@ function formatReservationSource(source: string) {
   return titleCaseWords(source.trim()) || "Walkup"
 }
 
+/** Customer on ticket: Last Name then First Name. */
 function buildCustomerFullName(firstName: string, lastName: string) {
-  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim()
+  const fullName = [lastName, firstName].filter(Boolean).join(" ").trim()
   return fullName || "Guest"
+}
+
+/**
+ * Headliner labels are stored as "Last, First". Ticket print shows "First Last".
+ * e.g. "Anderson, Carter" → "Carter Anderson"
+ */
+function formatShowTitleForTicket(title: string) {
+  const trimmed = title.trim()
+  if (!trimmed.includes(",")) {
+    return trimmed
+  }
+
+  const [lastName, firstName] = trimmed.split(",").map((part) => part.trim())
+  if (!firstName) {
+    return lastName
+  }
+
+  return `${firstName} ${lastName}`.trim()
+}
+
+function formatCardLabel(cardType: string | null | undefined, cardNum: string | null | undefined) {
+  const type = (cardType ?? "").trim()
+  const num = (cardNum ?? "").replace(/\D/g, "").slice(-4)
+  if (!type && !num) {
+    return null
+  }
+  if (type && num) {
+    return `${type}:${num}`
+  }
+  return type || num
 }
 
 function buildPrintedTicket(ticket: TicketPrintData, ticketCount: number) {
@@ -286,6 +318,11 @@ function buildTicketMarkup(
       <span>Payment Type:</span>
       <span>${escapeHtml(ticket.reservation.paymentType)}</span>
       </div>
+      ${
+        ticket.reservation.cardLabel
+          ? `<div class="card-label">${escapeHtml(ticket.reservation.cardLabel)}</div>`
+          : ""
+      }
       
       <div class="section">${escapeHtml(
         ticket.reservation.section || "General"
@@ -413,6 +450,10 @@ async function buildPrintDocument(
       .source {
         margin-top: 2px;
         font-size: 16px;
+      }
+      .card-label {
+        margin-top: 2px;
+        font-size: 14px;
       }
       .detail-row {
         display: flex;
@@ -569,12 +610,22 @@ export function createTicketPrintData({
   qrValue,
   tables,
   seatNumbers,
+  cardLabel,
+  kind = "ticket",
 }: CreateTicketPrintDataParams): TicketPrintData {
   const normalizedPartySize = Math.max(1, partySize)
   const normalizedCheckedInCount = Math.max(
     0,
     Math.min(checkedInCount, normalizedPartySize)
   )
+  const text =
+    kind === "receipt"
+      ? {
+          ...DEFAULT_TICKET_TEXT,
+          printFooter: "--RECEIPT (not TICKET)",
+          reprintFooter: "--RECEIPT (not TICKET)",
+        }
+      : DEFAULT_TICKET_TEXT
 
   return {
     venue: resolveVenue(locationName),
@@ -597,8 +648,9 @@ export function createTicketPrintData({
       promotion: normalizeTicketPromotion(promotion),
       tables: tables || null,
       seatNumbers: seatNumbers || null,
+      cardLabel: cardLabel?.trim() || null,
     },
-    text: DEFAULT_TICKET_TEXT,
+    text,
     qrValue: qrValue || reservationId,
   }
 }
@@ -608,8 +660,55 @@ export async function getMockTicketPrintData({
   showDate,
   showLabel,
   locationName,
+  connectionName,
+  kind = "ticket",
 }: GetMockTicketPrintDataParams): Promise<TicketPrintData> {
-  await new Promise((resolve) => window.setTimeout(resolve, 140))
+  let cardLabel: string | null = null
+  let qrValue = reservation.id
+  let paymentType = resolvePaymentType(reservation.source)
+  let source: string = reservation.source
+  let promotion = reservation.promo
+  let section = reservation.section || "General"
+  let effectiveShowLabel = showLabel
+
+  if (connectionName) {
+    try {
+      const printProperties = await fetchReservationPrintProperties({
+        connectionName,
+        reservationId: reservation.id,
+      })
+      cardLabel = formatCardLabel(
+        printProperties.CardType,
+        printProperties.CardNum
+      )
+      const pnref = printProperties.PNREF?.trim()
+      if (pnref) {
+        qrValue = pnref
+      }
+      if (printProperties.PaymentType?.trim()) {
+        paymentType = printProperties.PaymentType.trim()
+      }
+      if (printProperties.Orgin?.trim()) {
+        source = printProperties.Orgin.trim()
+      }
+      if (printProperties.Promo?.trim()) {
+        promotion = printProperties.Promo.trim()
+      }
+      if (printProperties.TicketSection?.trim()) {
+        section = printProperties.TicketSection.trim()
+      }
+      const headliner = printProperties.Headliner?.trim()
+      if (headliner) {
+        const { timeLabel } = splitShowLabel(showLabel)
+        const formattedHeadliner = formatShowTitleForTicket(headliner)
+        effectiveShowLabel = timeLabel
+          ? `${timeLabel} ${formattedHeadliner}`
+          : formattedHeadliner
+      }
+    } catch {
+      // Ticket still prints without print-properties fields if unavailable.
+    }
+  }
 
   return createTicketPrintData({
     reservationId: reservation.id,
@@ -619,16 +718,18 @@ export async function getMockTicketPrintData({
     checkedInCount: Math.max(0, reservation.scanner),
     totalAmount: parseCurrency(reservation.total),
     paidAmount: parseCurrency(reservation.paid),
-    paymentType: resolvePaymentType(reservation.source),
-    source: reservation.source,
-    section: reservation.section || "General",
-    promotion: reservation.promo,
+    paymentType,
+    source,
+    section,
+    promotion,
     tables: reservation.tables || null,
     seatNumbers: reservation.seatNo || null,
+    cardLabel,
     showDate,
-    showLabel,
+    showLabel: effectiveShowLabel,
     locationName,
-    qrValue: reservation.id,
+    qrValue,
+    kind,
   })
 }
 

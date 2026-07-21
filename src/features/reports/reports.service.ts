@@ -247,7 +247,7 @@ export const REPORT_CONFIGS: Record<string, ReportConfig> = {
   "web-counts": { ...BASE, endpoint: "GetWebCountReport", title: "Web Counts", showDateRange: true },
   "web-gift-certificates": { ...BASE, endpoint: "GetWebGiftCertificatesReport", title: "Web Gift Certificates", showDateRange: true },
   "web-reservations-for-day": { ...BASE, endpoint: "GetWebReservationForDayReport", title: "Web Reservations for Day", showDateRange: true },
-  "zipcode-breakdown": { ...BASE, endpoint: "GetZipCodeBreakDownReport", title: "ZipCode Breakdown", showDateRange: true },
+  "zipcode-breakdown": { ...BASE, endpoint: "GetZipCodeBreakDownReport", title: "ZipCode Breakdown", showDateRange: false },
 }
 
 /** Maps WPF PermDesc values to internal report ids (desktop ReportVM switch). */
@@ -658,6 +658,14 @@ export function buildReportRequest(
   if (config.showAllDatesOption && filters.isAllDates) {
     startDate = formatUsApiDate(dayjs().subtract(20, "year").format("YYYY-MM-DD"))
     endDate = formatUsApiDate(dayjs().add(20, "year").format("YYYY-MM-DD"))
+  }
+
+  // ZipCode Breakdown (and other no-date reports) — omit StartDate/EndDate
+  if (!config.showDateRange) {
+    return {
+      Connection: connectionName,
+      LocaltionId: filters.locationId,
+    }
   }
 
   // Door Checkout — WPF sends only these fields (no customer filters)

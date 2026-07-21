@@ -339,6 +339,17 @@ export function AddPromotionDialog({
     if (!form.startDate.trim()) {
       return "Start date is required."
     }
+    if (form.endDate.trim()) {
+      const start = new Date(`${form.startDate.trim()}T00:00:00`)
+      const end = new Date(`${form.endDate.trim()}T00:00:00`)
+      if (
+        !Number.isNaN(start.getTime()) &&
+        !Number.isNaN(end.getTime()) &&
+        end < start
+      ) {
+        return "End date must be greater than or equal to start date."
+      }
+    }
     if (!form.walkUp && !form.phoneIn && !form.web && !form.managerComp) {
       return "Select at least one of Walk-Up, Phone-In, Web, or Manager Comp."
     }
