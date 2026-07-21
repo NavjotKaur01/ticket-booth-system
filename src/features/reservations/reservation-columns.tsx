@@ -27,13 +27,40 @@ function emptyCell(value: string | number | null | undefined) {
   return value
 }
 
+function groupValues(values: string[], separator: string) {
+  const lines: string[] = []
+
+  for (let index = 0; index < values.length; index += 6) {
+    lines.push(values.slice(index, index + 6).join(separator))
+  }
+
+  return lines.join("\n")
+}
+
 function formatSeatNumbers(value: string) {
-  const seatNumbers = Array.from(
+  const encodedSeatNumbers = Array.from(
     value.matchAll(/#\d+\$(\d+)/g),
     match => match[1]
   )
 
-  return seatNumbers.length > 0 ? seatNumbers.join(" | ") : value
+  const seatNumbers =
+    encodedSeatNumbers.length > 0
+      ? encodedSeatNumbers
+      : value
+          .split("|")
+          .map(seat => seat.trim())
+          .filter(Boolean)
+
+  return groupValues(seatNumbers, " | ")
+}
+
+function formatTableNumbers(value: string) {
+  const tableNumbers = value
+    .split(",")
+    .map(table => table.trim())
+    .filter(Boolean)
+
+  return groupValues(tableNumbers, ", ")
 }
 
 /** Column definitions aligned with desktop ClubMan reservation grid. */
@@ -148,8 +175,8 @@ export function createReservationColumns({
         <DataTableColumnHeader label="Table(s)" column={column} />
       ),
       cell: ({ row }) => (
-        <span className="text-muted-foreground">
-          {emptyCell(row.original.tables)}
+        <span className="block w-56 whitespace-pre-line leading-relaxed text-muted-foreground">
+          {emptyCell(formatTableNumbers(row.original.tables))}
         </span>
       ),
     },
@@ -159,7 +186,7 @@ export function createReservationColumns({
         <DataTableColumnHeader label="SeatNo" column={column} />
       ),
       cell: ({ row }) => (
-        <span className="whitespace-nowrap text-muted-foreground">
+        <span className="block w-64 whitespace-pre-line leading-relaxed text-muted-foreground">
           {emptyCell(formatSeatNumbers(row.original.seatNo))}
         </span>
       ),
