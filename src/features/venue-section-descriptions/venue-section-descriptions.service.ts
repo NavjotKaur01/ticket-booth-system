@@ -3,7 +3,16 @@ import type {
   VenueSectionDescriptionRecord,
 } from "@/types/venue-section-description"
 
-const STANDUPMEDIA_SECTIONS: VenueSectionDescriptionRecord[] = [
+type SectionSeed = Omit<VenueSectionDescriptionRecord, "lookupOrder">
+
+function withLookupOrders(rows: SectionSeed[]): VenueSectionDescriptionRecord[] {
+  return rows.map((row, index) => ({
+    ...row,
+    lookupOrder: index + 1,
+  }))
+}
+
+const STANDUPMEDIA_SECTIONS = withLookupOrders([
   {
     id: "section-1",
     locationId: "standupmedia",
@@ -77,13 +86,13 @@ const STANDUPMEDIA_SECTIONS: VenueSectionDescriptionRecord[] = [
     sectionName: "Bar Seating",
     sectionDetail: "High-top bar seating near the service area.",
   },
-]
+])
 
 const MOCK_VENUE_SECTION_DESCRIPTIONS = new Map<string, VenueSectionDescriptionRecord[]>([
   ["standupmedia", STANDUPMEDIA_SECTIONS],
   [
     "venue-b",
-    [
+    withLookupOrders([
       {
         id: "vb-section-1",
         locationId: "venue-b",
@@ -96,7 +105,7 @@ const MOCK_VENUE_SECTION_DESCRIPTIONS = new Map<string, VenueSectionDescriptionR
         sectionName: "Premium",
         sectionDetail: "Premium reserved seating closer to the stage.",
       },
-    ],
+    ]),
   ],
 ])
 
@@ -127,9 +136,9 @@ function resolveTemplateKey(locationLabel?: string) {
 }
 
 function getMutableRows(locationId: string, locationLabel?: string) {
-  const rowsById = MOCK_VENUE_SECTION_DESCRIPTIONS.get(locationId)
-  if (rowsById) {
-    return cloneRows(rowsById)
+  const existing = MOCK_VENUE_SECTION_DESCRIPTIONS.get(locationId)
+  if (existing) {
+    return cloneRows(existing)
   }
 
   const templateKey = resolveTemplateKey(locationLabel)
@@ -183,6 +192,7 @@ export async function createVenueSectionDescription({
   const nextRow: VenueSectionDescriptionRecord = {
     id: buildSectionId(),
     locationId,
+    lookupOrder: rows.length + 1,
     ...input,
   }
 

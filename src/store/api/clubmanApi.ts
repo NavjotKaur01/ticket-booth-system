@@ -65,7 +65,7 @@ import type {
   MarketingComedianSearchRequest,
 } from "@/types/api/marketing-filter-search"
 import type { ComicInfo } from "@/data/comedian-info"
-import type { EmploymentPosition, AddUpdateEmploymentPositionRequest, DeleteEmploymentPositionRequest, AddUpdateEmploymentPositionResponse } from "@/types/api/employment-position"
+import type { EmploymentPosition, AddUpdateEmploymentPositionRequest, AddUpdateEmploymentPositionResponse } from "@/types/api/employment-position"
 import type { EmploymentApplication, EmploymentApplicationBio, EmploymentApplicationOpening, EmploymentApplicationQuestion, EmploymentApplicationReview, UpdateEmploymentApplicationReviewRequest } from "@/types/api/employment-application"
 import type { FreeFormItem, AddUpdateFreeFormRequest, DeleteFreeFormRequest } from "@/types/api/free-form"
 import type { SocialItem, AddUpdateSocialRequest, DeleteSocialRequest } from "@/types/api/social"
@@ -1644,16 +1644,18 @@ export const clubmanApi = createApi({
     >({
       query: ({ connectionString, locationId }) =>
         systemApiPath(connectionString, locationId, "GetEmploymentQuestion"),
+      extraOptions: { useNewApi: true },
       transformResponse: (response: { Data: EmploymentQuestion[] } | EmploymentQuestion[]) =>
         'Data' in response ? response.Data : response,
     }),
 
     addUpdateEmploymentQuestion: builder.mutation<AddUpdateEmploymentQuestionResponse, AddUpdateEmploymentQuestionRequest>({
       query: (body) => ({
-        url: systemApiPath(body.ConnectionString, "AddUpdateEmploymentQuestion"),
+        url: systemApiPath("AddUpdateEmploymentQuestion"),
         method: "POST",
         body,
       }),
+      extraOptions: { useNewApi: true },
     }),
 
     deleteEmploymentQuestion: builder.mutation<unknown, DeleteEmploymentQuestionRequest>({
@@ -1670,6 +1672,7 @@ export const clubmanApi = createApi({
     >({
       query: ({ connectionString, locationId }) =>
         systemApiPath(connectionString, locationId, "GetEmploymentApplications"),
+      extraOptions: { useNewApi: true },
       transformResponse: (response: { Data: EmploymentApplication[] } | EmploymentApplication[]) =>
         'Data' in response ? response.Data : response,
     }),
@@ -1731,6 +1734,7 @@ export const clubmanApi = createApi({
         method: "GET",
         responseHandler: (response) => response.blob(),
       }),
+      extraOptions: { useNewApi: true },
     }),
 
     getFreeForms: builder.query<
@@ -1749,26 +1753,29 @@ export const clubmanApi = createApi({
     >({
       query: ({ connectionString, locationId }) =>
         systemApiPath(connectionString, locationId, "GetSocials"),
+      extraOptions: { useNewApi: true },
       transformResponse: (response: { Data: SocialItem[] } | SocialItem[]) =>
         'Data' in response ? response.Data : response,
     }),
 
     getSectionDetails: builder.query<SectionDetailItem[], GetSectionDetailsRequest>({
       query: (body) => ({
-        url: systemApiPath(body.ConnectionString, "GetSectionDetails"),
+        url: systemApiPath( "GetSectionDetails"),
         method: "POST",
         body,
       }),
+      extraOptions: { useNewApi: true },
       transformResponse: (response: { Data: SectionDetailItem[] } | SectionDetailItem[]) =>
         'Data' in response ? response.Data : response,
     }),
 
     addUpdateSectionDetail: builder.mutation<SectionDetailItem, AddUpdateSectionDetailRequest>({
       query: (body) => ({
-        url: systemApiPath(body.ConnectionString, "AddUpdateSectionDetail"),
+        url: systemApiPath("AddUpdateSectionDetail"),
         method: "POST",
         body,
       }),
+      extraOptions: { useNewApi: true },
     }),
 
     searchSectionDetails: builder.query<
@@ -1902,18 +1909,20 @@ export const clubmanApi = createApi({
 
     addUpdateSocial: builder.mutation<unknown, AddUpdateSocialRequest>({
       query: (body) => ({
-        url: systemApiPath(body.ConnectionString, "AddUpdateSocial"),
+        url: systemApiPath("AddUpdateSocial"),
         method: "POST",
         body,
       }),
+      extraOptions: { useNewApi: true },
     }),
 
     deleteSocial: builder.mutation<unknown, DeleteSocialRequest>({
       query: (body) => ({
-        url: systemApiPath(body.ConnectionString, "DeleteSocial"),
+        url: systemApiPath("DeleteSocial"),
         method: "POST",
         body,
       }),
+      extraOptions: { useNewApi: true },
     }),
 
     addUpdateFreeForm: builder.mutation<FreeFormItem, AddUpdateFreeFormRequest>({
@@ -1932,20 +1941,13 @@ export const clubmanApi = createApi({
       }),
     }),
 
-    deleteEmploymentPosition: builder.mutation<unknown, DeleteEmploymentPositionRequest>({
-      query: (body) => ({
-        url: systemApiPath(body.ConnectionString, "DeleteEmploymentPosition"),
-        method: "POST",
-        body,
-      }),
-    }),
-
     getFormEmails: builder.query<
       FormEmailRecord[],
       { connectionString: string; locationId: string }
     >({
       query: ({ connectionString, locationId }) =>
         systemApiPath(connectionString, locationId, "GetFormEmails"),
+      extraOptions: { useNewApi: true },
       transformResponse: (rows: ApiFormEmailReference[]) =>
         rows.map((row) => ({
           id: row.EmailReferenceId,
@@ -1964,6 +1966,7 @@ export const clubmanApi = createApi({
         method: "POST",
         body,
       }),
+      extraOptions: { useNewApi: true },
       invalidatesTags: (_result, _error, body) => [
         { type: "FormEmail", id: body.LocationId },
       ],
@@ -1975,6 +1978,7 @@ export const clubmanApi = createApi({
         method: "POST",
         body,
       }),
+      extraOptions: { useNewApi: true },
       invalidatesTags: ["FormEmail"],
     }),
 
@@ -2125,13 +2129,16 @@ export const clubmanApi = createApi({
       invalidatesTags: ["Calendar", "ShowDetails"],
     }),
 
-    getGiftCertificates: builder.mutation<GiftCertificate[], GetGiftCertificatesRequest>({
+    getGiftCertificates: builder.query<GiftCertificate[], GetGiftCertificatesRequest>({
       query: (body) => ({
         url: "/clubman/api/GetGiftCertificates",
         method: "POST",
         body,
       }),
-      invalidatesTags: ["GiftCertificates"],
+      extraOptions: { useNewApi: true },
+      transformResponse: (response: { Data: GiftCertificate[] } | GiftCertificate[]) =>
+        "Data" in response ? response.Data : response,
+      providesTags: ["GiftCertificates"],
     }),
 
     exportGiftCertificates: builder.mutation<unknown, ExportGiftCertificatesRequest>({
@@ -2279,7 +2286,6 @@ export const {
   useMarkShowUnavailableOnWebMutation,
   useGetEmploymentPositionsQuery,
   useAddUpdateEmploymentPositionMutation,
-  useDeleteEmploymentPositionMutation,
   useGetEmploymentQuestionsQuery,
   useGetFormEmailsQuery,
   useAddUpdateFormEmailMutation,
@@ -2316,7 +2322,7 @@ export const {
   useDeleteFreeFormMutation,
   useAddUpdateEmploymentQuestionMutation,
   useDeleteEmploymentQuestionMutation,
-  useGetGiftCertificatesMutation,
+  useGetGiftCertificatesQuery,
   useExportGiftCertificatesMutation,
   useUpdateGiftCertificateMutation,
   useResendGiftCertificateMutation,

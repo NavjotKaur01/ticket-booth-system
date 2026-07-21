@@ -34,10 +34,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { deleteEmploymentOpening } from "@/features/employment-openings/employment-openings.service"
+
 import { useAppSession } from "@/hooks/use-app-session"
 import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
-import { useGetEmploymentPositionsQuery, useAddUpdateEmploymentPositionMutation } from "@/store/api/clubmanApi"
+import {
+  useGetEmploymentPositionsQuery,
+  useAddUpdateEmploymentPositionMutation,
+} from "@/store/api/clubmanApi"
 import type { EmploymentOpeningRecord } from "@/types/employment-opening"
 
 const ACTIVE_OPTIONS = [
@@ -83,8 +86,6 @@ export function EmploymentOpeningsScreen() {
   const [activeInput, setActiveInput] = useState("Y")
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [deletingRow, setDeletingRow] = useState<EmploymentOpeningRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
@@ -218,36 +219,6 @@ export function EmploymentOpeningsScreen() {
       reportError(setError, requestError, "Unable to save the employment opening.")
     } finally {
       setSaving(false)
-    }
-  }
-
-  async function confirmDelete() {
-    if (!locationId || !deletingRow || deletingId) {
-      return
-    }
-
-    setDeletingId(deletingRow.id)
-    setError(null)
-
-    try {
-      await deleteEmploymentOpening({
-        locationId: locationId,
-        locationLabel: locationName,
-        openingId: deletingRow.id,
-      })
-
-      setRows((current) => current.filter((row) => row.id !== deletingRow.id))
-      if (editingOpeningId === deletingRow.id) {
-        closeEditor()
-      }
-      const deleteMessage = `Deleted employment opening for ${locationName}.`
-      setStatusMessage(deleteMessage)
-      toastSuccess(deleteMessage)
-      setDeletingRow(null)
-    } catch (requestError) {
-      reportError(setError, requestError, "Unable to delete the employment opening.")
-    } finally {
-      setDeletingId(null)
     }
   }
 
@@ -397,14 +368,14 @@ export function EmploymentOpeningsScreen() {
                             <div className="flex items-center justify-end">
                               <StandardRowActionsMenu
                                 ariaLabel={`Actions for ${row.title}`}
-                                hiddenActions={["Add"]}
+                                hiddenActions={["Add", "Delete"]}
                                 onAction={(action) => {
                                   if (action === "Edit") {
                                     openEditEditor(row)
                                   }
-                                  if (action === "Delete") {
-                                    setDeletingRow(row)
-                                  }
+                                  // if (action === "Delete") {
+                                  //   setDeletingRow(row)
+                                  // }
                                 }}
                               />
                             </div>
@@ -435,7 +406,7 @@ export function EmploymentOpeningsScreen() {
           </CardFooter>
         </Card>
 
-        <ConfirmDeleteDialog
+        {/* <ConfirmDeleteDialog
           open={Boolean(deletingRow)}
           onOpenChange={(open) => {
             if (!open && !deletingId) {
@@ -449,7 +420,7 @@ export function EmploymentOpeningsScreen() {
             : ""}
           confirmLabel="Delete opening"
           isPending={Boolean(deletingId)}
-        />
+        /> */}
     </div>
   )
 }

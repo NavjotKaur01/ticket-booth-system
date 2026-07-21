@@ -47,12 +47,16 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import {
   getEmploymentApplicantFilterGroupsByLocation,
-  getEmploymentApplicantsByLocation,
   updateEmploymentApplicant,
 } from "@/features/employment-applicants/employment-applicants.service"
-import { getEmploymentOpeningsByLocation } from "@/features/employment-openings/employment-openings.service"
 import { useAppSession } from "@/hooks/use-app-session"
-import { reportError, toastSuccess } from "@/lib/app-toast"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
+import {
+  useGetEmploymentApplicationsQuery,
+  useGetEmploymentPositionsQuery,
+  useDownloadEmploymentApplicationPdfMutation,
+} from "@/store/api/clubmanApi"
+import type { EmploymentApplication } from "@/types/api/employment-application"
 import type {
   EmploymentApplicantFilterGroup,
   EmploymentApplicantRecord,
@@ -192,7 +196,8 @@ function formatShortDate(value: string | null) {
     return "-"
   }
 
-  const parsed = new Date(`${value}T00:00:00`)
+  const dateOnly = value.includes("T") ? value.slice(0, 10) : value.slice(0, 10)
+  const parsed = new Date(`${dateOnly}T00:00:00`)
   if (Number.isNaN(parsed.getTime())) {
     return value
   }
@@ -202,6 +207,51 @@ function formatShortDate(value: string | null) {
     day: "numeric",
     year: "numeric",
   }).format(parsed)
+}
+
+function normalizeApiDate(value: string | null) {
+  if (!value) {
+    return null
+  }
+
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return null
+  }
+
+  if (trimmed.includes("T")) {
+    return trimmed.slice(0, 10)
+  }
+
+  if (trimmed.includes(" ")) {
+    return trimmed.slice(0, 10)
+  }
+
+  return trimmed.slice(0, 10)
+}
+
+function mapApplicationToRecord(
+  application: EmploymentApplication,
+  openingsById: Map<string, string>
+): EmploymentApplicantRecord {
+  return {
+    id: application.EntryID,
+    locationId: application.LocationID,
+    firstName: application.FirstName,
+    lastName: application.LastName,
+    email: "",
+    phone: "",
+    positionGroupId: "",
+    positionGroupLabel: "",
+    opportunityId: application.OpeningID,
+    opportunityTitle: openingsById.get(application.OpeningID) ?? application.OpeningID,
+    submittedOn: normalizeApiDate(application.DateSubmitted) ?? application.DateSubmitted,
+    reviewed: application.Reviewed === "Y",
+    reviewedBy: application.ReviewedBy ?? "",
+    hireDate: normalizeApiDate(application.HireDate),
+    dismissalDate: normalizeApiDate(application.DismissalDate),
+    notes: application.ReviewComments ?? "",
+  }
 }
 
 function getInitials(firstName: string, lastName: string) {
@@ -246,14 +296,33 @@ export function EmploymentApplicantsScreen() {
   const [editingApplicantId, setEditingApplicantId] = useState<string | null>(null)
   const [editDialogApplicant, setEditDialogApplicant] = useState<EmploymentApplicantRecord | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [previewApplicantId, setPreviewApplicantId] = useState<string | null>(null)
-  const [previewDialogApplicant, setPreviewDialogApplicant] = useState<EmploymentApplicantRecord | null>(null)
-  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false)
+  const [downloadingPdfId, setDownloadingPdfId] = useState<string | null>(null)
   const [reviewedInput, setReviewedInput] = useState("N")
   const [reviewedByInput, setReviewedByInput] = useState("")
   const [hireDateInput, setHireDateInput] = useState("")
   const [dismissalDateInput, setDismissalDateInput] = useState("")
   const [notesInput, setNotesInput] = useState("")
+
+  const {
+    data: apiApplications,
+    isLoading: isApplicationsLoading,
+    error: applicationsError,
+    refetch: refetchApplications,
+  } = useGetEmploymentApplicationsQuery(
+    { connectionString: "demo_prod", locationId: locationId ?? "" },
+    { skip: !locationId }
+  )
+
+  const {
+    data: apiPositions,
+    isLoading: isPositionsLoading,
+    error: positionsError,
+  } = useGetEmploymentPositionsQuery(
+    { connectionString: "demo_prod", locationId: locationId ?? "" },
+    { skip: !locationId }
+  )
+
+  const [downloadEmploymentApplicationPdf] = useDownloadEmploymentApplicationPdfMutation()
 
   const positionOptions = useMemo<ChecklistOption[]>(
     () =>
@@ -269,14 +338,17 @@ export function EmploymentApplicantsScreen() {
     [openings]
   )
 
+  const openingsById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const opening of openings) {
+      map.set(opening.id, opening.title)
+    }
+    return map
+  }, [openings])
+
   const editingApplicant = useMemo(
     () => rows.find((row) => row.id === editingApplicantId) ?? editDialogApplicant,
     [rows, editingApplicantId, editDialogApplicant]
-  )
-
-  const previewApplicant = useMemo(
-    () => rows.find((row) => row.id === previewApplicantId) ?? previewDialogApplicant,
-    [rows, previewApplicantId, previewDialogApplicant]
   )
 
   useEffect(() => {
@@ -295,19 +367,13 @@ export function EmploymentApplicantsScreen() {
       setEditingApplicantId(null)
       setEditDialogApplicant(null)
       setIsEditDialogOpen(false)
-      setPreviewApplicantId(null)
-      setPreviewDialogApplicant(null)
-      setIsPreviewDialogOpen(false)
+      setDownloadingPdfId(null)
       return
     }
 
     let isActive = true
-    setLoading(true)
     setError(null)
     setStatusMessage(null)
-    setPositionGroups([])
-    setOpenings([])
-    setRows([])
     setDraftPositionIds([])
     setDraftOpportunityIds([])
     setAppliedPositionIds([])
@@ -315,41 +381,20 @@ export function EmploymentApplicantsScreen() {
     setEditingApplicantId(null)
     setEditDialogApplicant(null)
     setIsEditDialogOpen(false)
-    setPreviewApplicantId(null)
-    setPreviewDialogApplicant(null)
-    setIsPreviewDialogOpen(false)
+    setDownloadingPdfId(null)
 
-    Promise.all([
-      getEmploymentApplicantFilterGroupsByLocation({
-        locationId: locationId,
-        locationLabel: locationName,
-      }),
-      getEmploymentOpeningsByLocation({
-        locationId: locationId,
-        locationLabel: locationName,
-      }),
-      getEmploymentApplicantsByLocation({
-        locationId: locationId,
-        locationLabel: locationName,
-      }),
-    ])
-      .then(([nextGroups, nextOpenings, nextApplicants]) => {
-        if (!isActive) {
-          return
+    getEmploymentApplicantFilterGroupsByLocation({
+      locationId: locationId,
+      locationLabel: locationName,
+    })
+      .then((nextGroups) => {
+        if (isActive) {
+          setPositionGroups(nextGroups)
         }
-
-        setPositionGroups(nextGroups)
-        setOpenings(nextOpenings)
-        setRows(nextApplicants)
       })
       .catch((requestError: unknown) => {
         if (isActive) {
-          reportError(setError, requestError, "Unable to load employment applicants.")
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoading(false)
+          reportError(setError, requestError, "Unable to load employment applicant filters.")
         }
       })
 
@@ -357,6 +402,41 @@ export function EmploymentApplicantsScreen() {
       isActive = false
     }
   }, [locationId, locationName])
+
+  useEffect(() => {
+    if (apiPositions) {
+      setOpenings(
+        apiPositions.map((position) => ({
+          id: position.PositionID,
+          locationId: position.LocationId,
+          title: position.PositionText,
+          active: position.ActiveIndicator === "Y",
+        }))
+      )
+    } else {
+      setOpenings([])
+    }
+  }, [apiPositions])
+
+  useEffect(() => {
+    if (apiApplications) {
+      setRows(apiApplications.map((application) => mapApplicationToRecord(application, openingsById)))
+    } else {
+      setRows([])
+    }
+  }, [apiApplications, openingsById])
+
+  useEffect(() => {
+    setLoading(isApplicationsLoading || isPositionsLoading)
+  }, [isApplicationsLoading, isPositionsLoading])
+
+  useEffect(() => {
+    if (applicationsError || positionsError) {
+      reportErrorMessage(setError, "Unable to load employment applicants.")
+    } else {
+      setError(null)
+    }
+  }, [applicationsError, positionsError])
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
@@ -412,6 +492,45 @@ export function EmploymentApplicantsScreen() {
     setError(null)
   }
 
+  async function handleDownloadPdf(row: EmploymentApplicantRecord) {
+    if (downloadingPdfId) {
+      return
+    }
+
+    setDownloadingPdfId(row.id)
+    setError(null)
+
+    try {
+      const blob = await downloadEmploymentApplicationPdf({
+        connectionString: "demo_prod",
+        entryId: row.id,
+      }).unwrap()
+
+      const pdfBlob =
+        blob.type && blob.type !== "application/octet-stream"
+          ? blob
+          : new Blob([blob], { type: "application/pdf" })
+      const url = URL.createObjectURL(pdfBlob)
+      const opened = window.open(url, "_blank", "noopener,noreferrer")
+
+      if (!opened) {
+        const link = document.createElement("a")
+        link.href = url
+        link.download = `${row.firstName}-${row.lastName}-application.pdf`.replace(/\s+/g, "-")
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+      }
+
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+      toastSuccess(`Opened PDF for ${row.firstName} ${row.lastName}.`)
+    } catch (requestError) {
+      reportError(setError, requestError, "Unable to download the employment application PDF.")
+    } finally {
+      setDownloadingPdfId(null)
+    }
+  }
+
   async function handleSaveApplicant() {
     if (!locationId || !editingApplicant || saving) {
       return
@@ -444,6 +563,7 @@ export function EmploymentApplicantsScreen() {
       setStatusMessage(updateMessage)
       toastSuccess(updateMessage)
       closeEditDialog()
+      void refetchApplications()
     } catch (requestError) {
       reportError(setError, requestError, "Unable to update the employment applicant.")
     } finally {
@@ -633,13 +753,10 @@ export function EmploymentApplicantsScreen() {
                                   Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => {
-                                    setPreviewApplicantId(row.id)
-                                    setPreviewDialogApplicant(row)
-                                    setIsPreviewDialogOpen(true)
-                                  }}
+                                  disabled={downloadingPdfId === row.id}
+                                  onClick={() => void handleDownloadPdf(row)}
                                 >
-                                  PDF
+                                  {downloadingPdfId === row.id ? "Downloading..." : "PDF"}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -661,8 +778,7 @@ export function EmploymentApplicantsScreen() {
                 : "Select a location from the header to begin reviewing employment applicants."}
             </div>
             <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
-              <span className="text-foreground">Mock mode:</span>
-              <span>Applicants and PDF preview use local service data</span>
+           
             </div>
           </CardFooter>
         </Card>
@@ -781,82 +897,6 @@ export function EmploymentApplicantsScreen() {
             <Button type="button" className="gap-2" onClick={() => void handleSaveApplicant()} disabled={saving}>
               {saving ? <LoaderCircle className="size-4 animate-spin" /> : <Pencil className="size-4" />}
               Update Applicant
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isPreviewDialogOpen} onOpenChange={(open) => { if (!open) { setIsPreviewDialogOpen(false) } else { setIsPreviewDialogOpen(true) } }}>
-        <DialogContent className="max-w-2xl p-0 sm:max-w-2xl">
-          <DialogHeader className="border-b bg-muted/40 px-5 py-4">
-            <DialogTitle className="text-base font-semibold text-foreground">
-              Applicant PDF Preview
-            </DialogTitle>
-            <DialogDescription>
-              Mock preview using the current applicant payload until the real document endpoint is connected.
-            </DialogDescription>
-          </DialogHeader>
-
-          {previewApplicant ? (
-            <div className="space-y-5 px-5 py-5">
-              <div className="rounded-xl border border-border/80 bg-gradient-to-br from-background via-background to-muted/40 p-5 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
-                      {locationName || "Venue"}
-                    </p>
-                    <h3 className="mt-2 text-xl font-semibold text-foreground">
-                      {previewApplicant.firstName} {previewApplicant.lastName}
-                    </h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Applicant for {previewApplicant.opportunityTitle}
-                    </p>
-                  </div>
-                  <ApplicantStatusPill reviewed={previewApplicant.reviewed} />
-                </div>
-
-                <Separator className="my-4" />
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Email</p>
-                    <p className="mt-1 text-sm text-foreground">{previewApplicant.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Phone</p>
-                    <p className="mt-1 text-sm text-foreground">{previewApplicant.phone}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Submitted</p>
-                    <p className="mt-1 text-sm text-foreground">{formatShortDate(previewApplicant.submittedOn)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Reviewed By</p>
-                    <p className="mt-1 text-sm text-foreground">{previewApplicant.reviewedBy || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Hire Date</p>
-                    <p className="mt-1 text-sm text-foreground">{formatShortDate(previewApplicant.hireDate)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Dismissal Date</p>
-                    <p className="mt-1 text-sm text-foreground">{formatShortDate(previewApplicant.dismissalDate)}</p>
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-lg border border-border/70 bg-muted/20 px-4 py-4">
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Notes</p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">
-                    {previewApplicant.notes || "No internal notes added yet."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          <DialogFooter className="border-t px-5 py-4">
-            <Button type="button" variant="outline" onClick={() => setIsPreviewDialogOpen(false)}>
-              Close
             </Button>
           </DialogFooter>
         </DialogContent>

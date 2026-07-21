@@ -6,7 +6,7 @@ import {
 import { Fragment, useEffect, useState } from "react"
 
 
-import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
+// import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
 import { StandardRowActionsMenu } from "@/components/common/standard-row-actions-menu"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { Button } from "@/components/ui/button"
@@ -36,12 +36,16 @@ import {
 } from "@/components/ui/table"
 import {
   createEmploymentQuestion,
-  deleteEmploymentQuestion,
+
   getEmploymentQuestionsByLocation,
   updateEmploymentQuestion,
 } from "@/features/employment-questions/employment-questions.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
+import {
+  useGetEmploymentQuestionsQuery,
+  useAddUpdateEmploymentQuestionMutation,
+} from "@/store/api/clubmanApi"
 import type { EmploymentQuestionRecord } from "@/types/employment-question"
 
 const ACTIVE_OPTIONS = [
@@ -87,16 +91,44 @@ export function EmploymentQuestionsScreen() {
   const [activeInput, setActiveInput] = useState("Y")
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [deletingRow, setDeletingRow] = useState<EmploymentQuestionRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
   const canSave = questionInput.trim().length > 0
 
+  const { data: apiQuestions, isLoading: isQueryLoading, error: queryError, refetch } =
+    useGetEmploymentQuestionsQuery(
+      { connectionString: "demo_prod", locationId: locationId ?? "" },
+      { skip: !locationId }
+    )
+
+  const [addUpdateEmploymentQuestion] = useAddUpdateEmploymentQuestionMutation()
+
+  useEffect(() => {
+    if (queryError) {
+      reportErrorMessage(setError, "Unable to load employment questions.")
+    } else {
+      setError(null)
+    }
+  }, [queryError])
+
+  useEffect(() => {
+    if (apiQuestions) {
+      setRows(
+        apiQuestions.map((question) => ({
+          id: question.EQID,
+          locationId: question.LocationId,
+          question: question.EQText,
+          active: question.ActiveIndicator === "Y",
+        }))
+      )
+    } else {
+      setRows([])
+    }
+  }, [apiQuestions])
+
   useEffect(() => {
     if (!locationId) {
-      setRows([])
       setEditorMode(null)
       setEditingQuestionId(null)
       setQuestionInput("")
@@ -104,43 +136,12 @@ export function EmploymentQuestionsScreen() {
       setLoading(false)
       setError(null)
       setStatusMessage(null)
-      return
     }
+  }, [locationId])
 
-    let isActive = true
-    setLoading(true)
-    setError(null)
-    setStatusMessage(null)
-    setRows([])
-    setEditorMode(null)
-    setEditingQuestionId(null)
-    setQuestionInput("")
-    setActiveInput("Y")
-
-    getEmploymentQuestionsByLocation({
-      locationId: locationId,
-      locationLabel: locationName,
-    })
-      .then((result) => {
-        if (isActive) {
-          setRows(result)
-        }
-      })
-      .catch((requestError: unknown) => {
-        if (isActive) {
-          reportError(setError, requestError, "Unable to load employment questions.")
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      isActive = false
-    }
-  }, [locationId, locationName])
+  useEffect(() => {
+    setLoading(isQueryLoading)
+  }, [isQueryLoading])
 
   function openCreateEditor() {
     setEditorMode("create")
@@ -191,69 +192,39 @@ export function EmploymentQuestionsScreen() {
 
     try {
       if (editorMode === "edit" && editingQuestionId) {
-        const updatedRow = await updateEmploymentQuestion({
-          locationId: locationId,
-          locationLabel: locationName,
-          questionId: editingQuestionId,
-          question: normalizedQuestion,
-          active: activeInput === "Y",
-        })
+        await addUpdateEmploymentQuestion({
+          ConnectionString: "demo_prod",
+          LocationId: locationId,
+          EQID: editingQuestionId,
+          EQText: normalizedQuestion,
+          ActiveIndicator: activeInput,
+          LastUpdatedId: "Admin",
+        }).unwrap()
 
-        setRows((current) =>
-          current.map((row) => (row.id === updatedRow.id ? updatedRow : row))
-        )
         const updateMessage = `Updated employment question for ${locationName}.`
         setStatusMessage(updateMessage)
         toastSuccess(updateMessage)
       } else {
-        const createdRow = await createEmploymentQuestion({
-          locationId: locationId,
-          locationLabel: locationName,
-          question: normalizedQuestion,
-          active: activeInput === "Y",
-        })
+        await addUpdateEmploymentQuestion({
+          ConnectionString: "demo_prod",
+          LocationId: locationId,
+          EQID: "",
+          EQText: normalizedQuestion,
+          ActiveIndicator: activeInput,
+          LastUpdatedId: "Admin",
+        }).unwrap()
 
-        setRows((current) => [createdRow, ...current])
         const createMessage = `Added a new employment question for ${locationName}.`
         setStatusMessage(createMessage)
         toastSuccess(createMessage)
       }
 
       closeEditor()
+      refetch()
     } catch (requestError) {
       reportError(setError, requestError, "Unable to save the employment question.")
     } finally {
       setSaving(false)
-    }
-  }
-
-  async function confirmDelete() {
-    if (!locationId || !deletingRow || deletingId) {
-      return
-    }
-
-    setDeletingId(deletingRow.id)
-    setError(null)
-
-    try {
-      await deleteEmploymentQuestion({
-        locationId: locationId,
-        locationLabel: locationName,
-        questionId: deletingRow.id,
-      })
-
-      setRows((current) => current.filter((row) => row.id !== deletingRow.id))
-      if (editingQuestionId === deletingRow.id) {
-        closeEditor()
-      }
-      const deleteMessage = `Deleted employment question for ${locationName}.`
-      setStatusMessage(deleteMessage)
-      toastSuccess(deleteMessage)
-      setDeletingRow(null)
-    } catch (requestError) {
-      reportError(setError, requestError, "Unable to delete the employment question.")
-    } finally {
-      setDeletingId(null)
     }
   }
 
@@ -402,14 +373,14 @@ export function EmploymentQuestionsScreen() {
                             <div className="flex items-center justify-end">
                               <StandardRowActionsMenu
                                 ariaLabel={`Actions for ${row.question}`}
-                                hiddenActions={["Add"]}
+                                hiddenActions={["Add", "Delete"]}
                                 onAction={(action) => {
                                   if (action === "Edit") {
                                     openEditEditor(row)
                                   }
-                                  if (action === "Delete") {
-                                    setDeletingRow(row)
-                                  }
+                                  // if (action === "Delete") {
+                                  //   setDeletingRow(row)
+                                  // }
                                 }}
                               />
                             </div>
@@ -435,12 +406,12 @@ export function EmploymentQuestionsScreen() {
             </div>
             <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
               <HelpCircle className="size-3.5" />
-              Mock management mode
+              Employment questions
             </div>
           </CardFooter>
         </Card>
 
-        <ConfirmDeleteDialog
+        {/* <ConfirmDeleteDialog
           open={Boolean(deletingRow)}
           onOpenChange={(open) => {
             if (!open && !deletingId) {
@@ -454,17 +425,7 @@ export function EmploymentQuestionsScreen() {
             : ""}
           confirmLabel="Delete question"
           isPending={Boolean(deletingId)}
-        />
+        /> */}
     </div>
   )
 }
-
-
-
-
-
-
-
-
-
-

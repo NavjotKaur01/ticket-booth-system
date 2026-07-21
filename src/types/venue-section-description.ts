@@ -3,9 +3,10 @@ export type VenueSectionDescriptionRecord = {
   locationId: string
   sectionName: string
   sectionDetail: string
+  lookupOrder: number
 }
 
 export type VenueSectionDescriptionDraft = Omit<
   VenueSectionDescriptionRecord,
-  "id" | "locationId"
+  "id" | "locationId" | "lookupOrder"
 >

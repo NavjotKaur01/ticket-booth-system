@@ -9,7 +9,8 @@ export type VenueSocialPlatform =
 export type VenueSocialRecord = {
   id: string
   locationId: string
-  social: VenueSocialPlatform
+  /** Display name from API (often a platform key like facebook). */
+  social: string
   displayOrder: number
   url: string
 }

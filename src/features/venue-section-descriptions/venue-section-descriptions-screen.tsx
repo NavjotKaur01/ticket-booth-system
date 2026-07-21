@@ -1,4 +1,6 @@
 import {
+  ChevronLeft,
+  ChevronRight,
   LayoutList,
   LoaderCircle,
   Plus,
@@ -19,6 +21,13 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Table,
   TableBody,
   TableCell,
@@ -28,14 +37,19 @@ import {
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  createVenueSectionDescription,
   deleteVenueSectionDescription,
-  getVenueSectionDescriptionsByLocation,
-  updateVenueSectionDescription,
 } from "@/features/venue-section-descriptions/venue-section-descriptions.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
+import {
+  useAddUpdateSectionDetailMutation,
+  useGetSectionDetailsQuery,
+} from "@/store/api/clubmanApi"
+import type { SectionDetailItem } from "@/types/api/section-details"
 import type { VenueSectionDescriptionRecord } from "@/types/venue-section-description"
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const
+const DEFAULT_PAGE_SIZE = 10
 
 function EmptyState({
   title,
@@ -48,6 +62,120 @@ function EmptyState({
     <div className="rounded-sm border border-dashed border-border bg-muted/20 px-4 py-10 text-center">
       <p className="text-sm font-medium text-foreground">{title}</p>
       <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+    </div>
+  )
+}
+
+function mapSectionDetailToRecord(
+  item: SectionDetailItem,
+  locationId: string
+): VenueSectionDescriptionRecord {
+  return {
+    id: item.LookupCode,
+    locationId,
+    sectionName: item.SectionName,
+    sectionDetail: item.SectionDetail,
+    lookupOrder: item.LookupOrder,
+  }
+}
+
+function SectionDetailsPagination({
+  pageNumber,
+  pageSize,
+  itemCount,
+  hasNextPage,
+  disabled,
+  onPageChange,
+  onPageSizeChange,
+}: {
+  pageNumber: number
+  pageSize: number
+  itemCount: number
+  hasNextPage: boolean
+  disabled?: boolean
+  onPageChange: (pageNumber: number) => void
+  onPageSizeChange: (pageSize: number) => void
+}) {
+  const from = itemCount === 0 ? 0 : (pageNumber - 1) * pageSize + 1
+  const to = (pageNumber - 1) * pageSize + itemCount
+  const canGoPrevious = pageNumber > 1
+  const canGoNext = hasNextPage
+
+  return (
+    <div className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+        <p className="text-xs text-muted-foreground">
+          {itemCount === 0 ? (
+            "No records"
+          ) : (
+            <>
+              <span className="font-medium text-foreground">
+                {from}–{to}
+              </span>{" "}
+              on page {pageNumber}
+            </>
+          )}
+        </p>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Rows per page</span>
+          <Select
+            value={String(pageSize)}
+            onValueChange={(value) => onPageSizeChange(Number(value))}
+            disabled={disabled}
+          >
+            <SelectTrigger
+              size="sm"
+              className="h-8 w-[4.5rem] bg-background"
+              aria-label="Rows per page"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              {PAGE_SIZE_OPTIONS.map((option) => (
+                <SelectItem key={option} value={String(option)}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-sm"
+          onClick={() => onPageChange(pageNumber - 1)}
+          disabled={disabled || !canGoPrevious}
+        >
+          <ChevronLeft className="size-4" />
+          <span className="sr-only">Previous page</span>
+        </Button>
+
+        <Button
+          type="button"
+          variant="default"
+          size="icon-sm"
+          className="size-8"
+          disabled
+          aria-current="page"
+        >
+          {pageNumber}
+        </Button>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-sm"
+          onClick={() => onPageChange(pageNumber + 1)}
+          disabled={disabled || !canGoNext}
+        >
+          <ChevronRight className="size-4" />
+          <span className="sr-only">Next page</span>
+        </Button>
+      </div>
     </div>
   )
 }
@@ -131,11 +259,14 @@ function InlineEditorRow({
 }
 
 export function VenueSectionDescriptionsScreen() {
-  const { locationId, locationName } = useAppSession()
+  const { locationId, locationName, username } = useAppSession()
 
   const [rows, setRows] = useState<VenueSectionDescriptionRecord[]>([])
+  const [pageNumber, setPageNumber] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [editorMode, setEditorMode] = useState<"create" | "edit" | null>(null)
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null)
+  const [editingLookupOrder, setEditingLookupOrder] = useState<number | null>(null)
   const [sectionNameInput, setSectionNameInput] = useState("")
   const [sectionDetailInput, setSectionDetailInput] = useState("")
   const [loading, setLoading] = useState(false)
@@ -148,57 +279,98 @@ export function VenueSectionDescriptionsScreen() {
   const canSave =
     sectionNameInput.trim().length > 0 && sectionDetailInput.trim().length > 0
 
+  const {
+    data: apiSections,
+    isLoading: isQueryLoading,
+    isFetching,
+    error: queryError,
+    refetch,
+  } = useGetSectionDetailsQuery(
+    {
+      ConnectionString: "demo_prod",
+      PageNumber: pageNumber,
+      PageSize: pageSize,
+      SortColumn: "LookupOrder",
+      SortDirection: "ASC",
+    },
+    { skip: !locationId }
+  )
+
+  const [addUpdateSectionDetail] = useAddUpdateSectionDetailMutation()
+
+  const hasNextPage = (apiSections?.length ?? 0) >= pageSize
+  const rowOffset = (pageNumber - 1) * pageSize
+
   useEffect(() => {
-    if (!locationId) {
-      setRows([])
-      setEditorMode(null)
-      setEditingSectionId(null)
-      setSectionNameInput("")
-      setSectionDetailInput("")
-      setLoading(false)
+    if (queryError) {
+      reportErrorMessage(setError, "Unable to load section descriptions.")
+    } else {
       setError(null)
-      setStatusMessage(null)
+    }
+  }, [queryError])
+
+  useEffect(() => {
+    if (apiSections && locationId) {
+      setRows(apiSections.map((item) => mapSectionDetailToRecord(item, locationId)))
+    } else {
+      setRows([])
+    }
+  }, [apiSections, locationId])
+
+  useEffect(() => {
+    setPageNumber(1)
+    setPageSize(DEFAULT_PAGE_SIZE)
+    setEditorMode(null)
+    setEditingSectionId(null)
+    setEditingLookupOrder(null)
+    setSectionNameInput("")
+    setSectionDetailInput("")
+    setError(null)
+    setStatusMessage(null)
+    if (!locationId) {
+      setLoading(false)
+    }
+  }, [locationId])
+
+  useEffect(() => {
+    setLoading(isQueryLoading || isFetching)
+  }, [isQueryLoading, isFetching])
+
+  function changePage(nextPage: number) {
+    if (nextPage < 1 || nextPage === pageNumber) {
       return
     }
 
-    let isActive = true
-    setLoading(true)
-    setError(null)
-    setStatusMessage(null)
-    setRows([])
+    setPageNumber(nextPage)
     setEditorMode(null)
     setEditingSectionId(null)
+    setEditingLookupOrder(null)
     setSectionNameInput("")
     setSectionDetailInput("")
+    setError(null)
+    setStatusMessage(null)
+  }
 
-    getVenueSectionDescriptionsByLocation({
-      locationId,
-      locationLabel: locationName,
-    })
-      .then((result) => {
-        if (isActive) {
-          setRows(result)
-        }
-      })
-      .catch((requestError: unknown) => {
-        if (isActive) {
-          reportError(setError, requestError, "Unable to load section descriptions.")
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      isActive = false
+  function changePageSize(nextPageSize: number) {
+    if (nextPageSize === pageSize) {
+      return
     }
-  }, [locationId, locationName])
+
+    setPageSize(nextPageSize)
+    setPageNumber(1)
+    setEditorMode(null)
+    setEditingSectionId(null)
+    setEditingLookupOrder(null)
+    setSectionNameInput("")
+    setSectionDetailInput("")
+    setError(null)
+    setStatusMessage(null)
+  }
 
   function openCreateEditor() {
     setEditorMode("create")
     setEditingSectionId(null)
+    setEditingLookupOrder(null)
     setSectionNameInput("")
     setSectionDetailInput("")
     setError(null)
@@ -207,6 +379,7 @@ export function VenueSectionDescriptionsScreen() {
   function openEditEditor(row: VenueSectionDescriptionRecord) {
     setEditorMode("edit")
     setEditingSectionId(row.id)
+    setEditingLookupOrder(row.lookupOrder)
     setSectionNameInput(row.sectionName)
     setSectionDetailInput(row.sectionDetail)
     setError(null)
@@ -215,6 +388,7 @@ export function VenueSectionDescriptionsScreen() {
   function closeEditor() {
     setEditorMode(null)
     setEditingSectionId(null)
+    setEditingLookupOrder(null)
     setSectionNameInput("")
     setSectionDetailInput("")
     setError(null)
@@ -227,6 +401,7 @@ export function VenueSectionDescriptionsScreen() {
 
     const normalizedName = sectionNameInput.trim()
     const normalizedDetail = sectionDetailInput.trim()
+    const isEdit = editorMode === "edit" && Boolean(editingSectionId)
     const duplicateRow = rows.find(
       (row) =>
         row.sectionName.toLowerCase() === normalizedName.toLowerCase() &&
@@ -244,39 +419,28 @@ export function VenueSectionDescriptionsScreen() {
     setError(null)
 
     try {
-      const payload = {
-        sectionName: normalizedName,
-        sectionDetail: normalizedDetail,
-      }
+      const nextLookupOrder = isEdit
+        ? (editingLookupOrder ??
+          rows.find((row) => row.id === editingSectionId)?.lookupOrder ??
+          0)
+        : Math.max(0, ...rows.map((row) => row.lookupOrder), 0) + 1
 
-      if (editorMode === "edit" && editingSectionId) {
-        const updatedRow = await updateVenueSectionDescription({
-          locationId,
-          locationLabel: locationName,
-          sectionId: editingSectionId,
-          input: payload,
-        })
+      await addUpdateSectionDetail({
+        ConnectionString: "demo_prod",
+        LookupCode: isEdit ? editingSectionId! : "",
+        SectionName: normalizedName,
+        SectionDetail: normalizedDetail,
+        LookupOrder: nextLookupOrder,
+        LastUpdateID: username || "Admin",
+      }).unwrap()
 
-        setRows((current) =>
-          current.map((row) => (row.id === updatedRow.id ? updatedRow : row))
-        )
-        const updateMessage = `Updated ${updatedRow.sectionName} for ${locationName}.`
-        setStatusMessage(updateMessage)
-        toastSuccess(updateMessage)
-      } else {
-        const createdRow = await createVenueSectionDescription({
-          locationId,
-          locationLabel: locationName,
-          input: payload,
-        })
-
-        setRows((current) => [...current, createdRow])
-        const createMessage = `Added ${createdRow.sectionName} for ${locationName}.`
-        setStatusMessage(createMessage)
-        toastSuccess(createMessage)
-      }
-
+      const saveMessage = isEdit
+        ? `Updated ${normalizedName} for ${locationName}.`
+        : `Added ${normalizedName} for ${locationName}.`
+      setStatusMessage(saveMessage)
+      toastSuccess(saveMessage)
       closeEditor()
+      await refetch()
     } catch (requestError) {
       reportError(setError, requestError, "Unable to save the section description.")
     } finally {
@@ -323,8 +487,7 @@ export function VenueSectionDescriptionsScreen() {
                 Section Details
               </h1>
               <p className="text-sm text-muted-foreground">
-                Manage venue section names and descriptions with mock service data
-                until the backend integration is ready.
+                Manage venue section names and descriptions for the selected location.
               </p>
             </div>
             <Button
@@ -359,7 +522,7 @@ export function VenueSectionDescriptionsScreen() {
                 <div className="p-4">
                   <VenueNoLocationState featureLabel="Section descriptions" />
                 </div>
-              ) : loading ? (
+              ) : loading && rows.length === 0 ? (
                 <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
                   <LoaderCircle className="size-4 animate-spin" />
                   Loading section descriptions...
@@ -401,7 +564,7 @@ export function VenueSectionDescriptionsScreen() {
                         <Fragment key={row.id}>
                           {editorMode === "edit" && editingSectionId === row.id ? (
                             <InlineEditorRow
-                              rowNumber={index + 1}
+                              rowNumber={rowOffset + index + 1}
                               sectionName={sectionNameInput}
                               sectionDetail={sectionDetailInput}
                               saving={saving}
@@ -420,7 +583,7 @@ export function VenueSectionDescriptionsScreen() {
                               }
                             >
                               <TableCell className="px-4 font-medium tabular-nums text-muted-foreground">
-                                {index + 1}
+                                {rowOffset + index + 1}
                               </TableCell>
                               <TableCell className="px-4 font-medium text-foreground">
                                 {row.sectionName}
@@ -460,6 +623,18 @@ export function VenueSectionDescriptionsScreen() {
                   </p>
                 </div>
               ) : null}
+
+              {locationId ? (
+                <SectionDetailsPagination
+                  pageNumber={pageNumber}
+                  pageSize={pageSize}
+                  itemCount={rows.length}
+                  hasNextPage={hasNextPage}
+                  disabled={loading}
+                  onPageChange={changePage}
+                  onPageSizeChange={changePageSize}
+                />
+              ) : null}
             </CardContent>
 
             <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 sm:flex-row sm:items-center">
@@ -472,7 +647,7 @@ export function VenueSectionDescriptionsScreen() {
               {locationId && rows.length > 0 ? (
                 <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
                   <LayoutList className="size-3.5" />
-                  Mock management mode
+                  Section details
                 </div>
               ) : null}
             </CardFooter>

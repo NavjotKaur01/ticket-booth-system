@@ -80,7 +80,7 @@ export function FormEmailsScreen() {
     isFetching,
     error: queryError,
   } = useGetFormEmailsQuery(
-    { connectionString: connectionName, locationId: locationId ?? "" },
+    { connectionString: 'demo_prod', locationId: locationId ?? "" },
     { skip: !canQuery }
   )
 
@@ -211,11 +211,11 @@ export function FormEmailsScreen() {
 
     try {
       await addUpdateFormEmail({
-        EmailReferenceId: editingEmailId ?? "",
+        EmailReferenceId: editorMode === "edit" && editingEmailId ? editingEmailId : "",
         LocationId: locationId,
         ItemId: selectedFormId,
         EmailAddress: normalized,
-        ConnectionString: connectionName,
+        ConnectionString: "demo_prod",
         Username: username,
       }).unwrap()
 
@@ -242,7 +242,7 @@ export function FormEmailsScreen() {
     try {
       await deleteFormEmail({
         EmailReferenceId: deletingRow.id,
-        ConnectionString: connectionName,
+        ConnectionString: "demo_prod",
       }).unwrap()
 
       if (editingEmailId === deletingRow.id) {

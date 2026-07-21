@@ -171,23 +171,3 @@ export async function updateEmploymentQuestion({
   persistRows(locationId, rows)
   return { ...updatedRow }
 }
-
-export async function deleteEmploymentQuestion({
-  locationId,
-  locationLabel,
-  questionId,
-}: {
-  locationId: string
-  locationLabel?: string
-  questionId: string
-}): Promise<void> {
-  await wait(160)
-
-  const rows = getRowsForLocation(locationId, locationLabel)
-  const nextRows = rows.filter((row) => row.id !== questionId)
-  if (nextRows.length === rows.length) {
-    throw new Error("Unable to find the selected employment question.")
-  }
-
-  persistRows(locationId, nextRows)
-}

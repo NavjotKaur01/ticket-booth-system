@@ -20,11 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { getGiftOfLaughterByLocation } from "@/features/gift-of-laughter/gift-of-laughter.service"
 import { useAppSession } from "@/hooks/use-app-session"
-import { reportError, toastSuccess } from "@/lib/app-toast"
+import { reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { downloadCsv } from "@/lib/download-csv"
 import { buildExportMatrix, type ExportColumn } from "@/lib/export-table-data"
+import { useGetGiftCertificatesQuery } from "@/store/api/clubmanApi"
+import type { GiftCertificate } from "@/types/gift-certificate"
 import type {
   GiftOfLaughterFilters,
   GiftOfLaughterRecord,
@@ -68,7 +69,10 @@ function formatDisplayDate(value: string) {
     return "-"
   }
 
-  const parsed = new Date(`${value}T00:00:00`)
+  const dateOnly = value.includes("T") ? value.slice(0, 10) : value
+  const parsed = new Date(
+    dateOnly.includes("-") ? `${dateOnly}T00:00:00` : dateOnly
+  )
   if (Number.isNaN(parsed.getTime())) {
     return value
   }
@@ -78,6 +82,120 @@ function formatDisplayDate(value: string) {
     day: "numeric",
     year: "numeric",
   }).format(parsed)
+}
+
+function normalizeApiDate(value: string) {
+  if (!value) {
+    return ""
+  }
+
+  const trimmed = value.trim()
+  if (trimmed.includes("T")) {
+    return trimmed.slice(0, 10)
+  }
+
+  const parsed = new Date(trimmed)
+  if (!Number.isNaN(parsed.getTime())) {
+    const year = parsed.getFullYear()
+    const month = String(parsed.getMonth() + 1).padStart(2, "0")
+    const day = String(parsed.getDate()).padStart(2, "0")
+    return `${year}-${month}-${day}`
+  }
+
+  return trimmed.slice(0, 10)
+}
+
+function readString(record: Record<string, unknown>, ...keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === "string" && value.trim()) {
+      return value.trim()
+    }
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return String(value)
+    }
+  }
+  return ""
+}
+
+function readNumber(record: Record<string, unknown>, ...keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value
+    }
+    if (typeof value === "string" && value.trim()) {
+      const parsed = Number(value.replace(/[$,]/g, ""))
+      if (Number.isFinite(parsed)) {
+        return parsed
+      }
+    }
+  }
+  return 0
+}
+
+function mapGiftCertificateToRecord(
+  certificate: GiftCertificate | Record<string, unknown>,
+  locationId: string
+): GiftOfLaughterRecord {
+  const record = certificate as Record<string, unknown>
+
+  return {
+    id: readString(record, "id", "CertID", "CertificateNo", "certificateNo"),
+    locationId,
+    giftType: readString(record, "giftType", "GiftType"),
+    senderFirstName: readString(
+      record,
+      "senderFirstName",
+      "SenderFirstName",
+      "SenFirstName"
+    ),
+    senderLastName: readString(
+      record,
+      "senderLastName",
+      "SenderLastName",
+      "SenLastName"
+    ),
+    senderEmail: readString(record, "senderEmail", "SenderEmail", "SenEmail"),
+    receiverFirstName: readString(
+      record,
+      "receiverFirstName",
+      "ReceiverFirstName",
+      "RecFirstName"
+    ),
+    receiverLastName: readString(
+      record,
+      "receiverLastName",
+      "ReceiverLastName",
+      "RecLastName"
+    ),
+    receiverAddress: readString(
+      record,
+      "receiverAddress",
+      "ReceiverAddress",
+      "RecAddress"
+    ),
+    receiverEmail: readString(
+      record,
+      "receiverEmail",
+      "ReceiverEmail",
+      "RecEmail"
+    ),
+    shippedBy: readString(record, "shippedBy", "ShippedBy"),
+    originalAmount: readNumber(record, "orgAmount", "OrgAmount", "OriginalAmount"),
+    remainingBalance: readNumber(record, "amount", "Amount", "RemainingBalance"),
+    dateCreated: normalizeApiDate(
+      readString(record, "createdDate", "CreatedDate", "DateCreated")
+    ),
+    transId: readString(
+      record,
+      "pnref",
+      "PNREF",
+      "TransID",
+      "certificateNo",
+      "CertificateNo"
+    ),
+  }
 }
 
 function matchesTextFilter(value: string, query: string) {
@@ -183,6 +301,19 @@ export function GiftOfLaughterScreen() {
     "xls" | "xlsx" | "csv" | null
   >(null)
 
+  const {
+    data: apiCertificates,
+    isLoading: isQueryLoading,
+    error: queryError,
+  } = useGetGiftCertificatesQuery(
+    {
+      ConnectionString: "demo_prod",
+      PageNumber: 1,
+      PageSize: 500,
+    },
+    { skip: !locationId }
+  )
+
   const filteredRows = useMemo(
     () => filterGiftOfLaughterRows(rows, filters),
     [rows, filters]
@@ -194,46 +325,37 @@ export function GiftOfLaughterScreen() {
   )
 
   useEffect(() => {
-    if (!locationId) {
-      setRows([])
-      setFilters(EMPTY_GIFT_OF_LAUGHTER_FILTERS)
-      setLoading(false)
+    if (queryError) {
+      reportErrorMessage(setError, "Unable to load Gift of Laughter records.")
+    } else {
       setError(null)
-      setStatusMessage(null)
-      return
     }
+  }, [queryError])
 
-    let isActive = true
-    setLoading(true)
+  useEffect(() => {
+    if (apiCertificates && locationId) {
+      setRows(
+        apiCertificates.map((certificate) =>
+          mapGiftCertificateToRecord(certificate, locationId)
+        )
+      )
+    } else {
+      setRows([])
+    }
+  }, [apiCertificates, locationId])
+
+  useEffect(() => {
+    setFilters(EMPTY_GIFT_OF_LAUGHTER_FILTERS)
     setError(null)
     setStatusMessage(null)
-    setRows([])
-    setFilters(EMPTY_GIFT_OF_LAUGHTER_FILTERS)
-
-    getGiftOfLaughterByLocation({
-      locationId,
-      locationLabel: locationName,
-    })
-      .then((result) => {
-        if (isActive) {
-          setRows(result)
-        }
-      })
-      .catch((requestError: unknown) => {
-        if (isActive) {
-          reportError(setError, requestError, "Unable to load Gift of Laughter records.")
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      isActive = false
+    if (!locationId) {
+      setLoading(false)
     }
-  }, [locationId, locationName])
+  }, [locationId])
+
+  useEffect(() => {
+    setLoading(isQueryLoading)
+  }, [isQueryLoading])
 
   function updateFilter<K extends FilterKey>(key: K, value: GiftOfLaughterFilters[K]) {
     setFilters((current) => ({ ...current, [key]: value }))
@@ -309,7 +431,7 @@ export function GiftOfLaughterScreen() {
         </h1>
         <p className="text-sm text-muted-foreground">
           Review Gift of Laughter purchases and balances for the header-selected
-          location using mock service data until the backend is connected.
+          location.
         </p>
       </div>
 
@@ -473,7 +595,7 @@ export function GiftOfLaughterScreen() {
                           title="No data to display"
                           description={
                             rows.length === 0
-                              ? "This location does not have Gift of Laughter records in the mock service yet."
+                              ? "No Gift of Laughter records were returned for this location."
                               : "Adjust the column filters to find matching Gift of Laughter records."
                           }
                         />

@@ -34,15 +34,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  createVenueSocial,
-  deleteVenueSocial,
-  getVenueSocialsByLocation,
-  updateVenueSocial,
-  VENUE_SOCIAL_PLATFORM_OPTIONS,
-} from "@/features/venue-socials/venue-socials.service"
+import { VENUE_SOCIAL_PLATFORM_OPTIONS } from "@/features/venue-socials/venue-socials.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
+import {
+  useAddUpdateSocialMutation,
+  useDeleteSocialMutation,
+  useGetSocialsQuery,
+} from "@/store/api/clubmanApi"
+import type { SocialItem } from "@/types/api/social"
 import type {
   VenueSocialFilters,
   VenueSocialPlatform,
@@ -65,8 +65,28 @@ function EmptyState({
   )
 }
 
-function formatSocialLabel(value: VenueSocialPlatform) {
+function formatSocialLabel(value: string) {
+  if (!value) {
+    return "-"
+  }
+
   return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+function normalizeSocialPlatform(displayName: string): string {
+  const normalized = displayName.trim().toLowerCase()
+  const matched = VENUE_SOCIAL_PLATFORM_OPTIONS.find((option) => option === normalized)
+  return matched ?? displayName.trim()
+}
+
+function mapSocialItemToRecord(item: SocialItem): VenueSocialRecord {
+  return {
+    id: item.SocialId,
+    locationId: item.LocationId,
+    social: normalizeSocialPlatform(item.DisplayName),
+    displayOrder: item.OrderNumber,
+    url: item.NavigateUrl,
+  }
 }
 
 function filterVenueSocialRows(rows: VenueSocialRecord[], filters: VenueSocialFilters) {
@@ -111,7 +131,7 @@ export function VenueSocialsScreen() {
   const [filters, setFilters] = useState<VenueSocialFilters>(EMPTY_VENUE_SOCIAL_FILTERS)
   const [editorMode, setEditorMode] = useState<"create" | "edit" | null>(null)
   const [editingSocialId, setEditingSocialId] = useState<string | null>(null)
-  const [socialInput, setSocialInput] = useState<VenueSocialPlatform>("facebook")
+  const [socialInput, setSocialInput] = useState<string>("facebook")
   const [displayOrderInput, setDisplayOrderInput] = useState("1")
   const [urlInput, setUrlInput] = useState("")
   const [loading, setLoading] = useState(false)
@@ -121,10 +141,31 @@ export function VenueSocialsScreen() {
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
+  const {
+    data: apiSocials,
+    isLoading: isQueryLoading,
+    error: queryError,
+    refetch,
+  } = useGetSocialsQuery(
+    { connectionString: "demo_prod", locationId: locationId ?? "" },
+    { skip: !locationId }
+  )
+
+  const [addUpdateSocial] = useAddUpdateSocialMutation()
+  const [deleteSocial] = useDeleteSocialMutation()
+
   const filteredRows = useMemo(
     () => filterVenueSocialRows(rows, filters),
     [rows, filters]
   )
+
+  const socialSelectOptions = useMemo(() => {
+    const options = [...VENUE_SOCIAL_PLATFORM_OPTIONS]
+    if (socialInput && !options.includes(socialInput as VenueSocialPlatform)) {
+      options.push(socialInput as VenueSocialPlatform)
+    }
+    return options
+  }, [socialInput])
 
   const parsedDisplayOrder = Number.parseInt(displayOrderInput, 10)
   const canSave =
@@ -133,56 +174,38 @@ export function VenueSocialsScreen() {
     parsedDisplayOrder >= 0
 
   useEffect(() => {
-    if (!locationId) {
-      setRows([])
-      setFilters(EMPTY_VENUE_SOCIAL_FILTERS)
-      setEditorMode(null)
-      setEditingSocialId(null)
-      setSocialInput("facebook")
-      setDisplayOrderInput("1")
-      setUrlInput("")
-      setLoading(false)
+    if (queryError) {
+      reportErrorMessage(setError, "Unable to load venue social links.")
+    } else {
       setError(null)
-      setStatusMessage(null)
-      return
     }
+  }, [queryError])
 
-    let isActive = true
-    setLoading(true)
-    setError(null)
-    setStatusMessage(null)
-    setRows([])
+  useEffect(() => {
+    if (apiSocials) {
+      setRows(apiSocials.map(mapSocialItemToRecord))
+    } else {
+      setRows([])
+    }
+  }, [apiSocials])
+
+  useEffect(() => {
     setFilters(EMPTY_VENUE_SOCIAL_FILTERS)
     setEditorMode(null)
     setEditingSocialId(null)
     setSocialInput("facebook")
     setDisplayOrderInput("1")
     setUrlInput("")
-
-    getVenueSocialsByLocation({
-      locationId,
-      locationLabel: locationName,
-    })
-      .then((result) => {
-        if (isActive) {
-          setRows(result)
-        }
-      })
-      .catch((requestError: unknown) => {
-        if (isActive) {
-          reportError(setError, requestError, "Unable to load venue social links.")
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      isActive = false
+    setError(null)
+    setStatusMessage(null)
+    if (!locationId) {
+      setLoading(false)
     }
-  }, [locationId, locationName])
+  }, [locationId])
+
+  useEffect(() => {
+    setLoading(isQueryLoading)
+  }, [isQueryLoading])
 
   function openCreateEditor() {
     setEditorMode("create")
@@ -217,9 +240,11 @@ export function VenueSocialsScreen() {
     }
 
     const normalizedUrl = urlInput.trim()
+    const normalizedSocial = socialInput.trim()
+    const isEdit = editorMode === "edit" && Boolean(editingSocialId)
     const duplicateRow = rows.find(
       (row) =>
-        row.social === socialInput &&
+        row.social.toLowerCase() === normalizedSocial.toLowerCase() &&
         row.id !== editingSocialId
     )
     if (duplicateRow) {
@@ -234,46 +259,22 @@ export function VenueSocialsScreen() {
     setError(null)
 
     try {
-      const payload = {
-        social: socialInput,
-        displayOrder: parsedDisplayOrder,
-        url: normalizedUrl,
-      }
+      await addUpdateSocial({
+        ConnectionString: "demo_prod",
+        LocationId: locationId,
+        SocialId: isEdit ? editingSocialId! : "",
+        DisplayName: normalizedSocial,
+        NavigateUrl: normalizedUrl,
+        OrderNumber: parsedDisplayOrder,
+      }).unwrap()
 
-      if (editorMode === "edit" && editingSocialId) {
-        const updatedRow = await updateVenueSocial({
-          locationId,
-          locationLabel: locationName,
-          socialId: editingSocialId,
-          input: payload,
-        })
-
-        setRows((current) =>
-          current
-            .map((row) => (row.id === updatedRow.id ? updatedRow : row))
-            .sort((left, right) => left.displayOrder - right.displayOrder)
-        )
-        const updateMessage = `Updated ${formatSocialLabel(updatedRow.social)} for ${locationName}.`
-        setStatusMessage(updateMessage)
-        toastSuccess(updateMessage)
-      } else {
-        const createdRow = await createVenueSocial({
-          locationId,
-          locationLabel: locationName,
-          input: payload,
-        })
-
-        setRows((current) =>
-          [...current, createdRow].sort(
-            (left, right) => left.displayOrder - right.displayOrder
-          )
-        )
-        const createMessage = `Added ${formatSocialLabel(createdRow.social)} for ${locationName}.`
-        setStatusMessage(createMessage)
-        toastSuccess(createMessage)
-      }
-
+      const saveMessage = isEdit
+        ? `Updated ${formatSocialLabel(normalizedSocial)} for ${locationName}.`
+        : `Added ${formatSocialLabel(normalizedSocial)} for ${locationName}.`
+      setStatusMessage(saveMessage)
+      toastSuccess(saveMessage)
       closeEditor()
+      await refetch()
     } catch (requestError) {
       reportError(setError, requestError, "Unable to save the social link.")
     } finally {
@@ -290,13 +291,11 @@ export function VenueSocialsScreen() {
     setError(null)
 
     try {
-      await deleteVenueSocial({
-        locationId,
-        locationLabel: locationName,
-        socialId: deletingRow.id,
-      })
+      await deleteSocial({
+        ConnectionString: "demo_prod",
+        SocialId: deletingRow.id,
+      }).unwrap()
 
-      setRows((current) => current.filter((row) => row.id !== deletingRow.id))
       if (editingSocialId === deletingRow.id) {
         closeEditor()
       }
@@ -304,6 +303,7 @@ export function VenueSocialsScreen() {
       setStatusMessage(deleteMessage)
       toastSuccess(deleteMessage)
       setDeletingRow(null)
+      await refetch()
     } catch (requestError) {
       reportError(setError, requestError, "Unable to delete the social link.")
     } finally {
@@ -320,13 +320,13 @@ export function VenueSocialsScreen() {
               <Label htmlFor="venue-social-platform">Social</Label>
               <Select
                 value={socialInput}
-                onValueChange={(value) => setSocialInput(value as VenueSocialPlatform)}
+                onValueChange={setSocialInput}
               >
                 <SelectTrigger id="venue-social-platform" className="w-full bg-background">
                   <SelectValue placeholder="Select social platform" />
                 </SelectTrigger>
                 <SelectContent position="popper">
-                  {VENUE_SOCIAL_PLATFORM_OPTIONS.map((option) => (
+                  {socialSelectOptions.map((option) => (
                     <SelectItem key={option} value={option}>
                       {formatSocialLabel(option)}
                     </SelectItem>
@@ -395,8 +395,8 @@ export function VenueSocialsScreen() {
                 Location Socials Management
               </h1>
               <p className="text-sm text-muted-foreground">
-                Manage venue social links, display order, and profile URLs with mock
-                service data until the backend integration is ready.
+                Manage venue social links, display order, and profile URLs for the
+                selected location.
               </p>
             </div>
             <Button
@@ -571,7 +571,7 @@ export function VenueSocialsScreen() {
               {locationId && rows.length > 0 ? (
                 <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
                   <Share2 className="size-3.5" />
-                  Mock management mode
+                  Social links
                 </div>
               ) : null}
             </CardFooter>

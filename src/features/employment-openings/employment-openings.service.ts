@@ -177,23 +177,3 @@ export async function updateEmploymentOpening({
   persistRows(locationId, rows)
   return { ...updatedRow }
 }
-
-export async function deleteEmploymentOpening({
-  locationId,
-  locationLabel,
-  openingId,
-}: {
-  locationId: string
-  locationLabel?: string
-  openingId: string
-}): Promise<void> {
-  await wait(160)
-
-  const rows = getRowsForLocation(locationId, locationLabel)
-  const nextRows = rows.filter((row) => row.id !== openingId)
-  if (nextRows.length === rows.length) {
-    throw new Error("Unable to find the selected employment opening.")
-  }
-
-  persistRows(locationId, nextRows)
-}

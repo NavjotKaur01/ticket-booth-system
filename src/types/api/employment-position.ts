@@ -16,11 +16,6 @@ export interface AddUpdateEmploymentPositionRequest {
   LastUpdatedId: string
 }
 
-export interface DeleteEmploymentPositionRequest {
-  ConnectionString: string
-  PositionID: string
-}
-
 export interface AddUpdateEmploymentPositionResponse {
   Status: boolean
   Message: string
