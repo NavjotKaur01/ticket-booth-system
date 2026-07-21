@@ -5,7 +5,7 @@ import type {
   StatSummary,
 } from "@/types/dashboard"
 import { dashboardNewsImage } from "@/constants/assets"
-import { reportViewerUrl, ROUTES } from "@/constants/routes"
+import { reportViewerUrl } from "@/constants/routes"
 
 export const statSummaryDefinitions: Omit<StatSummary, "value">[] = [
   {
@@ -36,12 +36,6 @@ export const serviceFees: ServiceFees = {
 export const quickLinks: QuickLink[] = [
   { label: "Standupmedia Support", href: "#" },
   { label: "Email Support", href: "#" },
-  { label: "Manager Checkout", href: ROUTES.reports },
-  { label: "Quick View Sales", href: ROUTES.reports },
-  { label: "Door Checkout", href: ROUTES.reports },
-  { label: "System Defaults", href: ROUTES.systemDefaults },
-  { label: "Online Dashboard", href: "#" },
-  { label: "Add a Comic", href: "#" },
 ]
 
 export const newsItems: NewsItem[] = [
