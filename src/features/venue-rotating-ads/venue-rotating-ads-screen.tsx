@@ -1,15 +1,14 @@
 import {
   Eye,
   LoaderCircle,
-  Pencil,
   Plus,
   Save,
-  Trash2,
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
 import { RichTextEditor } from "@/components/common/rich-text-editor"
+import { StandardRowActionsMenu } from "@/components/common/standard-row-actions-menu"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import CalendarDatePickerControl from "@/components/calendar/controls/CalendarDatePickerControl"
 import { Button } from "@/components/ui/button"
@@ -45,12 +44,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import {
   createVenueRotatingAd,
   deleteVenueRotatingAd,
@@ -102,42 +95,6 @@ function ActivePill({ active }: { active: boolean }) {
     >
       {active ? "Y" : "N"}
     </span>
-  )
-}
-
-function ActionButton({
-  label,
-  onClick,
-  tone = "default",
-  children,
-  disabled = false,
-}: {
-  label: string
-  onClick: () => void
-  tone?: "default" | "danger"
-  children: React.ReactNode
-  disabled?: boolean
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClick}
-          disabled={disabled}
-          className={tone === "danger"
-            ? "text-destructive hover:bg-destructive/10 hover:text-destructive"
-            : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
-          }
-        >
-          {children}
-          <span className="sr-only">{label}</span>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="top">{label}</TooltipContent>
-    </Tooltip>
   )
 }
 
@@ -383,17 +340,28 @@ export function VenueRotatingAdsScreen() {
   }
 
   return (
-    <TooltipProvider>
-      <>
+    <>
         <div className="space-y-4">
-          <div className="space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">
-              Location Rotating Ads
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Manage venue rotating advertisement slots with mock service data until the
-              backend integration is ready.
-            </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <h1 className="text-xl font-semibold tracking-tight text-foreground">
+                Location Rotating Ads
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Manage venue rotating advertisement slots with mock service data until the
+                backend integration is ready.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              className="gap-2"
+              disabled={!locationId}
+              onClick={openCreateDialog}
+            >
+              <Plus className="size-4" />
+              Add New Ad
+            </Button>
           </div>
 
           <Card className="gap-0 py-0">
@@ -402,30 +370,17 @@ export function VenueRotatingAdsScreen() {
                 <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
                   Location Rotating Ads Management
                 </CardTitle>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="gap-2"
-                    disabled={!locationId || rows.length === 0}
-                    onClick={() => setPreviewOpen(true)}
-                  >
-                    <Eye className="size-4" />
-                    Preview
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="gap-2"
-                    disabled={!locationId}
-                    onClick={openCreateDialog}
-                  >
-                    <Plus className="size-4" />
-                    Add New Ad
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2"
+                  disabled={!locationId || rows.length === 0}
+                  onClick={() => setPreviewOpen(true)}
+                >
+                  <Eye className="size-4" />
+                  Preview
+                </Button>
               </div>
             </CardHeader>
 
@@ -482,25 +437,19 @@ export function VenueRotatingAdsScreen() {
                           <TableCell>{formatDisplayDate(row.startingDate)}</TableCell>
                           <TableCell>{formatDisplayDate(row.endingDate)}</TableCell>
                           <TableCell className="px-4">
-                            <div className="flex items-center justify-end gap-1">
-                              <ActionButton
-                                label="Edit rotating ad"
-                                onClick={() => openEditDialog(row)}
-                              >
-                                <Pencil className="size-4" />
-                              </ActionButton>
-                              <ActionButton
-                                label="Delete rotating ad"
-                                onClick={() => setDeletingRow(row)}
-                                tone="danger"
-                                disabled={deletingId === row.id}
-                              >
-                                {deletingId === row.id ? (
-                                  <LoaderCircle className="size-4 animate-spin" />
-                                ) : (
-                                  <Trash2 className="size-4" />
-                                )}
-                              </ActionButton>
+                            <div className="flex items-center justify-end">
+                              <StandardRowActionsMenu
+                                ariaLabel={`Actions for ${row.adName || row.alternateText}`}
+                                hiddenActions={["Add"]}
+                                onAction={(action) => {
+                                  if (action === "Edit") {
+                                    openEditDialog(row)
+                                  }
+                                  if (action === "Delete") {
+                                    setDeletingRow(row)
+                                  }
+                                }}
+                              />
                             </div>
                           </TableCell>
                         </TableRow>
@@ -734,7 +683,6 @@ export function VenueRotatingAdsScreen() {
           confirmLabel="Delete rotating ad"
           isPending={Boolean(deletingId)}
         />
-      </>
-    </TooltipProvider>
+    </>
   )
 }

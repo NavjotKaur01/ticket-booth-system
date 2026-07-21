@@ -1,14 +1,13 @@
 ﻿import {
   Clock3,
   LoaderCircle,
-  Pencil,
   Plus,
   Save,
-  Trash2,
 } from "lucide-react"
 import { Fragment, useEffect, useState } from "react"
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
+import { StandardRowActionsMenu } from "@/components/common/standard-row-actions-menu"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { Button } from "@/components/ui/button"
 import {
@@ -35,12 +34,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useAppSession } from "@/hooks/use-app-session"
 import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import {
@@ -91,42 +84,6 @@ function BooleanPill({ value }: { value: boolean }) {
     >
       {value ? "Y" : "N"}
     </span>
-  )
-}
-
-function ActionButton({
-  label,
-  onClick,
-  tone = "default",
-  children,
-  disabled = false,
-}: {
-  label: string
-  onClick: () => void
-  tone?: "default" | "danger"
-  children: React.ReactNode
-  disabled?: boolean
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClick}
-          disabled={disabled}
-          className={tone === "danger"
-            ? "text-destructive hover:bg-destructive/10 hover:text-destructive"
-            : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
-          }
-        >
-          {children}
-          <span className="sr-only">{label}</span>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="top">{label}</TooltipContent>
-    </Tooltip>
   )
 }
 
@@ -509,9 +466,9 @@ export function VenueShowTimesScreen() {
   }
 
   return (
-    <TooltipProvider>
-      <>
-        <div className="space-y-4">
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-xl font-semibold tracking-tight text-foreground">
               Venue Show Times
@@ -521,35 +478,33 @@ export function VenueShowTimesScreen() {
               data until the backend is wired in.
             </p>
           </div>
+          <Button
+            type="button"
+            size="sm"
+            className="gap-2"
+            disabled={!locationId}
+            onClick={openCreateEditor}
+          >
+            <Plus className="size-4" />
+            New Show Time
+          </Button>
+        </div>
 
-          <Card className="gap-0 py-0">
-            <CardContent className="px-4 py-4">
-              <div className="rounded-sm border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-                Use New Show Time to add a row, or edit a specific row inline when a venue
-                rule changes.
-              </div>
-            </CardContent>
-          </Card>
+        <Card className="gap-0 py-0">
+          <CardContent className="px-4 py-4">
+            <div className="rounded-sm border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+              Use New Show Time to add a row, or edit a specific row inline when a venue
+              rule changes.
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card className="gap-0 py-0">
-            <CardHeader className="border-b bg-muted/40 px-4 py-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
-                  Club Show Times Data
-                </CardTitle>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="gap-2"
-                  disabled={!locationId}
-                  onClick={openCreateEditor}
-                >
-                  <Plus className="size-4" />
-                  New Show Time
-                </Button>
-              </div>
-            </CardHeader>
+        <Card className="gap-0 py-0">
+          <CardHeader className="border-b bg-muted/40 px-4 py-3">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
+              Club Show Times Data
+            </CardTitle>
+          </CardHeader>
 
             <CardContent className="space-y-4 px-0 py-0">
               {error ? (
@@ -610,22 +565,19 @@ export function VenueShowTimesScreen() {
                             <TableCell><BooleanPill value={row.over21} /></TableCell>
                             <TableCell><BooleanPill value={row.showSeatingChart} /></TableCell>
                             <TableCell className="px-4">
-                              <div className="flex items-center justify-end gap-1">
-                                <ActionButton label="Edit show time" onClick={() => openEditEditor(row)}>
-                                  <Pencil className="size-4" />
-                                </ActionButton>
-                                <ActionButton
-                                  label="Delete show time"
-                                  onClick={() => setDeletingRow(row)}
-                                  tone="danger"
-                                  disabled={deletingId === row.id}
-                                >
-                                  {deletingId === row.id ? (
-                                    <LoaderCircle className="size-4 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="size-4" />
-                                  )}
-                                </ActionButton>
+                              <div className="flex items-center justify-end">
+                                <StandardRowActionsMenu
+                                  ariaLabel={`Actions for ${row.dayOfWeek} ${row.showTime}`}
+                                  hiddenActions={["Add"]}
+                                  onAction={(action) => {
+                                    if (action === "Edit") {
+                                      openEditEditor(row)
+                                    }
+                                    if (action === "Delete") {
+                                      setDeletingRow(row)
+                                    }
+                                  }}
+                                />
                               </div>
                             </TableCell>
                           </TableRow>
@@ -654,22 +606,21 @@ export function VenueShowTimesScreen() {
           </Card>
         </div>
 
-        <ConfirmDeleteDialog
-          open={Boolean(deletingRow)}
-          onOpenChange={(open) => {
-            if (!open && !deletingId) {
-              setDeletingRow(null)
-            }
-          }}
-          onConfirm={() => void confirmDelete()}
-          title="Delete show time?"
-          description={deletingRow
-            ? `This will remove ${deletingRow.dayOfWeek} ${deletingRow.showTime} from ${locationName}.`
-            : ""}
-          confirmLabel="Delete show time"
-          isPending={Boolean(deletingId)}
-        />
-      </>
-    </TooltipProvider>
+      <ConfirmDeleteDialog
+        open={Boolean(deletingRow)}
+        onOpenChange={(open) => {
+          if (!open && !deletingId) {
+            setDeletingRow(null)
+          }
+        }}
+        onConfirm={() => void confirmDelete()}
+        title="Delete show time?"
+        description={deletingRow
+          ? `This will remove ${deletingRow.dayOfWeek} ${deletingRow.showTime} from ${locationName}.`
+          : ""}
+        confirmLabel="Delete show time"
+        isPending={Boolean(deletingId)}
+      />
+    </>
   )
 }

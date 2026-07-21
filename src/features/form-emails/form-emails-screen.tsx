@@ -1,13 +1,12 @@
 ﻿import {
   LoaderCircle,
   Mail,
-  Pencil,
   Plus,
-  Trash2,
 } from "lucide-react"
 import { Fragment, useEffect, useMemo, useState } from "react"
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
+import { StandardRowActionsMenu } from "@/components/common/standard-row-actions-menu"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { ScrollSelectControl } from "@/components/common/scroll-select-control"
 import { Button } from "@/components/ui/button"
@@ -28,12 +27,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useAppSession } from "@/hooks/use-app-session"
 import { reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import { getClubmanErrorMessage } from "@/store/api/baseQuery"
@@ -56,42 +49,6 @@ function EmptyState({
       <p className="text-sm font-medium text-foreground">{title}</p>
       <p className="mt-1 text-sm text-muted-foreground">{description}</p>
     </div>
-  )
-}
-
-function ActionButton({
-  label,
-  onClick,
-  tone = "default",
-  children,
-  disabled = false,
-}: {
-  label: string
-  onClick: () => void
-  tone?: "default" | "danger"
-  children: React.ReactNode
-  disabled?: boolean
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClick}
-          disabled={disabled}
-          className={tone === "danger"
-            ? "text-destructive hover:bg-destructive/10 hover:text-destructive"
-            : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
-          }
-        >
-          {children}
-          <span className="sr-only">{label}</span>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="top">{label}</TooltipContent>
-    </Tooltip>
   )
 }
 
@@ -348,16 +305,27 @@ export function FormEmailsScreen() {
   }
 
   return (
-    <TooltipProvider>
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            Form Emails
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Manage which email addresses receive submissions for each venue form.
-            Form options are derived from ItemId values returned by GetFormEmails.
-          </p>
+    <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              Form Emails
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Manage which email addresses receive submissions for each venue form.
+              Form options are derived from ItemId values returned by GetFormEmails.
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="gap-2"
+            disabled={!selectedFormId}
+            onClick={openCreateEditor}
+          >
+            <Plus className="size-4" />
+            New Email
+          </Button>
         </div>
 
         <Card className="gap-0 py-0">
@@ -379,22 +347,9 @@ export function FormEmailsScreen() {
 
         <Card className="gap-0 py-0">
           <CardHeader className="border-b bg-muted/40 px-4 py-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
-                Form Emails Management
-              </CardTitle>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="gap-2"
-                disabled={!selectedFormId}
-                onClick={openCreateEditor}
-              >
-                <Plus className="size-4" />
-                New Email
-              </Button>
-            </div>
+            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
+              Form Emails Management
+            </CardTitle>
           </CardHeader>
 
           <CardContent className="space-y-4 px-0 py-0">
@@ -451,25 +406,19 @@ export function FormEmailsScreen() {
                             {row.emailAddress}
                           </TableCell>
                           <TableCell className="px-4">
-                            <div className="flex items-center justify-end gap-1">
-                              <ActionButton
-                                label="Edit email"
-                                onClick={() => openEditEditor(row)}
-                              >
-                                <Pencil className="size-4" />
-                              </ActionButton>
-                              <ActionButton
-                                label="Delete email"
-                                onClick={() => setDeletingRow(row)}
-                                tone="danger"
-                                disabled={deletingId === row.id}
-                              >
-                                {deletingId === row.id ? (
-                                  <LoaderCircle className="size-4 animate-spin" />
-                                ) : (
-                                  <Trash2 className="size-4" />
-                                )}
-                              </ActionButton>
+                            <div className="flex items-center justify-end">
+                              <StandardRowActionsMenu
+                                ariaLabel={`Actions for ${row.emailAddress}`}
+                                hiddenActions={["Add"]}
+                                onAction={(action) => {
+                                  if (action === "Edit") {
+                                    openEditEditor(row)
+                                  }
+                                  if (action === "Delete") {
+                                    setDeletingRow(row)
+                                  }
+                                }}
+                              />
                             </div>
                           </TableCell>
                         </TableRow>
@@ -515,8 +464,7 @@ export function FormEmailsScreen() {
           confirmLabel="Delete email"
           isPending={Boolean(deletingId)}
         />
-      </div>
-    </TooltipProvider>
+    </div>
   )
 }
 

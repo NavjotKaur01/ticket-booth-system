@@ -1,7 +1,7 @@
 ﻿import {
-  FileText,
   Filter,
   LoaderCircle,
+  MoreVertical,
   Pencil,
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
@@ -20,6 +20,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -609,31 +615,34 @@ export function EmploymentApplicantsScreen() {
                           {formatShortDate(row.dismissalDate)}
                         </TableCell>
                         <TableCell className="px-4">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              className="text-muted-foreground hover:bg-primary/10 hover:text-primary"
-                              onClick={() => openEditDialog(row)}
-                              aria-label="Edit applicant"
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="gap-1.5"
-                              onClick={() => {
-                                setPreviewApplicantId(row.id)
-                                setPreviewDialogApplicant(row)
-                                setIsPreviewDialogOpen(true)
-                              }}
-                            >
-                              <FileText className="size-4" />
-                              PDF
-                            </Button>
+                          <div className="flex items-center justify-end">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  className="bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+                                  aria-label={`Actions for ${row.firstName} ${row.lastName}`}
+                                >
+                                  <MoreVertical className="size-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="min-w-[8rem]">
+                                <DropdownMenuItem onClick={() => openEditDialog(row)}>
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setPreviewApplicantId(row.id)
+                                    setPreviewDialogApplicant(row)
+                                    setIsPreviewDialogOpen(true)
+                                  }}
+                                >
+                                  PDF
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </TableCell>
                       </TableRow>

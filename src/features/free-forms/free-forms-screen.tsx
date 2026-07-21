@@ -3,12 +3,12 @@
   Pencil,
   Plus,
   Save,
-  Trash2,
 } from "lucide-react"
-import { Fragment, type ReactNode, useEffect, useState } from "react"
+import { Fragment, useEffect, useState } from "react"
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
 import { RichTextEditor } from "@/components/common/rich-text-editor"
+import { StandardRowActionsMenu } from "@/components/common/standard-row-actions-menu"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { Button } from "@/components/ui/button"
 import {
@@ -35,12 +35,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import {
   createFreeForm,
   deleteFreeForm,
@@ -81,42 +75,6 @@ function ActivePill({ active }: { active: boolean }) {
     >
       {active ? "Y" : "N"}
     </span>
-  )
-}
-
-function ActionButton({
-  label,
-  onClick,
-  children,
-  tone = "default",
-  disabled = false,
-}: {
-  label: string
-  onClick: () => void
-  children: ReactNode
-  tone?: "default" | "danger"
-  disabled?: boolean
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClick}
-          disabled={disabled}
-          className={tone === "danger"
-            ? "text-destructive hover:bg-destructive/10 hover:text-destructive"
-            : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
-          }
-        >
-          {children}
-          <span className="sr-only">{label}</span>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="top">{label}</TooltipContent>
-    </Tooltip>
   )
 }
 
@@ -414,35 +372,34 @@ export function FreeFormsScreen() {
   }
 
   return (
-    <TooltipProvider delayDuration={120}>
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            Free Form
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Manage reusable venue landing blocks with button labels, display order,
-            active state, and shared rich-text content using mock service data.
-          </p>
+    <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              Free Form
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Manage reusable venue landing blocks with button labels, display order,
+              active state, and shared rich-text content using mock service data.
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="gap-2"
+            onClick={openCreateEditor}
+            disabled={!locationId || saving}
+          >
+            <Plus className="size-4" />
+            New Form
+          </Button>
         </div>
 
         <Card className="gap-0 py-0">
           <CardHeader className="border-b bg-muted/40 px-4 py-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
-                Free Form Management
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  onClick={openCreateEditor}
-                  disabled={!locationId || saving}
-                >
-                  <Plus className="mr-2 size-4" />
-                  New Form
-                </Button>
-              </div>
-            </div>
+            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
+              Free Form Management
+            </CardTitle>
           </CardHeader>
 
           <CardContent className="space-y-4 px-4 py-4">
@@ -491,25 +448,19 @@ export function FreeFormsScreen() {
                             <ActivePill active={row.active} />
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <ActionButton
-                                label="Edit free form"
-                                onClick={() => openEditEditor(row)}
-                              >
-                                <Pencil className="size-4" />
-                              </ActionButton>
-                              <ActionButton
-                                label="Delete free form"
-                                onClick={() => setDeletingRow(row)}
-                                tone="danger"
-                                disabled={deletingId === row.id}
-                              >
-                                {deletingId === row.id ? (
-                                  <LoaderCircle className="size-4 animate-spin" />
-                                ) : (
-                                  <Trash2 className="size-4" />
-                                )}
-                              </ActionButton>
+                            <div className="flex justify-end">
+                              <StandardRowActionsMenu
+                                ariaLabel={`Actions for ${row.buttonText}`}
+                                hiddenActions={["Add"]}
+                                onAction={(action) => {
+                                  if (action === "Edit") {
+                                    openEditEditor(row)
+                                  }
+                                  if (action === "Delete") {
+                                    setDeletingRow(row)
+                                  }
+                                }}
+                              />
                             </div>
                           </TableCell>
                         </TableRow>
@@ -557,8 +508,7 @@ export function FreeFormsScreen() {
           confirmLabel="Delete free form"
           isPending={Boolean(deletingId)}
         />
-      </div>
-    </TooltipProvider>
+    </div>
   )
 }
 

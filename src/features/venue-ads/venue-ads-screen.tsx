@@ -4,13 +4,13 @@ import {
   ExternalLink,
   ImageIcon,
   LoaderCircle,
-  Pencil,
   Plus,
   Trash2,
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
+import { StandardRowActionsMenu } from "@/components/common/standard-row-actions-menu"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { Button } from "@/components/ui/button"
 import {
@@ -95,37 +95,6 @@ function StatusPill({ active }: { active: boolean }) {
     >
       {active ? "Y" : "N"}
     </span>
-  )
-}
-
-function ActionIconButton({
-  label,
-  onClick,
-  tone = "default",
-  children,
-}: {
-  label: string
-  onClick: () => void
-  tone?: "default" | "danger"
-  children: React.ReactNode
-}) {
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon-sm"
-      onClick={(event) => {
-        event.stopPropagation()
-        onClick()
-      }}
-      className={tone === "danger"
-        ? "text-destructive hover:bg-destructive/10 hover:text-destructive"
-        : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
-      }
-    >
-      {children}
-      <span className="sr-only">{label}</span>
-    </Button>
   )
 }
 
@@ -401,34 +370,33 @@ export function VenueAdsScreen() {
   return (
     <>
       <div className="space-y-4">
-        <div className="space-y-1">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            Venue Ads
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Manage venue advertisement links and creative metadata with mock service
-            data until the backend endpoints are ready.
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              Venue Ads
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Manage venue advertisement links and creative metadata with mock service
+              data until the backend endpoints are ready.
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="gap-2"
+            disabled={!locationId}
+            onClick={openCreateDialog}
+          >
+            <Plus className="size-4" />
+            New
+          </Button>
         </div>
 
         <Card className="gap-0 py-0">
           <CardHeader className="border-b bg-muted/40 px-4 py-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
-                Venue Ads Management
-              </CardTitle>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="gap-2"
-                disabled={!locationId}
-                onClick={openCreateDialog}
-              >
-                <Plus className="size-4" />
-                New
-              </Button>
-            </div>
+            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
+              Venue Ads Management
+            </CardTitle>
           </CardHeader>
 
           <CardContent className="space-y-4 px-0 py-0">
@@ -514,21 +482,20 @@ export function VenueAdsScreen() {
                           <TableCell className="px-4">
                             <span className="font-medium text-foreground">{row.section}</span>
                           </TableCell>
-                          <TableCell className="px-4">
-                            <div className="flex items-center justify-end gap-1">
-                              <ActionIconButton
-                                label="Edit ad"
-                                onClick={() => openEditDialog(row)}
-                              >
-                                <Pencil className="size-4" />
-                              </ActionIconButton>
-                              <ActionIconButton
-                                label="Delete ad"
-                                onClick={() => openDeleteDialog(row)}
-                                tone="danger"
-                              >
-                                <Trash2 className="size-4" />
-                              </ActionIconButton>
+                          <TableCell className="px-4" onClick={(event) => event.stopPropagation()}>
+                            <div className="flex items-center justify-end">
+                              <StandardRowActionsMenu
+                                ariaLabel={`Actions for ${row.displayText || row.navigateUrl}`}
+                                hiddenActions={["Add"]}
+                                onAction={(action) => {
+                                  if (action === "Edit") {
+                                    openEditDialog(row)
+                                  }
+                                  if (action === "Delete") {
+                                    openDeleteDialog(row)
+                                  }
+                                }}
+                              />
                             </div>
                           </TableCell>
                         </TableRow>

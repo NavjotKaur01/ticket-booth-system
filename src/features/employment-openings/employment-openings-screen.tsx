@@ -1,14 +1,13 @@
 import {
   Briefcase,
   LoaderCircle,
-  Pencil,
   Plus,
-  Trash2,
 } from "lucide-react"
 import { Fragment, useEffect, useState } from "react"
 
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
+import { StandardRowActionsMenu } from "@/components/common/standard-row-actions-menu"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { Button } from "@/components/ui/button"
 import {
@@ -35,12 +34,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { deleteEmploymentOpening } from "@/features/employment-openings/employment-openings.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
@@ -77,34 +70,6 @@ function ActivePill({ active }: { active: boolean }) {
     >
       {active ? "Y" : "N"}
     </span>
-  )
-}
-
-function ActionButton({
-  label,
-  onClick,
-  children,
-}: {
-  label: string
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClick}
-          className="text-muted-foreground hover:bg-primary/10 hover:text-primary"
-        >
-          {children}
-          <span className="sr-only">{label}</span>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="top">{label}</TooltipContent>
-    </Tooltip>
   )
 }
 
@@ -347,37 +312,35 @@ export function EmploymentOpeningsScreen() {
   }
 
   return (
-    <TooltipProvider>
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            Employment Openings
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Manage venue employment opportunities with mock service data until the
-            backend integration for openings is ready.
-          </p>
+    <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              Employment Openings
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Manage venue employment opportunities with mock service data until the
+              backend integration for openings is ready.
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="gap-2"
+            disabled={!locationId}
+            onClick={openCreateEditor}
+          >
+            <Plus className="size-4" />
+            New Opening
+          </Button>
         </div>
 
 
         <Card className="gap-0 py-0">
           <CardHeader className="border-b bg-muted/40 px-4 py-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
-                Employment Other Opportunities Data
-              </CardTitle>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="gap-2"
-                disabled={!locationId}
-                onClick={openCreateEditor}
-              >
-                <Plus className="size-4" />
-                New Opening
-              </Button>
-            </div>
+            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
+              Employment Other Opportunities Data
+            </CardTitle>
           </CardHeader>
 
           <CardContent className="space-y-4 px-0 py-0">
@@ -431,19 +394,19 @@ export function EmploymentOpeningsScreen() {
                             <ActivePill active={row.active} />
                           </TableCell>
                           <TableCell className="px-4">
-                            <div className="flex items-center justify-end gap-1">
-                              <ActionButton
-                                label="Edit opening"
-                                onClick={() => openEditEditor(row)}
-                              >
-                                <Pencil className="size-4" />
-                              </ActionButton>
-                              <ActionButton
-                                label="Delete opening"
-                                onClick={() => setDeletingRow(row)}
-                              >
-                                <Trash2 className="size-4" />
-                              </ActionButton>
+                            <div className="flex items-center justify-end">
+                              <StandardRowActionsMenu
+                                ariaLabel={`Actions for ${row.title}`}
+                                hiddenActions={["Add"]}
+                                onAction={(action) => {
+                                  if (action === "Edit") {
+                                    openEditEditor(row)
+                                  }
+                                  if (action === "Delete") {
+                                    setDeletingRow(row)
+                                  }
+                                }}
+                              />
                             </div>
                           </TableCell>
                         </TableRow>
@@ -487,8 +450,7 @@ export function EmploymentOpeningsScreen() {
           confirmLabel="Delete opening"
           isPending={Boolean(deletingId)}
         />
-      </div>
-    </TooltipProvider>
+    </div>
   )
 }
 

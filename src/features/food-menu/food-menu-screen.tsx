@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from "react"
 import type { SegmentedTab } from "@/components/common/segmented-tab-list"
 import { SegmentedTabList } from "@/components/common/segmented-tab-list"
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
+import { StandardRowActionsMenu } from "@/components/common/standard-row-actions-menu"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { ScrollSelectControl } from "@/components/common/scroll-select-control"
 import { Button } from "@/components/ui/button"
@@ -83,39 +84,6 @@ function StatusPill({ active }: { active: boolean }) {
     >
       {active ? "Y" : "N"}
     </span>
-  )
-}
-
-function ActionIconButton({
-  label,
-  onClick,
-  tone = "default",
-  children,
-}: {
-  label: string
-  onClick: () => void
-  tone?: "default" | "danger"
-  children: React.ReactNode
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClick}
-          className={tone === "danger"
-            ? "text-destructive hover:bg-destructive/10 hover:text-destructive"
-            : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
-          }
-        >
-          {children}
-          <span className="sr-only">{label}</span>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="top">{label}</TooltipContent>
-    </Tooltip>
   )
 }
 
@@ -295,14 +263,28 @@ export function FoodMenuScreen() {
   return (
     <TooltipProvider>
       <div className="space-y-4">
-        <div className="space-y-1">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            Food Menu
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Manage venue food menu categories and PDF menu assets with mock data until
-            the backend integration is ready.
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              Food Menu
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Manage venue food menu categories and PDF menu assets with mock data until
+              the backend integration is ready.
+            </p>
+          </div>
+          {activeTab === "categories" ? (
+            <Button
+              type="button"
+              size="sm"
+              className="gap-2"
+              disabled={!locationId || loading || categoryRows.length === 0}
+              onClick={() => handleCategoryNew(categoryRows[0])}
+            >
+              <Plus className="size-4" />
+              Add
+            </Button>
+          ) : null}
         </div>
 
         <Card className="gap-0 py-0">
@@ -362,26 +344,19 @@ export function FoodMenuScreen() {
                         <TableCell className="tabular-nums">{row.menuOrder}</TableCell>
                         <TableCell><StatusPill active={row.active} /></TableCell>
                         <TableCell className="px-4">
-                          <div className="flex items-center justify-end gap-1">
-                            <ActionIconButton
-                              label="New category"
-                              onClick={() => handleCategoryNew(row)}
-                            >
-                              <Plus className="size-4" />
-                            </ActionIconButton>
-                            <ActionIconButton
-                              label="Edit category"
-                              onClick={() => handleCategoryEdit(row)}
-                            >
-                              <Pencil className="size-4" />
-                            </ActionIconButton>
-                            <ActionIconButton
-                              label="Delete category"
-                              onClick={() => handleCategoryDelete(row)}
-                              tone="danger"
-                            >
-                              <Trash2 className="size-4" />
-                            </ActionIconButton>
+                          <div className="flex items-center justify-end">
+                            <StandardRowActionsMenu
+                              ariaLabel={`Actions for ${row.menuName}`}
+                              hiddenActions={["Add"]}
+                              onAction={(action) => {
+                                if (action === "Edit") {
+                                  handleCategoryEdit(row)
+                                }
+                                if (action === "Delete") {
+                                  handleCategoryDelete(row)
+                                }
+                              }}
+                            />
                           </div>
                         </TableCell>
                       </TableRow>
@@ -404,7 +379,7 @@ export function FoodMenuScreen() {
                     />
                   </div>
 
-                                    <div className="flex flex-wrap items-center justify-start gap-1 rounded-sm border border-border/70 bg-muted/20 px-2 py-1 lg:justify-end">
+                  <div className="flex flex-wrap items-center justify-start gap-1 rounded-sm border border-border/70 bg-muted/20 px-2 py-1 lg:justify-end">
                     <PdfToolbarButton
                       label="Modify PDF menu"
                       icon={<Pencil className="size-4" />}
