@@ -2,6 +2,7 @@ import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { Provider } from "react-redux"
 
+import { AppDialogHost } from "@/components/common/app-dialog-host"
 import { AuthProvider } from "@/contexts/auth-context"
 import { initTheme, ThemeProvider } from "@/components/theme-provider"
 import { AppToaster } from "@/components/ui/app-toaster"
@@ -20,6 +21,7 @@ createRoot(document.getElementById("root")!).render(
           <TooltipProvider delayDuration={200}>
             <App />
             <AppToaster />
+            <AppDialogHost />
           </TooltipProvider>
         </AuthProvider>
       </ThemeProvider>

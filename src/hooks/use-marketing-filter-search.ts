@@ -3,6 +3,7 @@ import { useCallback, useState } from "react"
 import {
   hasMarketingFilterSearchCriteria,
 } from "@/lib/build-marketing-filter-search-request"
+import { confirmDialog } from "@/lib/app-dialog"
 import { mapMarketingFilterResults } from "@/lib/map-marketing-filter-results"
 import { getClubmanErrorMessage } from "@/store/api/baseQuery"
 import { useMarketingFilterSearchMutation } from "@/store/api/clubmanApi"
@@ -44,9 +45,11 @@ export function useMarketingFilterSearch({
       }
 
       if (!hasMarketingFilterSearchCriteria(filters)) {
-        const proceed = window.confirm(
-          "No search criteria entered. Search may take a long time to load customers. Do you wish to continue?"
-        )
+        const proceed = await confirmDialog({
+          title: "Confirm Search",
+          description:
+            "No search criteria entered. Search may take a long time to load customers. Do you wish to continue?",
+        })
         if (!proceed) {
           return
         }

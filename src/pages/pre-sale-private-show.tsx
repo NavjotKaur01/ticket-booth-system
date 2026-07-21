@@ -8,6 +8,7 @@ import { PreSaleDataTable } from "@/features/pre-sale/pre-sale-data-table"
 import { useAppSession } from "@/hooks/use-app-session"
 import { usePrivateShowLinks } from "@/hooks/use-private-show-links"
 import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
+import { confirmDialog } from "@/lib/app-dialog"
 import { deletePrivateShowLink } from "@/lib/api/private-show-links"
 import { buildDeletePrivateShowLinkRequest } from "@/lib/build-private-show-link-request"
 import { copyTextToClipboard } from "@/lib/export-table-data"
@@ -55,7 +56,10 @@ export function PreSalePrivateShow() {
       return
     }
 
-    const confirmed = window.confirm("Are you sure you want to delete?")
+    const confirmed = await confirmDialog({
+      title: "Delete Private Show Link",
+      description: "Are you sure you want to delete?",
+    })
     if (!confirmed) return
 
     setActionError(null)

@@ -138,7 +138,13 @@ import type {
 } from "@/types/api/private-show-link"
 import type { ReservationNoteRequest } from "@/types/api/reservation-note"
 import { mapReservationDetail } from "@/lib/map-reservation-detail"
+import { mapPaymentDetail } from "@/lib/map-payment-detail"
 import { mapUpcomingShowDetails } from "@/lib/map-upcoming-show-details"
+import type {
+  ApiPaymentDetail,
+  RefundPaymentRequest,
+  VoidPaymentRequest,
+} from "@/types/api/reservation-payment-actions"
 import type { ReservationHistoryItem } from "@/types/api/reservation-history"
 import type { DailyTransactionItem } from "@/types/api/daily-transaction"
 import type {
@@ -1154,6 +1160,41 @@ export const clubmanApi = createApi({
     updateTableNumberReservation: builder.mutation({
       query: (body: UpdateTableNumberReservationRequest) => ({
         url: reservationApiPath("UpdateTableNumberReservation"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    /**
+     * GET clubman/api/Reservation/{connection}/{paymentId}/GetPaymentById
+     * On-demand fetch of a single payment (decrypted card + type codes) used
+     * by the refund flow. Mutation so it can be triggered imperatively.
+     */
+    getPaymentById: builder.mutation<
+      ApiPaymentDetail,
+      { connectionName: string; paymentId: string }
+    >({
+      query: ({ connectionName, paymentId }) => ({
+        url: reservationApiPath(connectionName, paymentId, "GetPaymentById"),
+        method: "GET",
+        headers: { Accept: "application/json" },
+      }),
+      transformResponse: (response: unknown) => mapPaymentDetail(response),
+    }),
+
+    refundPayment: builder.mutation({
+      query: (body: RefundPaymentRequest) => ({
+        url: reservationApiPath("RefundPayment"),
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Reservation", "ShowDetails"],
+    }),
+
+    voidCreditAndGiftCardPayment: builder.mutation({
+      query: (body: VoidPaymentRequest) => ({
+        url: reservationApiPath("VoidCreditAndGiftCardPayment"),
         method: "PUT",
         body,
       }),

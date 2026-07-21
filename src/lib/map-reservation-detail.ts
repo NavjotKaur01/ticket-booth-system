@@ -160,6 +160,28 @@ export function mapReservationDetail(response: unknown): ReservationDetail {
     Note: readString(record, ['Note', 'note']) || null,
     ReservationNotes:
       readString(record, ['ReservationNotes', 'reservationNotes']) || null,
+    Memo: readString(record, ['Memo', 'memo']) || null,
+    Price: readNumber(record, ['Price', 'price', 'ShowPrice', 'showPrice']),
+    DayOfShowFee: readNumber(record, [
+      'DayOfShowFee',
+      'dayOfShowFee',
+      'DayOfShow',
+    ]),
+    PhoneInFee: readNumber(record, ['PhoneInFee', 'phoneInFee']),
+    WalkUpFee: readNumber(record, ['WalkUpFee', 'walkUpFee']),
+    WebFee: readNumber(record, ['WebFee', 'webFee']),
+    LookupSDescSource:
+      readString(record, [
+        'LookupSDescSource',
+        'lookupSDescSource',
+        'SourceLookUpCode',
+        'sourceLookUpCode',
+      ]) || null,
+    ResStatus: readString(record, ['ResStatus', 'resStatus']) || null,
+    TixPaid: readNumber(record, ['TixPaid', 'tixPaid']),
+    TixComp: readNumber(record, ['TixComp', 'tixComp']),
+    TixDisc: readNumber(record, ['TixDisc', 'tixDisc']),
+    TableNum: readString(record, ['TableNum', 'tableNum', 'TableNums']) || null,
     PaymentList: Array.isArray(paymentListRaw)
       ? paymentListRaw.map(mapReservationDetailPayment)
       : [],

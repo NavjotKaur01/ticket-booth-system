@@ -14,6 +14,7 @@ import {
   getBusinessContactDeleteDetail,
 } from "@/lib/api/business-contacts"
 import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
+import { confirmDialog } from "@/lib/app-dialog"
 import { businessFormToSearchFilters } from "@/lib/map-business-contact-form"
 import {
   EMPTY_BUSINESS_CONTACT_FILTERS,
@@ -102,7 +103,10 @@ export function BusinessContacts() {
     setActionError(null)
 
     if (
-      !window.confirm("Are you sure you want to delete this business contact?")
+      !(await confirmDialog({
+        title: "Delete Business Contact",
+        description: "Are you sure you want to delete this business contact?",
+      }))
     ) {
       return
     }

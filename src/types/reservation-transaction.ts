@@ -9,6 +9,8 @@ export type ReservationTransactionRow = {
   amount: number
   authorization: string
   pnref: string
+  /** ClubMan payment type LookUpCode (e.g. PYMT01 = Hold with Credit Card). */
+  paymentTypeCode: string
   isSplit: boolean
   dueAmt: number
   billAddr: string

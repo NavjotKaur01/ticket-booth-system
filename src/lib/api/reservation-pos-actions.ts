@@ -5,7 +5,12 @@
 
 import { dispatchEndpoint } from "@/lib/api/dispatch-endpoint"
 import { buildUpdateTableNumberReservationRequest } from "@/lib/build-assign-seats-request"
+import {
+  buildRefundPaymentRequest,
+  buildVoidPaymentRequest,
+} from "@/lib/build-refund-payment-request"
 import { clubmanApi } from "@/store/api/clubmanApi"
+import type { ApiPaymentDetail } from "@/types/api/reservation-payment-actions"
 
 export type AssignReservationSeatParams = {
   connectionName: string
@@ -78,27 +83,40 @@ export type ReservationPaymentActionParams = {
   lastUpdateId: string
 }
 
-export async function refundReservationPayment(
-  _params: ReservationPaymentActionParams
-): Promise<never> {
-  throw new Error(
-    "Refund is not available yet — the payment refund endpoint has not been implemented on the backend."
+/** GetPaymentById — full payment record (decrypted card + type codes). */
+export async function getReservationPaymentById(params: {
+  connectionName: string
+  paymentId: string
+}): Promise<ApiPaymentDetail> {
+  return dispatchEndpoint<ApiPaymentDetail, typeof params>(
+    clubmanApi.endpoints.getPaymentById,
+    params
   )
 }
 
-export async function voidReservationPayment(
-  _params: ReservationPaymentActionParams
-): Promise<never> {
-  throw new Error(
-    "Void is not available yet — the payment void endpoint has not been implemented on the backend."
-  )
+/** Desktop RefundPayment — refunds the selected card for RefundAmount. */
+export async function refundReservationPayment(params: {
+  connectionName: string
+  locationId: string
+  lastUpdateId: string
+  refundAmount: number
+  payment: ApiPaymentDetail
+}): Promise<unknown> {
+  const request = buildRefundPaymentRequest(params)
+  return dispatchEndpoint(clubmanApi.endpoints.refundPayment, request)
 }
 
-export async function clearReservationPayment(
-  _params: ReservationPaymentActionParams
-): Promise<never> {
-  throw new Error(
-    "Clear is not available yet — the payment clear endpoint has not been implemented on the backend."
+/** Desktop VoidCreditAndGiftCardPayment — voids one payment by id. */
+export async function voidReservationPayment(params: {
+  connectionName: string
+  locationId: string
+  lastUpdateId: string
+  paymentId: string
+}): Promise<unknown> {
+  const request = buildVoidPaymentRequest(params)
+  return dispatchEndpoint(
+    clubmanApi.endpoints.voidCreditAndGiftCardPayment,
+    request
   )
 }
 
@@ -110,6 +128,7 @@ export async function openCashDrawer(): Promise<{ message: string }> {
 }
 
 export async function revealMaskedCardNumber(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _params: ReservationPaymentActionParams
 ): Promise<never> {
   throw new Error(

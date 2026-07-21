@@ -1,4 +1,4 @@
-﻿import { LoaderCircle, QrCode } from "lucide-react"
+﻿import { LoaderCircle } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -12,16 +12,24 @@ import {
 import { Input } from "@/components/ui/input"
 import {
   buildReprintCountOptions,
+  createTicketPrintData,
   getMockTicketPrintData,
   printReservationTicket,
 } from "@/services/ticket-print.service"
-import {
-  reportError,
-  reportErrorMessage,
-  toastSuccess,
-} from "@/lib/app-toast"
+import { toastError, toastSuccess, getErrorMessage } from "@/lib/app-toast"
 import type { Reservation } from "@/types/reservation"
 import type { TicketPrintData } from "@/types/ticket-print"
+
+/** Desktop ReservationPayment reprint popup display values (form + detail). */
+export type ReprintTicketDialogDetails = {
+  lastName: string
+  firstName: string
+  partySize: number
+  /** Desktop CheckedIn from GetReservationDetailById. */
+  checkedInCount: number
+  totalAmount: number
+  paidAmount: number
+}
 
 type ReprintTicketDialogProps = {
   open: boolean
@@ -30,6 +38,14 @@ type ReprintTicketDialogProps = {
   showDate: string
   showLabel?: string
   locationName?: string
+  /**
+   * Desktop binds Party/Total/PaiedAmount from the payment form and
+   * CheckedIn/Remaining from GetReservationDetailById. When provided, these
+   * override the list-row mock ticket data for the popup display + button count.
+   */
+  details?: ReprintTicketDialogDetails | null
+  /** Raise z-index / suppress base close when opened on top of another dialog. */
+  nested?: boolean
 }
 
 function formatAmount(value: number) {
@@ -44,7 +60,7 @@ function ReadOnlyInput({ value }: { value: string }) {
     <Input
       value={value}
       readOnly
-      className="h-9 bg-muted/20 text-sm text-foreground"
+      className="h-8 bg-white text-sm text-foreground"
     />
   )
 }
@@ -52,13 +68,17 @@ function ReadOnlyInput({ value }: { value: string }) {
 function DetailField({
   label,
   value,
+  className,
 }: {
   label: string
   value: string
+  className?: string
 }) {
   return (
-    <label className="space-y-1">
-      <span className="text-xs font-medium text-foreground">{label}</span>
+    <label className={`inline-flex items-center gap-1.5 ${className ?? ""}`}>
+      <span className="whitespace-nowrap text-xs font-medium text-foreground">
+        {label}:
+      </span>
       <ReadOnlyInput value={value} />
     </label>
   )
@@ -71,25 +91,24 @@ export function ReprintTicketDialog({
   showDate,
   showLabel,
   locationName,
+  details = null,
+  nested = false,
 }: ReprintTicketDialogProps) {
   const [ticketData, setTicketData] = useState<TicketPrintData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isPrinting, setIsPrinting] = useState(false)
-  const [printError, setPrintError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open || !reservation) {
       setTicketData(null)
       setIsLoading(false)
       setIsPrinting(false)
-      setPrintError(null)
       return
     }
 
     let isActive = true
     setIsLoading(true)
     setIsPrinting(false)
-    setPrintError(null)
 
     getMockTicketPrintData({
       reservation,
@@ -98,16 +117,47 @@ export function ReprintTicketDialog({
       locationName,
     })
       .then((result) => {
-        if (isActive) {
-          setTicketData(result)
+        if (!isActive) {
+          return
         }
+
+        // Desktop: Party/Total/Paid from payment form; CheckedIn from detail.
+        if (details) {
+          const partySize = Math.max(1, details.partySize)
+          const checkedInCount = Math.max(
+            0,
+            Math.min(details.checkedInCount, partySize)
+          )
+          setTicketData(
+            createTicketPrintData({
+              reservationId: result.reservation.reservationId,
+              firstName: details.firstName || result.customer.firstName,
+              lastName: details.lastName || result.customer.lastName,
+              partySize,
+              checkedInCount,
+              totalAmount: details.totalAmount,
+              paidAmount: details.paidAmount,
+              paymentType: result.reservation.paymentType,
+              source: result.reservation.source,
+              section: result.reservation.section,
+              promotion: result.reservation.promotion,
+              tables: result.reservation.tables,
+              seatNumbers: result.reservation.seatNumbers,
+              showDate,
+              showLabel,
+              locationName,
+              qrValue: result.qrValue,
+            })
+          )
+          return
+        }
+
+        setTicketData(result)
       })
       .catch((error: unknown) => {
         if (isActive) {
-          reportError(
-            setPrintError,
-            error,
-            "Failed to load re-print ticket data."
+          toastError(
+            getErrorMessage(error, "Failed to load re-print ticket data.")
           )
         }
       })
@@ -120,12 +170,13 @@ export function ReprintTicketDialog({
     return () => {
       isActive = false
     }
-  }, [locationName, open, reservation, showDate, showLabel])
+  }, [details, locationName, open, reservation, showDate, showLabel])
 
-  const countOptions = useMemo(
-    () => buildReprintCountOptions(ticketData?.reservation.partySize ?? 1),
-    [ticketData?.reservation.partySize]
-  )
+  // Desktop ReprintTickets: buttons are 1..CheckedIn (not party size).
+  const countOptions = useMemo(() => {
+    const checkedIn = ticketData?.reservation.checkedInCount ?? 0
+    return buildReprintCountOptions(Math.max(0, checkedIn))
+  }, [ticketData?.reservation.checkedInCount])
 
   async function handlePrint(ticketCount: number) {
     if (!ticketData || isPrinting) {
@@ -133,7 +184,6 @@ export function ReprintTicketDialog({
     }
 
     setIsPrinting(true)
-    setPrintError(null)
 
     try {
       const didStart = await printReservationTicket({
@@ -143,131 +193,133 @@ export function ReprintTicketDialog({
       })
 
       if (!didStart) {
-        reportErrorMessage(
-          setPrintError,
-          "Unable to start printing. Please try again."
-        )
+        toastError("Unable to start printing. Please try again.")
         return
       }
 
       toastSuccess("Ticket print started")
       onOpenChange(false)
     } catch (error) {
-      reportError(
-        setPrintError,
-        error,
-        "Unable to build the ticket QR. Please try again."
+      toastError(
+        getErrorMessage(error, "Unable to build the ticket QR. Please try again.")
       )
     } finally {
       setIsPrinting(false)
     }
   }
 
+  const remainingCount = ticketData
+    ? Math.max(
+        0,
+        ticketData.reservation.partySize - ticketData.reservation.checkedInCount
+      )
+    : 0
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton
-        className="max-w-[46rem] overflow-hidden rounded-md border border-border/70 p-0 sm:max-w-[46rem]"
+        nested={nested}
+        className="max-w-[36rem] overflow-hidden rounded-md border border-border/70 p-0 sm:max-w-[36rem]"
       >
-        <DialogHeader className="bg-blue-700 px-5 py-3 text-primary-foreground">
-          <DialogTitle className="text-xl font-semibold text-white">
+        <DialogHeader className="bg-[#155abb] px-4 py-2.5 text-primary-foreground">
+          <DialogTitle className="text-base font-semibold text-white">
             Re-Print Ticket
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 bg-background px-4 py-4">
+        <div className="space-y-3 bg-background px-3 py-3">
           {isLoading ? (
-            <div className="flex min-h-48 items-center justify-center gap-2 text-sm text-muted-foreground">
+            <div className="flex min-h-40 items-center justify-center gap-2 text-sm text-muted-foreground">
               <LoaderCircle className="size-4 animate-spin" />
               Loading ticket details...
             </div>
           ) : ticketData ? (
             <>
-              <section className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
-                <h3 className="text-sm font-medium text-foreground">
+              <section className="rounded-sm border border-slate-200 p-2">
+                <h3 className="mb-2 text-sm font-medium text-foreground">
                   Customer Information
                 </h3>
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   <DetailField
                     label="Last Name"
                     value={ticketData.customer.lastName}
+                    className="[&_input]:w-[9.5rem]"
                   />
                   <DetailField
                     label="First Name"
                     value={ticketData.customer.firstName}
+                    className="[&_input]:w-[9.5rem]"
                   />
                 </div>
               </section>
 
-              <section className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
-                <h3 className="text-sm font-medium text-foreground">
+              <section className="rounded-sm border border-slate-200 p-2">
+                <h3 className="mb-2 text-sm font-medium text-foreground">
                   Reservation Details
                 </h3>
-                <div className="mt-3 grid gap-3 md:grid-cols-3">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   <DetailField
                     label="Number in Party"
                     value={String(ticketData.reservation.partySize)}
+                    className="[&_input]:w-16"
                   />
                   <DetailField
                     label="Total Amount"
                     value={formatAmount(ticketData.reservation.totalAmount)}
+                    className="[&_input]:w-24"
                   />
                   <DetailField
                     label="Paid Amount"
                     value={formatAmount(ticketData.reservation.paidAmount)}
+                    className="[&_input]:w-24"
                   />
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-semibold text-foreground">
-                  <span>Checked In: {ticketData.reservation.checkedInCount}</span>
-                  <span>Remaining: {ticketData.reservation.remainingCount}</span>
-                  <span>Section: {ticketData.reservation.section}</span>
+                <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-foreground">
+                  <span>
+                    Checked In: {ticketData.reservation.checkedInCount}
+                  </span>
+                  <span>Remaining: {remainingCount}</span>
                 </div>
               </section>
 
-              <section className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
-                <h3 className="text-sm font-medium text-foreground">
+              <section className="rounded-sm border border-slate-200 p-2">
+                <h3 className="mb-2 text-sm font-medium text-foreground">
                   Click the Number of Customer to Print on Ticket
                 </h3>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {countOptions.map((count) => (
-                    <Button
-                      key={count}
-                      type="button"
-                      className="h-11 min-w-16 rounded-sm bg-blue-700 px-5 text-base font-semibold hover:bg-blue-800"
-                      onClick={() => void handlePrint(count)}
-                      disabled={isPrinting}
-                    >
-                      {count}
-                    </Button>
-                  ))}
-                </div>
-
-                <div className="mt-4 flex items-start gap-3 rounded-md border border-dashed border-slate-300 bg-white px-3 py-2 text-xs text-muted-foreground">
-                  <QrCode className="mt-0.5 size-4 shrink-0 text-slate-500" />
-                  <div className="space-y-1">
-                    <p>QR value for now: {ticketData.qrValue}</p>
-                    <p>The clicked number changes the ticket quantity printed on the slip, not the number of pages.</p>
+                {countOptions.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {countOptions.map((count) => (
+                      <Button
+                        key={count}
+                        type="button"
+                        className="h-10 min-w-12 rounded-sm bg-[#155abb] px-3 text-sm font-semibold hover:bg-[#124a9a]"
+                        onClick={() => void handlePrint(count)}
+                        disabled={isPrinting}
+                      >
+                        {count}
+                      </Button>
+                    ))}
                   </div>
-                </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No checked-in guests available to re-print.
+                  </p>
+                )}
               </section>
             </>
           ) : (
-            <div className="min-h-48 rounded-md border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-muted-foreground">
+            <div className="min-h-40 rounded-md border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-muted-foreground">
               Select a reservation to load ticket details.
             </div>
           )}
-
-          {printError ? (
-            <p className="text-sm text-destructive">{printError}</p>
-          ) : null}
         </div>
 
         <DialogFooter className="border-t px-4 py-3 sm:justify-center">
           <Button
             type="button"
-            variant="outline"
-            className="min-w-28"
+            className="min-w-24 bg-[#155abb] hover:bg-[#124a9a]"
             onClick={() => onOpenChange(false)}
             disabled={isPrinting}
           >

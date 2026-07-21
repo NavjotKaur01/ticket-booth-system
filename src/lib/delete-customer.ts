@@ -2,6 +2,7 @@ import {
   archiveCustomer,
   getCustomerDeleteDetail,
 } from "@/lib/api/customers"
+import { confirmDialog } from "@/lib/app-dialog"
 import { buildCustomerDeleteRequest } from "@/lib/build-save-customer-request"
 import type { Customer } from "@/types/customer"
 
@@ -61,16 +62,21 @@ export async function deleteCustomerRecord({
   }
 
   if (reservationCount > 0) {
-    const proceed = window.confirm(
-      `This customer had ${reservationCount} old reservations. Would you like to delete?`
-    )
+    const proceed = await confirmDialog({
+      title: "Delete Customer",
+      description: `This customer had ${reservationCount} old reservations. Would you like to delete?`,
+    })
     if (!proceed) {
       return false
     }
-  } else if (
-    !window.confirm("Are you sure you want to delete this customer?")
-  ) {
-    return false
+  } else {
+    const proceed = await confirmDialog({
+      title: "Delete Customer",
+      description: "Are you sure you want to delete this customer?",
+    })
+    if (!proceed) {
+      return false
+    }
   }
 
   if (

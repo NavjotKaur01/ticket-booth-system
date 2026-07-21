@@ -87,9 +87,15 @@ import {
 } from '@/lib/reservation-customer-search-criteria'
 import { saveCustomer } from '@/lib/api/customers'
 import {
+  getReservationPaymentById,
   refundReservationPayment,
   voidReservationPayment
 } from '@/lib/api/reservation-pos-actions'
+import {
+  RefundPaymentDialog,
+  type RefundCardOption
+} from '@/features/reservations/refund-payment-dialog'
+import { ReprintTicketDialog } from '@/features/ticket-print/reprint-ticket-dialog'
 import {
   createNewReservation,
   saveReservationNote,
@@ -132,8 +138,10 @@ import {
   getErrorMessage,
   reportError,
   reportErrorMessage,
+  toastError,
   toastSuccess,
 } from '@/lib/app-toast'
+import { alertDialog } from '@/lib/app-dialog'
 import { cn } from '@/lib/utils'
 import { useAppSession } from '@/hooks/use-app-session'
 import { createTicketPrintData } from '@/services/ticket-print.service'
@@ -171,8 +179,6 @@ type AddReservationDialogProps = {
   onSplitParty?: (reservation: Reservation) => void
   /** Edit mode only — the reservation is already fully paid, so splitting isn't possible. */
   onAlreadyPaidAlert?: () => void
-  /** Edit mode only — reprints the reservation ticket using the existing print pipeline. */
-  onReprintTicket?: (reservation: Reservation) => void
   /**
    * Express Walkup Other/Express → Reservation Payment.
    * Prefills walk-up booking + customer and locks origin.
@@ -812,6 +818,28 @@ function PaymentMetadataField({
   )
 }
 
+const HOLD_WITH_CARD_PAYMENT_CODE = 'PYMT01'
+
+/**
+ * Desktop rule (ReservationVM.SetPayment): a Hold with Credit Card payment
+ * collapses the entire payment-history panel, including metadata and actions.
+ * Match on the ClubMan LookUpCode, falling back to the display name for the
+ * print-properties path which carries no code.
+ */
+function isHoldWithCardTransaction(
+  transaction: ReservationTransactionRow | null
+): boolean {
+  if (!transaction) {
+    return false
+  }
+
+  if (transaction.paymentTypeCode?.trim().toUpperCase() === HOLD_WITH_CARD_PAYMENT_CODE) {
+    return true
+  }
+
+  return transaction.payment?.trim().toLowerCase() === 'hold with credit card'
+}
+
 function PaymentMetadataBlock({
   createdBy,
   status,
@@ -819,7 +847,6 @@ function PaymentMetadataBlock({
   authorization,
   pnref,
   busyAction,
-  error,
   onRefund,
   onVoid,
   onClear
@@ -830,7 +857,6 @@ function PaymentMetadataBlock({
   authorization: string
   pnref: string
   busyAction: 'refund' | 'void' | 'clear' | 'cash-drawer' | 'split' | null
-  error: string | null
   onRefund: () => void
   onVoid: () => void
   onClear: () => void
@@ -845,17 +871,35 @@ function PaymentMetadataBlock({
         <PaymentMetadataField label='PNREF' value={pnref} />
       </div>
       <div className='flex flex-wrap items-center gap-2 border-t border-border/50 pt-2'>
-        <Button type='button' size='sm' variant='outline' onClick={onRefund} disabled={busyAction === 'refund'}>
-          Refund
+        <Button
+          type='button'
+          size='sm'
+          onClick={onRefund}
+          disabled={busyAction === 'refund'}
+          className='min-w-[96px] bg-blue-600 text-white shadow-sm hover:bg-blue-700 focus-visible:ring-blue-500/40'
+        >
+          {busyAction === 'refund' ? 'Refunding…' : 'Refund'}
         </Button>
-        <Button type='button' size='sm' variant='outline' onClick={onVoid} disabled={busyAction === 'void'}>
-          Void
+        <Button
+          type='button'
+          size='sm'
+          onClick={onVoid}
+          disabled={busyAction === 'void'}
+          className='min-w-[96px] bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 focus-visible:ring-emerald-500/40'
+        >
+          {busyAction === 'void' ? 'Voiding…' : 'Void'}
         </Button>
-        <Button type='button' size='sm' variant='outline' onClick={onClear} disabled={busyAction === 'clear'}>
+        <Button
+          type='button'
+          size='sm'
+          variant='outline'
+          onClick={onClear}
+          disabled={busyAction === 'clear'}
+          className='min-w-[96px] border-slate-300 text-foreground shadow-sm hover:bg-slate-100'
+        >
           Clear
         </Button>
       </div>
-      {error ? <p className='text-xs text-destructive'>{error}</p> : null}
     </div>
   )
 }
@@ -1230,7 +1274,6 @@ export function AddReservationDialog({
   onSplitReservation,
   onSplitParty,
   onAlreadyPaidAlert,
-  onReprintTicket,
   expressWalkupSeed = null
 }: AddReservationDialogProps) {
   const isEditMode = Boolean(reservation)
@@ -1324,15 +1367,18 @@ export function AddReservationDialog({
   const [paymentActionBusy, setPaymentActionBusy] = useState<
     'refund' | 'void' | 'clear' | 'cash-drawer' | 'split' | null
   >(null)
-  const [paymentActionError, setPaymentActionError] = useState<string | null>(
-    null
-  )
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false)
+  const [refundCards, setRefundCards] = useState<RefundCardOption[]>([])
+  const [refundInitialPaymentId, setRefundInitialPaymentId] = useState('')
+  const [refundBusy, setRefundBusy] = useState(false)
   const [isSavingNote, setIsSavingNote] = useState(false)
   const [saveNoteError, setSaveNoteError] = useState<string | null>(null)
   const [saveNoteSuccess, setSaveNoteSuccess] = useState(false)
   const [selectedTransaction, setSelectedTransaction] =
     useState<ReservationTransactionRow | null>(null)
+  const [splitCheckedInAlertOpen, setSplitCheckedInAlertOpen] = useState(false)
   const [splitPromoAlertOpen, setSplitPromoAlertOpen] = useState(false)
+  const [reprintOpen, setReprintOpen] = useState(false)
   const [pendingSplitType, setPendingSplitType] = useState<'payment' | 'party' | null>(null)
 
   const { detail: reservationDetail } = useReservationDetail(
@@ -1919,6 +1965,48 @@ export function AddReservationDialog({
   const displayLastName = selectedTransaction?.lastName ?? editCustomerLastName
   const displayFirstName = selectedTransaction?.firstName ?? editCustomerFirstName
   const isViewingTransaction = Boolean(selectedTransaction)
+
+  // Desktop reprint popup: form Party/Total/Paid + detail CheckedIn.
+  const reprintDetails = useMemo(() => {
+    if (!reservation) {
+      return null
+    }
+    const party = Math.max(1, partySize > 0 ? partySize : reservation.qty)
+    const checkedInCount =
+      reservationDetail?.CheckedIn ?? reservation.seated ?? 0
+    // When form tax is inflated vs subtotal (bad SalesTax/rate), match desktop
+    // CalcTicketTotal display of ticket total without the bad tax line.
+    const totalAmount =
+      totals.taxes > totals.subtotal && totals.subtotal > 0
+        ? totals.subtotal + totals.serviceCharge - totals.discount
+        : (reservationDetail?.Total ?? reservation.totalAmount ?? totals.total)
+
+    return {
+      lastName: displayLastName,
+      firstName: displayFirstName,
+      partySize: party,
+      checkedInCount,
+      totalAmount,
+      paidAmount: reservationDetail?.ResPayments ?? reservation.paidAmount ?? 0,
+    }
+  }, [
+    reservation,
+    partySize,
+    reservationDetail?.CheckedIn,
+    reservationDetail?.Total,
+    reservationDetail?.ResPayments,
+    totals.taxes,
+    totals.subtotal,
+    totals.serviceCharge,
+    totals.discount,
+    totals.total,
+    displayLastName,
+    displayFirstName,
+  ])
+
+  // Desktop parity: Hold with Credit Card payments collapse the payment-history
+  // panel, so Refund / Void / Clear are not offered (ReservationVM SetPayment).
+  const selectedTransactionIsHoldWithCard = isHoldWithCardTransaction(selectedTransaction)
   const dialogTitle = isEditMode
     ? `Payment :- ${[editCustomerLastName, editCustomerFirstName].filter(Boolean).join(',') || 'Guest'}  ${formatShowDate(showDate)}`
     : isExpressWalkupPayment
@@ -2072,39 +2160,86 @@ export function AddReservationDialog({
     setAssignSeatError(null)
   }
 
-  async function runPaymentAction(
-    action: 'refund' | 'void' | 'clear',
-    handler: (params: {
-      connectionName: string
-      locationId: string
-      reservationId: string
-      lastUpdateId: string
-    }) => Promise<never>
-  ) {
-    if (!reservation) {
+  // Desktop RefundReservationPayment role gate: ReadOnly (SEC03) and plain User
+  // (SEC02, manager-approval on desktop) cannot refund/void here.
+  const canManagePaymentActions = useMemo(() => {
+    const right = (userRight ?? '').trim().toUpperCase()
+    return right === 'SEC01' || right === 'SEC05' || right === 'SEC09'
+  }, [userRight])
+
+  function buildRefundCards(): RefundCardOption[] {
+    const payments = reservationDetail?.PaymentList ?? []
+    return payments
+      .filter(
+        (payment: (typeof payments)[number]) =>
+          (payment.PaymentStatusCode?.trim() ?? '') === PAYMENT_STATUS_PAYMENT &&
+          (payment.PaymentTypeCode?.trim().toUpperCase() ?? '') !==
+            HOLD_WITH_CARD_PAYMENT_CODE
+      )
+      .map((payment: (typeof payments)[number]) => {
+        const parts = [
+          payment.PymtType?.trim() || payment.CCType?.trim() || '',
+          payment.CardNum?.trim() || '',
+          formatReservationMoney(payment.Amount ?? 0)
+        ].filter(Boolean)
+        return {
+          paymentId: payment.PaymentID,
+          label: parts.join('  '),
+          amount: payment.Amount ?? 0
+        }
+      })
+  }
+
+  async function handleRefundClick() {
+    if (!reservation || !selectedTransaction) {
+      return
+    }
+    if (!canManagePaymentActions) {
+      toastError(
+        'You do not have permission to refund. Manager approval is required.'
+      )
       return
     }
 
     const sessionGeneration = sessionGenerationRef.current
-    setPaymentActionBusy(action)
-    setPaymentActionError(null)
+    setPaymentActionBusy('refund')
 
     try {
-      await handler({
+      const payment = await getReservationPaymentById({
         connectionName,
-        locationId,
-        reservationId: reservation.id,
-        lastUpdateId: username
+        paymentId: selectedTransaction.id
       })
+
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
+
+      if ((payment.PaymentStatusCode?.trim() ?? '') !== PAYMENT_STATUS_PAYMENT) {
+        toastError('Invalid payment status for refunds. Cannot refund.')
+        return
+      }
+      if (
+        (payment.PaymentTypeCode?.trim().toUpperCase() ?? '') ===
+        HOLD_WITH_CARD_PAYMENT_CODE
+      ) {
+        toastError('Invalid payment type for refunds. Cannot refund.')
+        return
+      }
+
+      const cards = buildRefundCards()
+      if (cards.length === 0) {
+        toastError('No payment available to refund.')
+        return
+      }
+
+      setRefundCards(cards)
+      setRefundInitialPaymentId(selectedTransaction.id)
+      setRefundDialogOpen(true)
     } catch (requestError) {
       if (sessionGeneration !== sessionGenerationRef.current) {
         return
       }
-      reportError(
-        setPaymentActionError,
-        requestError,
-        `Failed to ${action} payment`
-      )
+      toastError(getErrorMessage(requestError, 'Failed to refund payment'))
     } finally {
       if (sessionGeneration === sessionGenerationRef.current) {
         setPaymentActionBusy(null)
@@ -2112,12 +2247,93 @@ export function AddReservationDialog({
     }
   }
 
-  function handleRefundClick() {
-    void runPaymentAction('refund', refundReservationPayment)
+  async function handleConfirmRefund(paymentId: string, refundAmount: number) {
+    setRefundBusy(true)
+
+    try {
+      const payment = await getReservationPaymentById({
+        connectionName,
+        paymentId
+      })
+      await refundReservationPayment({
+        connectionName,
+        locationId,
+        lastUpdateId: username,
+        refundAmount,
+        payment
+      })
+
+      setRefundDialogOpen(false)
+      handleClearTransactionSelection()
+      toastSuccess('Refund processed successfully.')
+    } catch (requestError) {
+      toastError(getErrorMessage(requestError, 'Failed to refund payment'))
+    } finally {
+      setRefundBusy(false)
+    }
   }
 
-  function handleVoidClick() {
-    void runPaymentAction('void', voidReservationPayment)
+  async function handleVoidClick() {
+    if (!reservation || !selectedTransaction) {
+      return
+    }
+    if (!canManagePaymentActions) {
+      toastError(
+        'You do not have permission to void. Manager approval is required.'
+      )
+      return
+    }
+
+    const sessionGeneration = sessionGenerationRef.current
+    setPaymentActionBusy('void')
+
+    try {
+      await voidReservationPayment({
+        connectionName,
+        locationId,
+        lastUpdateId: username,
+        paymentId: selectedTransaction.id
+      })
+
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
+      handleClearTransactionSelection()
+      toastSuccess('Payment voided successfully.')
+    } catch (requestError) {
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
+      toastError(getErrorMessage(requestError, 'Failed to void payment'))
+    } finally {
+      if (sessionGeneration === sessionGenerationRef.current) {
+        setPaymentActionBusy(null)
+      }
+    }
+  }
+
+  /**
+   * Desktop ReservationVM.ReprintTickets:
+   * - blocks when CheckedIn == 0
+   * - opens popup with buttons 1..CheckedIn
+   */
+  async function handleReprintClick() {
+    if (!reservation) {
+      return
+    }
+
+    const checkedIn = reservationDetail?.CheckedIn ?? reservation.seated ?? 0
+    if (checkedIn <= 0) {
+      await alertDialog({
+        title: 'Error',
+        description:
+          'Reprint only you to re-print the lost ticket. Cannot use since number checked-in zero',
+        confirmLabel: 'OK',
+      })
+      return
+    }
+
+    setReprintOpen(true)
   }
 
   function handleClearTransactionSelection() {
@@ -2126,7 +2342,6 @@ export function AddReservationDialog({
     setPaymentType('credit-card')
     setPaymentFields(createEmptyReservationPaymentFields())
     setPaymentValidationErrors({})
-    setPaymentActionError(null)
   }
 
   function handleTransactionSelect(row: ReservationTransactionRow) {
@@ -2154,7 +2369,6 @@ export function AddReservationDialog({
       zipCode: row.billZip || ''
     })
     setPaymentValidationErrors({})
-    setPaymentActionError(null)
   }
 
   async function handleSplitReservationClick(type: 'payment' | 'party') {
@@ -2170,7 +2384,7 @@ export function AddReservationDialog({
     }
 
     if (reservationDetail?.CheckedIn != null && partySize === reservationDetail.CheckedIn && partySize > 0) {
-      window.alert("Cannot split reservation: all guests are already checked in.")
+      setSplitCheckedInAlertOpen(true)
       return
     }
 
@@ -2208,7 +2422,12 @@ export function AddReservationDialog({
             PhoneInFee: reservationDetail?.PhoneInFee ?? 0,
             WalkUpFee: reservationDetail?.WalkUpFee ?? 0,
             WebFee: reservationDetail?.WebFee ?? 0,
-            SourceLookUpCode: origin === 'phone' ? 'SRC01' : 'SRC02',
+            SourceLookUpCode:
+              origin === 'phone'
+                ? 'SRC01'
+                : origin === 'walkup'
+                  ? 'SRC02'
+                  : 'SRC03',
             Party: partySize,
             SubTotal: totals.subtotal,
             ServiceChage: totals.serviceCharge,
@@ -2224,12 +2443,13 @@ export function AddReservationDialog({
         if (sessionGeneration !== sessionGenerationRef.current) {
           return
         }
-        reportError(
-          setPaymentActionError,
-          error,
-          type === 'party'
-            ? 'Failed to remove reservation promo.'
-            : 'Failed to prepare split reservation.'
+        toastError(
+          getErrorMessage(
+            error,
+            type === 'party'
+              ? 'Failed to remove reservation promo.'
+              : 'Failed to prepare split reservation.'
+          )
         )
         setPaymentActionBusy(null)
         return
@@ -2910,7 +3130,6 @@ export function AddReservationDialog({
     setAssignSeatsOpen(false)
     setAssignSeatError(null)
     setPaymentActionBusy(null)
-    setPaymentActionError(null)
     setIsSavingNote(false)
     setSaveNoteError(null)
     setSaveNoteSuccess(false)
@@ -3415,7 +3634,7 @@ export function AddReservationDialog({
                       ) : null}
                     </div>
 
-                    {isEditMode && selectedTransaction ? (
+                    {isEditMode && selectedTransaction && !selectedTransactionIsHoldWithCard ? (
                       <div className='shrink-0'>
                         <PaymentMetadataBlock
                           createdBy={reservation?.createdBy ?? ''}
@@ -3424,7 +3643,6 @@ export function AddReservationDialog({
                           authorization={selectedTransaction.authorization}
                           pnref={selectedTransaction.pnref}
                           busyAction={paymentActionBusy}
-                          error={paymentActionError}
                           onRefund={handleRefundClick}
                           onVoid={handleVoidClick}
                           onClear={handleClearTransactionSelection}
@@ -3454,9 +3672,7 @@ export function AddReservationDialog({
                               type='button'
                               size='sm'
                               variant='outline'
-                              onClick={() =>
-                                reservation ? onReprintTicket?.(reservation) : undefined
-                              }
+                              onClick={() => void handleReprintClick()}
                               disabled={!reservation}
                             >
                               Re Print Ticket
@@ -3550,6 +3766,32 @@ export function AddReservationDialog({
         }}
       />
 
+      <RefundPaymentDialog
+        key={`${refundDialogOpen}-${refundInitialPaymentId}`}
+        open={refundDialogOpen}
+        onOpenChange={openState => {
+          setRefundDialogOpen(openState)
+        }}
+        cards={refundCards}
+        initialPaymentId={refundInitialPaymentId}
+        serviceCharge={totals.serviceCharge}
+        paidAmount={alreadyPaid}
+        details={{
+          party: String(partySize),
+          promo: reservationDetail?.Promo ?? '',
+          subTotal: totals.subtotal,
+          serviceCharge: totals.serviceCharge,
+          discount: totals.discount,
+          total: totals.total,
+          pricePerTicket: parseReservationMoney(selectedSection?.price ?? '0'),
+          totalPayment: alreadyPaid
+        }}
+        busy={refundBusy}
+        onConfirm={(paymentId, amount) => {
+          void handleConfirmRefund(paymentId, amount)
+        }}
+      />
+
       <ConfirmDialog
         open={checkInConfirmOpen}
         onOpenChange={setCheckInConfirmOpen}
@@ -3564,6 +3806,16 @@ export function AddReservationDialog({
           void executeSaveReservation(false)
         }}
       />
+      <ConfirmDialog
+        open={splitCheckedInAlertOpen}
+        onOpenChange={setSplitCheckedInAlertOpen}
+        title="Cannot Split Reservation"
+        description="All guests are already checked in."
+        confirmLabel="OK"
+        hideCancel
+        nested
+        onConfirm={() => setSplitCheckedInAlertOpen(false)}
+      />
       <SplitPromoAlertDialog
         open={splitPromoAlertOpen}
         onOpenChange={setSplitPromoAlertOpen}
@@ -3572,6 +3824,18 @@ export function AddReservationDialog({
             void executeSplitReservationClick(pendingSplitType)
           }
         }}
+        nested
+      />
+
+      {/* Desktop Re-Print Ticket popup: pick how many tickets to print, then print. */}
+      <ReprintTicketDialog
+        open={reprintOpen}
+        onOpenChange={setReprintOpen}
+        reservation={reservation}
+        showDate={showDate}
+        showLabel={selectedShowLabel}
+        locationName={locationName}
+        details={reprintDetails}
         nested
       />
     </>

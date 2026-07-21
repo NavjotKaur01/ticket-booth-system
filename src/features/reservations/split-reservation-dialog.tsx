@@ -12,6 +12,13 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 import type { ReservationPaymentType } from '@/data/reservation-payment-options'
 import { ReservationPaymentPanel } from '@/features/reservations/reservation-payment-panel'
 import { SplitReservationTicketPicker } from '@/features/reservations/split-reservation-ticket-picker'
@@ -22,9 +29,12 @@ import { openCashDrawer } from '@/lib/api/reservation-pos-actions'
 import {
   buildSplitReservationRequest,
   calculateSplitReservationTotals,
+  normalizeTaxPercent,
+  sanitizeStoredTotalsForDisplay,
   validateReservationSplit
 } from '@/lib/build-split-reservation-request'
 import { formatReservationMoney, parseReservationMoney } from '@/lib/calculate-reservation-totals'
+import { readPaymentTaxRate } from '@/lib/check-in-defaults'
 import {
   findReservationSection,
   mapReservationSourceToOrigin
@@ -40,6 +50,7 @@ import {
   reportErrorMessage,
   toastSuccess,
 } from '@/lib/app-toast'
+import { alertDialog } from '@/lib/app-dialog'
 import {
   createEmptyReservationPaymentFields,
   type ReservationPaymentFields
@@ -177,6 +188,14 @@ export function SplitReservationDialog({
     }, {} as Record<string, string | null | undefined>)
   }, [rawSystemDefaults])
 
+  // Desktop TaxRate = Payment lblTaxes percent (e.g. 8.875).
+  const systemTaxPercent = useMemo(() => {
+    const fromDefaults = rawSystemDefaults
+      ? readPaymentTaxRate(rawSystemDefaults)
+      : Number(systemDefaults?.lblTaxes || 0)
+    return normalizeTaxPercent(fromDefaults)
+  }, [rawSystemDefaults, systemDefaults?.lblTaxes])
+
   const allowMultiplePromos = useMemo(() => {
     return (
       rawSystemDefaults?.some(
@@ -201,18 +220,32 @@ export function SplitReservationDialog({
 
   const party = detail?.PartyNo ?? reservation?.qty ?? 0
   const remainingTickets = Math.max(0, party - (detail?.CheckedIn ?? 0))
-  const unitPrice = parseReservationMoney(matchedSection?.price ?? '0')
+  const unitPrice =
+    (detail?.Price != null && detail.Price > 0
+      ? detail.Price
+      : null) ??
+    matchedSection?.showPrice ??
+    parseReservationMoney(matchedSection?.price ?? '0')
 
-  const origTotals = {
-    subtotal: detail?.SubTotal ?? 0,
-    serviceCharge: detail?.SVC ?? 0,
-    discount: detail?.Discount ?? 0,
-    taxes: detail?.SalesTax ?? 0,
-    total: detail?.Total ?? parseReservationMoney(reservation?.total ?? '0')
-  }
+  const origTotals = sanitizeStoredTotalsForDisplay(
+    {
+      subtotal: detail?.SubTotal ?? 0,
+      serviceCharge: detail?.SVC ?? 0,
+      discount: detail?.Discount ?? 0,
+      taxes: detail?.SalesTax ?? 0,
+      total: detail?.Total ?? parseReservationMoney(reservation?.total ?? '0')
+    },
+    systemTaxPercent,
+    systemDefaults?.lblTaxWithServiceCharge === 'Y'
+  )
 
   const alreadyPaidAmount = parseReservationMoney(reservation?.paid ?? '$0.00')
   const isFullyPaid = origTotals.total > 0 && alreadyPaidAmount >= origTotals.total
+
+  // Desktop PartyList builds each button as `i * (Total / Party)` — a
+  // tax/SVC-inclusive per-ticket share of the full reservation total (uses the
+  // sanitized total so a corrupt stored SalesTax can't inflate the buttons).
+  const chipPricePerTicket = party > 0 ? origTotals.total / party : unitPrice
 
   const effectiveSplitPromo = splitSelectedPromo !== 'none' ? splitSelectedPromo : null
   const splitPromoObj = effectiveSplitPromo ? promoById.get(effectiveSplitPromo) ?? null : null
@@ -221,29 +254,25 @@ export function SplitReservationDialog({
     : origin === 'walkup' ? (detail?.WalkUpFee ?? 0)
       : (detail?.WebFee ?? 0)
   const dayOfShowFee = detail?.DayOfShowFee ?? 0
-  const serviceChargePerTicket = baseFee + dayOfShowFee
-
-  // Desktop only includes DayOfShowFee in SVC when today IS the show day
+  // Desktop CalculateServiceCharge uses origin fee; DayOfShow only on show day.
   const isDayOfShow = showDate
     ? new Date(showDate).toDateString() === new Date().toDateString()
     : false
-
-  const origTaxable = Math.max(0, (detail?.SubTotal ?? 0) + (detail?.SVC ?? 0) - (detail?.Discount ?? 0))
-  const impliedTaxRate = origTaxable > 0 ? (detail?.SalesTax ?? 0) / origTaxable : 0
+  const serviceChargePerTicket =
+    baseFee + (isDayOfShow ? dayOfShowFee : 0)
 
   const originCode = origin === 'phone' ? 'SRC01' : origin === 'walkup' ? 'SRC02' : origin === 'web' ? 'SRC03' : 'SRC01'
 
   const splitTotals = calculateSplitReservationTotals({
-    sectionPrice: matchedSection?.price ?? '0',
+    sectionPrice: String(unitPrice),
     splitCount,
-    promo: splitPromoObj,
+    promo: allowMultiplePromos ? null : splitPromoObj,
     multiplePromos: allowMultiplePromos ? splitMultiplePromos : [],
     serviceChargePerTicket,
-    taxRate: impliedTaxRate,
+    taxRate: systemTaxPercent,
     originCode,
     baseClubFee: baseFee,
     baseDayOfShowFee: dayOfShowFee,
-
     taxWithServiceCharge: systemDefaults?.lblTaxWithServiceCharge === 'Y',
     isDayOfShow
   })
@@ -387,7 +416,7 @@ export function SplitReservationDialog({
           isSplitFlag: willBeSplitFlag,
           paymentAmount: inputAmount,
           promoId: splitSelectedPromo !== 'none' ? splitSelectedPromo : undefined,
-          taxRate: impliedTaxRate,
+          taxRate: systemTaxPercent,
           detail,
           reservationNote: notes.trim()
         })
@@ -411,9 +440,12 @@ export function SplitReservationDialog({
     }
   }
 
-  function handleOpenChange(newOpen: boolean) {
+  async function handleOpenChange(newOpen: boolean) {
     if (!newOpen && isSplitFlag) {
-      window.alert("Please clear the split due amount first before closing.")
+      await alertDialog({
+        title: "Split Payment",
+        description: "Please clear the split due amount first before closing.",
+      })
       return
     }
     onOpenChange(newOpen)
@@ -510,8 +542,7 @@ export function SplitReservationDialog({
                 ) : (
                   <SplitReservationTicketPicker
                     remainingTickets={remainingTickets}
-                    totalAmount={origTotals.total}
-                    partySize={party}
+                    unitPrice={chipPricePerTicket}
                     selectedCount={splitCount}
                     onSelect={count => {
                       setSplitCount(count)
@@ -535,7 +566,31 @@ export function SplitReservationDialog({
                       Multiple Promos
                     </Button>
                   </div>
-                ) : null}
+                ) : (
+                  <div className='mb-4 flex items-center justify-between gap-4'>
+                    <span className='text-sm font-medium text-foreground'>Split Promo</span>
+                    <Select
+                      value={splitSelectedPromo}
+                      onValueChange={value => {
+                        setSplitSelectedPromo(value)
+                        setSplitMultiplePromos([])
+                      }}
+                      disabled={isSplitFlag}
+                    >
+                      <SelectTrigger className='h-8 w-48 text-sm'>
+                        <SelectValue placeholder='None' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='none'>None</SelectItem>
+                        {promoOptions.map(p => (
+                          <SelectItem key={p.value} value={p.value}>
+                            {p.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <ReservationTotalsCard
                   selectedSection={matchedSection}
                   partySize={splitCount}
@@ -637,7 +692,7 @@ export function SplitReservationDialog({
           promoById={promoById}
           unitPrice={unitPrice}
           serviceChargePerTicket={serviceChargePerTicket}
-          taxRate={impliedTaxRate}
+          taxRate={systemTaxPercent}
           originCode={originCode}
           baseClubFee={baseFee}
           baseDayOfShowFee={dayOfShowFee}
@@ -649,9 +704,7 @@ export function SplitReservationDialog({
                 promo: promoById.get(p.promoId) || null
               }))
             )
-            // Clear the single promo drop-down equivalent if multiple promos are used?
-            // If they open Multiple Promos, maybe we should clear the single promo?
-            // Actually they removed the single promo dropdown entirely earlier! 
+            setSplitSelectedPromo('none')
             setMultiplePromosOpen(false)
           }}
           nested={true}

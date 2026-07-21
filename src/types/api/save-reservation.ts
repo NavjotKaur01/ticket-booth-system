@@ -17,6 +17,9 @@ export type SaveReservationPaymentRequest = {
   IsSplitPayment?: boolean
   WebGiftCertificateNumber?: string
   SplitTaxes?: number
+  /** Desktop DLL typo — binder expects SplitServiceChage, not SplitServiceCharge. */
+  SplitServiceChage?: number
+  /** @deprecated Prefer SplitServiceChage for desktop binder parity. */
   SplitServiceCharge?: number
   SplitTotal?: number
 }
@@ -93,6 +96,16 @@ export type SaveReservationRequest = {
   SplitCustomerFirstName?: string
   SplitCustomerLastName?: string
   SplitParty?: number
+  /** Desktop ReservationRequestModel field used by Split Party (UpdateReservation). */
+  SpltParty?: number
+  SplitSubTotal?: number
+  SplitTaxes?: number
+  TaxRate?: number
+  SVCDiffAmount?: number
+  SplitPromotionID?: string
+  SplitPromotionCode?: string
+  SplitPromoPass?: number
+  SplitDiscount?: number
 }
 
 export type RemoveReservationPromoRequest = {

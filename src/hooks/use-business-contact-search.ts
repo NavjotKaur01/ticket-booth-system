@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react"
 
 import { hasBusinessContactSearchCriteria } from "@/lib/build-business-contact-search-request"
+import { confirmDialog } from "@/lib/app-dialog"
 import { mapBusinessContactSearchResults } from "@/lib/map-business-contact-search"
 import { getClubmanErrorMessage } from "@/store/api/baseQuery"
 import { useSearchBusinessContactsMutation } from "@/store/api/clubmanApi"
@@ -43,9 +44,11 @@ export function useBusinessContactSearch({
       }
 
       if (!hasBusinessContactSearchCriteria(filters)) {
-        const proceed = window.confirm(
-          "No search criteria entered. Search may take a long time to load business contacts. Continue?"
-        )
+        const proceed = await confirmDialog({
+          title: "Confirm Search",
+          description:
+            "No search criteria entered. Search may take a long time to load business contacts. Continue?",
+        })
         if (!proceed) {
           return
         }

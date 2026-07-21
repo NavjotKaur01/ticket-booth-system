@@ -3,6 +3,7 @@ import { useCallback, useState } from "react"
 import { getClubmanErrorMessage } from "@/store/api/baseQuery"
 import { useSearchCustomersMutation } from "@/store/api/clubmanApi"
 import { hasCustomerSearchCriteria } from "@/lib/build-customer-search-request"
+import { confirmDialog } from "@/lib/app-dialog"
 import {
   mapCustomerExportRows,
   type CustomerExportRow,
@@ -49,9 +50,11 @@ export function useCustomerSearch({
       }
 
       if (!hasCustomerSearchCriteria(filters)) {
-        const proceed = window.confirm(
-          "No search criteria entered. Search may take a long time to load customers. Continue?"
-        )
+        const proceed = await confirmDialog({
+          title: "Confirm Search",
+          description:
+            "No search criteria entered. Search may take a long time to load customers. Continue?",
+        })
         if (!proceed) {
           return
         }

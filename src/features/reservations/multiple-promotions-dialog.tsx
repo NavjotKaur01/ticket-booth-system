@@ -136,7 +136,8 @@ export function MultiplePromotionsDialog({
 
 
   const taxable = Math.max(0, derivedSubtotal + derivedSvc - derivedDisc)
-  const derivedTaxes = taxable * taxRate
+  // taxRate is desktop lblTaxes percent (e.g. 8.875).
+  const derivedTaxes = (taxable * taxRate) / 100
   const derivedTotal = taxable + derivedTaxes
 
   // Remove the old state for subtotal, svc, disc, taxes, total, and just use derived values.
