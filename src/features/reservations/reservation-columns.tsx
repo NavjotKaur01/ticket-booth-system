@@ -251,7 +251,9 @@ export function createReservationColumns({
         <DataTableColumnHeader label="QTY" column={column} />
       ),
       cell: ({ row }) => (
-        <span className="font-medium tabular-nums">{row.original.qty}</span>
+        <span className="tabular-nums text-muted-foreground">
+          {row.original.qty}
+        </span>
       ),
     },
     {
@@ -282,7 +284,7 @@ export function createReservationColumns({
         <DataTableColumnHeader label="Total" column={column} />
       ),
       cell: ({ row }) => (
-        <span className="font-semibold tabular-nums text-primary">
+        <span className="tabular-nums text-muted-foreground">
           {row.original.total}
         </span>
       ),
@@ -293,7 +295,7 @@ export function createReservationColumns({
         <DataTableColumnHeader label="Paid" column={column} />
       ),
       cell: ({ row }) => (
-        <span className="font-medium tabular-nums text-emerald-600">
+        <span className="tabular-nums text-muted-foreground">
           {row.original.paid}
         </span>
       ),

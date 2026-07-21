@@ -1292,9 +1292,11 @@ export function CheckIn() {
     {
       layout = "combined",
       includeQr = true,
+      kind = "ticket",
     }: {
       layout?: "combined" | "individual"
       includeQr?: boolean
+      kind?: "ticket" | "receipt"
     } = {}
   ) {
     setReservationPrintError(null)
@@ -1306,6 +1308,8 @@ export function CheckIn() {
         showDate,
         showLabel: selectedShowLabel,
         locationName,
+        connectionName,
+        kind,
       })
 
       const didStart = await printReservationTicket({
@@ -1320,7 +1324,9 @@ export function CheckIn() {
           "Unable to start printing. Please allow popups and try again."
         )
       }
-      toastSuccess("Ticket print started")
+      toastSuccess(
+        kind === "receipt" ? "Receipt print started" : "Ticket print started"
+      )
     } catch (error) {
       reportError(
         setReservationPrintError,
@@ -1708,6 +1714,7 @@ export function CheckIn() {
             void handlePrintReservation(record, {
               layout: "combined",
               includeQr: false,
+              kind: "receipt",
             })
           }}
           onReservationHistory={handleOpenHistory}
