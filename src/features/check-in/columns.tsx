@@ -27,6 +27,37 @@ type CheckInColumnsOptions = {
   showScannerColumn?: boolean
 }
 
+function groupDelimitedValues(value: string) {
+  const parts = value.split(/([|,])/)
+  const lines: string[] = []
+  let line = ""
+  let pendingSeparator = ""
+  let valueCount = 0
+
+  for (const part of parts) {
+    if (part === "|" || part === ",") {
+      pendingSeparator = ` ${part} `
+      continue
+    }
+
+    const item = part.trim()
+    if (!item) continue
+
+    if (valueCount > 0 && valueCount % 5 === 0) {
+      lines.push(line)
+      line = item
+    } else {
+      line += `${line ? pendingSeparator : ""}${item}`
+    }
+
+    pendingSeparator = ""
+    valueCount += 1
+  }
+
+  if (line) lines.push(line)
+  return lines.join("\n")
+}
+
 export function createCheckInColumns({
   onCancelReservation,
   onUnCancelReservation,
@@ -120,8 +151,8 @@ export function createCheckInColumns({
       accessorKey: "tables",
       header: "Table(s)",
       cell: ({ row }) => (
-        <span className="text-muted-foreground">
-          {row.original.tables || ""}
+        <span className="block w-56 whitespace-pre-line leading-relaxed text-muted-foreground">
+          {groupDelimitedValues(row.original.tables)}
         </span>
       ),
     },
@@ -129,7 +160,7 @@ export function createCheckInColumns({
       accessorKey: "notes",
       header: "Notes",
       cell: ({ row }) => (
-        <span className="max-w-[8rem] truncate text-muted-foreground">
+        <span className="max-w-32 truncate text-muted-foreground">
           {row.original.notes || ""}
         </span>
       ),
@@ -161,8 +192,8 @@ export function createCheckInColumns({
       accessorKey: "seatNo",
       header: "SeatNo",
       cell: ({ row }) => (
-        <span className="text-muted-foreground">
-          {formatAssignSeatNumbers(row.original.seatNo)}
+        <span className="block w-64 whitespace-pre-line leading-relaxed text-muted-foreground">
+          {groupDelimitedValues(formatAssignSeatNumbers(row.original.seatNo))}
         </span>
       ),
     },
