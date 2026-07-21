@@ -144,6 +144,19 @@ export function fetchReservationDetailById({
   )
 }
 
+export function fetchReservationPrintProperties({
+  connectionName,
+  reservationId,
+}: FetchReservationDetailByIdParams) {
+  return dispatchEndpoint<
+    import("@/types/api/reservation-print").ReservationPrintProperties,
+    FetchReservationDetailByIdParams
+  >(clubmanApi.endpoints.getReservationPrintProperties, {
+    connectionName,
+    reservationId,
+  })
+}
+
 export function fetchReservationHistoryById({
   connectionString,
   reservationId,

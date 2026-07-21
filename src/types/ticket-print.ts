@@ -31,6 +31,8 @@ export type TicketPrintReservation = {
   promotion: string | null
   tables: string | null
   seatNumbers: string | null
+  /** From GetReservationPrintProperties — e.g. "Visa:1111". */
+  cardLabel: string | null
 }
 
 export type TicketPrintText = {
@@ -51,6 +53,8 @@ export type TicketPrintData = {
 
 export type TicketPrintLayout = "combined" | "individual"
 
+export type TicketPrintKind = "ticket" | "receipt"
+
 export type CreateTicketPrintDataParams = {
   reservationId: string
   firstName: string
@@ -66,10 +70,13 @@ export type CreateTicketPrintDataParams = {
   promotion?: string | null
   tables?: string | null
   seatNumbers?: string | null
+  /** Combined card line from print properties, e.g. "Visa:1111". */
+  cardLabel?: string | null
   showDate: string
   showLabel?: string
   locationName?: string
   qrValue?: string
+  kind?: TicketPrintKind
 }
 
 export type GetMockTicketPrintDataParams = {
@@ -77,6 +84,9 @@ export type GetMockTicketPrintDataParams = {
   showDate: string
   showLabel?: string
   locationName?: string
+  /** Loads CardType + CardNum from GetReservationPrintProperties. */
+  connectionName?: string
+  kind?: TicketPrintKind
 }
 
 export type PrintReservationTicketRequest = {
