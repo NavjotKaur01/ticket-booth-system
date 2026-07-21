@@ -2171,12 +2171,12 @@ export function AddReservationDialog({
     const payments = reservationDetail?.PaymentList ?? []
     return payments
       .filter(
-        (payment) =>
+        (payment: (typeof payments)[number]) =>
           (payment.PaymentStatusCode?.trim() ?? '') === PAYMENT_STATUS_PAYMENT &&
           (payment.PaymentTypeCode?.trim().toUpperCase() ?? '') !==
             HOLD_WITH_CARD_PAYMENT_CODE
       )
-      .map((payment) => {
+      .map((payment: (typeof payments)[number]) => {
         const parts = [
           payment.PymtType?.trim() || payment.CCType?.trim() || '',
           payment.CardNum?.trim() || '',
@@ -2422,7 +2422,12 @@ export function AddReservationDialog({
             PhoneInFee: reservationDetail?.PhoneInFee ?? 0,
             WalkUpFee: reservationDetail?.WalkUpFee ?? 0,
             WebFee: reservationDetail?.WebFee ?? 0,
-            SourceLookUpCode: origin === 'phone' ? 'SRC01' : 'SRC02',
+            SourceLookUpCode:
+              origin === 'phone'
+                ? 'SRC01'
+                : origin === 'walkup'
+                  ? 'SRC02'
+                  : 'SRC03',
             Party: partySize,
             SubTotal: totals.subtotal,
             ServiceChage: totals.serviceCharge,

@@ -1,5 +1,5 @@
 import { LoaderCircle, X } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { ReservationTotalsCard } from '@/components/reservation/reservation-totals-card'
 import { Button } from '@/components/ui/button'
@@ -19,11 +19,14 @@ import { useCachedReservationShowData } from '@/hooks/use-cached-reservation-sho
 import { useReservationDetail } from '@/hooks/use-reservation-detail'
 import { openCashDrawer } from '@/lib/api/reservation-pos-actions'
 import {
-  buildSplitReservationRequest,
+  buildSplitPartyUpdateReservationRequest,
   calculateSplitReservationTotals,
+  normalizeTaxPercent,
+  sanitizeStoredTotalsForDisplay,
   validateReservationSplit
 } from '@/lib/build-split-reservation-request'
 import { formatReservationMoney, parseReservationMoney } from '@/lib/calculate-reservation-totals'
+import { readPaymentTaxRate } from '@/lib/check-in-defaults'
 import {
   findReservationSection,
   mapReservationSourceToOrigin
@@ -34,12 +37,17 @@ import {
   type ReservationPaymentValidationErrors
 } from '@/lib/validate-reservation-payment'
 import { cn } from '@/lib/utils'
+import { reportError, reportErrorMessage, toastSuccess } from '@/lib/app-toast'
 import {
   createEmptyReservationPaymentFields,
   type ReservationPaymentFields
 } from '@/types/reservation-payment'
 import type { Reservation } from '@/types/reservation'
-import { useSaveSplitReservationMutation, useGetShowDataQuery } from '@/store/api/clubmanApi'
+import {
+  useGetSystemDefaultsQuery,
+  useGetShowDataQuery,
+  useUpdateReservationMutation
+} from '@/store/api/clubmanApi'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 type SplitReservationDialogProps = {
@@ -127,9 +135,10 @@ export function SplitPartyDialog({
   const [isCashDrawerBusy, setIsCashDrawerBusy] = useState(false)
 
   const [splitSelectedPromo, setSplitSelectedPromo] = useState('none')
+  const [splitPasses, setSplitPasses] = useState(1)
   const [paymentDue, setPaymentDue] = useState(0)
   const [paymentAmountInput, setPaymentAmountInput] = useState('')
-  const [saveSplitReservation] = useSaveSplitReservationMutation()
+  const [updateReservation] = useUpdateReservationMutation()
 
   const showId = detail?.ShowId?.trim() || currentShowId
 
@@ -155,6 +164,27 @@ export function SplitPartyDialog({
       origin: promoOrigin
     })
 
+  const { data: rawSystemDefaults } = useGetSystemDefaultsQuery(
+    { connectionName, locationId },
+    { skip: !open }
+  )
+  const systemDefaults = useMemo(() => {
+    if (!rawSystemDefaults) return {} as Record<string, string | null | undefined>
+    return rawSystemDefaults.reduce((acc, curr) => {
+      if (curr.Field) {
+        acc[curr.Field] = curr.DefValue
+      }
+      return acc
+    }, {} as Record<string, string | null | undefined>)
+  }, [rawSystemDefaults])
+
+  const systemTaxPercent = useMemo(() => {
+    const fromDefaults = rawSystemDefaults
+      ? readPaymentTaxRate(rawSystemDefaults)
+      : Number(systemDefaults?.lblTaxes || 0)
+    return normalizeTaxPercent(fromDefaults)
+  }, [rawSystemDefaults, systemDefaults?.lblTaxes])
+
   const matchedSection =
     findReservationSection(sections, detail?.ResSec ?? reservation?.section ?? '') ??
     sections[0] ??
@@ -162,20 +192,31 @@ export function SplitPartyDialog({
 
   const party = detail?.PartyNo ?? reservation?.qty ?? 0
   const remainingTickets = Math.max(0, party - (detail?.CheckedIn ?? 0))
-  const unitPrice = parseReservationMoney(matchedSection?.price ?? '0')
+  const unitPrice =
+    (detail?.Price != null && detail.Price > 0 ? detail.Price : null) ??
+    matchedSection?.showPrice ??
+    parseReservationMoney(matchedSection?.price ?? '0')
   const promotionCode = detail?.Promo?.trim() ?? reservation?.promo.trim() ?? ''
 
-
-  const origTotals = {
-    subtotal: detail?.SubTotal ?? 0,
-    serviceCharge: detail?.SVC ?? 0,
-    discount: detail?.Discount ?? 0,
-    taxes: detail?.SalesTax ?? 0,
-    total: detail?.Total ?? parseReservationMoney(reservation?.total ?? '0')
-  }
+  const origTotals = sanitizeStoredTotalsForDisplay(
+    {
+      subtotal: detail?.SubTotal ?? 0,
+      serviceCharge: detail?.SVC ?? 0,
+      discount: detail?.Discount ?? 0,
+      taxes: detail?.SalesTax ?? 0,
+      total: detail?.Total ?? parseReservationMoney(reservation?.total ?? '0')
+    },
+    systemTaxPercent,
+    systemDefaults?.lblTaxWithServiceCharge === 'Y'
+  )
 
   const alreadyPaidAmount = parseReservationMoney(reservation?.paid ?? '$0.00')
   const isFullyPaid = origTotals.total > 0 && alreadyPaidAmount >= origTotals.total
+
+  // Desktop PartyList builds each button as `i * (Total / Party)` — a
+  // tax/SVC-inclusive per-ticket share of the full reservation total (uses the
+  // sanitized total so a corrupt stored SalesTax can't inflate the buttons).
+  const chipPricePerTicket = party > 0 ? origTotals.total / party : unitPrice
 
   const effectiveSplitPromo = splitSelectedPromo !== 'none' ? splitSelectedPromo : null
   const splitPromoObj = effectiveSplitPromo ? promoById.get(effectiveSplitPromo) ?? null : null
@@ -184,17 +225,25 @@ export function SplitPartyDialog({
     : origin === 'walkup' ? (detail?.WalkUpFee ?? 0)
       : (detail?.WebFee ?? 0)
   const dayOfShowFee = detail?.DayOfShowFee ?? 0
-  const serviceChargePerTicket = baseFee + dayOfShowFee
-
-  const origTaxable = Math.max(0, (detail?.SubTotal ?? 0) + (detail?.SVC ?? 0) - (detail?.Discount ?? 0))
-  const impliedTaxRate = origTaxable > 0 ? (detail?.SalesTax ?? 0) / origTaxable : 0
+  const isDayOfShow = showDate
+    ? new Date(showDate).toDateString() === new Date().toDateString()
+    : false
+  const serviceChargePerTicket = baseFee + (isDayOfShow ? dayOfShowFee : 0)
+  const originCode =
+    origin === 'phone' ? 'SRC01' : origin === 'walkup' ? 'SRC02' : origin === 'web' ? 'SRC03' : 'SRC01'
 
   const splitTotals = calculateSplitReservationTotals({
-    sectionPrice: matchedSection?.price ?? '0',
+    sectionPrice: String(unitPrice),
     splitCount,
     promo: splitPromoObj,
     serviceChargePerTicket,
-    taxRate: impliedTaxRate
+    taxRate: systemTaxPercent,
+    originCode,
+    baseClubFee: baseFee,
+    baseDayOfShowFee: dayOfShowFee,
+    passes: splitPasses,
+    taxWithServiceCharge: systemDefaults?.lblTaxWithServiceCharge === 'Y',
+    isDayOfShow
   })
 
   useEffect(() => {
@@ -209,12 +258,25 @@ export function SplitPartyDialog({
       setPaymentDue(0)
       setPaymentAmountInput('')
       setSplitSelectedPromo('none')
+      setSplitPasses(1)
       setSplitFirstName('')
       setSplitLastName('')
     }
   }, [open])
 
   useEffect(() => {
+    if (!open || !reservation) {
+      return
+    }
+
+    // Desktop pre-fills its single editable Customer Details section with the
+    // original reservation name and sends those values if they are unchanged.
+    setSplitLastName(reservation.lastName ?? '')
+    setSplitFirstName(reservation.firstName ?? '')
+  }, [open, reservation?.id, reservation?.lastName, reservation?.firstName])
+
+  useEffect(() => {
+    // Desktop Split Reservation locks payment amount to SplitTotal.
     setPaymentDue(splitTotals.total)
     setPaymentAmountInput(formatReservationMoney(splitTotals.total))
   }, [splitTotals.total])
@@ -247,9 +309,7 @@ export function SplitPartyDialog({
     try {
       await openCashDrawer()
     } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : 'Failed to open cash drawer'
-      )
+      reportError(setSubmitError, error, 'Failed to open cash drawer')
     } finally {
       setIsCashDrawerBusy(false)
     }
@@ -267,13 +327,16 @@ export function SplitPartyDialog({
     })
 
     if (validationError) {
-      setSubmitError(validationError)
+      reportErrorMessage(setSubmitError, validationError)
       return
     }
 
     const inputAmount = parseReservationMoney(paymentAmountInput)
     if (inputAmount > paymentDue) {
-      setSubmitError("Payment amount cannot be greater than the remaining due.")
+      reportErrorMessage(
+        setSubmitError,
+        'Payment amount cannot be greater than the remaining due.'
+      )
       return
     }
 
@@ -288,12 +351,15 @@ export function SplitPartyDialog({
 
     if (paymentError) {
       setPaymentValidationErrors(nextPaymentErrors)
-      setSubmitError(paymentError)
+      reportErrorMessage(setSubmitError, paymentError)
       return
     }
 
     if (inputAmount < paymentDue) {
-      setSubmitError("Full payment is required when splitting the party.")
+      reportErrorMessage(
+        setSubmitError,
+        'Full payment is required when splitting the party.'
+      )
       return
     }
 
@@ -302,39 +368,31 @@ export function SplitPartyDialog({
     setSubmitError(null)
 
     try {
-      const payload = buildSplitReservationRequest({
+      const payload = buildSplitPartyUpdateReservationRequest({
         connectionName,
         locationId,
         reservationId: reservation.id,
         lastUpdateId: username,
         splitCount,
-        remainingTickets,
         paymentType,
         paymentFields,
         totals: splitTotals,
-        isSplitFlag: false,
         paymentAmount: inputAmount,
         promoId: splitSelectedPromo !== 'none' ? splitSelectedPromo : undefined,
-        taxRate: impliedTaxRate,
-        detail
+        taxRate: systemTaxPercent,
+        detail: detail ?? {},
+        splitFirstName,
+        splitLastName,
+        splitPasses
       })
 
-      // Overrides for Split Party
-      payload.Action = 'CMDSaveSplitReservation'
-      payload.ActionForm = 'fromReservation'
-      payload.IsSplitReservation = true
-      if (splitFirstName.trim()) payload.SplitCustomerFirstName = splitFirstName.trim()
-      if (splitLastName.trim()) payload.SplitCustomerLastName = splitLastName.trim()
-      payload.SplitParty = splitCount
-
-      await saveSplitReservation(payload).unwrap()
+      await updateReservation(payload).unwrap()
 
       onOpenChange(false)
       await onSplit?.()
+      toastSuccess('Reservation split')
     } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : 'Failed to split reservation'
-      )
+      reportError(setSubmitError, error, 'Failed to split reservation')
     } finally {
       setIsSubmitting(false)
     }
@@ -385,30 +443,21 @@ export function SplitPartyDialog({
 
           {!isLoading ? (
             <>
-              <SectionCard title='Original Customer Details'>
-                <div className='grid gap-3 sm:grid-cols-2'>
-                  <SummaryField label='Last Name:' value={reservation?.lastName || '—'} />
-                  <SummaryField label='First Name:' value={reservation?.firstName || '—'} />
-                </div>
-              </SectionCard>
-
-              <SectionCard title='New Party Name (Optional)'>
+              <SectionCard title='Customer Details'>
                 <div className='grid gap-3 sm:grid-cols-2'>
                   <div className='flex flex-col gap-1.5'>
-                    <label className='text-xs font-medium text-muted-foreground'>New First Name</label>
+                    <label className='text-xs font-medium text-muted-foreground'>Last Name</label>
                     <Input
-                      value={splitFirstName}
-                      onChange={e => setSplitFirstName(e.target.value)}
-                      placeholder={reservation?.firstName || ''}
+                      value={splitLastName}
+                      onChange={e => setSplitLastName(e.target.value)}
                       className='h-8'
                     />
                   </div>
                   <div className='flex flex-col gap-1.5'>
-                    <label className='text-xs font-medium text-muted-foreground'>New Last Name</label>
+                    <label className='text-xs font-medium text-muted-foreground'>First Name</label>
                     <Input
-                      value={splitLastName}
-                      onChange={e => setSplitLastName(e.target.value)}
-                      placeholder={reservation?.lastName || ''}
+                      value={splitFirstName}
+                      onChange={e => setSplitFirstName(e.target.value)}
                       className='h-8'
                     />
                   </div>
@@ -461,8 +510,7 @@ export function SplitPartyDialog({
               <SectionCard title='Select Tickets to Split'>
                 <SplitReservationTicketPicker
                   remainingTickets={remainingTickets}
-                  totalAmount={origTotals.total}
-                  partySize={party}
+                  unitPrice={chipPricePerTicket}
                   selectedCount={splitCount}
                   onSelect={count => {
                     setSplitCount(count)
@@ -472,24 +520,39 @@ export function SplitPartyDialog({
               </SectionCard>
 
               <SectionCard title='Split Details'>
-                <div className='mb-4 flex items-center justify-between gap-4'>
-                  <span className='text-sm font-medium text-foreground'>Split Promo</span>
-                  <Select
-                    value={splitSelectedPromo}
-                    onValueChange={setSplitSelectedPromo}
-                  >
-                    <SelectTrigger className='h-8 w-48 text-sm'>
-                      <SelectValue placeholder='None' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='none'>None</SelectItem>
-                      {promoOptions.map(p => (
-                        <SelectItem key={p.value} value={p.value}>
-                          {p.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className='mb-4 grid gap-3 sm:grid-cols-2'>
+                  <div className='flex items-center justify-between gap-4'>
+                    <span className='text-sm font-medium text-foreground'>Split Promo</span>
+                    <Select
+                      value={splitSelectedPromo}
+                      onValueChange={setSplitSelectedPromo}
+                    >
+                      <SelectTrigger className='h-8 w-48 text-sm'>
+                        <SelectValue placeholder='None' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='none'>None</SelectItem>
+                        {promoOptions.map(p => (
+                          <SelectItem key={p.value} value={p.value}>
+                            {p.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className='flex items-center justify-between gap-4'>
+                    <span className='text-sm font-medium text-foreground'>Split Passes</span>
+                    <Input
+                      type='number'
+                      min={1}
+                      value={splitPasses}
+                      onChange={event => {
+                        const next = Number.parseInt(event.target.value, 10)
+                        setSplitPasses(Number.isFinite(next) && next > 0 ? next : 1)
+                      }}
+                      className='h-8 w-24 text-sm'
+                    />
+                  </div>
                 </div>
                 <ReservationTotalsCard
                   selectedSection={matchedSection}
@@ -523,6 +586,7 @@ export function SplitPartyDialog({
                   }}
                   paymentAmount={paymentAmountInput}
                   onPaymentAmountChange={setPaymentAmountInput}
+                  paymentDisabled
                   fields={paymentFields}
                   onFieldChange={(key, value) => {
                     setPaymentFields(current => ({ ...current, [key]: value }))

@@ -61,6 +61,7 @@ import { buildPartialCheckInRequest } from "@/lib/build-partial-check-in-request
 import { buildReservationCheckInRequest } from "@/lib/build-reservation-check-in-request"
 import { buildReservationNoteRequest } from "@/lib/build-reservation-note-request"
 import { buildRevertReservationCheckInRequest } from "@/lib/build-revert-reservation-check-in-request"
+import { buildUpdateSplitReservationRequest } from "@/lib/build-update-split-reservation-request"
 import { calculateReservationShowStats } from "@/lib/calculate-reservation-show-stats"
 import { parseReservationMoney } from "@/lib/calculate-reservation-totals"
 import { readBoothSeatDefault } from "@/lib/booth-seat-default"
@@ -356,6 +357,8 @@ export function CheckIn() {
     clubmanApi.useLazyGetReservationDetailByIdQuery()
   const [getReservationPrintProperties] =
     clubmanApi.useLazyGetReservationPrintPropertiesQuery()
+  const [updateSplitReservation] =
+    clubmanApi.useUpdateSplitReservationMutation()
 
   const boothSeatDefault = useMemo(
     () => readBoothSeatDefault(systemDefaults),
@@ -809,16 +812,23 @@ export function CheckIn() {
     setCheckInError(null)
 
     try {
-      await reservationCheckIn(
-        buildReservationCheckInRequest({
+      // Desktop unpaid Check-In path opens Split Payment after promo confirm.
+      // Reservation Payment prep clears promo/discount via UpdateSplitReservation —
+      // do NOT ReservationCheckIn here (that prematurely checks the party in).
+      const detail = await fetchReservationDetailById({
+        connectionName,
+        reservationId: selectedReservation.id,
+      })
+      await updateSplitReservation(
+        buildUpdateSplitReservationRequest({
           connectionName,
           reservationId: selectedReservation.id,
           lastUpdateId: username,
+          detail,
         })
-      )
+      ).unwrap()
       setSplitPromoOpen(false)
       setSplitOpen(true)
-      toastSuccess("Checked in — continue with split")
     } catch (requestError) {
       reportError(
         setCheckInError,

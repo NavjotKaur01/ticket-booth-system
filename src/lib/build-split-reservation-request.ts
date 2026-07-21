@@ -17,6 +17,7 @@ import type { ReservationDetail } from '@/types/api/reservation-detail'
 import type {
   MultiplePromoModel,
   SaveReservationPaymentRequest,
+  SaveReservationRequest,
   SaveSplitReservationRequestModel
 } from '@/types/api/save-reservation'
 import type { ReservationPaymentFields } from '@/types/reservation-payment'
@@ -117,6 +118,10 @@ export function calculateSplitReservationTotals({
     promo: ReservationPromo | null
   }[]
   serviceChargePerTicket?: number
+  /**
+   * Desktop TaxRate from Payment defaults `lblTaxes` — a PERCENT (e.g. 8.875),
+   * not a fraction. CalculateTax does `((amount) * taxRate) / 100`.
+   */
   taxRate?: number
   originCode?: string
   baseClubFee?: number
@@ -192,11 +197,18 @@ export function calculateSplitReservationTotals({
     tixDisc = ticketCounts.tixDisc
   }
 
+  // Desktop TicketCalculationHelper.CalculateTax: TaxRate is a PERCENT
+  // (lblTaxes), then ((amount [+ svc]) * taxRate) / 100.
   let taxable = Math.max(0, subtotal - discount)
   if (taxWithServiceCharge) {
     taxable = Math.max(0, taxable + serviceCharge)
   }
-  const taxes = taxable * (taxRate ?? 0)
+  const percentRate = normalizeTaxPercent(taxRate)
+  let taxes = (taxable * percentRate) / 100
+  // Guardrail: a corrupt rate must never recreate the $1.18M-style inflation.
+  if (taxes > taxable && taxable > 0) {
+    taxes = 0
+  }
   const total = subtotal - discount + serviceCharge + taxes
 
   return {
@@ -211,6 +223,63 @@ export function calculateSplitReservationTotals({
     svcDiffAmount: roundMoney(svcDiffAmount),
     isMultiplePromo: useMultiPromo,
     multiplePromoList
+  }
+}
+
+/** Desktop lblTaxes — percent (e.g. 8.875). Reject dollar amounts masquerading as rates. */
+export function normalizeTaxPercent(taxRate: number | null | undefined) {
+  const rate = typeof taxRate === 'number' && Number.isFinite(taxRate) ? taxRate : 0
+  if (rate <= 0) {
+    return 0
+  }
+  // Fractions like 0.08875 were previously derived from SalesTax/taxable — convert.
+  if (rate > 0 && rate < 1) {
+    return rate * 100
+  }
+  // Anything above a plausible sales-tax percent is corrupt (e.g. 10880).
+  if (rate > 100) {
+    return 0
+  }
+  return rate
+}
+
+/**
+ * Guards the "Reservation Details" summary against records that were persisted
+ * with a corrupt SalesTax/Total (e.g. from the earlier tax-rate-unit bug that
+ * stored a raw amount/fraction as the rate and inflated tax to values like
+ * $1,183,744). A legitimate percentage-based sales tax can never exceed the
+ * taxable base, so when it does we recompute tax/total from the system tax
+ * percent. This is DISPLAY-only sanitization; it does not change what is sent
+ * to the API (split payloads already use the normalized system percent).
+ */
+export function sanitizeStoredTotalsForDisplay(
+  totals: {
+    subtotal: number
+    serviceCharge: number
+    discount: number
+    taxes: number
+    total: number
+  },
+  taxRatePercent: number,
+  taxWithServiceCharge = false
+) {
+  const { subtotal, serviceCharge, discount } = totals
+  const taxable = Math.max(
+    0,
+    subtotal - discount + (taxWithServiceCharge ? serviceCharge : 0)
+  )
+  const isCorrupt = subtotal > 0 && totals.taxes > taxable
+  if (!isCorrupt) {
+    return totals
+  }
+  const percent = normalizeTaxPercent(taxRatePercent)
+  const fixedTaxes = (taxable * percent) / 100
+  return {
+    subtotal,
+    serviceCharge,
+    discount,
+    taxes: fixedTaxes,
+    total: subtotal - discount + serviceCharge + fixedTaxes
   }
 }
 
@@ -254,9 +323,11 @@ function buildSplitPaymentModel({
     ServiceCharge: 0,
     IsCustomerSearch: true,
     IsSwipeCard: false,
-    IsSplitPayment: true,
+    // Desktop SaveSplitPaymentDetails leaves IsSplitPayment unset/false.
+    IsSplitPayment: false,
     SplitTaxes: splitTotals.taxes,
-    SplitServiceCharge: splitTotals.serviceCharge,
+    // Desktop PaymentRequestModel uses the typo SplitServiceChage.
+    SplitServiceChage: splitTotals.serviceCharge,
     SplitTotal: splitTotals.total
   }
 
@@ -352,7 +423,8 @@ export function buildSplitReservationRequest({
     Action: 'CMDSaveSplitPayment',
     ActionForm: 'fromReservation',
     IsReservationCheckedIn: (detail.CheckedIn ?? 0) > 0,
-    TaxRate: taxRate,
+    // Desktop sends lblTaxes percent on TaxRate (not SalesTax/taxable fraction).
+    TaxRate: normalizeTaxPercent(taxRate),
     SplitSubTotal: totals.subtotal,
     SplitServiceChage: totals.serviceCharge,
     SplitDiscount: totals.discount,
@@ -382,4 +454,105 @@ export function buildSplitReservationRequest({
   }
 
   return payload
+}
+
+/**
+ * Desktop Split Party (existing reservation): SavePaymenInfo(isSplit=true) →
+ * UpdateReservation with IsSplitReservation + SpltParty (not SaveSplitReservation).
+ */
+export function buildSplitPartyUpdateReservationRequest({
+  connectionName,
+  locationId,
+  reservationId,
+  lastUpdateId,
+  splitCount,
+  paymentType,
+  paymentFields,
+  totals,
+  paymentAmount,
+  promoId,
+  taxRate,
+  detail,
+  splitFirstName,
+  splitLastName,
+  splitPasses = 0,
+}: {
+  connectionName: string
+  locationId: string
+  reservationId: string
+  lastUpdateId: string
+  splitCount: number
+  paymentType: ReservationPaymentType
+  paymentFields: ReservationPaymentFields
+  totals: SplitReservationTotals
+  paymentAmount: number
+  promoId?: string
+  taxRate: number
+  detail: ReservationDetail
+  splitFirstName?: string
+  splitLastName?: string
+  splitPasses?: number
+}): SaveReservationRequest {
+  const paymentModel = buildSplitPaymentModel({
+    paymentType,
+    paymentFields,
+    paymentAmount,
+    splitTotals: totals,
+  })
+  // Desktop sets IsSplitPayment on the payment model for Split Party CC path.
+  paymentModel.IsSplitPayment = true
+  paymentModel.Taxes = detail.SalesTax ?? 0
+  paymentModel.ServiceCharge = detail.SVC ?? 0
+
+  const request: SaveReservationRequest = {
+    ConnectionString: connectionName,
+    LocationId: locationId,
+    ReservationId: reservationId,
+    LastUpdateId: lastUpdateId,
+    LastUpdateDt: formatUsDateTime(new Date()),
+    UserRights: '',
+    CustomerId: detail.CustomerID ?? '',
+    ShowID: detail.ShowId ?? '',
+    ShowDetID: detail.ShowDetID ?? '',
+    ShowSec: detail.ResSec ?? '',
+    ShowPrice: detail.Price ?? 0,
+    DayOfShowFee: detail.DayOfShowFee ?? 0,
+    PhoneInFee: detail.PhoneInFee ?? 0,
+    WalkUpFee: detail.WalkUpFee ?? 0,
+    WebFee: detail.WebFee ?? 0,
+    LookUpCode: detail.LookupSDescSource ?? '',
+    ReservationSource: detail.ResSource ?? '',
+    OrigParty: detail.OrigPartyNo ?? detail.PartyNo ?? 0,
+    Party: detail.PartyNo ?? 0,
+    PromotionID: promoId && promoId !== 'none' ? promoId : '',
+    PromotionCode: '',
+    Passes: splitPasses,
+    SubTotal: detail.SubTotal ?? 0,
+    ServiceChage: detail.SVC ?? 0,
+    Discount: detail.Discount ?? 0,
+    Taxes: detail.SalesTax ?? 0,
+    Total: detail.Total ?? 0,
+    ReservationStatus: detail.ResStatus ?? '',
+    IsDinner: detail.Dinner?.toUpperCase() === 'Y',
+    IsVIP: false,
+    ReservationNote: detail.Memo ?? detail.ReservationNotes ?? detail.Note ?? '',
+    Action: 'CMDSaveReservation',
+    ActionForm: 'fromReservation',
+    IsReservationCheckedIn: (detail.CheckedIn ?? 0) > 0,
+    TixPaid: totals.tixPaid ?? splitCount,
+    TixComp: totals.tixComp ?? 0,
+    TixDisc: totals.tixDisc ?? 0,
+    IsSplitReservation: true,
+    SpltParty: splitCount,
+    SplitSubTotal: totals.subtotal,
+    SplitTaxes: totals.taxes,
+    TaxRate: normalizeTaxPercent(taxRate),
+    SVCDiffAmount: totals.svcDiffAmount ?? 0,
+    SplitCustomerFirstName: splitFirstName?.trim() || undefined,
+    SplitCustomerLastName: splitLastName?.trim() || undefined,
+    PaymentAmount: roundMoney(paymentAmount),
+    PaymentModel: paymentModel,
+  }
+
+  return request
 }

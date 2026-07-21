@@ -1,4 +1,4 @@
-import { LoaderCircle, LockKeyhole, X } from 'lucide-react'
+import { LoaderCircle, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { ShowDateField } from '@/components/common/show-date-field'
@@ -120,7 +120,7 @@ function SectionCard({
   title,
   children,
   className,
-  readOnly = false,
+  readOnly: _readOnly = false,
 }: {
   title: string
   children: ReactNode
