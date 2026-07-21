@@ -71,8 +71,10 @@ export function PartialCheckInDialog({
     mode === "check-in"
       ? "Click the Number of Customer to Print on Ticket"
       : "Click the Number of Customer to Un-scan"
+  // Desktop fills PrintButtonList with every available number and lets the
+  // containing ScrollViewer handle large parties.
   const numbers = Array.from(
-    { length: Math.max(0, Math.min(15, maxCount)) },
+    { length: Math.max(0, Math.floor(maxCount)) },
     (_, index) => index + 1
   )
 
@@ -183,21 +185,23 @@ export function PartialCheckInDialog({
             {numbers.length === 0 ? (
               <p className="text-sm text-muted-foreground">No seats available.</p>
             ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {numbers.map((num) => (
-                  <Button
-                    key={num}
-                    type="button"
-                    variant={selected === num ? "default" : "outline"}
-                    className={cn(
-                      "size-9 rounded-sm p-0 text-sm font-semibold tabular-nums"
-                    )}
-                    disabled={isSubmitting}
-                    onClick={() => setSelected(num)}
-                  >
-                    {num}
-                  </Button>
-                ))}
+              <div className="max-h-36 overflow-y-auto pr-1">
+                <div className="flex flex-wrap gap-1.5">
+                  {numbers.map((num) => (
+                    <Button
+                      key={num}
+                      type="button"
+                      variant={selected === num ? "default" : "outline"}
+                      className={cn(
+                        "size-9 rounded-sm p-0 text-sm font-semibold tabular-nums"
+                      )}
+                      disabled={isSubmitting}
+                      onClick={() => setSelected(num)}
+                    >
+                      {num}
+                    </Button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

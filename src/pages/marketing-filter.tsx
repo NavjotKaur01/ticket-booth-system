@@ -11,6 +11,7 @@ import { MarketingFilterFiltersCard } from "@/features/marketing-filter/marketin
 import { useAppSession } from "@/hooks/use-app-session"
 import { useMarketingFilterSearch } from "@/hooks/use-marketing-filter-search"
 import { toastError } from "@/lib/app-toast"
+import { alertDialog } from "@/lib/app-dialog"
 import { marketingFilterRecordToCustomer } from "@/lib/filter-marketing-records"
 import { exportMarketingFilterRecords } from "@/lib/marketing-filter-export"
 import type { ExportFormat } from "@/lib/export-table-data"
@@ -99,14 +100,20 @@ export function MarketingFilter() {
     }
   }
 
-  function handleExportOpen() {
+  async function handleExportOpen() {
     if (loading) {
-      window.alert("Please wait while data is loading.")
+      await alertDialog({
+        title: "Please Wait",
+        description: "Please wait while data is loading.",
+      })
       return
     }
 
     if (records.length === 0) {
-      window.alert("Please search customer first!")
+      await alertDialog({
+        title: "No Customers",
+        description: "Please search customer first!",
+      })
       return
     }
 

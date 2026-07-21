@@ -51,6 +51,7 @@ export function useReservationTransactions({
         amount: payment.Amount ?? 0,
         authorization: payment.Auth ?? '',
         pnref: payment.PNREF ?? '',
+        paymentTypeCode: payment.PaymentTypeCode ?? '',
         // API Split flag: "X" = split payment → display Y; null/empty → N
         isSplit: payment.Split?.trim().toUpperCase() === 'X',
         dueAmt: payment?.dueAmt ?? 0,
@@ -79,6 +80,9 @@ export function useReservationTransactions({
         amount,
         authorization: printProperties?.Auth ?? '',
         pnref: printProperties?.PNREF ?? '',
+        // Print-properties fallback has no code; keep empty (hold detection also
+        // checks the display name).
+        paymentTypeCode: '',
         isSplit: false,
         dueAmt: printProperties?.DueAmount ?? 0,
         billAddr: '',

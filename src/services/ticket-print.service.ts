@@ -539,8 +539,10 @@ async function startPrintDocument(html: string) {
 
 
 
-export function buildReprintCountOptions(partySize: number) {
-  return Array.from({ length: Math.max(1, partySize) }, (_, index) => index + 1)
+/** Desktop ReprintTickets: one button per checked-in guest (1..CheckedIn). */
+export function buildReprintCountOptions(checkedInCount: number) {
+  const count = Math.max(0, Math.floor(checkedInCount))
+  return Array.from({ length: count }, (_, index) => index + 1)
 }
 
 function normalizeTicketPromotion(value: string | null | undefined) {
@@ -616,9 +618,10 @@ export async function getMockTicketPrintData({
     firstName: reservation.firstName,
     lastName: reservation.lastName,
     partySize: Math.max(1, reservation.qty),
-    checkedInCount: Math.max(0, reservation.scanner),
-    totalAmount: parseCurrency(reservation.total),
-    paidAmount: parseCurrency(reservation.paid),
+    // Desktop CheckedIn (seated), NOT ScannerIn.
+    checkedInCount: Math.max(0, reservation.seated),
+    totalAmount: reservation.totalAmount ?? parseCurrency(reservation.total),
+    paidAmount: reservation.paidAmount ?? parseCurrency(reservation.paid),
     paymentType: resolvePaymentType(reservation.source),
     source: reservation.source,
     section: reservation.section || "General",

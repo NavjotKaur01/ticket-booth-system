@@ -1,8 +1,7 @@
-import { LoaderCircle, X } from 'lucide-react'
+import { LoaderCircle, LockKeyhole, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { ShowDateField } from '@/components/common/show-date-field'
-import { ShowTimePicker } from '@/components/common/show-time-picker'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -60,6 +59,45 @@ import {
 import type { Reservation, ReservationSectionOption } from '@/types/reservation'
 import type { ShowDetailsByDateItem } from '@/types/api/show-details'
 
+/** Desktop MoveReservation.xaml table-section visibility (BookTableSecVisibility). */
+const TABLE_SECTION_CODES = new Set([
+  'SECT12',
+  'SECT16',
+  'SECT13',
+  'SECT17',
+  'SECT10',
+  'SECT15',
+  'SECT05',
+])
+
+const READONLY_FIELD_CLASS =
+  'h-9 cursor-default border-slate-200 bg-slate-100/80 text-muted-foreground shadow-none focus-visible:border-slate-200 focus-visible:ring-0'
+
+/** Desktop section combo: `$ price Name Seats: n` (Available is a separate field). */
+function formatMoveSectionLabel(section: ReservationSectionOption) {
+  return `${section.price} ${section.name} Seats: ${section.seats}`
+}
+
+function formatShowDateShort(dateValue: string) {
+  const iso = toIsoShowDate(dateValue) || dateValue
+  const date = new Date(`${iso}T00:00:00`)
+  if (Number.isNaN(date.getTime())) {
+    return dateValue
+  }
+
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${month}/${day}/${date.getFullYear()}`
+}
+
+function formatDifferenceMoney(value: number) {
+  return value.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    currencySign: 'accounting',
+  })
+}
+
 type MoveReservationDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -78,43 +116,16 @@ function todayDateValue() {
   return `${date.getFullYear()}-${month}-${day}`
 }
 
-function formatShowDate(dateValue: string) {
-  const date = new Date(`${dateValue}T00:00:00`)
-  if (Number.isNaN(date.getTime())) {
-    return dateValue
-  }
-
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric'
-  })
-}
-
-function SummaryField({
-  label,
-  value
-}: {
-  label: string
-  value: string
-}) {
-  return (
-    <div className='flex min-w-0 items-center gap-2 text-sm'>
-      <span className='shrink-0 font-medium text-foreground'>{label}</span>
-      <span className='truncate text-muted-foreground'>{value}</span>
-    </div>
-  )
-}
-
 function SectionCard({
   title,
   children,
-  className
+  className,
+  readOnly = false,
 }: {
   title: string
   children: ReactNode
   className?: string
+  readOnly?: boolean
 }) {
   return (
     <section
@@ -123,7 +134,9 @@ function SectionCard({
         className
       )}
     >
-      <h3 className='text-sm font-medium text-foreground'>{title}</h3>
+      <div className='flex items-center justify-between gap-3'>
+        <h3 className='text-sm font-medium text-foreground'>{title}</h3>
+      </div>
       <div className='mt-3'>{children}</div>
     </section>
   )
@@ -132,24 +145,32 @@ function SectionCard({
 function MoneyField({
   label,
   value,
-  highlight
+  className,
+  readOnlyTone = false,
 }: {
   label: string
   value: number
-  highlight?: boolean
+  className?: string
+  readOnlyTone?: boolean
 }) {
   return (
-    <div className='min-w-0 space-y-1'>
+    <div className={cn('min-w-0 space-y-1', className)}>
       <span className='text-xs font-medium text-foreground'>{label}</span>
       <Input
         readOnly
         value={formatReservationMoney(value)}
         className={cn(
           'h-9 bg-white text-sm shadow-xs',
-          highlight && value > 0 && 'font-medium text-destructive'
+          readOnlyTone && READONLY_FIELD_CLASS
         )}
       />
     </div>
+  )
+}
+
+function FieldLabel({ children }: { children: ReactNode }) {
+  return (
+    <span className='block text-xs font-semibold text-foreground'>{children}</span>
   )
 }
 
@@ -188,6 +209,14 @@ export function MoveReservationDialog({
   const [paymentFields, setPaymentFields] = useState<ReservationPaymentFields>(
     () => createEmptyReservationPaymentFields()
   )
+  const [displayedMoveTotals, setDisplayedMoveTotals] = useState({
+    subtotal: 0,
+    serviceCharge: 0,
+    discount: 0,
+    taxes: 0,
+    total: 0,
+  })
+  const [displayedDifference, setDisplayedDifference] = useState(0)
 
   const originShowId = detail?.ShowId?.trim() || currentShowId
   const party = detail?.PartyNo ?? reservation?.qty ?? 0
@@ -202,6 +231,12 @@ export function MoveReservationDialog({
     ''
   const reservationSectionCode = detail?.ResSec ?? ''
   const isVip = detail?.VIP?.trim().toUpperCase() === 'Y'
+  const isTableReservation = TABLE_SECTION_CODES.has(
+    reservationSectionCode.trim().toUpperCase()
+  )
+  const originLabel = reservation?.source ?? 'Phone'
+  const partyOrTableLabel = isTableReservation ? 'Table :' : 'Party :'
+  const partyOrTableValue = String(party || '')
 
   const origSubTotal = detail?.SubTotal ?? 0
   const origServiceCharge = detail?.SVC ?? 0
@@ -278,6 +313,20 @@ export function MoveReservationDialog({
     [moveTotals.total, origTotal]
   )
 
+  function applyMoveTotalsDisplay() {
+    setDisplayedMoveTotals(moveTotals)
+    setDisplayedDifference(difference)
+  }
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+    // Desktop recalcs when show/section selection changes; keep charge math live.
+    applyMoveTotalsDisplay()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync display from current memo values
+  }, [open, moveTotals, difference])
+
   useEffect(() => {
     if (!open) {
       setUpcomingShows([])
@@ -292,6 +341,14 @@ export function MoveReservationDialog({
       setPaymentDialogOpen(false)
       setPaymentType('credit-card')
       setPaymentFields(createEmptyReservationPaymentFields())
+      setDisplayedMoveTotals({
+        subtotal: 0,
+        serviceCharge: 0,
+        discount: 0,
+        taxes: 0,
+        total: 0,
+      })
+      setDisplayedDifference(0)
       return
     }
 
@@ -501,38 +558,25 @@ export function MoveReservationDialog({
   }
 
   const isLoading = detailLoading || upcomingLoading
-  const customerName = reservation
-    ? `${reservation.lastName}, ${reservation.firstName}`.trim()
-    : ''
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           disableOutsideDismiss
           showCloseButton={false}
-          className='flex max-h-[82vh] max-w-6xl flex-col overflow-hidden p-0 sm:max-w-6xl'
+          className='flex max-h-[90vh] max-w-5xl flex-col overflow-hidden p-0 sm:max-w-5xl'
         >
           <DialogHeader className='shrink-0 flex-row items-center justify-between gap-4 border-b px-4 py-3'>
-            <div className='min-w-0'>
-              <DialogTitle className='text-base font-semibold text-foreground'>
-                Move Reservation
-              </DialogTitle>
-              {reservation ? (
-                <p className='truncate text-sm text-muted-foreground'>
-                  {customerName || 'Guest'}
-                  {customerName ? ' · ' : ''}
-                  Party {party}
-                </p>
-              ) : null}
-            </div>
+            <DialogTitle className='text-base font-semibold text-foreground'>
+              Move Reservation
+            </DialogTitle>
             <DialogClose className='flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-none'>
               <X className='size-4' />
               <span className='sr-only'>Close</span>
             </DialogClose>
           </DialogHeader>
 
-          <div className='min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4'>
+          <div className='min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4'>
             {isLoading ? (
               <div className='flex min-h-48 items-center justify-center gap-2 text-sm text-muted-foreground'>
                 <LoaderCircle className='size-4 animate-spin' />
@@ -548,31 +592,55 @@ export function MoveReservationDialog({
 
             {!isLoading ? (
               <>
-                <SectionCard title='Reservation Details'>
-                  <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
-                    <SummaryField label='Customer:' value={customerName || '—'} />
-                    <SummaryField label='Source:' value={reservation?.source ?? '—'} />
-                    <SummaryField
-                      label={reservationSectionCode ? 'Table:' : 'Party:'}
-                      value={String(party || '—')}
-                    />
-                    <SummaryField label='Promo Code:' value={promotionCode || '—'} />
+                <SectionCard title='Reservation Details' readOnly>
+                  <div className='grid gap-3 md:grid-cols-[minmax(0,7rem)_minmax(0,12rem)_minmax(0,5rem)_minmax(0,7rem)_minmax(0,6rem)_minmax(0,12rem)] md:items-end'>
+                    <div className='space-y-1'>
+                      <FieldLabel>Origin :</FieldLabel>
+                      <Input
+                        readOnly
+                        value={originLabel}
+                        aria-label='Origin (read only)'
+                        className={READONLY_FIELD_CLASS}
+                      />
+                    </div>
+
+                    <div className='space-y-1 md:col-start-3'>
+                      <FieldLabel>{partyOrTableLabel}</FieldLabel>
+                      <Input
+                        readOnly
+                        value={partyOrTableValue}
+                        className={cn(READONLY_FIELD_CLASS, 'max-w-28')}
+                      />
+                    </div>
+
+                    <div className='space-y-1 md:col-span-2'>
+                      <FieldLabel>Promo Code</FieldLabel>
+                      <Input
+                        readOnly
+                        value={promotionCode || 'None'}
+                        aria-label='Promo Code (read only)'
+                        className={READONLY_FIELD_CLASS}
+                      />
+                    </div>
                   </div>
+
                   <div className='mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5'>
-                    <MoneyField label='Subtotal' value={origSubTotal} />
-                    <MoneyField label='Service Charge' value={origServiceCharge} />
-                    <MoneyField label='Discount' value={origDiscount} />
-                    <MoneyField label='Taxes' value={origTaxes} />
-                    <MoneyField label='Total' value={origTotal} />
+                    <MoneyField label='Subtotal' value={origSubTotal} readOnlyTone />
+                    <MoneyField
+                      label='Service Charge'
+                      value={origServiceCharge}
+                      readOnlyTone
+                    />
+                    <MoneyField label='Discount' value={origDiscount} readOnlyTone />
+                    <MoneyField label='Taxes' value={origTaxes} readOnlyTone />
+                    <MoneyField label='Total' value={origTotal} readOnlyTone />
                   </div>
                 </SectionCard>
 
                 <SectionCard title='Select a Show'>
-                  <div className='grid gap-4 xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] xl:items-end'>
-                    <div className='space-y-2'>
-                      <span className='block text-xs font-medium text-foreground'>
-                        Show Date
-                      </span>
+                  <div className='grid gap-3 lg:grid-cols-[minmax(0,11rem)_minmax(0,5rem)_minmax(0,1fr)_auto] lg:items-end'>
+                    <div className='space-y-1'>
+                      <FieldLabel>Show Date</FieldLabel>
                       <ShowDateField
                         showDate={destinationDate}
                         onShowDateChange={value => {
@@ -583,35 +651,42 @@ export function MoveReservationDialog({
                       />
                     </div>
 
-                    <label className='flex h-9 items-center gap-2 self-end text-sm xl:justify-self-end'>
+                    <div className='space-y-1 lg:col-start-2 lg:col-span-2'>
+                      <FieldLabel>Show Time</FieldLabel>
+                      <Select
+                        value={selectedDestinationShowId || undefined}
+                        onValueChange={value => {
+                          setDestinationShowId(value)
+                          setSubmitError(null)
+                        }}
+                        disabled={destinationShowOptions.length === 0}
+                      >
+                        <SelectTrigger className='h-9 w-full min-w-[16rem] bg-white shadow-xs'>
+                          <SelectValue placeholder='Select show time' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {destinationShowOptions.map(show => (
+                            <SelectItem key={show.id} value={show.id}>
+                              {show.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className='flex h-9 items-center gap-2 self-end text-sm'>
                       <Checkbox
                         checked={dinner}
-                        onCheckedChange={value => setDinner(value === true)}
+                        disabled
+                        className='cursor-default border-slate-300 bg-slate-100 opacity-100 disabled:cursor-default disabled:opacity-100'
                       />
                       Dinner
-                    </label>
+                    </div>
                   </div>
 
-                  <div className='mt-4 space-y-1.5'>
-                    <span className='text-xs font-medium text-foreground'>
-                      Show Time
-                    </span>
-                    <ShowTimePicker
-                      shows={destinationShowOptions}
-                      showTime={selectedDestinationShowId}
-                      onShowTimeChange={value => {
-                        setDestinationShowId(value)
-                        setSubmitError(null)
-                      }}
-                      className='w-full'
-                    />
-                  </div>
-
-                  <div className='mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_8rem] lg:items-end'>
-                    <div className='space-y-1.5'>
-                      <span className='text-xs font-medium text-foreground'>
-                        Section
-                      </span>
+                  <div className='mt-4 grid gap-3 lg:grid-cols-[minmax(0,5rem)_minmax(0,1fr)_auto] lg:items-end'>
+                    <div className='space-y-1 lg:col-span-2'>
+                      <FieldLabel>Section:</FieldLabel>
                       <Select
                         value={selectedSection?.id ?? ''}
                         onValueChange={value => {
@@ -626,102 +701,132 @@ export function MoveReservationDialog({
                         <SelectContent>
                           {destinationSections.map(section => (
                             <SelectItem key={section.id} value={section.id}>
-                              {section.label}
+                              {formatMoveSectionLabel(section)}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
 
-                    <div className='space-y-1.5'>
-                      <span className='text-xs font-medium text-foreground'>
-                        Available
+                    <div className='flex items-center gap-2 self-end'>
+                      <span className='shrink-0 text-xs font-semibold text-foreground'>
+                        Available :
                       </span>
                       <Input
                         readOnly
                         value={String(selectedSection?.available ?? 0)}
-                        className='h-9 bg-white shadow-xs'
+                        className='h-9 w-24 bg-white shadow-xs'
                       />
                     </div>
                   </div>
                 </SectionCard>
 
-                <SectionCard title='Reservation Details (With Move)'>
-                  <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6'>
-                    <MoneyField label='Subtotal' value={moveTotals.subtotal} />
+                <SectionCard title='Reservation Details ( With Move )'>
+                  <div className='grid gap-3 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-end'>
+                    <MoneyField
+                      label='Subtotal'
+                      value={displayedMoveTotals.subtotal}
+                    />
                     <MoneyField
                       label='Service Charge'
-                      value={moveTotals.serviceCharge}
+                      value={displayedMoveTotals.serviceCharge}
                     />
-                    <MoneyField label='Discount' value={moveTotals.discount} />
-                    <MoneyField label='Taxes' value={moveTotals.taxes} />
-                    <MoneyField label='Total' value={moveTotals.total} />
                     <MoneyField
-                      label='Difference'
-                      value={difference}
-                      highlight
+                      label='Discount'
+                      value={displayedMoveTotals.discount}
                     />
+                    <Button
+                      type='button'
+                      size='sm'
+                      className='h-9 self-end bg-emerald-600 text-white hover:bg-emerald-700'
+                      onClick={() => {
+                        applyMoveTotalsDisplay()
+                        setSubmitError(null)
+                      }}
+                    >
+                      Re-Calculate Total
+                    </Button>
+                  </div>
+
+                  <div className='mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
+                    <MoneyField label='Taxes' value={displayedMoveTotals.taxes} />
+                    <MoneyField label='Total' value={displayedMoveTotals.total} />
                   </div>
                 </SectionCard>
 
-                <SectionCard title='Upcoming Shows'>
-                  <p className='mb-3 text-xs text-muted-foreground'>
-                    Double-click a show to move to
-                  </p>
-                  <div className='overflow-hidden rounded-md border border-slate-200 bg-white'>
-                    <div className='max-h-52 overflow-auto'>
-                      <table className='min-w-full w-full border-collapse text-sm'>
-                        <thead>
-                          <tr className='border-b border-slate-200 bg-muted/40 text-left text-xs font-semibold text-foreground'>
-                            <th className='h-10 px-3 py-2'>Show Date</th>
-                            <th className='h-10 px-3 py-2'>Show Time</th>
-                            <th className='h-10 px-3 py-2'>Comic Name</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {activeUpcomingShows.length === 0 ? (
-                            <tr>
-                              <td
-                                colSpan={3}
-                                className='px-3 py-8 text-center text-muted-foreground'
-                              >
-                                No upcoming shows found.
-                              </td>
-                            </tr>
-                          ) : (
-                            activeUpcomingShows.map(show => {
-                              const showOption = mapShowDetailsToOptions([show])[0]
-                              const isSelected = show.ShowId === selectedDestinationShowId
-
-                              return (
-                                <tr
-                                  key={show.ShowId}
-                                  className={cn(
-                                    'cursor-pointer border-b border-slate-100 transition-colors last:border-b-0 hover:bg-muted/30',
-                                    isSelected && 'bg-primary/5'
-                                  )}
-                                  onDoubleClick={() => handleSelectUpcomingShow(show)}
-                                >
-                                  <td className='px-3 py-2.5'>
-                                    {toIsoShowDate(show.ShowDate)
-                                      ? formatShowDate(toIsoShowDate(show.ShowDate))
-                                      : show.ShowDate}
-                                  </td>
-                                  <td className='px-3 py-2.5'>
-                                    {showOption?.time ?? show.ShowTim}
-                                  </td>
-                                  <td className='px-3 py-2.5'>
-                                    {showOption?.headliner ?? show.HeadlinerName ?? '—'}
-                                  </td>
-                                </tr>
-                              )
-                            })
-                          )}
-                        </tbody>
-                      </table>
+                <section className='rounded-md border border-slate-200 bg-white'>
+                  <div className='flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-3 py-2'>
+                    <p className='text-xs text-muted-foreground'>
+                      Upcoming Shows : ( DblClick show to move to )
+                    </p>
+                    <div className='flex items-center gap-2'>
+                      <span className='text-xs font-semibold text-foreground'>
+                        Difference :
+                      </span>
+                      <Input
+                        readOnly
+                        value={formatDifferenceMoney(displayedDifference)}
+                        className={cn(
+                          'h-9 w-32 bg-white text-sm shadow-xs',
+                          displayedDifference > 0 && 'font-medium text-destructive'
+                        )}
+                      />
                     </div>
                   </div>
-                </SectionCard>
+
+                  <div className='max-h-52 overflow-auto'>
+                    <table className='min-w-full w-full border-collapse text-sm'>
+                      <thead>
+                        <tr className='border-b border-slate-200 bg-muted/40 text-left text-xs font-semibold text-foreground'>
+                          <th className='h-10 px-3 py-2'>Show Date</th>
+                          <th className='h-10 px-3 py-2'>Show Time</th>
+                          <th className='h-10 px-3 py-2'>Comic Name</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activeUpcomingShows.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={3}
+                              className='px-3 py-8 text-center text-muted-foreground'
+                            >
+                              No upcoming shows found.
+                            </td>
+                          </tr>
+                        ) : (
+                          activeUpcomingShows.map(show => {
+                            const showOption = mapShowDetailsToOptions([show])[0]
+                            const isSelected =
+                              show.ShowId === selectedDestinationShowId
+
+                            return (
+                              <tr
+                                key={show.ShowId}
+                                className={cn(
+                                  'cursor-pointer border-b border-slate-100 transition-colors last:border-b-0 hover:bg-muted/30',
+                                  isSelected && 'bg-primary/5'
+                                )}
+                                onDoubleClick={() => handleSelectUpcomingShow(show)}
+                              >
+                                <td className='px-3 py-2.5'>
+                                  {formatShowDateShort(show.ShowDate)}
+                                </td>
+                                <td className='px-3 py-2.5'>
+                                  {showOption?.time ?? show.ShowTim}
+                                </td>
+                                <td className='px-3 py-2.5'>
+                                  {showOption?.headliner ??
+                                    show.HeadlinerName ??
+                                    '—'}
+                                </td>
+                              </tr>
+                            )
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
 
                 {submitError ? (
                   <p className='text-sm text-destructive'>{submitError}</p>

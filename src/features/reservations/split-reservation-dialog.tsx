@@ -40,6 +40,7 @@ import {
   reportErrorMessage,
   toastSuccess,
 } from '@/lib/app-toast'
+import { alertDialog } from '@/lib/app-dialog'
 import {
   createEmptyReservationPaymentFields,
   type ReservationPaymentFields
@@ -411,9 +412,12 @@ export function SplitReservationDialog({
     }
   }
 
-  function handleOpenChange(newOpen: boolean) {
+  async function handleOpenChange(newOpen: boolean) {
     if (!newOpen && isSplitFlag) {
-      window.alert("Please clear the split due amount first before closing.")
+      await alertDialog({
+        title: "Split Payment",
+        description: "Please clear the split due amount first before closing.",
+      })
       return
     }
     onOpenChange(newOpen)

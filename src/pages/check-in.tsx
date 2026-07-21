@@ -91,6 +91,7 @@ import {
   toastSuccess,
   toastWarning,
 } from "@/lib/app-toast"
+import { confirmDialog } from "@/lib/app-dialog"
 import {
   needsPromoValidation,
   validateReservationCheckIn,
@@ -710,7 +711,8 @@ export function CheckIn() {
     setSelectedReservation(reservation)
     setPartialReservationId(reservation.id)
     setPartialMode("check-in")
-    setPartialMaxCount(Math.min(15, remaining))
+    // Desktop OpenPartialCheckedInPopup creates 1..RemainingTicket.
+    setPartialMaxCount(remaining)
     setPartialPartyNo(party)
     setPartialCheckedIn(checkedIn)
     setPartialRemaining(remaining)
@@ -844,7 +846,8 @@ export function CheckIn() {
     setSelectedReservation(resolveReservation(record))
     setPartialReservationId(record.id)
     setPartialMode("unscan")
-    setPartialMaxCount(Math.min(15, record.scanner))
+    // Desktop OpenPartialUnCheckedInPopup creates 1..ScannerIn.
+    setPartialMaxCount(record.scanner)
     setPartialPartyNo(record.qty)
     setPartialCheckedIn(record.seated)
     setPartialRemaining(0)
@@ -1082,7 +1085,12 @@ export function CheckIn() {
     setExpressError(null)
 
     try {
-      const shouldCheckIn = window.confirm("Check-In party?")
+      const shouldCheckIn = await confirmDialog({
+        title: "Check-In",
+        description: "Check-In party?",
+        confirmLabel: "Yes",
+        cancelLabel: "No",
+      })
 
       const { reservationIds } = await saveExpressWalkupReservation({
         connectionName,

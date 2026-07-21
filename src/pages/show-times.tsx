@@ -9,6 +9,7 @@ import { ShowTimeFiltersCard } from "@/features/show-times/show-time-filters-car
 import { useAppSession } from "@/hooks/use-app-session"
 import { useShowTimeSearch } from "@/hooks/use-show-time-search"
 import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
+import { confirmDialog } from "@/lib/app-dialog"
 import { buildDeleteShowDefRequest } from "@/lib/build-show-def-request"
 import { deleteShowDefs } from "@/lib/api/show-times"
 import {
@@ -85,7 +86,10 @@ export function ShowTimes() {
       return
     }
 
-    const confirmed = window.confirm("Are you sure you want to delete?")
+    const confirmed = await confirmDialog({
+      title: "Delete Show Time",
+      description: "Are you sure you want to delete?",
+    })
     if (!confirmed) return
 
     setActionError(null)

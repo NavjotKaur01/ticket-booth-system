@@ -858,12 +858,6 @@ export function Reservations() {
         onSplitReservation={handleOpenSplitReservation}
         onSplitParty={handleOpenSplitParty}
         onAlreadyPaidAlert={handleOpenAlreadyPaidAlert}
-        onReprintTicket={(reservation) =>
-          void handlePrintReservation(reservation, {
-            layout: "combined",
-            includeQr: true,
-          })
-        }
       />
       <CancelReservationDialog
         open={cancelOpen}
