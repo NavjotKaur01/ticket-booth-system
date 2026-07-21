@@ -1,6 +1,8 @@
 export type UpdateCustomerEmailRequest = {
+  /** Desktop CustomerRequestModel fields for Adminstrator/UpdateCustomerEmail. */
+  LocationId: string
   ConnectionString: string
-  CustomerId: string
-  Email: string
-  LastUpdateId: string
+  ConnectionName: string
+  ReservationId: string
+  Email1: string
 }

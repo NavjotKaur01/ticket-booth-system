@@ -1,20 +1,22 @@
 import type { UpdateCustomerEmailRequest } from "@/types/api/update-customer-email"
 
+/** Matches desktop CheckInVM.ResendTicketEmail → AdminstratorApi.UpdateCustomerEmail. */
 export function buildUpdateCustomerEmailRequest({
   connectionName,
-  customerId,
+  locationId,
+  reservationId,
   email,
-  lastUpdateId,
 }: {
   connectionName: string
-  customerId: string
+  locationId: string
+  reservationId: string
   email: string
-  lastUpdateId: string
 }): UpdateCustomerEmailRequest {
   return {
+    LocationId: locationId,
     ConnectionString: connectionName,
-    CustomerId: customerId,
-    Email: email.trim(),
-    LastUpdateId: lastUpdateId,
+    ConnectionName: connectionName,
+    ReservationId: reservationId,
+    Email1: email.trim(),
   }
 }
