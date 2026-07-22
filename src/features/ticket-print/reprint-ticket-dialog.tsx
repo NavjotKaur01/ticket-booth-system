@@ -12,7 +12,6 @@ import {
 import { Input } from "@/components/ui/input"
 import {
   buildReprintCountOptions,
-  createTicketPrintData,
   getMockTicketPrintData,
   printReservationTicket,
 } from "@/services/ticket-print.service"
@@ -38,6 +37,8 @@ type ReprintTicketDialogProps = {
   showDate: string
   showLabel?: string
   locationName?: string
+  /** Required to load PaymentType, card last-4, and PNREF for QR. */
+  connectionName?: string
   /**
    * Desktop binds Party/Total/PaiedAmount from the payment form and
    * CheckedIn/Remaining from GetReservationDetailById. When provided, these
@@ -91,6 +92,7 @@ export function ReprintTicketDialog({
   showDate,
   showLabel,
   locationName,
+  connectionName,
   details = null,
   nested = false,
 }: ReprintTicketDialogProps) {
@@ -115,6 +117,7 @@ export function ReprintTicketDialog({
       showDate,
       showLabel,
       locationName,
+      connectionName,
     })
       .then((result) => {
         if (!isActive) {
@@ -122,33 +125,35 @@ export function ReprintTicketDialog({
         }
 
         // Desktop: Party/Total/Paid from payment form; CheckedIn from detail.
+        // Keep PaymentType, card last-4, PNREF QR, and show fields from print properties.
         if (details) {
           const partySize = Math.max(1, details.partySize)
           const checkedInCount = Math.max(
             0,
             Math.min(details.checkedInCount, partySize)
           )
-          setTicketData(
-            createTicketPrintData({
-              reservationId: result.reservation.reservationId,
+          setTicketData({
+            ...result,
+            customer: {
               firstName: details.firstName || result.customer.firstName,
               lastName: details.lastName || result.customer.lastName,
+              fullName: [
+                details.lastName || result.customer.lastName,
+                details.firstName || result.customer.firstName,
+              ]
+                .filter(Boolean)
+                .join(" ")
+                .trim() || result.customer.fullName,
+            },
+            reservation: {
+              ...result.reservation,
               partySize,
               checkedInCount,
+              remainingCount: Math.max(0, partySize - checkedInCount),
               totalAmount: details.totalAmount,
               paidAmount: details.paidAmount,
-              paymentType: result.reservation.paymentType,
-              source: result.reservation.source,
-              section: result.reservation.section,
-              promotion: result.reservation.promotion,
-              tables: result.reservation.tables,
-              seatNumbers: result.reservation.seatNumbers,
-              showDate,
-              showLabel,
-              locationName,
-              qrValue: result.qrValue,
-            })
-          )
+            },
+          })
           return
         }
 
@@ -170,7 +175,7 @@ export function ReprintTicketDialog({
     return () => {
       isActive = false
     }
-  }, [details, locationName, open, reservation, showDate, showLabel])
+  }, [connectionName, details, locationName, open, reservation, showDate, showLabel])
 
   // Desktop ReprintTickets: buttons are 1..CheckedIn (not party size).
   const countOptions = useMemo(() => {

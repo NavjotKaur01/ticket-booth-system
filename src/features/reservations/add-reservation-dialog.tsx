@@ -4244,6 +4244,7 @@ export function AddReservationDialog({
         showDate={showDate}
         showLabel={selectedShowLabel}
         locationName={locationName}
+        connectionName={connectionName}
         details={reprintDetails}
         nested
       />
