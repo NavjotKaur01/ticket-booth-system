@@ -89,7 +89,7 @@ export function GiftCardActionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton
-        className="flex max-h-[92vh] max-w-lg flex-col overflow-hidden sm:max-w-lg"
+        className="flex w-full max-h-[92vh] max-w-xl flex-col overflow-hidden sm:max-w-xl"
       >
         <DialogHeader className="shrink-0 gap-0 border-b px-4 py-3 pr-12">
           <DialogTitle className="text-lg leading-snug font-normal">
