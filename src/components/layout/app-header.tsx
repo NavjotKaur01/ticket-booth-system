@@ -100,7 +100,6 @@ export function AppHeader({ session, onMenuClick }: AppHeaderProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>My Account</DropdownMenuItem>
-            <DropdownMenuItem>System Defaults</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
           </DropdownMenuContent>
