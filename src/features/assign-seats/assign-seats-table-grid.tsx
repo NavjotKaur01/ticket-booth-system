@@ -46,7 +46,8 @@ export function AssignSeatsTableGrid({
   return (
     <div className="flex h-full min-h-0 flex-col bg-background px-3 pt-2 pb-2">
       <p className="shrink-0 pb-1.5 text-xs text-muted-foreground">
-        Note: Double-click a cell to assign a seat.
+        Note: Double-click a cell to assign seats from that column across the
+        row (up to remaining).
       </p>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-border/70 bg-background">

@@ -95,9 +95,20 @@ export function mapReservationDetailPayment(
     Split: readString(record, ['Split', 'split']) || null,
     LastName: readString(record, ['LastName', 'lastName']) || null,
     FirstName: readString(record, ['FirstName', 'firstName']) || null,
-    PaymentTypeCode: readString(record, ['PaymentTypeCode', 'paymentTypeCode']) || null,
+    PaymentTypeCode:
+      readString(record, ['PaymentTypeCode', 'paymentTypeCode']) ||
+      // Some detail payloads only put the type code in PymtType (same as GetPaymentById).
+      (/^PYMT\d+/i.test(readString(record, ['PymtType', 'pymtType']))
+        ? readString(record, ['PymtType', 'pymtType'])
+        : '') ||
+      null,
     PaymentStatusCode:
-      readString(record, ['PaymentStatusCode', 'paymentStatusCode']) || null,
+      readString(record, ['PaymentStatusCode', 'paymentStatusCode']) ||
+      // Desktop PaiedAmount / SVC also read PymtStatus when it holds PSTAT* codes.
+      (/^PSTAT\d+/i.test(readString(record, ['PymtStatus', 'pymtStatus']))
+        ? readString(record, ['PymtStatus', 'pymtStatus'])
+        : '') ||
+      null,
     IsSelected: readBoolean(record, ['IsSelected', 'isSelected']),
     ExpYr: readString(record, ['ExpYr', 'expYr', 'ExpYear', 'expYear', 'ExpirationYear', 'expirationYear', 'CCExpYear', 'ccExpYear']) || '',
     BillZip: readString(record, ['BillZip', 'billZip', 'ZipCode', 'zipCode', 'BillingZip', 'billingZip']) || '',
@@ -170,6 +181,8 @@ export function mapReservationDetail(response: unknown): ReservationDetail {
     TixComp: readNumber(record, ['TixComp', 'tixComp']),
     TixDisc: readNumber(record, ['TixDisc', 'tixDisc']),
     TableNum: readString(record, ['TableNum', 'tableNum', 'TableNums']) || null,
+    SeatNumbers:
+      readString(record, ['SeatNumbers', 'seatNumbers', 'SeatNumber']) || null,
     PaymentList: Array.isArray(paymentListRaw)
       ? paymentListRaw.map(mapReservationDetailPayment)
       : [],

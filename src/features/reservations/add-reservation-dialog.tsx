@@ -87,6 +87,7 @@ import {
 import { saveCustomer } from '@/lib/api/customers'
 import {
   getReservationPaymentById,
+  openCashDrawer,
   refundReservationPayment,
   voidReservationPayment
 } from '@/lib/api/reservation-pos-actions'
@@ -1379,6 +1380,8 @@ export function AddReservationDialog({
   )
   const [editCustomerId, setEditCustomerId] = useState<string | null>(null)
   const [tableNums, setTableNums] = useState('')
+  /** Desktop ResAssignSeatNumbers — drives Assign Seats Rem seed. */
+  const [assignSeatNumbers, setAssignSeatNumbers] = useState('')
   const [assignSeatsOpen, setAssignSeatsOpen] = useState(false)
   const [assignSeatError, setAssignSeatError] = useState<string | null>(null)
   const [paymentActionBusy, setPaymentActionBusy] = useState<
@@ -1570,6 +1573,7 @@ export function AddReservationDialog({
     setDinner(reservation.din.trim().toUpperCase() === 'Y')
     setOrigin(mapReservationSourceToOrigin(reservation.source))
     setTableNums(reservation.tables)
+    setAssignSeatNumbers(reservation.seatNo || '')
 
     const { searchType: nextSearchType, criteria } =
       buildReservationEditSearchCriteria(reservation)
@@ -1601,12 +1605,16 @@ export function AddReservationDialog({
     const partySize = reservation.qty > 0 ? reservation.qty : reservationDetail?.PartyNo ?? 0
     const matchedPromoId = findReservationPromoId(promoOptions, reservation.promo)
     const mappedOrigin = mapReservationSourceToOrigin(reservation.source)
+    const loadedPasses =
+      reservationDetail?.NumPasses != null && reservationDetail.NumPasses > 0
+        ? reservationDetail.NumPasses
+        : 1
     origPartyRef.current = partySize
     origShowIdRef.current = activeShowTime
     origSectionIdRef.current = sectionId
     origPromoIdRef.current = matchedPromoId
     origOriginRef.current = mappedOrigin
-    origPassesRef.current = passes
+    origPassesRef.current = loadedPasses
     origDinnerRef.current = reservation.din.trim().toUpperCase() === 'Y'
 
     sectionsInitializedForShowRef.current = activeShowTime
@@ -1620,6 +1628,7 @@ export function AddReservationDialog({
       ) as Record<string, number>
     )
     setPromo(matchedPromoId)
+    setPasses(loadedPasses)
     editPrefillDoneRef.current = true
   }, [
     activeShowTime,
@@ -1629,7 +1638,94 @@ export function AddReservationDialog({
     promoOptions,
     reservation,
     reservationDetail?.PartyNo,
+    reservationDetail?.NumPasses,
     sectionsLoading
+  ])
+
+  // Desktop GetReservationInfo: ResPasses from detail NumPasses.
+  const passesHydratedRef = useRef(false)
+  useEffect(() => {
+    if (!open) {
+      passesHydratedRef.current = false
+      return
+    }
+    if (!isEditMode || passesHydratedRef.current || reservationDetail == null) {
+      return
+    }
+    const detailPasses = reservationDetail.NumPasses
+    if (detailPasses != null && detailPasses > 0) {
+      setPasses(detailPasses)
+      origPassesRef.current = detailPasses
+    }
+    passesHydratedRef.current = true
+  }, [open, isEditMode, reservationDetail])
+
+  // Desktop GetReservationInfo: TableNum / SeatNumbers come from detail.
+  // List rows often lack TableNums on first open after Assign Seats Save;
+  // apply detail values when the refetch arrives (never clear with empty).
+  useEffect(() => {
+    if (!open || !isEditMode) {
+      return
+    }
+    const detailTables = reservationDetail?.TableNum?.trim()
+    if (detailTables) {
+      setTableNums(detailTables)
+    }
+    const detailSeats = reservationDetail?.SeatNumbers?.trim()
+    if (detailSeats) {
+      setAssignSeatNumbers(detailSeats)
+    }
+  }, [
+    open,
+    isEditMode,
+    reservationDetail?.TableNum,
+    reservationDetail?.SeatNumbers
+  ])
+
+  // Desktop GetReservationInfo: single Hold with Credit Card → select Hold payment
+  // type and load card fields (no new card required on Save when Amount Due is 0).
+  useEffect(() => {
+    if (!open || !isEditMode || selectedTransaction) {
+      return
+    }
+    const payments = reservationDetail?.PaymentList
+    if (!payments || payments.length !== 1) {
+      return
+    }
+    const only = payments[0]
+    const typeCode = (only.PaymentTypeCode ?? '').trim().toUpperCase()
+    const typeLabel = (only.PymtType ?? '').trim().toLowerCase()
+    const isHold =
+      typeCode === HOLD_WITH_CARD_PAYMENT_CODE ||
+      typeLabel === 'hold with credit card'
+    if (!isHold) {
+      return
+    }
+
+    setPaymentType('hold-cc')
+    const expMonthIndex = Number(only.ExpMo) - 1
+    const expMonthName =
+      Number.isInteger(expMonthIndex) && expMonthIndex >= 0 && expMonthIndex <= 11
+        ? EXPIRATION_MONTHS[expMonthIndex]
+        : only.ExpMo || ''
+    const expYearStr =
+      only.ExpYr?.length === 2 ? `20${only.ExpYr}` : only.ExpYr || ''
+    setPaymentFields({
+      ...createEmptyReservationPaymentFields(),
+      cardNumber: only.CardNum ? `************${only.CardNum.slice(-4)}` : '',
+      cardType: only.CCType ?? '',
+      authorization: only.Auth ?? '',
+      pnref: only.PNREF ?? '',
+      expMonth: expMonthName,
+      expYear: expYearStr,
+      billingAddress: only.BillAddr || '',
+      zipCode: only.BillZip || ''
+    })
+  }, [
+    open,
+    isEditMode,
+    reservationDetail?.PaymentList,
+    selectedTransaction
   ])
 
   useEffect(() => {
@@ -1925,12 +2021,54 @@ export function AddReservationDialog({
         PAYMENT_STATUS_REFUND,
         PAYMENT_STATUS_PROMO
       ])
-      return payments
-        .filter((p: any) => p.ReservationID?.trim() === reservation.id && ELIGIBLE.has(p.PaymentStatusCode?.trim() ?? ''))
-        .reduce((sum: number, p: any) => sum + (p.Amount ?? 0), 0)
+      // Desktop GetReservationInfo sums PaymentList for this reservation without
+      // re-filtering ReservationID (the list is already scoped). Requiring an ID
+      // match dropped Hold-CC rows with empty ReservationID → Amount Due stayed
+      // full and Save incorrectly required a new card after Assign Seats.
+      const fromLedger = payments
+        .filter((p: (typeof payments)[number]) => {
+          const status = (p.PaymentStatusCode ?? '').trim().toUpperCase()
+          // When API omits status codes, still count ledger amounts (transaction
+          // grid shows them). Desktop PaymentList always has PSTAT*, but web
+          // detail payloads sometimes only send Amount + PymtType.
+          if (status && !ELIGIBLE.has(status)) {
+            return false
+          }
+          if (!status) {
+            // Skip obvious non-payment rows only when we can detect them.
+            const typeLabel = (p.PymtType ?? '').trim().toLowerCase()
+            if (typeLabel.includes('void') || typeLabel.includes('cancel')) {
+              return false
+            }
+          }
+          const paymentResId = (p.ReservationID ?? '').trim()
+          if (!paymentResId) {
+            return true
+          }
+          return (
+            paymentResId.toLowerCase() === reservation.id.trim().toLowerCase() ||
+            paymentResId.replace(/-/g, '').toLowerCase() ===
+              reservation.id.replace(/-/g, '').toLowerCase()
+          )
+        })
+        .reduce((sum: number, p: (typeof payments)[number]) => sum + (p.Amount ?? 0), 0)
+
+      if (fromLedger > 0) {
+        return fromLedger
+      }
     }
-    return parseReservationMoney(reservation.paid ?? '$0.00')
-  }, [isEditMode, reservation, reservationDetail?.PaymentList])
+    // Fall back to detail/list ResPayments (desktop PaiedAmount source of truth).
+    return (
+      reservationDetail?.ResPayments ??
+      reservation.paidAmount ??
+      parseReservationMoney(reservation.paid ?? '$0.00')
+    )
+  }, [
+    isEditMode,
+    reservation,
+    reservationDetail?.PaymentList,
+    reservationDetail?.ResPayments
+  ])
   const balanceDue = Math.max(0, totals.total - alreadyPaid)
   // Desktop GetReservationInfo: PaymentAmount = Total-Paid only when PaymentList has
   // rows; otherwise PaymentAmount stays 0. Amount Due is shown separately.
@@ -2174,6 +2312,15 @@ export function AddReservationDialog({
   async function handleAssignSeatsSaved(payload: {
     result: {
       tableNumsByReservation: Array<{ reservationId: string; tableNums: string }>
+      seatNumbersByReservation?: Array<{
+        reservationId: string
+        seatNumbers: string
+      }>
+      assignments?: Array<{
+        ReservationId: string
+        TableNo: string
+        SeatNo: number
+      }>
     }
     reservationId: string | null
   }) {
@@ -2181,16 +2328,49 @@ export function AddReservationDialog({
     // Only apply this reservation's tables — never fall back to other guests'
     // seats (that copied clark's 11–14 onto the payment form).
     const match = targetId
-      ? payload.result.tableNumsByReservation.find(
-        row =>
+      ? payload.result.tableNumsByReservation.find(row =>
           row.reservationId.trim().toLowerCase() ===
-          targetId.trim().toLowerCase()
-      )
+            targetId.trim().toLowerCase() ||
+          row.reservationId.replace(/-/g, '').toLowerCase() ===
+            targetId.replace(/-/g, '').toLowerCase()
+        )
       : undefined
 
     if (match?.tableNums) {
       setTableNums(match.tableNums)
     }
+
+    const seatMatch = targetId
+      ? payload.result.seatNumbersByReservation?.find(
+          row =>
+            row.reservationId.trim().toLowerCase() ===
+              targetId.trim().toLowerCase() ||
+            row.reservationId.replace(/-/g, '').toLowerCase() ===
+              targetId.replace(/-/g, '').toLowerCase()
+        )
+      : undefined
+    if (seatMatch?.seatNumbers) {
+      setAssignSeatNumbers(seatMatch.seatNumbers)
+    } else if (targetId && payload.result.assignments?.length) {
+      const seats = payload.result.assignments
+        .filter(
+          row =>
+            row.ReservationId.trim().toLowerCase() ===
+              targetId.trim().toLowerCase() ||
+            row.ReservationId.replace(/-/g, '').toLowerCase() ===
+              targetId.replace(/-/g, '').toLowerCase()
+        )
+        .sort((a, b) =>
+          a.TableNo === b.TableNo
+            ? a.SeatNo - b.SeatNo
+            : a.TableNo.localeCompare(b.TableNo, undefined, { numeric: true })
+        )
+        .map(row => `${row.TableNo}-${row.SeatNo}`)
+      if (seats.length > 0) {
+        setAssignSeatNumbers(seats.join(','))
+      }
+    }
+
     setAssignSeatsOpen(false)
     setAssignSeatError(null)
   }
@@ -2510,6 +2690,23 @@ export function AddReservationDialog({
     }
   }
 
+  /** Desktop ReservationPayment.cmdOpenCashDrawer */
+  async function handleCashDrawerClick() {
+    setPaymentActionBusy('cash-drawer')
+    try {
+      const result = await openCashDrawer()
+      if (result.message.toLowerCase().includes('not available')) {
+        toastError(result.message)
+      } else {
+        toastSuccess(result.message || 'Cash drawer opened')
+      }
+    } catch (error) {
+      toastError(getErrorMessage(error, 'Failed to open cash drawer'))
+    } finally {
+      setPaymentActionBusy(null)
+    }
+  }
+
   async function handleSaveNoteClick() {
     if (!reservation || !isReady) {
       return
@@ -2702,6 +2899,11 @@ export function AddReservationDialog({
       return
     }
 
+    const balanceCovered =
+      isEditMode &&
+      saveTotals.total > 0 &&
+      alreadyPaid + 0.001 >= saveTotals.total
+
     const reservationChanged =
       !isEditMode ||
       !reservation ||
@@ -2720,13 +2922,21 @@ export function AddReservationDialog({
         origPasses: origPassesRef.current,
         dinner,
         origDinner: origDinnerRef.current,
-        paymentAmount: editPaymentAmount,
+        // Desktop: PaymentAmount == 0 when Hold covers Total → no reservation change
+        // from payment type alone (Assign Seats does not count as a change).
+        paymentAmount: balanceCovered ? 0 : editPaymentAmount,
         paymentType,
         sectionShowPrice: saveSection.showPrice
       })
     const shouldApplyPayment = isEditMode
       ? reservationChanged
       : saveTotals.total > 0
+
+    // Desktop IsPaymentLoad && !IsReservationChange(): Assign Seats alone does
+    // not change the reservation — Save closes without charging. Also skip when
+    // Hold/payment already covers Total (PaymentAmount == 0).
+    const needsNewPayment =
+      shouldApplyPayment && editPaymentAmount > 0 && !balanceCovered
 
     setShowPartyRequiredError(true)
     setSaveReservationError(null)
@@ -2745,13 +2955,28 @@ export function AddReservationDialog({
       return
     }
 
-    if (shouldApplyPayment && editPaymentAmount > 0) {
+    if (needsNewPayment) {
+      // Desktop Hold-CC / Credit Card with empty card + amount still due →
+      // Due Amount popup (Continue without payment / Cancel / Additional),
+      // not hard field validation errors.
+      const cardMissing =
+        (paymentType === 'hold-cc' || paymentType === 'credit-card') &&
+        !paymentFields.cardNumber.trim()
+      if (cardMissing) {
+        setHasAttemptedSave(true)
+        setDueAmountOption('continue-without-payment')
+        setDueAmountOpen(true)
+        return
+      }
+
       const nextPaymentErrors = validateReservationPaymentFields({
         paymentType,
         fields: paymentFields,
         paymentAmount: savePaymentAmount,
         paymentRequired: true,
-        disallowCash: origin === 'phone'
+        // Desktop IsPaymentValid: Cash blocked for Phone-In only when
+        // !IsPaymentLoad (new booking). Edit Payment allows Cash on Phone.
+        disallowCash: origin === 'phone' && !isEditMode
       })
       const paymentError = getFirstReservationPaymentError(nextPaymentErrors)
 
@@ -2845,11 +3070,7 @@ export function AddReservationDialog({
       formatReservationMoney(
         isEditMode
           ? hasExistingPaymentRecords
-            ? Math.max(
-              0,
-              saveTotals.total -
-              parseReservationMoney(reservation?.paid ?? '$0.00')
-            )
+            ? Math.max(0, saveTotals.total - alreadyPaid)
             : 0
           : saveTotals.total > 0
             ? saveTotals.total
@@ -2861,6 +3082,12 @@ export function AddReservationDialog({
       return
     }
 
+    const balanceCovered =
+      isEditMode &&
+      saveTotals.total > 0 &&
+      alreadyPaid + 0.001 >= saveTotals.total
+    // When Hold/payment already covers Total, treat PaymentAmount as 0 for the
+    // desktop IsReservationChange check so Assign Seats-only Save early-exits.
     const reservationChanged =
       !isEditMode ||
       !reservation ||
@@ -2879,13 +3106,14 @@ export function AddReservationDialog({
         origPasses: origPassesRef.current,
         dinner,
         origDinner: origDinnerRef.current,
-        paymentAmount: editPaymentAmount,
+        paymentAmount: balanceCovered ? 0 : editPaymentAmount,
         paymentType,
         sectionShowPrice: saveSection.showPrice
       })
-    const shouldApplyPayment = isEditMode
-      ? reservationChanged
-      : saveTotals.total > 0
+    const shouldApplyPayment =
+      (isEditMode ? reservationChanged : saveTotals.total > 0) &&
+      editPaymentAmount > 0 &&
+      !balanceCovered
 
     const customerDetails = getSelectedCustomerDetails()
     const reservationParams = {
@@ -2968,7 +3196,7 @@ export function AddReservationDialog({
           buildUpdateReservationPaymentRequest({
             ...reservationParams,
             reservationId: reservation.id,
-            paymentAmount: editPaymentAmount,
+            paymentAmount: shouldApplyPayment ? editPaymentAmount : 0,
             paymentType,
             paymentFields,
             includeCustomerModel: false,
@@ -2984,6 +3212,22 @@ export function AddReservationDialog({
         if (sessionGeneration !== sessionGenerationRef.current) {
           return
         }
+
+        // Desktop: when save leaves Amount Due at $0 and party not checked in,
+        // offer Check-In (same prompt as no-change early-exit path).
+        const remainingAfterSave = shouldApplyPayment
+          ? Math.max(0, saveTotals.total - alreadyPaid - editPaymentAmount)
+          : Math.max(0, saveTotals.total - alreadyPaid)
+        if (
+          (reservation.seated ?? 0) <= 0 &&
+          remainingAfterSave <= 0.001 &&
+          saveTotals.total > 0
+        ) {
+          setIsSavingReservation(false)
+          setEditNoChangeCheckInOpen(true)
+          return
+        }
+
         await onSaved?.([reservation.id])
         if (sessionGeneration !== sessionGenerationRef.current) {
           return
@@ -3205,6 +3449,7 @@ export function AddReservationDialog({
     setShowPartyRequiredError(false)
     setEditCustomerId(null)
     setTableNums('')
+    setAssignSeatNumbers('')
     setAssignSeatsOpen(false)
     setAssignSeatError(null)
     setPaymentActionBusy(null)
@@ -3809,6 +4054,9 @@ export function AddReservationDialog({
                           size='sm'
                           variant='outline'
                           onClick={() => handleSplitReservationClick('payment')}
+                          disabled={
+                            !onSplitReservation || paymentActionBusy === 'split'
+                          }
                         >
                           Split Payment
                         </Button>
@@ -4020,7 +4268,7 @@ export function AddReservationDialog({
                             >
                               Re Print Ticket
                             </Button>
-                            {/* <Button
+                            <Button
                               type='button'
                               size='sm'
                               variant='outline'
@@ -4028,7 +4276,7 @@ export function AddReservationDialog({
                               disabled={paymentActionBusy === 'cash-drawer'}
                             >
                               Cash Drawer
-                            </Button> */}
+                            </Button>
                           </>
                         ) : undefined
                       }
@@ -4085,8 +4333,9 @@ export function AddReservationDialog({
             ? {
               qty: partySize > 0 ? partySize : reservation.qty,
               // Desktop ResAssignSeatNumbers — seat labels, NOT TableNums.
-              // Using tableNums here made Rem=0 and hid the guest.
-              seatNumbers: reservation.seatNo || '',
+              // Prefer local state updated after Assign Seats Save, then list.
+              seatNumbers:
+                assignSeatNumbers || reservation.seatNo || '',
               section:
                 selectedSection?.name ||
                 selectedSection?.label ||

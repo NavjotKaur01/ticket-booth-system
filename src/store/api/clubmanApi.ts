@@ -1300,7 +1300,9 @@ export const clubmanApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Reservation", "ShowDetails"],
+      // Do not invalidate here — UpdateTableNumberReservation runs next and
+      // invalidates. Invalidating after Save alone caused a race where Payment
+      // Table Nums refetched empty on first visit before table numbers were written.
     }),
 
     deleteAllAssignSeats: builder.mutation({
