@@ -72,7 +72,6 @@ import { getPromoApplicableTickets } from '@/lib/calculate-promo-discount'
 import {
   calculateReservationTotals,
   formatReservationMoney,
-  getReservationAmountDue,
   parseReservationMoney
 } from '@/lib/calculate-reservation-totals'
 import { calculatePromoFeeAdjustment, calculateSvcBase, mapOriginToCode } from '@/lib/calculate-svc-base'
@@ -98,15 +97,23 @@ import {
 import { ReprintTicketDialog } from '@/features/ticket-print/reprint-ticket-dialog'
 import {
   createNewReservation,
+  cancelReservation,
+  reservationCheckIn,
   saveReservationNote,
   updateReservation
 } from '@/lib/api/reservations'
+import { buildCancelReservationRequest } from '@/lib/build-cancel-reservation-request'
+import { buildReservationCheckInRequest } from '@/lib/build-reservation-check-in-request'
 import { buildReservationNoteRequest } from '@/lib/build-reservation-note-request'
 import {
   buildSaveReservationOnlyRequest,
   buildSaveReservationWithPaymentRequest,
   buildUpdateReservationPaymentRequest
 } from '@/lib/build-save-reservation-request'
+import {
+  DueAmountDialog,
+  type DueAmountOption
+} from '@/features/reservations/due-amount-dialog'
 import { useUpdateSplitReservationMutation, useRemoveReservationPromoMutation, useGetShowDataQuery, useGetSystemDefaultsQuery } from '@/store/api/clubmanApi'
 import { mapReservationSearchCriteriaToCustomerForm } from '@/lib/map-reservation-search-to-customer-form'
 import { parsePhoneSearchParts, normalizePhoneSearchParts } from '@/lib/parse-phone-search-parts'
@@ -124,7 +131,8 @@ import {
   EMPTY_GUID,
   PAYMENT_STATUS_PAYMENT,
   PAYMENT_STATUS_REFUND,
-  PAYMENT_STATUS_PROMO
+  PAYMENT_STATUS_PROMO,
+  RESERVATION_STATUS_CANCELLED
 } from '@/lib/reservation-lookup-codes'
 import { syncReservationCustomerIfChanged, syncReservationCustomerSearchResultIfChanged } from '@/lib/sync-reservation-customer'
 import { validateReservationParty } from '@/lib/validate-reservation-party'
@@ -1379,6 +1387,16 @@ export function AddReservationDialog({
   const [splitCheckedInAlertOpen, setSplitCheckedInAlertOpen] = useState(false)
   const [splitPromoAlertOpen, setSplitPromoAlertOpen] = useState(false)
   const [reprintOpen, setReprintOpen] = useState(false)
+  const [dueAmountOpen, setDueAmountOpen] = useState(false)
+  const [dueAmountOption, setDueAmountOption] =
+    useState<DueAmountOption>('continue-without-payment')
+  const [isDueAmountPending, setIsDueAmountPending] = useState(false)
+  /** Desktop IsSaveChanges — set true when Save is clicked on the payment screen. */
+  const [hasAttemptedSave, setHasAttemptedSave] = useState(false)
+  const [cancelWithoutSavingOpen, setCancelWithoutSavingOpen] = useState(false)
+  const [sendUpdateConfirmOpen, setSendUpdateConfirmOpen] = useState(false)
+  const [sendUpdateToCustomer, setSendUpdateToCustomer] = useState(false)
+  const [editNoChangeCheckInOpen, setEditNoChangeCheckInOpen] = useState(false)
   const [pendingSplitType, setPendingSplitType] = useState<'payment' | 'party' | null>(null)
 
   const { detail: reservationDetail } = useReservationDetail(
@@ -1905,9 +1923,16 @@ export function AddReservationDialog({
     return parseReservationMoney(reservation.paid ?? '$0.00')
   }, [isEditMode, reservation, reservationDetail?.PaymentList])
   const balanceDue = Math.max(0, totals.total - alreadyPaid)
+  // Desktop GetReservationInfo: PaymentAmount = Total-Paid only when PaymentList has
+  // rows; otherwise PaymentAmount stays 0. Amount Due is shown separately.
+  const hasExistingPaymentRecords = Boolean(
+    reservationDetail?.PaymentList && reservationDetail.PaymentList.length > 0
+  )
   const defaultPaymentAmount = formatReservationMoney(
     isEditMode
-      ? balanceDue
+      ? hasExistingPaymentRecords
+        ? balanceDue
+        : 0
       : totals.total > 0
         ? totals.total
         : 0
@@ -1917,9 +1942,10 @@ export function AddReservationDialog({
     ? parseReservationMoney(paymentAmount) > 0
     : totals.total > 0
 
-  const amountDueValue = isEditMode
-    ? balanceDue
-    : getReservationAmountDue(totals.total, parseReservationMoney(paymentAmount))
+  // Edit: remaining balance after recorded payments.
+  // Add: nothing is paid until Save succeeds - do not subtract the intended
+  // Payment Amount field (that made Amount Due $0 and blocked Due Amount on Cancel).
+  const amountDueValue = isEditMode ? balanceDue : Math.max(0, totals.total)
   const amountDue = formatReservationMoney(amountDueValue)
 
   const selectedCustomerId = useMemo(() => {
@@ -2595,6 +2621,26 @@ export function AddReservationDialog({
       return
     }
 
+    // Desktop SaveReservationWithPayment sets IsSaveChanges = true at the start.
+    setHasAttemptedSave(true)
+
+    // Desktop edit: always ask "Are you want to send update to customer?" first.
+    if (isEditMode && reservation) {
+      setSendUpdateConfirmOpen(true)
+      return
+    }
+
+    await runSaveReservationFlow(false)
+  }
+
+  async function runSaveReservationFlow(sendUpdate: boolean) {
+    setSendUpdateConfirmOpen(false)
+    setSendUpdateToCustomer(sendUpdate)
+
+    if (!effectiveCustomerId || isSavingReservation) {
+      return
+    }
+
     const booking = resolveReservationBooking({
       sectionId: section,
       partyBySection,
@@ -2627,10 +2673,9 @@ export function AddReservationDialog({
       paymentAmountOverride ??
       formatReservationMoney(
         isEditMode
-          ? Math.max(
-            0,
-            saveTotals.total - alreadyPaid
-          )
+          ? hasExistingPaymentRecords
+            ? Math.max(0, saveTotals.total - alreadyPaid)
+            : 0
           : saveTotals.total > 0
             ? saveTotals.total
             : 0
@@ -2728,7 +2773,7 @@ export function AddReservationDialog({
     // - Other + cash → popup when CheckIn/cmdCheckIn = Y
     if (isExpressWalkupPayment && isFullPayment && !isEditMode) {
       if (isCashLike && expressWalkupSeed?.isExpressRequest) {
-        await executeSaveReservation(true)
+        await executeSaveReservation(true, sendUpdate)
         return
       }
 
@@ -2739,11 +2784,15 @@ export function AddReservationDialog({
     }
 
     await executeSaveReservation(
-      isEditMode ? (reservation?.seated ?? 0) > 0 : false
+      isEditMode ? (reservation?.seated ?? 0) > 0 : false,
+      sendUpdate
     )
   }
 
-  async function executeSaveReservation(checkInAfterSave: boolean) {
+  async function executeSaveReservation(
+    checkInAfterSave: boolean,
+    sendUpdate = false
+  ) {
     if (!effectiveCustomerId || isSavingReservation) {
       return
     }
@@ -2779,11 +2828,13 @@ export function AddReservationDialog({
       paymentAmountOverride ??
       formatReservationMoney(
         isEditMode
-          ? Math.max(
-            0,
-            saveTotals.total -
-            parseReservationMoney(reservation?.paid ?? '$0.00')
-          )
+          ? hasExistingPaymentRecords
+            ? Math.max(
+              0,
+              saveTotals.total -
+              parseReservationMoney(reservation?.paid ?? '$0.00')
+            )
+            : 0
           : saveTotals.total > 0
             ? saveTotals.total
             : 0
@@ -2878,6 +2929,16 @@ export function AddReservationDialog({
           if (sessionGeneration !== sessionGenerationRef.current) {
             return
           }
+
+          // Desktop IsPaymentLoad && !IsReservationChange after send-update:
+          // - Fully paid (Amount Due $0) and not checked in → "Check-In Reservation?"
+          // - Unpaid (Amount Due > 0) → no Check-In; return to reservation list
+          if ((reservation.seated ?? 0) <= 0 && amountDueValue <= 0.001) {
+            setIsSavingReservation(false)
+            setEditNoChangeCheckInOpen(true)
+            return
+          }
+
           await onSaved?.([reservation.id])
           if (sessionGeneration !== sessionGenerationRef.current) {
             return
@@ -2896,6 +2957,7 @@ export function AddReservationDialog({
             paymentFields,
             includeCustomerModel: false,
             isPaymentLoad: true,
+            isSendUpdateToCustomer: sendUpdate,
             resSelectedPromotionId:
               origPromoIdRef.current === 'none'
                 ? EMPTY_GUID
@@ -3134,6 +3196,14 @@ export function AddReservationDialog({
     setSaveNoteError(null)
     setSaveNoteSuccess(false)
     setSelectedTransaction(null)
+    setDueAmountOpen(false)
+    setIsDueAmountPending(false)
+    setDueAmountOption('continue-without-payment')
+    setHasAttemptedSave(false)
+    setCancelWithoutSavingOpen(false)
+    setSendUpdateConfirmOpen(false)
+    setSendUpdateToCustomer(false)
+    setEditNoChangeCheckInOpen(false)
     origPartyRef.current = 0
     origShowIdRef.current = ''
     origSectionIdRef.current = ''
@@ -3152,8 +3222,245 @@ export function AddReservationDialog({
   function handleDialogOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
       sessionGenerationRef.current += 1
+      setDueAmountOpen(false)
+      setIsDueAmountPending(false)
+      setDueAmountOption('continue-without-payment')
+      setHasAttemptedSave(false)
+      setCancelWithoutSavingOpen(false)
+      setSendUpdateConfirmOpen(false)
+      setSendUpdateToCustomer(false)
+      setEditNoChangeCheckInOpen(false)
     }
     onOpenChange(nextOpen)
+  }
+
+  /**
+   * Desktop OpenCancelReservationPopup (Add IsCancelRequest=false):
+   * - Before Save (!IsSaveChanges) → "Cancel without saving?"
+   * - After Save (IsSaveChanges) → Due Amount (always; not gated on Amount Due display)
+   * Edit (IsCancelRequest=true) → close immediately
+   */
+  function requestCloseReservationDialog() {
+    if (isSavingReservation || isDueAmountPending) {
+      return
+    }
+
+    if (isEditMode) {
+      handleDialogOpenChange(false)
+      return
+    }
+
+    if (hasAttemptedSave) {
+      setDueAmountOption('continue-without-payment')
+      setDueAmountOpen(true)
+      return
+    }
+
+    setCancelWithoutSavingOpen(true)
+  }
+
+  /**
+   * Desktop paid no-change edit save: after Check-In Yes/No, always close and
+   * return to the reservation list.
+   */
+  async function finishEditNoChangeAndClose(shouldCheckIn: boolean) {
+    if (!reservation) {
+      setEditNoChangeCheckInOpen(false)
+      return
+    }
+
+    const sessionGeneration = sessionGenerationRef.current
+    setEditNoChangeCheckInOpen(false)
+    setIsSavingReservation(true)
+
+    try {
+      if (shouldCheckIn) {
+        await reservationCheckIn(
+          buildReservationCheckInRequest({
+            connectionName,
+            reservationId: reservation.id,
+            lastUpdateId: username
+          })
+        )
+      }
+
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
+
+      await onSaved?.([reservation.id])
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
+      toastSuccess('Reservation saved')
+      handleDialogOpenChange(false)
+    } catch (error) {
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
+      toastError(getErrorMessage(error, 'Failed to save reservation'))
+    } finally {
+      if (sessionGeneration === sessionGenerationRef.current) {
+        setIsSavingReservation(false)
+      }
+    }
+  }
+
+  async function handleDueAmountConfirm() {
+    if (dueAmountOption === 'additional-payment') {
+      setDueAmountOpen(false)
+      return
+    }
+
+    const booking = resolveReservationBooking({
+      sectionId: section,
+      partyBySection,
+      sections: availableSections
+    })
+    const saveSection = booking.selectedSection
+    const saveParty = booking.partySize
+
+    if (!effectiveCustomerId) {
+      toastError('Please select a customer before continuing.')
+      return
+    }
+    if (!saveSection || !activeShowTime) {
+      toastError('Please select a show section before continuing.')
+      return
+    }
+
+    const savePromo =
+      effectivePromo === 'none' ? null : promoById.get(effectivePromo) ?? null
+    const saveTotals = isEditMode
+      ? calculateReservationTotals({
+          sectionPrice: saveSection.price ?? '$0.00',
+          sectionShowPrice: saveSection.showPrice,
+          sectionPriceMultiplier: saveSection.priceMultiplier ?? 1,
+          party: saveParty,
+          passes,
+          promo: savePromo,
+          existingServiceCharge: reservationDetail?.SVC,
+          existingDiscount: reservationDetail?.Discount,
+          existingSalesTax: reservationDetail?.SalesTax,
+          systemTaxRate: Number(systemDefaults?.lblTaxes || 0),
+          taxWithServiceCharge:
+            systemDefaults?.lblTaxWithServiceCharge ?? undefined,
+          ccFeePercent: Number(systemDefaults?.cboCC || 0)
+        })
+      : totals
+
+    const customerDetails = getSelectedCustomerDetails()
+    const reservationParams = {
+      connectionName,
+      locationId,
+      userRights: userRight,
+      lastUpdateId: username,
+      searchType,
+      customerId: effectiveCustomerId,
+      searchCriteria: customerDetails,
+      selectedSection: saveSection,
+      origin,
+      party: saveParty,
+      origParty: isEditMode
+        ? origPartyRef.current || reservation?.qty || saveParty
+        : saveParty,
+      passes,
+      promo: savePromo,
+      totals: saveTotals,
+      notes,
+      dinner,
+      isVip: showDataPayload?.[0]?.VIP === 'Y',
+      isReservationCheckedIn: false
+    }
+
+    const sessionGeneration = sessionGenerationRef.current
+    setIsDueAmountPending(true)
+
+    try {
+      if (dueAmountOption === 'cancel-reservation') {
+        if (isEditMode && reservation) {
+          await cancelReservation(
+            buildCancelReservationRequest({
+              connectionName,
+              locationId,
+              reservationId: reservation.id,
+              lastUpdateId: username,
+              reservationNote: notes
+            })
+          )
+          if (sessionGeneration !== sessionGenerationRef.current) {
+            return
+          }
+          await onSaved?.([reservation.id])
+          toastSuccess('Reservation cancelled')
+        } else {
+          const reservationIds = await createNewReservation(
+            buildSaveReservationOnlyRequest({
+              ...reservationParams,
+              reservationStatus: RESERVATION_STATUS_CANCELLED
+            })
+          )
+          if (sessionGeneration !== sessionGenerationRef.current) {
+            return
+          }
+          const reservationId = reservationIds[0]
+          if (reservationId) {
+            await onSaved?.([reservationId])
+          }
+          toastSuccess('Reservation cancelled')
+        }
+      } else {
+        // Continue without payment — desktop SaveReservation(Active) / UpdateConfirmation Active
+        if (isEditMode && reservation) {
+          await updateReservation(
+            buildSaveReservationOnlyRequest({
+              ...reservationParams,
+              reservationId: reservation.id,
+              isSendUpdateToCustomer: sendUpdateToCustomer
+            })
+          )
+          if (sessionGeneration !== sessionGenerationRef.current) {
+            return
+          }
+          await onSaved?.([reservation.id])
+          toastSuccess('Reservation saved')
+        } else {
+          const reservationIds = await createNewReservation(
+            buildSaveReservationOnlyRequest(reservationParams)
+          )
+          if (sessionGeneration !== sessionGenerationRef.current) {
+            return
+          }
+          const reservationId = reservationIds[0]
+          if (!reservationId) {
+            throw new Error(
+              'Reservation was created but no reservation id was returned.'
+            )
+          }
+          await onSaved?.([reservationId])
+          toastSuccess('Reservation saved')
+        }
+      }
+
+      setDueAmountOpen(false)
+      handleDialogOpenChange(false)
+    } catch (error) {
+      if (sessionGeneration !== sessionGenerationRef.current) {
+        return
+      }
+      toastError(
+        getErrorMessage(
+          error,
+          dueAmountOption === 'cancel-reservation'
+            ? 'Failed to cancel reservation'
+            : 'Failed to save reservation'
+        )
+      )
+    } finally {
+      if (sessionGeneration === sessionGenerationRef.current) {
+        setIsDueAmountPending(false)
+      }
+    }
   }
 
   useEffect(() => {
@@ -3365,7 +3672,20 @@ export function AddReservationDialog({
       <Dialog
         open={open}
         onOpenChange={(nextOpen) => {
-          if (!nextOpen && (comicInfoOpen || isAddCustomerOpen || assignSeatsOpen)) {
+          if (
+            !nextOpen &&
+            (comicInfoOpen ||
+              isAddCustomerOpen ||
+              assignSeatsOpen ||
+              dueAmountOpen ||
+              cancelWithoutSavingOpen ||
+              sendUpdateConfirmOpen ||
+              editNoChangeCheckInOpen)
+          ) {
+            return
+          }
+          if (!nextOpen) {
+            requestCloseReservationDialog()
             return
           }
           handleDialogOpenChange(nextOpen)
@@ -3653,7 +3973,7 @@ export function AddReservationDialog({
 
                   <div className='shrink-0 border-t border-border/50 pt-3 pb-1'>
                     <ReservationPaymentActions
-                      onCancel={() => handleDialogOpenChange(false)}
+                      onCancel={requestCloseReservationDialog}
                       onSave={() => void handleSaveReservation()}
                       saveDisabled={!canSave}
                       saving={isSavingReservation}
@@ -3801,10 +4121,76 @@ export function AddReservationDialog({
         cancelLabel="No"
         nested
         isPending={isSavingReservation}
-        onConfirm={() => executeSaveReservation(true)}
+        onConfirm={() => executeSaveReservation(true, sendUpdateToCustomer)}
         onCancel={() => {
-          void executeSaveReservation(false)
+          void executeSaveReservation(false, sendUpdateToCustomer)
         }}
+      />
+      <ConfirmDialog
+        open={sendUpdateConfirmOpen}
+        onOpenChange={openState => {
+          if (!isSavingReservation) {
+            setSendUpdateConfirmOpen(openState)
+          }
+        }}
+        title="Alert"
+        description="Are you want to send update to customer?"
+        confirmLabel="Yes"
+        cancelLabel="No"
+        nested
+        isPending={isSavingReservation}
+        onConfirm={() => {
+          void runSaveReservationFlow(true)
+        }}
+        onCancel={() => {
+          void runSaveReservationFlow(false)
+        }}
+      />
+      <ConfirmDialog
+        open={editNoChangeCheckInOpen}
+        onOpenChange={openState => {
+          if (!isSavingReservation) {
+            setEditNoChangeCheckInOpen(openState)
+          }
+        }}
+        title="CheckIn"
+        description="Check-In Reservation?"
+        confirmLabel="Yes"
+        cancelLabel="No"
+        nested
+        isPending={isSavingReservation}
+        onConfirm={() => {
+          void finishEditNoChangeAndClose(true)
+        }}
+        onCancel={() => {
+          void finishEditNoChangeAndClose(false)
+        }}
+      />
+      <DueAmountDialog
+        open={dueAmountOpen}
+        onOpenChange={openState => {
+          if (!isDueAmountPending) {
+            setDueAmountOpen(openState)
+          }
+        }}
+        option={dueAmountOption}
+        onOptionChange={setDueAmountOption}
+        isPending={isDueAmountPending}
+        onConfirm={handleDueAmountConfirm}
+      />
+      <ConfirmDialog
+        open={cancelWithoutSavingOpen}
+        onOpenChange={setCancelWithoutSavingOpen}
+        title="Cancel"
+        description="Are you sure you want to Cancel without saving?"
+        confirmLabel="Yes"
+        cancelLabel="No"
+        nested
+        onConfirm={() => {
+          setCancelWithoutSavingOpen(false)
+          handleDialogOpenChange(false)
+        }}
+        onCancel={() => setCancelWithoutSavingOpen(false)}
       />
       <ConfirmDialog
         open={splitCheckedInAlertOpen}

@@ -51,7 +51,7 @@ type BuildUpdateReservationPaymentParams = BuildReservationRequestParams & {
   isPaymentLoad?: boolean
   resSelectedPromotionId?: string
   includeCustomerModel?: boolean
-
+  isSendUpdateToCustomer?: boolean
 }
 
 function roundMoney(value: number) {
@@ -248,13 +248,24 @@ function buildReservationCore({
   return request
 }
 
-/** Create reservation without payment (e.g. comp / zero-total). */
+/** Create/update reservation without payment (e.g. comp / due-amount continue or cancel). */
 export function buildSaveReservationOnlyRequest(
-  params: BuildReservationRequestParams
+  params: BuildReservationRequestParams & {
+    reservationId?: string
+    reservationStatus?: string
+    isSendUpdateToCustomer?: boolean
+  }
 ): SaveReservationRequest {
   return {
     ...buildReservationCore(params),
-    IsSaveReservationOnly: true
+    IsSaveReservationOnly: true,
+    ...(params.reservationId ? { ReservationId: params.reservationId } : {}),
+    ...(params.reservationStatus
+      ? { ReservationStatus: params.reservationStatus }
+      : {}),
+    ...(typeof params.isSendUpdateToCustomer === 'boolean'
+      ? { IsSendUpdateToCustomer: params.isSendUpdateToCustomer }
+      : {})
   }
 }
 
@@ -265,6 +276,7 @@ type BuildReservationWithPaymentParams = BuildReservationRequestParams & {
   reservationId?: string
   isPaymentLoad?: boolean
   resSelectedPromotionId?: string
+  isSendUpdateToCustomer?: boolean
 }
 
 function buildReservationWithPaymentRequest(
@@ -278,7 +290,8 @@ function buildReservationWithPaymentRequest(
     searchType,
     totals,
     isPaymentLoad,
-    resSelectedPromotionId
+    resSelectedPromotionId,
+    isSendUpdateToCustomer
   } = params
   const roundedPaymentAmount = roundMoney(paymentAmount)
   const effectivePaymentType =
@@ -297,6 +310,9 @@ function buildReservationWithPaymentRequest(
     ...(isPaymentLoad ? { IsPaymentLoad: true } : {}),
     ...(resSelectedPromotionId
       ? { ResSelectedPromotionID: resSelectedPromotionId }
+      : {}),
+    ...(typeof isSendUpdateToCustomer === 'boolean'
+      ? { IsSendUpdateToCustomer: isSendUpdateToCustomer }
       : {}),
     PaymentModel: buildPaymentModel({
       paymentType: effectivePaymentType,
