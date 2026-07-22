@@ -66,7 +66,7 @@ export function AppLayout({ session }: AppLayoutProps) {
   const [ticketDefaultOpen, setTicketDefaultOpen] = useState(false)
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-muted">
+    <div className="flex h-full overflow-hidden bg-muted">
       <div
         className={cn(
           "fixed inset-0 z-40 bg-black/40 lg:hidden",
@@ -127,8 +127,8 @@ export function AppLayout({ session }: AppLayoutProps) {
           onMenuClick={() => setMobileOpen((prev) => !prev)}
         />
 
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto flex h-full min-h-0 max-w-[1600px] flex-col px-3 py-3 sm:px-4 md:px-5 lg:p-4">
+        <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+          <div className="mx-auto flex w-full max-w-[1600px] flex-col px-3 py-3 sm:px-4 md:px-5 lg:p-4 has-[[data-fill-page]]:h-full has-[[data-fill-page]]:min-h-0">
             <Outlet />
           </div>
         </main>

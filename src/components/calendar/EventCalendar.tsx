@@ -475,7 +475,10 @@ export default function EventCalendar() {
   )
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg bg-background shadow-sm ring-1 ring-border">
+    <div
+      data-fill-page
+      className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-lg bg-background shadow-sm ring-1 ring-border"
+    >
       
       <Calendar
         localizer={localizer}

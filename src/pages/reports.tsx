@@ -481,7 +481,7 @@ export function Reports() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div data-fill-page className="flex h-full min-h-0 flex-1 flex-col">
       <PanelCard className="flex min-h-0 flex-1 flex-col rounded-2xl border-border/70 bg-card shadow-sm">
         <div className="shrink-0 border-b border-border/70 bg-card">
           <ReportFiltersToolbar

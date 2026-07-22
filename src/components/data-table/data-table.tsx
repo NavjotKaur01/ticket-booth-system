@@ -113,8 +113,8 @@ export function DataTable<TData>({
 
   return (
     <div className={cn("overflow-hidden bg-card", className)}>
-      <div className="overflow-x-auto">
-        <Table>
+      <div className="overflow-x-auto overflow-y-hidden">
+        <Table containerClassName="overflow-x-visible">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
