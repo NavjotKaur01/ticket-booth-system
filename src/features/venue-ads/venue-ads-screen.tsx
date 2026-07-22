@@ -44,16 +44,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  createVenueAd,
-  deleteVenueAd,
-  getVenueAdsByLocation,
-  updateVenueAd,
-  VENUE_AD_SECTION_OPTIONS,
-} from "@/features/venue-ads/venue-ads.service"
 import { useAppSession } from "@/hooks/use-app-session"
-import { reportError, toastSuccess } from "@/lib/app-toast"
-import type { VenueAdDraft, VenueAdRecord, VenueAdSection } from "@/types/venue-ad"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
+import {
+  useAddUpdateVenueAdMutation,
+  useDeleteVenueAdMutation,
+  useGetVenueAdSectionsQuery,
+  useGetVenueAdsQuery,
+} from "@/store/api/clubmanApi"
+import {
+  EMPTY_VENUE_AD_ID,
+  type VenueAdItem,
+  type VenueAdSectionItem,
+} from "@/types/api/venue-ads"
+import type { VenueAdDraft, VenueAdRecord } from "@/types/venue-ad"
 
 const ACTIVE_OPTIONS = [
   { value: "Y", label: "Y" },
@@ -64,7 +68,7 @@ const EMPTY_AD_FORM: VenueAdDraft = {
   navigateUrl: "",
   displayText: "",
   active: false,
-  section: "Hub",
+  section: "",
   merchant: "",
   imageName: "",
   imagePreviewLabel: "",
@@ -102,6 +106,38 @@ function buildEmptyAd() {
   return { ...EMPTY_AD_FORM }
 }
 
+function mapVenueAdItemToRecord(
+  item: VenueAdItem,
+  locationId: string
+): VenueAdRecord {
+  const alternateText = item.AlternateText?.trim() ?? ""
+
+  return {
+    id: item.AdID,
+    locationId,
+    navigateUrl: item.NavigateUrl?.trim() ?? "",
+    displayText: alternateText,
+    active: item.Active?.trim().toUpperCase() === "Y",
+    section: item.Section?.trim() ?? "",
+    merchant: item.Merchant?.trim() ?? "",
+    imageName: "",
+    imagePreviewLabel: alternateText,
+  }
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : ""
+      const base64 = result.includes(",") ? result.split(",")[1] ?? "" : result
+      resolve(base64)
+    }
+    reader.onerror = () => reject(reader.error ?? new Error("Unable to read image file."))
+    reader.readAsDataURL(file)
+  })
+}
+
 export function VenueAdsScreen() {
   const { locationId, locationName } = useAppSession()
 
@@ -112,12 +148,42 @@ export function VenueAdsScreen() {
   const [form, setForm] = useState<VenueAdDraft>(buildEmptyAd)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreviewUrl, setImagePreviewUrl] = useState("")
-  const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deletingRow, setDeletingRow] = useState<VenueAdRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
+
+  const {
+    data: apiAds,
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useGetVenueAdsQuery(
+    { connectionString: "demo_prod", locationId: locationId ?? "" },
+    { skip: !locationId }
+  )
+
+  const {
+    data: apiSections = [],
+    refetch: refetchVenueAdSections,
+  } = useGetVenueAdSectionsQuery(
+    {locationId: locationId ?? "" },
+    { skip: !locationId }
+  )
+
+  const [addUpdateVenueAd] = useAddUpdateVenueAdMutation()
+  const [deleteVenueAd] = useDeleteVenueAdMutation()
+
+  const sectionOptions = useMemo(() => {
+    const fromApi = (apiSections as VenueAdSectionItem[])
+      .map((item) => item.ItemName?.trim() ?? "")
+      .filter(Boolean)
+    if (form.section && !fromApi.includes(form.section)) {
+      return [form.section, ...fromApi]
+    }
+    return fromApi
+  }, [apiSections, form.section])
 
   const selectedAd = useMemo(
     () => rows.find((row) => row.id === selectedAdId) ?? null,
@@ -125,7 +191,18 @@ export function VenueAdsScreen() {
   )
 
   const isEditing = editingAdId != null
-  const canSubmit = locationId.length > 0 && form.navigateUrl.trim().length > 0
+  const canSubmit =
+    locationId.length > 0 &&
+    form.navigateUrl.trim().length > 0 &&
+    form.section.trim().length > 0
+  const loading = isLoading
+
+  function loadSectionOptions() {
+    if (!locationId) {
+      return
+    }
+    void refetchVenueAdSections()
+  }
 
   useEffect(() => {
     if (!imageFile) {
@@ -142,61 +219,48 @@ export function VenueAdsScreen() {
   }, [imageFile])
 
   useEffect(() => {
+    if (queryError) {
+      reportErrorMessage(setError, "Unable to load venue ads.")
+    } else {
+      setError(null)
+    }
+  }, [queryError])
+
+  useEffect(() => {
     if (!locationId) {
       setRows([])
       setSelectedAdId("")
-      setDialogOpen(false)
-      setEditingAdId(null)
-      setForm(buildEmptyAd())
-      setImageFile(null)
-      setLoading(false)
-      setSaving(false)
-      setDeleting(false)
-      setDeletingRow(null)
-      setError(null)
-      setStatusMessage(null)
       return
     }
 
-    let isActive = true
-    setLoading(true)
-    setError(null)
-    setStatusMessage(null)
-    setRows([])
-    setSelectedAdId("")
+    if (apiAds) {
+      const mapped = apiAds.map((item) => mapVenueAdItemToRecord(item, locationId))
+      setRows(mapped)
+      setSelectedAdId((current) =>
+        mapped.some((row) => row.id === current) ? current : (mapped[0]?.id ?? "")
+      )
+    } else {
+      setRows([])
+      setSelectedAdId("")
+    }
+  }, [apiAds, locationId])
+
+  useEffect(() => {
     setDialogOpen(false)
     setEditingAdId(null)
     setForm(buildEmptyAd())
     setImageFile(null)
     setDeletingRow(null)
+    setError(null)
+    setStatusMessage(null)
+  }, [locationId])
 
-    getVenueAdsByLocation({
-      locationId: locationId,
-      locationLabel: locationName,
-    })
-      .then((result) => {
-        if (!isActive) {
-          return
-        }
-
-        setRows(result)
-        setSelectedAdId(result[0]?.id ?? "")
-      })
-      .catch((requestError: unknown) => {
-        if (isActive) {
-          reportError(setError, requestError, "Unable to load venue ads.")
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      isActive = false
+  useEffect(() => {
+    if (!dialogOpen || isEditing || form.section || sectionOptions.length === 0) {
+      return
     }
-  }, [locationId, locationName])
+    setForm((current) => ({ ...current, section: sectionOptions[0] ?? "" }))
+  }, [dialogOpen, form.section, isEditing, sectionOptions])
 
   function updateField<K extends keyof VenueAdDraft>(key: K, value: VenueAdDraft[K]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -210,6 +274,7 @@ export function VenueAdsScreen() {
     setImageFile(null)
     setError(null)
     setDialogOpen(true)
+    loadSectionOptions()
   }
 
   function openEditDialog(row: VenueAdRecord) {
@@ -227,6 +292,7 @@ export function VenueAdsScreen() {
     setImageFile(null)
     setError(null)
     setDialogOpen(true)
+    loadSectionOptions()
   }
 
   function openDeleteDialog(row: VenueAdRecord) {
@@ -253,46 +319,27 @@ export function VenueAdsScreen() {
     setSaving(true)
     setError(null)
 
-    const nextForm: VenueAdDraft = {
-      ...form,
-      imageName: imageFile?.name || form.imageName,
-      imagePreviewLabel:
-        form.imagePreviewLabel.trim() ||
-        form.displayText.trim() ||
-        imageFile?.name ||
-        form.imageName ||
-        "Venue ad image preview",
-    }
-
     try {
-      if (editingAdId) {
-        const updatedRow = await updateVenueAd({
-          locationId: locationId,
-          locationLabel: locationName,
-          adId: editingAdId,
-          input: nextForm,
-        })
+      const adImage = imageFile ? await fileToBase64(imageFile) : ""
 
-        setRows((current) =>
-          current.map((row) => (row.id === updatedRow.id ? updatedRow : row))
-        )
-        setSelectedAdId(updatedRow.id)
-        const updateMessage = `Ad updated for ${locationName}.`
-        setStatusMessage(updateMessage)
-        toastSuccess(updateMessage)
-      } else {
-        const createdRow = await createVenueAd({
-          locationId: locationId,
-          locationLabel: locationName,
-          input: nextForm,
-        })
+      await addUpdateVenueAd({
+        ConnectionString: "demo_prod",
+        AdID: editingAdId ?? EMPTY_VENUE_AD_ID,
+        LocationID: locationId,
+        NavigateUrl: form.navigateUrl.trim(),
+        AlternateText: form.displayText.trim(),
+        Active: form.active ? "Y" : "N",
+        Section: form.section.trim(),
+        Merchant: form.merchant.trim(),
+        AdImage: adImage,
+      }).unwrap()
 
-        setRows((current) => [createdRow, ...current])
-        setSelectedAdId(createdRow.id)
-        const createMessage = `New ad created for ${locationName}.`
-        setStatusMessage(createMessage)
-        toastSuccess(createMessage)
-      }
+      const saveMessage = editingAdId
+        ? `Ad updated for ${locationName}.`
+        : `New ad created for ${locationName}.`
+      setStatusMessage(saveMessage)
+      toastSuccess(saveMessage)
+      void refetch()
 
       setDialogOpen(false)
       setEditingAdId(null)
@@ -315,10 +362,9 @@ export function VenueAdsScreen() {
 
     try {
       await deleteVenueAd({
-        locationId: locationId,
-        locationLabel: locationName,
-        adId: deletingRow.id,
-      })
+        ConnectionString: "demo_prod",
+        AdID: deletingRow.id,
+      }).unwrap()
 
       const nextRows = rows.filter((row) => row.id !== deletingRow.id)
       setRows(nextRows)
@@ -329,6 +375,7 @@ export function VenueAdsScreen() {
       setStatusMessage(deleteMessage)
       toastSuccess(deleteMessage)
       setDeletingRow(null)
+      void refetch()
 
       if (editingAdId === deletingRow.id) {
         setDialogOpen(false)
@@ -376,8 +423,8 @@ export function VenueAdsScreen() {
               Venue Ads
             </h1>
             <p className="text-sm text-muted-foreground">
-              Manage venue advertisement links and creative metadata with mock service
-              data until the backend endpoints are ready.
+              Manage venue advertisement links and creative metadata for the selected
+              location.
             </p>
           </div>
           <Button
@@ -511,7 +558,7 @@ export function VenueAdsScreen() {
             <div aria-live="polite" className="text-sm text-muted-foreground">
               {locationId
                 ? statusMessage ||
-                  `${rows.length} mock ad${rows.length === 1 ? "" : "s"} loaded for ${locationName}. Click a row to edit it or use New to add another.`
+                  `${rows.length} ad${rows.length === 1 ? "" : "s"} loaded for ${locationName}. Click a row to edit it or use New to add another.`
                 : "Select a location from the header to begin managing venue ads."}
             </div>
             {selectedAd ? (
@@ -592,14 +639,14 @@ export function VenueAdsScreen() {
               <div className="space-y-2">
                 <Label htmlFor="venue-ad-section">Section</Label>
                 <Select
-                  value={form.section}
-                  onValueChange={(value) => updateField("section", value as VenueAdSection)}
+                  value={form.section || undefined}
+                  onValueChange={(value) => updateField("section", value)}
                 >
                   <SelectTrigger id="venue-ad-section" className="w-full bg-background">
                     <SelectValue placeholder="Select section" />
                   </SelectTrigger>
                   <SelectContent className="max-h-72" position="popper">
-                    {VENUE_AD_SECTION_OPTIONS.map((option) => (
+                    {sectionOptions.map((option) => (
                       <SelectItem key={option} value={option}>
                         {option}
                       </SelectItem>

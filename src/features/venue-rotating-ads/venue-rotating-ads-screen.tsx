@@ -44,14 +44,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  createVenueRotatingAd,
-  deleteVenueRotatingAd,
-  getVenueRotatingAdsByLocation,
-  updateVenueRotatingAd,
-} from "@/features/venue-rotating-ads/venue-rotating-ads.service"
+import { deleteVenueRotatingAd } from "@/features/venue-rotating-ads/venue-rotating-ads.service"
 import { useAppSession } from "@/hooks/use-app-session"
-import { reportError, toastSuccess } from "@/lib/app-toast"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
+import {
+  useAddUpdateRotatingAdMutation,
+  useGetRotatingAdsQuery,
+} from "@/store/api/clubmanApi"
+import type { RotatingAdItem } from "@/types/api/rotating-ads"
 import type { VenueRotatingAdDraft, VenueRotatingAdRecord } from "@/types/venue-rotating-ad"
 
 const ACTIVE_OPTIONS = [
@@ -115,6 +115,55 @@ function formatDisplayDate(value: string) {
   }).format(parsed)
 }
 
+/** API dates are MM/DD/YYYY; the date picker uses YYYY-MM-DD. */
+function toFormDate(value: string) {
+  if (!value) {
+    return ""
+  }
+
+  const us = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value.trim())
+  if (us) {
+    return `${us[3]}-${us[1].padStart(2, "0")}-${us[2].padStart(2, "0")}`
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return value.slice(0, 10)
+  }
+
+  return value
+}
+
+function toApiDate(value: string) {
+  if (!value) {
+    return ""
+  }
+
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim())
+  if (iso) {
+    return `${iso[2]}/${iso[3]}/${iso[1]}`
+  }
+
+  return value
+}
+
+function mapRotatingAdItem(
+  item: RotatingAdItem,
+  locationId: string
+): VenueRotatingAdRecord {
+  return {
+    id: item.RotatingAdID,
+    locationId,
+    alternateText: item.AlternateText ?? "",
+    displayOrder: item.DisplayOrder,
+    active: item.ActiveIndicator === "Y",
+    startingDate: toFormDate(item.StartingDate ?? ""),
+    endingDate: toFormDate(item.EndingDate ?? ""),
+    adName: item.AlternateText ?? "",
+    navigateUrl: item.NavigateURL ?? "",
+    adText: item.DisplayText || "<p></p>",
+  }
+}
+
 function buildEmptyAd(): VenueRotatingAdDraft {
   return { ...EMPTY_AD_FORM }
 }
@@ -136,6 +185,7 @@ export function VenueRotatingAdsScreen() {
   const { locationId, locationName } = useAppSession()
 
   const [rows, setRows] = useState<VenueRotatingAdRecord[]>([])
+  const [selectedAdId, setSelectedAdId] = useState<string | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [editingAdId, setEditingAdId] = useState<string | null>(null)
@@ -147,11 +197,21 @@ export function VenueRotatingAdsScreen() {
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
+  const {
+    data: apiRotatingAds,
+    isLoading: isQueryLoading,
+    error: queryError,
+  } = useGetRotatingAdsQuery(
+    { connectionString: "demo_prod", locationId: locationId ?? "" },
+    { skip: !locationId }
+  )
+  const [addUpdateRotatingAd] = useAddUpdateRotatingAdMutation()
+
   const isEditing = editingAdId != null
 
   const previewAd = useMemo(
-    () => (rows.length > 0 ? rows[0] : null),
-    [rows]
+    () => rows.find((row) => row.id === selectedAdId) ?? null,
+    [rows, selectedAdId]
   )
 
   const canSubmit =
@@ -161,55 +221,45 @@ export function VenueRotatingAdsScreen() {
     Number.isFinite(form.displayOrder)
 
   useEffect(() => {
-    if (!locationId) {
-      setRows([])
-      setDialogOpen(false)
-      setPreviewOpen(false)
-      setEditingAdId(null)
-      setForm(buildEmptyAd())
-      setLoading(false)
-      setSaving(false)
-      setDeletingId(null)
-      setDeletingRow(null)
-      setError(null)
-      setStatusMessage(null)
-      return
+    if (queryError) {
+      reportErrorMessage(setError, "Unable to load rotating ads.")
     }
+  }, [queryError])
 
-    let isActive = true
-    setLoading(true)
-    setError(null)
-    setStatusMessage(null)
-    setRows([])
+  useEffect(() => {
+    if (apiRotatingAds && locationId) {
+      const nextRows = [...apiRotatingAds]
+        .map((item) => mapRotatingAdItem(item, locationId))
+        .sort((left, right) => left.displayOrder - right.displayOrder)
+      setRows(nextRows)
+      setSelectedAdId((current) =>
+        current && nextRows.some((row) => row.id === current) ? current : null
+      )
+    } else {
+      setRows([])
+      setSelectedAdId(null)
+    }
+  }, [apiRotatingAds, locationId])
+
+  useEffect(() => {
     setDialogOpen(false)
     setPreviewOpen(false)
     setEditingAdId(null)
+    setSelectedAdId(null)
     setForm(buildEmptyAd())
-
-    getVenueRotatingAdsByLocation({
-      locationId,
-      locationLabel: locationName,
-    })
-      .then((result) => {
-        if (isActive) {
-          setRows(result)
-        }
-      })
-      .catch((requestError: unknown) => {
-        if (isActive) {
-          reportError(setError, requestError, "Unable to load rotating ads.")
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      isActive = false
+    setSaving(false)
+    setDeletingId(null)
+    setDeletingRow(null)
+    setError(null)
+    setStatusMessage(null)
+    if (!locationId) {
+      setLoading(false)
     }
-  }, [locationId, locationName])
+  }, [locationId])
+
+  useEffect(() => {
+    setLoading(isQueryLoading)
+  }, [isQueryLoading])
 
   function updateField<K extends keyof VenueRotatingAdDraft>(
     key: K,
@@ -250,52 +300,33 @@ export function VenueRotatingAdsScreen() {
       return
     }
 
-    const normalizedOrder = Number(form.displayOrder)
-    const payload: VenueRotatingAdDraft = {
-      ...form,
-      alternateText: form.alternateText.trim(),
-      adName: form.adName.trim(),
-      navigateUrl: form.navigateUrl.trim(),
-      displayOrder: normalizedOrder,
-    }
+    const adLabel = form.adName.trim() || form.alternateText.trim()
+    const alternateText = form.alternateText.trim() || form.adName.trim()
 
     setSaving(true)
     setError(null)
     setStatusMessage(null)
 
     try {
-      if (isEditing && editingAdId) {
-        const updatedRow = await updateVenueRotatingAd({
-          locationId,
-          locationLabel: locationName,
-          adId: editingAdId,
-          input: payload,
-        })
+      await addUpdateRotatingAd({
+        ConnectionString: "demo_prod",
+        RotatingAdId: isEditing && editingAdId ? editingAdId : "",
+        LocationID: locationId,
+        DisplayOrder: Number(form.displayOrder),
+        AlternateText: alternateText,
+        NavigateURL: form.navigateUrl.trim(),
+        DisplayText: form.adText,
+        ActiveIndicator: form.active ? "Y" : "N",
+        StartingDate: toApiDate(form.startingDate),
+        EndingDate: toApiDate(form.endingDate),
+        ImageURL: "",
+      }).unwrap()
 
-        setRows((current) =>
-          current
-            .map((row) => (row.id === updatedRow.id ? updatedRow : row))
-            .sort((left, right) => left.displayOrder - right.displayOrder)
-        )
-        const updateMessage = `Updated rotating ad "${updatedRow.adName}" for ${locationName}.`
-        setStatusMessage(updateMessage)
-        toastSuccess(updateMessage)
-      } else {
-        const createdRow = await createVenueRotatingAd({
-          locationId,
-          locationLabel: locationName,
-          input: payload,
-        })
-
-        setRows((current) =>
-          [...current, createdRow].sort(
-            (left, right) => left.displayOrder - right.displayOrder
-          )
-        )
-        const createMessage = `Added rotating ad "${createdRow.adName}" for ${locationName}.`
-        setStatusMessage(createMessage)
-        toastSuccess(createMessage)
-      }
+      const saveMessage = isEditing
+        ? `Updated rotating ad "${adLabel}" for ${locationName}.`
+        : `Added rotating ad "${adLabel}" for ${locationName}.`
+      setStatusMessage(saveMessage)
+      toastSuccess(saveMessage)
 
       setDialogOpen(false)
       setEditingAdId(null)
@@ -323,6 +354,10 @@ export function VenueRotatingAdsScreen() {
       })
 
       setRows((current) => current.filter((row) => row.id !== deletingRow.id))
+      if (selectedAdId === deletingRow.id) {
+        setSelectedAdId(null)
+        setPreviewOpen(false)
+      }
       if (editingAdId === deletingRow.id) {
         setDialogOpen(false)
         setEditingAdId(null)
@@ -348,8 +383,7 @@ export function VenueRotatingAdsScreen() {
                 Location Rotating Ads
               </h1>
               <p className="text-sm text-muted-foreground">
-                Manage venue rotating advertisement slots with mock service data until the
-                backend integration is ready.
+                Manage venue rotating advertisement slots for the selected location.
               </p>
             </div>
             <Button
@@ -375,7 +409,7 @@ export function VenueRotatingAdsScreen() {
                   variant="secondary"
                   size="sm"
                   className="gap-2"
-                  disabled={!locationId || rows.length === 0}
+                  disabled={!locationId || !previewAd}
                   onClick={() => setPreviewOpen(true)}
                 >
                   <Eye className="size-4" />
@@ -423,8 +457,19 @@ export function VenueRotatingAdsScreen() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {rows.map((row) => (
-                        <TableRow key={row.id}>
+                      {rows.map((row) => {
+                        const isSelected = row.id === selectedAdId
+                        return (
+                        <TableRow
+                          key={row.id}
+                          data-state={isSelected ? "selected" : undefined}
+                          className={
+                            isSelected
+                              ? "cursor-pointer bg-muted/60"
+                              : "cursor-pointer"
+                          }
+                          onClick={() => setSelectedAdId(row.id)}
+                        >
                           <TableCell className="font-medium text-foreground">
                             {row.alternateText || row.adName}
                           </TableCell>
@@ -436,7 +481,10 @@ export function VenueRotatingAdsScreen() {
                           </TableCell>
                           <TableCell>{formatDisplayDate(row.startingDate)}</TableCell>
                           <TableCell>{formatDisplayDate(row.endingDate)}</TableCell>
-                          <TableCell className="px-4">
+                          <TableCell
+                            className="px-4"
+                            onClick={(event) => event.stopPropagation()}
+                          >
                             <div className="flex items-center justify-end">
                               <StandardRowActionsMenu
                                 ariaLabel={`Actions for ${row.adName || row.alternateText}`}
@@ -453,7 +501,8 @@ export function VenueRotatingAdsScreen() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                        )
+                      })}
                     </TableBody>
                   </Table>
                 </div>
@@ -626,7 +675,7 @@ export function VenueRotatingAdsScreen() {
                 Rotating Ad Preview
               </DialogTitle>
               <DialogDescription>
-                Mock preview of the first rotating ad for {locationName}.
+                Preview of the selected rotating ad for {locationName}.
               </DialogDescription>
             </DialogHeader>
 

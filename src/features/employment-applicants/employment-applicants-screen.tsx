@@ -901,6 +901,82 @@ export function EmploymentApplicantsScreen() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* <Dialog open={isPreviewDialogOpen} onOpenChange={(open) => { if (!open) { setIsPreviewDialogOpen(false) } else { setIsPreviewDialogOpen(true) } }}>
+        <DialogContent className="max-w-2xl p-0 sm:max-w-2xl">
+          <DialogHeader className="border-b bg-muted/40 px-5 py-4">
+            <DialogTitle className="text-base font-semibold text-foreground">
+              Applicant PDF Preview
+            </DialogTitle>
+            <DialogDescription>
+              Mock preview using the current applicant payload until the real document endpoint is connected.
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewApplicant ? (
+            <div className="space-y-5 px-5 py-5">
+              <div className="rounded-xl border border-border/80 bg-gradient-to-br from-background via-background to-muted/40 p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
+                      {locationName || "Venue"}
+                    </p>
+                    <h3 className="mt-2 text-xl font-semibold text-foreground">
+                      {previewApplicant.firstName} {previewApplicant.lastName}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Applicant for {previewApplicant.opportunityTitle}
+                    </p>
+                  </div>
+                  <ApplicantStatusPill reviewed={previewApplicant.reviewed} />
+                </div>
+
+                <Separator className="my-4" />
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Email</p>
+                    <p className="mt-1 text-sm text-foreground">{previewApplicant.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Phone</p>
+                    <p className="mt-1 text-sm text-foreground">{previewApplicant.phone}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Submitted</p>
+                    <p className="mt-1 text-sm text-foreground">{formatShortDate(previewApplicant.submittedOn)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Reviewed By</p>
+                    <p className="mt-1 text-sm text-foreground">{previewApplicant.reviewedBy || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Hire Date</p>
+                    <p className="mt-1 text-sm text-foreground">{formatShortDate(previewApplicant.hireDate)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Dismissal Date</p>
+                    <p className="mt-1 text-sm text-foreground">{formatShortDate(previewApplicant.dismissalDate)}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-lg border border-border/70 bg-muted/20 px-4 py-4">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Notes</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">
+                    {previewApplicant.notes || "No internal notes added yet."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter className="border-t px-5 py-4">
+            <Button type="button" variant="outline" onClick={() => setIsPreviewDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog> */}
     </>
   )
 }

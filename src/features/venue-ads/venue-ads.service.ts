@@ -1,11 +1,11 @@
-﻿import type { VenueAdDraft, VenueAdRecord, VenueAdSection } from "@/types/venue-ad"
+﻿import type { VenueAdDraft, VenueAdRecord } from "@/types/venue-ad"
 
-export const VENUE_AD_SECTION_OPTIONS: VenueAdSection[] = [
+export const VENUE_AD_SECTION_OPTIONS = [
   "Hub",
   "Sponsors",
   "Website",
   "Lobby",
-]
+] as const
 
 const MOCK_VENUE_ADS = new Map<string, VenueAdRecord[]>([
   [

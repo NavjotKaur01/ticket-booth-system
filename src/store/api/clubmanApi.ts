@@ -68,9 +68,15 @@ import type { ComicInfo } from "@/data/comedian-info"
 import type { EmploymentPosition, AddUpdateEmploymentPositionRequest, AddUpdateEmploymentPositionResponse } from "@/types/api/employment-position"
 import type { EmploymentApplication, EmploymentApplicationBio, EmploymentApplicationOpening, EmploymentApplicationQuestion, EmploymentApplicationReview, UpdateEmploymentApplicationReviewRequest } from "@/types/api/employment-application"
 import type { FreeFormItem, AddUpdateFreeFormRequest, DeleteFreeFormRequest } from "@/types/api/free-form"
+import type { WebpageTextPageItem } from "@/types/api/webpage-text"
 import type { SocialItem, AddUpdateSocialRequest, DeleteSocialRequest } from "@/types/api/social"
+import type { VenueAdItem, VenueAdSectionItem, AddUpdateVenueAdRequest, DeleteVenueAdRequest } from "@/types/api/venue-ads"
+import type {
+  AddUpdateRotatingAdRequest,
+  RotatingAdItem,
+} from "@/types/api/rotating-ads"
 import type { SectionDetailItem, GetSectionDetailsRequest, AddUpdateSectionDetailRequest } from "@/types/api/section-details"
-import type { MenuItem, AddUpdateMenuRequest, DeleteMenuRequest, MenuItemDetail, AddUpdateMenuItemRequest, DeleteMenuItemRequest, MenuPdfItem, AddUpdateMenuPdfRequest, UploadMenuPdfRequest, UploadMenuImageRequest } from "@/types/api/menu"
+import type { MenuItem, AddUpdateMenuRequest, DeleteMenuRequest, MenuItemDetail, AddUpdateMenuItemRequest, DeleteMenuItemRequest, MenuPdfItem, AddUpdateMenuPdfRequest, GetMenuPdfData, GetMenuImageData, UploadMenuPdfRequest, UploadMenuImageRequest } from "@/types/api/menu"
 
 
 import { buildUpdateComedianRequest } from "@/lib/build-update-comedian-request"
@@ -202,6 +208,8 @@ export const clubmanApi = createApi({
     "UserAccess",
     "FormEmail",
     "GiftCertificates",
+    "VenueAds",
+    "RotatingAds",
   ],
   endpoints: (builder) => ({
     getLocations: builder.query({
@@ -1743,8 +1751,21 @@ export const clubmanApi = createApi({
     >({
       query: ({ connectionString, locationId }) =>
         systemApiPath(connectionString, locationId, "GetFreeForms"),
+      extraOptions: { useNewApi: true },
       transformResponse: (response: { Data: FreeFormItem[] } | FreeFormItem[]) =>
         'Data' in response ? response.Data : response,
+    }),
+
+    getWebpagePages: builder.query<
+      WebpageTextPageItem[],
+      { locationId: string }
+    >({
+      query: ({ locationId }) =>
+        `/clubman/api/WebPagesText/${locationId}/GetPages`,
+      extraOptions: { useNewApi: true },
+      transformResponse: (
+        response: { Data: WebpageTextPageItem[] } | WebpageTextPageItem[]
+      ) => ("Data" in response ? response.Data : response),
     }),
 
     getSocials: builder.query<
@@ -1756,6 +1777,73 @@ export const clubmanApi = createApi({
       extraOptions: { useNewApi: true },
       transformResponse: (response: { Data: SocialItem[] } | SocialItem[]) =>
         'Data' in response ? response.Data : response,
+    }),
+
+    getVenueAds: builder.query<
+      VenueAdItem[],
+      { connectionString: string; locationId: string }
+    >({
+      query: ({ connectionString, locationId }) =>
+        `/clubman/api/VenueAds/${connectionString}/${locationId}/GetAds`,
+      extraOptions: { useNewApi: true },
+      transformResponse: (response: { Data: VenueAdItem[] } | VenueAdItem[]) =>
+        "Data" in response ? response.Data : response,
+      providesTags: ["VenueAds"],
+    }),
+
+    getRotatingAds: builder.query<
+      RotatingAdItem[],
+      { connectionString: string; locationId: string }
+    >({
+      query: ({ connectionString, locationId }) =>
+        `/clubman/api/RotatingAds/${connectionString}/${locationId}/GetRotatingAds`,
+      extraOptions: { useNewApi: true },
+      transformResponse: (
+        response: { Data: RotatingAdItem[] } | RotatingAdItem[]
+      ) => ("Data" in response ? response.Data : response),
+      providesTags: ["RotatingAds"],
+    }),
+
+    addUpdateRotatingAd: builder.mutation<unknown, AddUpdateRotatingAdRequest>({
+      query: (body) => ({
+        url: "/clubman/api/RotatingAds/AddUpdateRotatingAd",
+        method: "POST",
+        body,
+      }),
+      extraOptions: { useNewApi: true },
+      invalidatesTags: ["RotatingAds"],
+    }),
+
+    getVenueAdSections: builder.query<
+      VenueAdSectionItem[],
+      { locationId: string }
+    >({
+      query: ({ locationId }) =>
+        `/clubman/api/VenueAds/${locationId}/GetSections`,
+      extraOptions: { useNewApi: true },
+      transformResponse: (
+        response: { Data: VenueAdSectionItem[] } | VenueAdSectionItem[]
+      ) => ("Data" in response ? response.Data : response),
+    }),
+
+    addUpdateVenueAd: builder.mutation<unknown, AddUpdateVenueAdRequest>({
+      query: (body) => ({
+        url: "/clubman/api/VenueAds/AddUpdateVenueAd",
+        method: "POST",
+        body,
+      }),
+      extraOptions: { useNewApi: true },
+      invalidatesTags: ["VenueAds"],
+    }),
+
+    deleteVenueAd: builder.mutation<unknown, DeleteVenueAdRequest>({
+      query: (body) => ({
+        url: "/clubman/api/VenueAds/DeleteVenueAd",
+        method: "POST",
+        body,
+      }),
+      extraOptions: { useNewApi: true },
+      invalidatesTags: ["VenueAds"],
     }),
 
     getSectionDetails: builder.query<SectionDetailItem[], GetSectionDetailsRequest>({
@@ -1794,24 +1882,27 @@ export const clubmanApi = createApi({
     >({
       query: ({ connectionString, locationId }) =>
         systemApiPath(connectionString, locationId, "GetMenus"),
+      extraOptions: { useNewApi: true },
       transformResponse: (response: { Data: MenuItem[] } | MenuItem[]) =>
         'Data' in response ? response.Data : response,
     }),
 
     addUpdateMenu: builder.mutation<unknown, AddUpdateMenuRequest>({
       query: (body) => ({
-        url: systemApiPath(body.ConnectionString, "AddUpdateMenu"),
+        url: systemApiPath("AddUpdateMenu"),
         method: "POST",
         body,
       }),
+      extraOptions: { useNewApi: true },
     }),
 
     deleteMenu: builder.mutation<unknown, DeleteMenuRequest>({
       query: (body) => ({
-        url: systemApiPath(body.ConnectionString, "DeleteMenu"),
+        url: systemApiPath("DeleteMenu"),
         method: "POST",
         body,
       }),
+      extraOptions: { useNewApi: true },
     }),
 
     getMenuItems: builder.query<
@@ -1834,10 +1925,11 @@ export const clubmanApi = createApi({
 
     deleteMenuItem: builder.mutation<unknown, DeleteMenuItemRequest>({
       query: (body) => ({
-        url: systemApiPath(body.ConnectionString, "DeleteMenuItem"),
+        url: systemApiPath("DeleteMenuItem"),
         method: "POST",
         body,
       }),
+      extraOptions: { useNewApi: true },
     }),
 
     getMenuPdfList: builder.query<
@@ -1846,6 +1938,7 @@ export const clubmanApi = createApi({
     >({
       query: ({ locationId }) =>
         clubApiPath(locationId, "GetMenuPdfList"),
+      extraOptions: { useNewApi: true },
       transformResponse: (response: { Data: MenuPdfItem[] } | MenuPdfItem[]) =>
         'Data' in response ? response.Data : response,
     }),
@@ -1856,13 +1949,15 @@ export const clubmanApi = createApi({
         method: "POST",
         body,
       }),
+      extraOptions: { useNewApi: true },
     }),
 
     deleteMenuPdf: builder.mutation<unknown, { fileGuid: string }>({
       query: ({ fileGuid }) => ({
-        url: clubApiPath(fileGuid, "DeletMenuPdf"),
+        url: clubApiPath(fileGuid, "DeleteMenuPdf"),
         method: "POST",
       }),
+      extraOptions: { useNewApi: true },
     }),
 
     uploadMenuPdf: builder.mutation<unknown, UploadMenuPdfRequest>({
@@ -1879,22 +1974,25 @@ export const clubmanApi = createApi({
         method: "POST",
         body,
       }),
+      extraOptions: { useNewApi: true },
     }),
 
-    getMenuPdf: builder.mutation<Blob, { fileGuid: string }>({
-      query: ({ fileGuid }) => ({
-        url: clubApiPath(fileGuid, "GetMenuPdf"),
-        method: "GET",
-        responseHandler: (response) => response.blob(),
-      }),
+    getMenuPdf: builder.mutation<GetMenuPdfData, { fileGuid: string }>({
+      query: ({ fileGuid }) =>
+        clubApiPath(fileGuid, "GetMenuPdf"),
+      extraOptions: { useNewApi: true },
+      transformResponse: (
+        response: { Data: GetMenuPdfData } | GetMenuPdfData
+      ) => ("Data" in response ? response.Data : response),
     }),
 
-    getMenuImage: builder.mutation<Blob, { fileGuid: string }>({
-      query: ({ fileGuid }) => ({
-        url: clubApiPath(fileGuid, "GetMenuImage"),
-        method: "GET",
-        responseHandler: (response) => response.blob(),
-      }),
+    getMenuImage: builder.mutation<GetMenuImageData, { fileGuid: string }>({
+      query: ({ fileGuid }) =>
+        clubApiPath(fileGuid, "GetMenuImage"),
+      extraOptions: { useNewApi: true },
+      transformResponse: (
+        response: { Data: GetMenuImageData } | GetMenuImageData
+      ) => ("Data" in response ? response.Data : response),
     }),
 
     searchSocials: builder.query<
@@ -1927,18 +2025,20 @@ export const clubmanApi = createApi({
 
     addUpdateFreeForm: builder.mutation<FreeFormItem, AddUpdateFreeFormRequest>({
       query: (body) => ({
-        url: systemApiPath(body.ConnectionString, "AddUpdateFreeForms"),
+        url: systemApiPath("AddUpdateFreeForm"),
         method: "POST",
         body,
       }),
+      extraOptions: { useNewApi: true },
     }),
 
     deleteFreeForm: builder.mutation<unknown, DeleteFreeFormRequest>({
       query: (body) => ({
-        url: systemApiPath(body.ConnectionString, "DeleteFreeForms"),
+        url: systemApiPath("DeleteFreeForm"),
         method: "POST",
         body,
       }),
+      extraOptions: { useNewApi: true },
     }),
 
     getFormEmails: builder.query<
@@ -2298,7 +2398,14 @@ export const {
   useUpdateEmploymentApplicationReviewMutation,
   useDownloadEmploymentApplicationPdfMutation,
   useGetFreeFormsQuery,
+  useGetWebpagePagesQuery,
   useGetSocialsQuery,
+  useGetVenueAdsQuery,
+  useGetRotatingAdsQuery,
+  useAddUpdateRotatingAdMutation,
+  useGetVenueAdSectionsQuery,
+  useAddUpdateVenueAdMutation,
+  useDeleteVenueAdMutation,
   useGetSectionDetailsQuery,
   useSearchSectionDetailsQuery,
   useGetMenusQuery,

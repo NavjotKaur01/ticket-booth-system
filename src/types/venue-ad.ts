@@ -1,12 +1,10 @@
-﻿export type VenueAdSection = "Hub" | "Sponsors" | "Website" | "Lobby"
-
-export type VenueAdRecord = {
+﻿export type VenueAdRecord = {
   id: string
   locationId: string
   navigateUrl: string
   displayText: string
   active: boolean
-  section: VenueAdSection
+  section: string
   merchant: string
   imageName: string
   imagePreviewLabel: string

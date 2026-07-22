@@ -68,6 +68,19 @@ export interface AddUpdateMenuPdfRequest {
   PdfContent: string
 }
 
+export interface GetMenuPdfData {
+  FileGuid: string
+  FileDescription: string
+  PdfContent: string
+}
+
+export interface GetMenuImageData {
+  FileGuid: string
+  ImageTitle?: string
+  ImageContent: string
+  OrderNumber?: number
+}
+
 export interface UploadMenuPdfRequest {
   FileGuid: string
   PdfContent: string

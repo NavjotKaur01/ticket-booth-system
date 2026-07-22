@@ -20,11 +20,12 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import {
   getWebpageTextByLocation,
-  getWebpageTextPagesByLocation,
   updateWebpageText,
 } from "@/features/webpages-text/webpages-text.service"
 import { useAppSession } from "@/hooks/use-app-session"
-import { reportError, toastSuccess } from "@/lib/app-toast"
+import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
+import { useGetWebpagePagesQuery } from "@/store/api/clubmanApi"
+import type { WebpageTextPageItem } from "@/types/api/webpage-text"
 import type {
   WebpageTextPageDefinition,
   WebpageTextRecord,
@@ -45,17 +46,32 @@ function EmptyState({
   )
 }
 
+function mapWebpagePageItem(item: WebpageTextPageItem): WebpageTextPageDefinition {
+  return {
+    id: item.ItemId,
+    label: item.ItemName,
+  }
+}
+
 export function WebpagesTextScreen() {
   const { locationId, locationName } = useAppSession()
 
   const [pageDefinitions, setPageDefinitions] = useState<WebpageTextPageDefinition[]>([])
   const [selectedPageId, setSelectedPageId] = useState("")
   const [record, setRecord] = useState<WebpageTextRecord | null>(null)
-  const [loadingPages, setLoadingPages] = useState(false)
   const [loadingRecord, setLoadingRecord] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
+
+  const {
+    data: apiPages,
+    isLoading: loadingPages,
+    error: pagesQueryError,
+  } = useGetWebpagePagesQuery(
+    { locationId: locationId ?? "" },
+    { skip: !locationId }
+  )
 
   const pageOptions = useMemo(
     () => pageDefinitions.map((page) => ({ value: page.id, label: page.label })),
@@ -68,50 +84,31 @@ export function WebpagesTextScreen() {
   )
 
   useEffect(() => {
-    if (!locationId) {
+    if (pagesQueryError) {
+      reportErrorMessage(setError, "Unable to load webpage text pages.")
+    }
+  }, [pagesQueryError])
+
+  useEffect(() => {
+    if (apiPages) {
+      const mapped = apiPages.map(mapWebpagePageItem)
+      setPageDefinitions(mapped)
+      setSelectedPageId((current) =>
+        current && mapped.some((page) => page.id === current)
+          ? current
+          : ""
+      )
+    } else {
       setPageDefinitions([])
       setSelectedPageId("")
-      setRecord(null)
-      setLoadingPages(false)
-      setLoadingRecord(false)
-      setError(null)
-      setStatusMessage(null)
-      return
     }
+  }, [apiPages])
 
-    let isActive = true
-    setLoadingPages(true)
-    setLoadingRecord(false)
+  useEffect(() => {
+    setRecord(null)
     setError(null)
     setStatusMessage(null)
-    setPageDefinitions([])
-    setSelectedPageId("")
-    setRecord(null)
-
-    getWebpageTextPagesByLocation({
-      locationId: locationId,
-      locationLabel: locationName,
-    })
-      .then((result) => {
-        if (isActive) {
-          setPageDefinitions(result)
-        }
-      })
-      .catch((requestError: unknown) => {
-        if (isActive) {
-          reportError(setError, requestError, "Unable to load webpage text pages.")
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoadingPages(false)
-        }
-      })
-
-    return () => {
-      isActive = false
-    }
-  }, [locationId, locationName])
+  }, [locationId])
 
   useEffect(() => {
     if (!locationId || !selectedPageId) {
@@ -119,6 +116,9 @@ export function WebpagesTextScreen() {
       setLoadingRecord(false)
       return
     }
+
+    const pageLabel =
+      pageDefinitions.find((page) => page.id === selectedPageId)?.label || "Selected page"
 
     let isActive = true
     setLoadingRecord(true)
@@ -133,12 +133,23 @@ export function WebpagesTextScreen() {
     })
       .then((result) => {
         if (isActive) {
-          setRecord(result)
+          setRecord({
+            ...result,
+            pageId: selectedPageId,
+            pageLabel,
+            locationLabel: locationName || result.locationLabel,
+          })
         }
       })
-      .catch((requestError: unknown) => {
+      .catch(() => {
         if (isActive) {
-          reportError(setError, requestError, "Unable to load webpage text content.")
+          setRecord({
+            locationId,
+            locationLabel: locationName,
+            pageId: selectedPageId,
+            pageLabel,
+            htmlContent: `<h2 style="text-align: center;">${pageLabel}</h2><p style="text-align: center;">Add webpage copy for ${locationName || "this venue"} here.</p>`,
+          })
         }
       })
       .finally(() => {
@@ -150,7 +161,7 @@ export function WebpagesTextScreen() {
     return () => {
       isActive = false
     }
-  }, [locationId, selectedPageId, locationName])
+  }, [locationId, selectedPageId, locationName, pageDefinitions])
 
   function updateHtmlContent(htmlContent: string) {
     setRecord((current) => (current ? { ...current, htmlContent } : current))
@@ -191,8 +202,7 @@ export function WebpagesTextScreen() {
           Webpages Text
         </h1>
         <p className="text-sm text-muted-foreground">
-          Manage editable venue webpage copy with reusable rich-text tooling, using
-          mock service content until the real CMS-style endpoint is connected.
+          Manage editable venue webpage copy with reusable rich-text tooling.
         </p>
       </div>
 
@@ -239,7 +249,12 @@ export function WebpagesTextScreen() {
           ) : loadingPages ? (
             <EmptyState
               title="Loading available webpage copy sections..."
-              description="Mock page definitions are being prepared for the selected location."
+              description="Page definitions are being loaded for the selected location."
+            />
+          ) : pageOptions.length === 0 ? (
+            <EmptyState
+              title="No pages found."
+              description="This location does not have webpage text pages yet."
             />
           ) : !selectedPageId ? (
             <EmptyState
@@ -264,8 +279,7 @@ export function WebpagesTextScreen() {
               <Separator />
 
               <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-                Stored HTML is preserved in the mock service exactly the way we will send it to
-                the backend later, so this screen already matches the future API contract well.
+                Edit the page content below, then click Update to save your changes.
               </div>
             </section>
           )}
@@ -295,4 +309,3 @@ export function WebpagesTextScreen() {
     </div>
   )
 }
-

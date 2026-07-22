@@ -35,14 +35,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  createFreeForm,
-  deleteFreeForm,
-  getFreeFormsByLocation,
-  updateFreeForm,
-} from "@/features/free-forms/free-forms.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
+import {
+  useAddUpdateFreeFormMutation,
+  useDeleteFreeFormMutation,
+  useGetFreeFormsQuery,
+} from "@/store/api/clubmanApi"
+import type { FreeFormItem } from "@/types/api/free-form"
 import type { FreeFormRecord } from "@/types/free-form"
 
 const ACTIVE_OPTIONS = [
@@ -78,6 +78,17 @@ function ActivePill({ active }: { active: boolean }) {
   )
 }
 
+function mapFreeFormItemToRecord(item: FreeFormItem): FreeFormRecord {
+  return {
+    id: item.FreeFormID,
+    locationId: item.LocationID,
+    buttonText: item.ButtonText,
+    displayOrder: item.DisplayOrder,
+    active: item.IsActive,
+    htmlContent: item.FreeFormText || "<p></p>",
+  }
+}
+
 function buildDefaultHtml(buttonText: string, locationLabel: string) {
   const heading = buttonText.trim() || "Free Form Content"
   const venueLabel = locationLabel.trim() || "this venue"
@@ -86,7 +97,7 @@ function buildDefaultHtml(buttonText: string, locationLabel: string) {
 }
 
 export function FreeFormsScreen() {
-  const { locationId, locationName } = useAppSession()
+  const { locationId, locationName, username } = useAppSession()
 
   const [rows, setRows] = useState<FreeFormRecord[]>([])
   const [editorMode, setEditorMode] = useState<"create" | "edit" | null>(null)
@@ -102,61 +113,58 @@ export function FreeFormsScreen() {
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
+  const {
+    data: apiFreeForms,
+    isLoading: isQueryLoading,
+    error: queryError,
+    refetch,
+  } = useGetFreeFormsQuery(
+    { connectionString: "demo_prod", locationId: locationId ?? "" },
+    { skip: !locationId }
+  )
+
+  const [addUpdateFreeForm] = useAddUpdateFreeFormMutation()
+  const [deleteFreeForm] = useDeleteFreeFormMutation()
+
   const parsedDisplayOrder = Number.parseInt(displayOrderInput, 10)
   const hasValidDisplayOrder = Number.isFinite(parsedDisplayOrder) && parsedDisplayOrder >= 0
   const canSave = buttonTextInput.trim().length > 0 && hasValidDisplayOrder
 
   useEffect(() => {
-    if (!locationId) {
-      setRows([])
-      setEditorMode(null)
-      setEditingFreeFormId(null)
-      setButtonTextInput("")
-      setDisplayOrderInput("1")
-      setActiveInput("Y")
-      setHtmlContentInput("<p></p>")
-      setLoading(false)
-      setError(null)
-      setStatusMessage(null)
-      return
+    if (queryError) {
+      reportErrorMessage(setError, "Unable to load free forms.")
     }
+  }, [queryError])
 
-    let isActive = true
-    setLoading(true)
-    setError(null)
-    setStatusMessage(null)
-    setRows([])
+  useEffect(() => {
+    if (apiFreeForms) {
+      setRows(
+        [...apiFreeForms]
+          .map(mapFreeFormItemToRecord)
+          .sort((left, right) => left.displayOrder - right.displayOrder)
+      )
+    } else {
+      setRows([])
+    }
+  }, [apiFreeForms])
+
+  useEffect(() => {
     setEditorMode(null)
     setEditingFreeFormId(null)
     setButtonTextInput("")
     setDisplayOrderInput("1")
     setActiveInput("Y")
     setHtmlContentInput("<p></p>")
-
-    getFreeFormsByLocation({
-      locationId: locationId,
-      locationLabel: locationName,
-    })
-      .then((result) => {
-        if (isActive) {
-          setRows(result)
-        }
-      })
-      .catch((requestError: unknown) => {
-        if (isActive) {
-          reportError(setError, requestError, "Unable to load free forms.")
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoading(false)
-        }
-      })
-
-    return () => {
-      isActive = false
+    setError(null)
+    setStatusMessage(null)
+    if (!locationId) {
+      setLoading(false)
     }
-  }, [locationId, locationName])
+  }, [locationId])
+
+  useEffect(() => {
+    setLoading(isQueryLoading)
+  }, [isQueryLoading])
 
   function openCreateEditor() {
     setEditorMode("create")
@@ -198,6 +206,7 @@ export function FreeFormsScreen() {
       return
     }
 
+    const isEdit = editorMode === "edit" && Boolean(editingFreeFormId)
     const duplicateRow = rows.find(
       (row) =>
         row.buttonText.trim().toLowerCase() === normalizedButtonText.toLowerCase() &&
@@ -216,46 +225,24 @@ export function FreeFormsScreen() {
     setStatusMessage(null)
 
     try {
-      if (editorMode === "edit" && editingFreeFormId) {
-        const updatedRow = await updateFreeForm({
-          locationId: locationId,
-          locationLabel: locationName,
-          freeFormId: editingFreeFormId,
-          buttonText: normalizedButtonText,
-          displayOrder: normalizedDisplayOrder,
-          active: activeInput === "Y",
-          htmlContent: htmlContentInput,
-        })
+      await addUpdateFreeForm({
+        ConnectionString: "demo_prod",
+        LocationID: locationId,
+        FreeFormID: isEdit ? editingFreeFormId! : "",
+        ButtonText: normalizedButtonText,
+        DisplayOrder: normalizedDisplayOrder,
+        FreeFormText: htmlContentInput,
+        IsActive: activeInput === "Y",
+        LastUpdatedUserName: username || "Admin",
+      }).unwrap()
 
-        setRows((current) =>
-          current
-            .map((row) => (row.id === updatedRow.id ? updatedRow : row))
-            .sort((left, right) => left.displayOrder - right.displayOrder)
-        )
-        const updateMessage = `Updated free form for ${locationName}.`
-        setStatusMessage(updateMessage)
-        toastSuccess(updateMessage)
-      } else {
-        const createdRow = await createFreeForm({
-          locationId: locationId,
-          locationLabel: locationName,
-          buttonText: normalizedButtonText,
-          displayOrder: normalizedDisplayOrder,
-          active: activeInput === "Y",
-          htmlContent: htmlContentInput,
-        })
-
-        setRows((current) =>
-          [createdRow, ...current].sort(
-            (left, right) => left.displayOrder - right.displayOrder
-          )
-        )
-        const createMessage = `Created a new free form for ${locationName}.`
-        setStatusMessage(createMessage)
-        toastSuccess(createMessage)
-      }
-
+      const saveMessage = isEdit
+        ? `Updated free form for ${locationName}.`
+        : `Created a new free form for ${locationName}.`
+      setStatusMessage(saveMessage)
+      toastSuccess(saveMessage)
       closeEditor()
+      await refetch()
     } catch (requestError) {
       reportError(setError, requestError, "Unable to save the free form.")
     } finally {
@@ -275,12 +262,10 @@ export function FreeFormsScreen() {
 
     try {
       await deleteFreeForm({
-        locationId: locationId,
-        locationLabel: locationName,
-        freeFormId: deletingRow.id,
-      })
+        ConnectionString: "demo_prod",
+        FreeFormID: deletingRow.id,
+      }).unwrap()
 
-      setRows((current) => current.filter((currentRow) => currentRow.id !== deletingRow.id))
       if (editingFreeFormId === deletingRow.id) {
         closeEditor()
       }
@@ -288,6 +273,7 @@ export function FreeFormsScreen() {
       setStatusMessage(deleteMessage)
       toastSuccess(deleteMessage)
       setDeletingRow(null)
+      await refetch()
     } catch (requestError) {
       reportError(setError, requestError, "Unable to delete the free form.")
     } finally {
@@ -380,7 +366,7 @@ export function FreeFormsScreen() {
             </h1>
             <p className="text-sm text-muted-foreground">
               Manage reusable venue landing blocks with button labels, display order,
-              active state, and shared rich-text content using mock service data.
+              active state, and shared rich-text content.
             </p>
           </div>
           <Button
