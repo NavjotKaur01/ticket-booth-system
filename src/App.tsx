@@ -4,7 +4,6 @@ import { GiftFeatureGuard } from "@/components/auth/gift-feature-guard"
 import { ProtectedLayout } from "@/components/auth/protected-layout"
 import { Dashboard } from "@/components/dashboard/dashboard"
 import { BusinessContacts } from "@/pages/business-contacts"
-import { ChangePassword } from "@/pages/change-password"
 import { CheckIn } from "@/pages/check-in"
 import { CommentCards } from "@/pages/comment-cards"
 import { EmploymentApplicants } from "@/pages/employment-applicants"
@@ -83,7 +82,6 @@ function App() {
 
           <Route path="my-account">
             <Route path="ticket-default" element={<TicketDefault />} />
-            <Route path="change-password" element={<ChangePassword />} />
           </Route>
 
           <Route path="administrator">

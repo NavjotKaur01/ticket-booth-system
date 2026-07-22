@@ -6,6 +6,7 @@ import { AppFooter } from "@/components/layout/app-footer"
 import { AppHeader } from "@/components/layout/app-header"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { AdjustFeesDialog } from "@/features/administrator/adjust-fees-dialog"
+import { ChangePasswordDialog } from "@/features/change-password/change-password-dialog"
 import { PaymentHistoryDialog } from "@/features/search/payment-history-dialog"
 import { SearchReservationDialog } from "@/features/search/search-reservation-dialog"
 import { useAppSession } from "@/hooks/use-app-session"
@@ -23,7 +24,8 @@ function handleSubMenuAction(
   action: NavSubItemAction,
   setAdjustFeesOpen: (open: boolean) => void,
   setSearchReservationOpen: (open: boolean) => void,
-  setPaymentHistoryOpen: (open: boolean) => void
+  setPaymentHistoryOpen: (open: boolean) => void,
+  setChangePasswordOpen: (open: boolean) => void
 ) {
   if (action === "adjust-fees") {
     setAdjustFeesOpen(true)
@@ -37,6 +39,11 @@ function handleSubMenuAction(
 
   if (action === "search-payments") {
     setPaymentHistoryOpen(true)
+    return
+  }
+
+  if (action === "change-password") {
+    setChangePasswordOpen(true)
   }
 }
 
@@ -48,6 +55,7 @@ export function AppLayout({ session }: AppLayoutProps) {
   const [adjustFeesOpen, setAdjustFeesOpen] = useState(false)
   const [searchReservationOpen, setSearchReservationOpen] = useState(false)
   const [paymentHistoryOpen, setPaymentHistoryOpen] = useState(false)
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
 
   return (
     <div className="flex h-dvh overflow-hidden bg-muted">
@@ -77,7 +85,8 @@ export function AppLayout({ session }: AppLayoutProps) {
               action,
               setAdjustFeesOpen,
               setSearchReservationOpen,
-              setPaymentHistoryOpen
+              setPaymentHistoryOpen,
+              setChangePasswordOpen
             )
           }
         />
@@ -95,6 +104,10 @@ export function AppLayout({ session }: AppLayoutProps) {
         <PaymentHistoryDialog
           open={paymentHistoryOpen}
           onOpenChange={setPaymentHistoryOpen}
+        />
+        <ChangePasswordDialog
+          open={changePasswordOpen}
+          onOpenChange={setChangePasswordOpen}
         />
         <AppHeader
           session={session}
