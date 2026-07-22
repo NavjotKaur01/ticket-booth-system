@@ -199,6 +199,30 @@ function buildCustomerFullName(firstName: string, lastName: string) {
 }
 
 /**
+ * Printed customer name.
+ * Normal print: Last Name then First Name.
+ * Reprint: First Name then Last Name.
+ */
+function getCustomerNameForTicket(
+  customer: { firstName: string; lastName: string; fullName: string },
+  isReprint: boolean
+) {
+  if (isReprint) {
+    const firstLast = [customer.firstName, customer.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim()
+    return firstLast || customer.fullName || "Guest"
+  }
+
+  return (
+    customer.fullName ||
+    [customer.lastName, customer.firstName].filter(Boolean).join(" ").trim() ||
+    "Guest"
+  )
+}
+
+/**
  * Headliner labels are stored as "Last, First". Ticket print shows "First Last".
  * e.g. "Anderson, Carter" → "Carter Anderson"
  */
@@ -272,6 +296,7 @@ function buildTicketMarkup(
   ticketIndex?: number
 ) {
   const footerText = isReprint ? ticket.text.reprintFooter : ticket.text.printFooter
+  const customerName = getCustomerNameForTicket(ticket.customer, isReprint)
   const tablesList = ticket.reservation.tables ? ticket.reservation.tables.split(",").map(s => s.trim()) : []
   const tableNo = ticketIndex !== undefined && tablesList.length > ticketIndex ? tablesList[ticketIndex] : ticket.reservation.tables || ""
 
@@ -298,7 +323,7 @@ function buildTicketMarkup(
 
       <div class="divider"></div>
       ${headerBox}
-      <div class="customer-name">${escapeHtml(ticket.customer.fullName)}</div>
+      <div class="customer-name">${escapeHtml(customerName)}</div>
       ${
         ticket.reservation.promotion
           ? `<div class="promotions">Promotions : ${escapeHtml(
@@ -351,6 +376,7 @@ async function buildPrintDocument(
 ) {
   const originalCount = Math.max(1, ticket.reservation.partySize)
   const normalizedCount = Math.min(Math.max(1, ticketCount), originalCount)
+  const documentTitle = getCustomerNameForTicket(ticket.customer, isReprint)
 
   const ticketMarkup = layout === "individual"
     ? (await Promise.all(
@@ -376,7 +402,7 @@ async function buildPrintDocument(
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>${escapeHtml(ticket.customer.fullName)} Ticket</title>
+    <title>${escapeHtml(documentTitle)} Ticket</title>
     <style>
       :root { color-scheme: light; }
       body {
