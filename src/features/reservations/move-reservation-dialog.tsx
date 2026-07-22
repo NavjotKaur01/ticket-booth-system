@@ -1,5 +1,5 @@
 import { LoaderCircle, X } from 'lucide-react'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { ShowDateField } from '@/components/common/show-date-field'
 import { Button } from '@/components/ui/button'
@@ -27,16 +27,27 @@ import {
   buildMoveReservationRequest,
   calculateMoveReservationDifference,
   calculateMoveReservationTotals,
+  getMoveOrigAmounts,
   isPastShowDate,
   validateMoveReservationSection
 } from '@/lib/build-move-reservation-request'
 import { formatReservationMoney, parseReservationMoney } from '@/lib/calculate-reservation-totals'
+import {
+  calculateSvcBase,
+  mapOriginToCode,
+} from '@/lib/calculate-svc-base'
 import { fetchUpcomingShowDetails, moveReservation } from '@/lib/api/reservations'
 import {
   reportError,
   reportErrorMessage,
   toastSuccess,
 } from '@/lib/app-toast'
+import { alertDialog } from '@/lib/app-dialog'
+import {
+  readPaymentTaxRate,
+  readTaxWithServiceCharge,
+} from '@/lib/check-in-defaults'
+import { normalizeTaxPercent } from '@/lib/build-split-reservation-request'
 import { mapReservationSourceToOrigin } from '@/lib/reservation-edit'
 import {
   getFirstReservationPaymentError,
@@ -51,7 +62,11 @@ import {
 import { mapShowDetailsToOptions } from '@/lib/map-show-details'
 import { mapShowSectionsToOptions } from '@/lib/map-show-sections'
 import { cn } from '@/lib/utils'
-import { useGetShowSectionsQuery } from '@/store/api/clubmanApi'
+import {
+  useGetShowDataQuery,
+  useGetShowSectionsQuery,
+  useGetSystemDefaultsQuery,
+} from '@/store/api/clubmanApi'
 import {
   createEmptyReservationPaymentFields,
   type ReservationPaymentFields
@@ -98,6 +113,25 @@ function formatDifferenceMoney(value: number) {
   })
 }
 
+/** Desktop Move Origin combo shows "Phone-In" / "Walk-Up" / "Web". */
+function formatMoveOriginLabel(source: string | null | undefined) {
+  const normalized = source?.trim().toLowerCase() ?? ''
+  if (!normalized || normalized === 'phone' || normalized === 'phone-in') {
+    return 'Phone-In'
+  }
+  if (
+    normalized === 'walkup' ||
+    normalized === 'walk-up' ||
+    normalized === 'walk up'
+  ) {
+    return 'Walk-Up'
+  }
+  if (normalized === 'web') {
+    return 'Web'
+  }
+  return source!.trim()
+}
+
 type MoveReservationDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -107,6 +141,43 @@ type MoveReservationDialogProps = {
   username: string
   currentShowId: string
   onMoved?: () => void | Promise<void>
+}
+
+function pickDefaultMoveSection(
+  sections: ReservationSectionOption[],
+  preferredShowDetId?: string | null,
+  preferredSecCode?: string | null
+) {
+  if (sections.length === 0) {
+    return null
+  }
+
+  const preferredId = preferredShowDetId?.trim()
+  if (preferredId) {
+    const byDetId = sections.find(
+      section =>
+        section.id === preferredId || section.showDetId === preferredId
+    )
+    if (byDetId) {
+      return byDetId
+    }
+  }
+
+  const preferredSec = preferredSecCode?.trim().toUpperCase()
+  if (preferredSec) {
+    const bySec = sections.find(
+      section => section.showSec.trim().toUpperCase() === preferredSec
+    )
+    if (bySec) {
+      return bySec
+    }
+  }
+
+  // Desktop RefreshShowSectionInMoveReservation looks up "Regular".
+  return (
+    sections.find(section => section.name.trim().toLowerCase() === 'regular') ??
+    sections[0]
+  )
 }
 
 function todayDateValue() {
@@ -191,12 +262,47 @@ export function MoveReservationDialog({
     open && Boolean(reservationId)
   )
 
+  const { data: rawSystemDefaults } = useGetSystemDefaultsQuery(
+    { connectionName, locationId },
+    { skip: !open || !connectionName || !locationId }
+  )
+
+  const systemDefaults = useMemo(() => {
+    if (!rawSystemDefaults) {
+      return {} as Record<string, string | null | undefined>
+    }
+    return rawSystemDefaults.reduce(
+      (acc, curr) => {
+        if (curr.Field) {
+          acc[curr.Field] = curr.DefValue
+        }
+        return acc
+      },
+      {} as Record<string, string | null | undefined>
+    )
+  }, [rawSystemDefaults])
+
+  const systemTaxPercent = useMemo(() => {
+    const fromDefaults = rawSystemDefaults
+      ? readPaymentTaxRate(rawSystemDefaults)
+      : Number(systemDefaults?.lblTaxes || 0)
+    return normalizeTaxPercent(fromDefaults)
+  }, [rawSystemDefaults, systemDefaults?.lblTaxes])
+
+  const taxWithServiceCharge =
+    readTaxWithServiceCharge(rawSystemDefaults ?? []) ??
+    systemDefaults?.lblTaxWithServiceCharge ??
+    undefined
+
   const [upcomingShows, setUpcomingShows] = useState<ShowDetailsByDateItem[]>([])
   const [upcomingLoading, setUpcomingLoading] = useState(false)
   const [upcomingError, setUpcomingError] = useState<string | null>(null)
-  const [destinationDate, setDestinationDate] = useState(todayDateValue)
+  // Desktop DatePicker style always shows "Select Show Date" text, but Show Time /
+  // Section / Available / With Move load from the current reservation show.
+  const [destinationDate, setDestinationDate] = useState('')
   const [destinationShowId, setDestinationShowId] = useState('')
   const [destinationSectionId, setDestinationSectionId] = useState('')
+  const [hasPickedMoveDate, setHasPickedMoveDate] = useState(false)
   const [dinner, setDinner] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [paymentValidationErrors, setPaymentValidationErrors] =
@@ -217,6 +323,7 @@ export function MoveReservationDialog({
     total: 0,
   })
   const [displayedDifference, setDisplayedDifference] = useState(0)
+  const lastNoShowAlertDateRef = useRef('')
 
   const originShowId = detail?.ShowId?.trim() || currentShowId
   const party = detail?.PartyNo ?? reservation?.qty ?? 0
@@ -234,37 +341,95 @@ export function MoveReservationDialog({
   const isTableReservation = TABLE_SECTION_CODES.has(
     reservationSectionCode.trim().toUpperCase()
   )
-  const originLabel = reservation?.source ?? 'Phone'
+  const originLabel = formatMoveOriginLabel(
+    detail?.LookupSDescSource || reservation?.source
+  )
   const partyOrTableLabel = isTableReservation ? 'Table :' : 'Party :'
   const partyOrTableValue = String(party || '')
 
   const origSubTotal = detail?.SubTotal ?? 0
   const origServiceCharge = detail?.SVC ?? 0
-  const origDiscount = detail?.Discount ?? 0
+  const { origTotal, origDiscount } = useMemo(
+    () =>
+      getMoveOrigAmounts({
+        total:
+          detail?.Total ??
+          parseReservationMoney(reservation?.total ?? '0'),
+        discount: detail?.Discount ?? 0,
+        paymentList: detail?.PaymentList,
+      }),
+    [detail?.Discount, detail?.PaymentList, detail?.Total, reservation?.total]
+  )
   const origTaxes = detail?.SalesTax ?? 0
-  const origTotal =
-    detail?.Total ??
-    parseReservationMoney(reservation?.total ?? '0')
 
   const activeUpcomingShows = useMemo(
     () => getActiveUpcomingShows(upcomingShows),
     [upcomingShows]
   )
 
-  const showsForSelectedDate = useMemo(
-    () => filterUpcomingShowsByDate(activeUpcomingShows, destinationDate),
-    [activeUpcomingShows, destinationDate]
+  const originUpcomingShow = useMemo(
+    () =>
+      activeUpcomingShows.find(show => show.ShowId === originShowId) ?? null,
+    [activeUpcomingShows, originShowId]
   )
 
+  const showsForShowTimeCombo = useMemo(() => {
+    let shows: ShowDetailsByDateItem[] = []
+
+    // After the user picks a date (or dbl-clicks upcoming), filter to that day.
+    if (hasPickedMoveDate && destinationDate) {
+      shows = filterUpcomingShowsByDate(activeUpcomingShows, destinationDate)
+    } else if (originUpcomingShow) {
+      // Desktop ShowDetails on open = shows for the current reservation day.
+      const originDate = toIsoShowDate(originUpcomingShow.ShowDate)
+      shows = originDate
+        ? filterUpcomingShowsByDate(activeUpcomingShows, originDate)
+        : activeUpcomingShows.filter(show => show.ShowId === originShowId)
+    } else if (originShowId) {
+      shows = activeUpcomingShows.filter(show => show.ShowId === originShowId)
+    }
+
+    // Keep the reservation's current show visible even if inactive in the active list.
+    if (
+      originShowId &&
+      !hasPickedMoveDate &&
+      !shows.some(show => show.ShowId === originShowId)
+    ) {
+      const originFromAll = upcomingShows.find(
+        show => show.ShowId === originShowId
+      )
+      if (originFromAll) {
+        shows = [originFromAll, ...shows]
+      }
+    }
+
+    return shows
+  }, [
+    activeUpcomingShows,
+    destinationDate,
+    hasPickedMoveDate,
+    originShowId,
+    originUpcomingShow,
+    upcomingShows,
+  ])
+
   const destinationShowOptions = useMemo(
-    () => mapShowDetailsToOptions(showsForSelectedDate),
-    [showsForSelectedDate]
+    () => mapShowDetailsToOptions(showsForShowTimeCombo),
+    [showsForShowTimeCombo]
   )
 
   const selectedDestinationShowId =
     destinationShowOptions.find(show => show.id === destinationShowId)?.id ??
+    destinationShowOptions.find(show => show.id === originShowId)?.id ??
     destinationShowOptions[0]?.id ??
-    ''
+    (destinationShowId || '')
+
+  const { data: showDataPayload } = useGetShowDataQuery(
+    { connectionName, showId: selectedDestinationShowId },
+    {
+      skip: !open || !connectionName || !selectedDestinationShowId,
+    }
+  )
 
   const { data: destinationSectionsRaw = [], isFetching: sectionsLoading } =
     useGetShowSectionsQuery(
@@ -277,41 +442,113 @@ export function MoveReservationDialog({
       }
     )
 
-  const destinationSections = useMemo(
-    () => mapShowSectionsToOptions(destinationSectionsRaw),
-    [destinationSectionsRaw]
-  )
+  // Avoid stale RTK section cache when no destination show is selected yet.
+  const destinationSections = useMemo(() => {
+    if (!selectedDestinationShowId) {
+      return []
+    }
+    return mapShowSectionsToOptions(destinationSectionsRaw)
+  }, [destinationSectionsRaw, selectedDestinationShowId])
 
   const selectedSection = useMemo(
     () =>
       destinationSections.find(section => section.id === destinationSectionId) ??
-      destinationSections[0] ??
-      null,
-    [destinationSectionId, destinationSections]
+      pickDefaultMoveSection(
+        destinationSections,
+        detail?.ShowDetID,
+        detail?.ResSec
+      ),
+    [
+      destinationSectionId,
+      destinationSections,
+      detail?.ResSec,
+      detail?.ShowDetID,
+    ]
   )
 
   const moveTotals = useMemo(() => {
-    if (!selectedSection || party <= 0) {
+    if (!selectedDestinationShowId || !selectedSection || party <= 0) {
       return {
         subtotal: 0,
         serviceCharge: 0,
-        discount: origDiscount,
+        discount: 0,
         taxes: 0,
         total: 0
       }
     }
 
-    return calculateMoveReservationTotals({
-      sectionPrice: selectedSection.price,
-      party,
-      origDiscount
-    })
-  }, [origDiscount, party, selectedSection])
+    const showData =
+      Array.isArray(showDataPayload) && showDataPayload.length > 0
+        ? showDataPayload[0]
+        : null
+    const sectionData = Array.isArray(showDataPayload)
+      ? showDataPayload.find(row => row.ShowDetID === selectedSection.id)
+      : null
 
-  const { difference, isPayable, chargeAmount } = useMemo(
-    () => calculateMoveReservationDifference(origTotal, moveTotals.total),
-    [moveTotals.total, origTotal]
-  )
+    // Desktop CalculateServiceCharge: show/section fees × party (no table multiplier).
+    let baseSvcAmount = 0
+    const svcShowDate =
+      destinationDate ||
+      toIsoShowDate(originUpcomingShow?.ShowDate ?? '') ||
+      todayDateValue()
+    if (showData) {
+      baseSvcAmount = calculateSvcBase({
+        originCode: mapOriginToCode(origin),
+        partySize: party,
+        showDate: svcShowDate,
+        reservationCreatedDate: reservation?.createdDt ?? null,
+        showData,
+        sectionData,
+        excludePhoneDayOfShow: systemDefaults?.txtDayOfShow2 === 'Y',
+        excludeWebDayOfShow: systemDefaults?.txtDayOfShow3 === 'Y',
+      })
+    } else {
+      const fee =
+        origin === 'phone'
+          ? selectedSection.phoneInFee
+          : origin === 'walkup'
+            ? selectedSection.walkUpFee
+            : selectedSection.webFee
+      baseSvcAmount = fee * party
+    }
+
+    return calculateMoveReservationTotals({
+      sectionShowPrice: selectedSection.showPrice,
+      party,
+      origDiscount,
+      baseSvcAmount,
+      systemTaxRate: systemTaxPercent,
+      taxWithServiceCharge,
+      ccFeePercent: Number(systemDefaults?.cboCC || 0),
+    })
+  }, [
+    destinationDate,
+    origDiscount,
+    origin,
+    originUpcomingShow?.ShowDate,
+    party,
+    reservation?.createdDt,
+    selectedDestinationShowId,
+    selectedSection,
+    showDataPayload,
+    systemDefaults?.cboCC,
+    systemDefaults?.txtDayOfShow2,
+    systemDefaults?.txtDayOfShow3,
+    systemTaxPercent,
+    taxWithServiceCharge,
+  ])
+
+  const { difference, isPayable, chargeAmount } = useMemo(() => {
+    if (!selectedDestinationShowId || !selectedSection) {
+      return { difference: 0, isPayable: false, chargeAmount: 0 }
+    }
+    return calculateMoveReservationDifference(origTotal, moveTotals.total)
+  }, [
+    moveTotals.total,
+    origTotal,
+    selectedDestinationShowId,
+    selectedSection,
+  ])
 
   function applyMoveTotalsDisplay() {
     setDisplayedMoveTotals(moveTotals)
@@ -331,9 +568,10 @@ export function MoveReservationDialog({
     if (!open) {
       setUpcomingShows([])
       setUpcomingError(null)
-      setDestinationDate(todayDateValue())
+      setDestinationDate('')
       setDestinationShowId('')
       setDestinationSectionId('')
+      setHasPickedMoveDate(false)
       setDinner(false)
       setSubmitError(null)
       setIsSubmitting(false)
@@ -349,6 +587,7 @@ export function MoveReservationDialog({
         total: 0,
       })
       setDisplayedDifference(0)
+      lastNoShowAlertDateRef.current = ''
       return
     }
 
@@ -359,6 +598,11 @@ export function MoveReservationDialog({
     let isCurrent = true
     setUpcomingLoading(true)
     setUpcomingError(null)
+    setDestinationDate('')
+    setHasPickedMoveDate(false)
+    // Desktop seeds Show Time / Section from the current reservation show.
+    setDestinationShowId(currentShowId || '')
+    setDestinationSectionId('')
 
     fetchUpcomingShowDetails({
       connectionString: connectionName,
@@ -388,7 +632,7 @@ export function MoveReservationDialog({
     return () => {
       isCurrent = false
     }
-  }, [connectionName, locationId, open])
+  }, [connectionName, currentShowId, locationId, open])
 
   useEffect(() => {
     if (!open || !detail) {
@@ -398,25 +642,106 @@ export function MoveReservationDialog({
     setDinner(detail.Dinner?.trim().toUpperCase() === 'Y')
   }, [detail, open])
 
+  // Seed Show Time from reservation show once (desktop GetMoveReservationInfo).
+  // Do not overwrite after the user changes show time or picks a move date.
   useEffect(() => {
-    if (!open) {
+    if (!open || hasPickedMoveDate) {
+      return
+    }
+
+    const detailShowId = detail?.ShowId?.trim()
+    if (!detailShowId) {
+      return
+    }
+
+    setDestinationShowId(prev =>
+      !prev || prev === currentShowId ? detailShowId : prev
+    )
+  }, [currentShowId, detail?.ShowId, hasPickedMoveDate, open])
+
+  useEffect(() => {
+    if (!open || !hasPickedMoveDate || !destinationDate) {
       return
     }
 
     if (!destinationShowOptions.some(show => show.id === destinationShowId)) {
-      setDestinationShowId(destinationShowOptions[0]?.id ?? '')
+      const preferred =
+        destinationShowOptions.find(show => show.id !== originShowId) ??
+        destinationShowOptions[0]
+      setDestinationShowId(preferred?.id ?? '')
     }
-  }, [destinationShowId, destinationShowOptions, open])
+  }, [
+    destinationDate,
+    destinationShowId,
+    destinationShowOptions,
+    hasPickedMoveDate,
+    open,
+    originShowId,
+  ])
+
+  // Desktop RefreshShowSectionInMoveReservation:
+  // "Show detail not found please select other date show."
+  useEffect(() => {
+    if (!open || !hasPickedMoveDate || !destinationDate || upcomingLoading) {
+      return
+    }
+
+    if (destinationShowOptions.length > 0) {
+      if (lastNoShowAlertDateRef.current === destinationDate) {
+        lastNoShowAlertDateRef.current = ''
+      }
+      return
+    }
+
+    if (lastNoShowAlertDateRef.current === destinationDate) {
+      return
+    }
+
+    lastNoShowAlertDateRef.current = destinationDate
+    void alertDialog({
+      title: 'Alter',
+      description: 'Show detail not found please select other date show.',
+      confirmLabel: 'OK',
+    })
+  }, [
+    destinationDate,
+    destinationShowOptions.length,
+    hasPickedMoveDate,
+    open,
+    upcomingLoading,
+  ])
 
   useEffect(() => {
     if (!open) {
       return
     }
 
-    if (!destinationSections.some(section => section.id === destinationSectionId)) {
-      setDestinationSectionId(destinationSections[0]?.id ?? '')
+    if (!selectedDestinationShowId) {
+      if (destinationSectionId) {
+        setDestinationSectionId('')
+      }
+      return
     }
-  }, [destinationSectionId, destinationSections, open])
+
+    if (!destinationSections.some(section => section.id === destinationSectionId)) {
+      setDestinationSectionId(
+        pickDefaultMoveSection(
+          destinationSections,
+          // Prefer reservation section only while still on the origin show.
+          selectedDestinationShowId === originShowId ? detail?.ShowDetID : null,
+          selectedDestinationShowId === originShowId ? detail?.ResSec : null
+        )?.id ?? ''
+      )
+    }
+  }, [
+    destinationSectionId,
+    destinationSections,
+    detail?.ResSec,
+    detail?.ShowDetID,
+    open,
+    originShowId,
+    selectedDestinationShowId,
+  ])
 
   function validateMoveSelection(section: ReservationSectionOption | null) {
     if (!section || !selectedDestinationShowId) {
@@ -427,7 +752,15 @@ export function MoveReservationDialog({
       return 'You can not move reservation to same show please choose another date.'
     }
 
-    if (isPastShowDate(destinationDate)) {
+    const moveDate =
+      destinationDate ||
+      toIsoShowDate(
+        activeUpcomingShows.find(
+          show => show.ShowId === selectedDestinationShowId
+        )?.ShowDate ?? ''
+      )
+
+    if (moveDate && isPastShowDate(moveDate)) {
       return 'Can not move reservation of past days.'
     }
 
@@ -552,8 +885,10 @@ export function MoveReservationDialog({
     const isoDate = toIsoShowDate(show.ShowDate)
     if (isoDate) {
       setDestinationDate(isoDate)
+      setHasPickedMoveDate(true)
     }
     setDestinationShowId(show.ShowId)
+    setDestinationSectionId('')
     setSubmitError(null)
   }
 
@@ -593,8 +928,8 @@ export function MoveReservationDialog({
             {!isLoading ? (
               <>
                 <SectionCard title='Reservation Details' readOnly>
-                  <div className='grid gap-3 md:grid-cols-[minmax(0,7rem)_minmax(0,12rem)_minmax(0,5rem)_minmax(0,7rem)_minmax(0,6rem)_minmax(0,12rem)] md:items-end'>
-                    <div className='space-y-1'>
+                  <div className='flex flex-wrap items-end gap-x-4 gap-y-3'>
+                    <div className='w-[7.5rem] space-y-1'>
                       <FieldLabel>Origin :</FieldLabel>
                       <Input
                         readOnly
@@ -604,16 +939,16 @@ export function MoveReservationDialog({
                       />
                     </div>
 
-                    <div className='space-y-1 md:col-start-3'>
+                    <div className='w-[5.5rem] space-y-1'>
                       <FieldLabel>{partyOrTableLabel}</FieldLabel>
                       <Input
                         readOnly
                         value={partyOrTableValue}
-                        className={cn(READONLY_FIELD_CLASS, 'max-w-28')}
+                        className={READONLY_FIELD_CLASS}
                       />
                     </div>
 
-                    <div className='space-y-1 md:col-span-2'>
+                    <div className='min-w-[10rem] max-w-[14rem] flex-1 space-y-1'>
                       <FieldLabel>Promo Code</FieldLabel>
                       <Input
                         readOnly
@@ -645,8 +980,12 @@ export function MoveReservationDialog({
                         showDate={destinationDate}
                         onShowDateChange={value => {
                           setDestinationDate(value)
+                          setHasPickedMoveDate(true)
+                          setDestinationShowId('')
+                          setDestinationSectionId('')
                           setSubmitError(null)
                         }}
+                        placeholder='Select a date'
                         className='w-full'
                       />
                     </div>
@@ -657,6 +996,7 @@ export function MoveReservationDialog({
                         value={selectedDestinationShowId || undefined}
                         onValueChange={value => {
                           setDestinationShowId(value)
+                          setDestinationSectionId('')
                           setSubmitError(null)
                         }}
                         disabled={destinationShowOptions.length === 0}
@@ -693,7 +1033,11 @@ export function MoveReservationDialog({
                           setDestinationSectionId(value)
                           setSubmitError(null)
                         }}
-                        disabled={!selectedDestinationShowId || sectionsLoading}
+                        disabled={
+                          !selectedDestinationShowId ||
+                          sectionsLoading ||
+                          destinationSections.length === 0
+                        }
                       >
                         <SelectTrigger className='h-9 w-full bg-white shadow-xs'>
                           <SelectValue placeholder='Select section' />
@@ -714,7 +1058,11 @@ export function MoveReservationDialog({
                       </span>
                       <Input
                         readOnly
-                        value={String(selectedSection?.available ?? 0)}
+                        value={
+                          selectedDestinationShowId && selectedSection
+                            ? String(selectedSection.available ?? 0)
+                            : ''
+                        }
                         className='h-9 w-24 bg-white shadow-xs'
                       />
                     </div>
