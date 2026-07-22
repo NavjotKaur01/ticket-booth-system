@@ -1316,6 +1316,8 @@ export function AddReservationDialog({
   const origPassesRef = useRef(1)
   const origDinnerRef = useRef(false)
   const sessionGenerationRef = useRef(0)
+  /** True when Cash/POS already showed "Check-In Reservation?" before save. */
+  const checkInPromptedBeforeSaveRef = useRef(false)
   useEffect(() => {
     if (open) {
       sessionGenerationRef.current += 1
@@ -3014,6 +3016,7 @@ export function AddReservationDialog({
       checkInConfirmEnabled &&
       notSeated
     ) {
+      checkInPromptedBeforeSaveRef.current = true
       setCheckInConfirmOpen(true)
       return
     }
@@ -3223,12 +3226,15 @@ export function AddReservationDialog({
 
         // Desktop: when save leaves Amount Due at $0 and party not checked in,
         // offer Check-In — but skip if Cash/POS already asked before save
-        // (checkInAfterSave already applied via IsReservationCheckedIn).
+        // (Yes or No); otherwise clicking No would open the same prompt again.
         const remainingAfterSave = shouldApplyPayment
           ? Math.max(0, saveTotals.total - alreadyPaid - editPaymentAmount)
           : Math.max(0, saveTotals.total - alreadyPaid)
+        const alreadyAskedCheckIn = checkInPromptedBeforeSaveRef.current
+        checkInPromptedBeforeSaveRef.current = false
         if (
           !checkInAfterSave &&
+          !alreadyAskedCheckIn &&
           (reservation.seated ?? 0) <= 0 &&
           remainingAfterSave <= 0.001 &&
           saveTotals.total > 0
@@ -3484,6 +3490,7 @@ export function AddReservationDialog({
     origDinnerRef.current = false
     editPrefillDoneRef.current = false
     expressWalkupSeedAppliedRef.current = false
+    checkInPromptedBeforeSaveRef.current = false
     sectionsInitializedForShowRef.current = ''
     bookingFormCacheRef.current.clear()
     clearCustomerSearch()
