@@ -1,10 +1,13 @@
 import { ArrowUpDown } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 type DataTableColumnHeaderProps = {
   label: string
   tabIndex?: number
+  /** When true, keep label casing (desktop Reservation History PascalCase). */
+  preserveCase?: boolean
   column: {
     toggleSorting: (desc?: boolean) => void
     getIsSorted: () => false | "asc" | "desc"
@@ -15,6 +18,7 @@ type DataTableColumnHeaderProps = {
 export function DataTableColumnHeader({
   label,
   tabIndex,
+  preserveCase = false,
   column,
 }: DataTableColumnHeaderProps) {
   return (
@@ -22,7 +26,10 @@ export function DataTableColumnHeader({
       variant="ghost"
       size="sm"
       tabIndex={tabIndex}
-      className="-ml-3 h-7 gap-1 px-2 text-[10px] font-semibold tracking-wider uppercase hover:bg-transparent"
+      className={cn(
+        "-ml-3 h-7 gap-1 px-2 text-[10px] font-semibold tracking-wider hover:bg-transparent",
+        !preserveCase && "uppercase"
+      )}
       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
     >
       {label}

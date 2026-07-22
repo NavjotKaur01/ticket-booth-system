@@ -524,6 +524,7 @@ function CreditCardInformationField({
   onFieldChange,
   showZip = false,
   showAuthFields = false,
+  authFieldsReadOnly = false,
   disabled = false,
   validationErrors = {}
 }: {
@@ -535,6 +536,8 @@ function CreditCardInformationField({
   showZip?: boolean
   /** Shows Authorization/PNREF inputs — used by the Split Reservation payment form. */
   showAuthFields?: boolean
+  /** Desktop Split Party: Auth/PNREF visible but not editable. */
+  authFieldsReadOnly?: boolean
   disabled?: boolean
   validationErrors?: ReservationPaymentValidationErrors
 }) {
@@ -676,7 +679,7 @@ function CreditCardInformationField({
             <AuthorizationFields
               fields={fields}
               onFieldChange={onFieldChange}
-              disabled={disabled}
+              disabled={disabled || authFieldsReadOnly}
             />
           ) : null}
         </div>
@@ -694,6 +697,7 @@ function PaymentFormFields({
   onFieldChange,
   paymentDisabled = false,
   showAuthFields = false,
+  authFieldsReadOnly = false,
   validationErrors = {},
   excludedPaymentTypes
 }: {
@@ -709,6 +713,8 @@ function PaymentFormFields({
   paymentDisabled?: boolean
   /** Shows Authorization/PNREF inputs — used by the Split Reservation payment form. */
   showAuthFields?: boolean
+  /** Desktop Split Party: Auth/PNREF visible but not editable. */
+  authFieldsReadOnly?: boolean
   validationErrors?: ReservationPaymentValidationErrors
   excludedPaymentTypes?: ReservationPaymentType[]
 }) {
@@ -737,6 +743,7 @@ function PaymentFormFields({
           onFieldChange={onFieldChange}
           showZip
           showAuthFields={showAuthFields}
+          authFieldsReadOnly={authFieldsReadOnly}
           disabled={paymentDisabled}
           validationErrors={validationErrors}
         />
@@ -766,6 +773,7 @@ function PaymentFormFields({
           fields={fields}
           onFieldChange={onFieldChange}
           showAuthFields={showAuthFields}
+          authFieldsReadOnly={authFieldsReadOnly}
           disabled={paymentDisabled}
           validationErrors={validationErrors}
         />
@@ -892,6 +900,7 @@ export function ReservationPaymentPanel({
   onFieldChange,
   paymentDisabled = false,
   showAuthFields = false,
+  authFieldsReadOnly = false,
   validationErrors,
   excludedPaymentTypes
 }: {
@@ -907,6 +916,8 @@ export function ReservationPaymentPanel({
   paymentDisabled?: boolean
   /** Shows Authorization/PNREF inputs — used by the Split Reservation payment form. */
   showAuthFields?: boolean
+  /** Desktop Split Party: Auth/PNREF visible but not editable. */
+  authFieldsReadOnly?: boolean
   validationErrors?: ReservationPaymentValidationErrors
   excludedPaymentTypes?: ReservationPaymentType[]
 }) {
@@ -926,6 +937,7 @@ export function ReservationPaymentPanel({
           onFieldChange={onFieldChange}
           paymentDisabled={paymentDisabled}
           showAuthFields={showAuthFields}
+          authFieldsReadOnly={authFieldsReadOnly}
           validationErrors={validationErrors}
           excludedPaymentTypes={excludedPaymentTypes}
         />

@@ -22,7 +22,6 @@ import {
   buildSplitPartyUpdateReservationRequest,
   calculateSplitReservationTotals,
   normalizeTaxPercent,
-  sanitizeStoredTotalsForDisplay,
   validateReservationSplit
 } from '@/lib/build-split-reservation-request'
 import { formatReservationMoney, parseReservationMoney } from '@/lib/calculate-reservation-totals'
@@ -198,24 +197,22 @@ export function SplitPartyDialog({
     parseReservationMoney(matchedSection?.price ?? '0')
   const promotionCode = detail?.Promo?.trim() ?? reservation?.promo.trim() ?? ''
 
-  const origTotals = sanitizeStoredTotalsForDisplay(
-    {
-      subtotal: detail?.SubTotal ?? 0,
-      serviceCharge: detail?.SVC ?? 0,
-      discount: detail?.Discount ?? 0,
-      taxes: detail?.SalesTax ?? 0,
-      total: detail?.Total ?? parseReservationMoney(reservation?.total ?? '0')
-    },
-    systemTaxPercent,
-    systemDefaults?.lblTaxWithServiceCharge === 'Y'
-  )
+  // Desktop Reservation Details binds raw SubTotal/SVC/Discount/SalesTax/Total
+  // with no sanitization. Chip buttons use Total/Party from those same values
+  // (so a reservation with Total $2,475 / Party 45 shows $55 chips even when
+  // Price Per Ticket / Split Details use section ShowPrice $10).
+  const origTotals = {
+    subtotal: detail?.SubTotal ?? 0,
+    serviceCharge: detail?.SVC ?? 0,
+    discount: detail?.Discount ?? 0,
+    taxes: detail?.SalesTax ?? 0,
+    total: detail?.Total ?? parseReservationMoney(reservation?.total ?? '0')
+  }
 
   const alreadyPaidAmount = parseReservationMoney(reservation?.paid ?? '$0.00')
   const isFullyPaid = origTotals.total > 0 && alreadyPaidAmount >= origTotals.total
 
-  // Desktop PartyList builds each button as `i * (Total / Party)` — a
-  // tax/SVC-inclusive per-ticket share of the full reservation total (uses the
-  // sanitized total so a corrupt stored SalesTax can't inflate the buttons).
+  // Desktop PartyList: each button label is `i * (Total / Party)`.
   const chipPricePerTicket = party > 0 ? origTotals.total / party : unitPrice
 
   const effectiveSplitPromo = splitSelectedPromo !== 'none' ? splitSelectedPromo : null
@@ -345,7 +342,8 @@ export function SplitPartyDialog({
       fields: paymentFields,
       paymentAmount: paymentAmountInput,
       paymentRequired: true,
-      disallowCash: origin === 'phone'
+      // Desktop Split Party allows cash for phone-in reservations.
+      disallowCash: false
     })
     const paymentError = getFirstReservationPaymentError(nextPaymentErrors)
 
@@ -379,6 +377,10 @@ export function SplitPartyDialog({
         totals: splitTotals,
         paymentAmount: inputAmount,
         promoId: splitSelectedPromo !== 'none' ? splitSelectedPromo : undefined,
+        promoCode:
+          splitSelectedPromo !== 'none'
+            ? splitPromoObj?.promotionCode?.trim() || undefined
+            : undefined,
         taxRate: systemTaxPercent,
         detail: detail ?? {},
         splitFirstName,
@@ -474,7 +476,13 @@ export function SplitPartyDialog({
                 <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
                   <SummaryField
                     label='Origin'
-                    value={reservation?.source ?? '—'}
+                    value={
+                      reservation?.source === 'Phone'
+                        ? 'Phone-In'
+                        : reservation?.source === 'Walkup'
+                          ? 'Walk-Up'
+                          : (reservation?.source ?? '—')
+                    }
                   />
                   <SummaryField label='Party' value={String(party || '—')} />
                   <SummaryField
@@ -507,7 +515,7 @@ export function SplitPartyDialog({
                 </div>
               </SectionCard>
 
-              <SectionCard title='Select Tickets to Split'>
+              <SectionCard title='Click The Number of tickets to Split'>
                 <SplitReservationTicketPicker
                   remainingTickets={remainingTickets}
                   unitPrice={chipPricePerTicket}
@@ -520,18 +528,53 @@ export function SplitPartyDialog({
               </SectionCard>
 
               <SectionCard title='Split Details'>
-                <div className='mb-4 grid gap-3 sm:grid-cols-2'>
-                  <div className='flex items-center justify-between gap-4'>
-                    <span className='text-sm font-medium text-foreground'>Split Promo</span>
+                <div className='mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
+                  <div className='flex flex-col gap-1.5'>
+                    <label className='text-xs font-medium text-muted-foreground'>
+                      Origin
+                    </label>
+                    <Input
+                      value={
+                        reservation?.source === 'Phone'
+                          ? 'Phone-In'
+                          : reservation?.source === 'Walkup'
+                            ? 'Walk-Up'
+                            : (reservation?.source ?? 'Phone-In')
+                      }
+                      readOnly
+                      className='h-8 bg-muted/40'
+                    />
+                  </div>
+                  <div className='flex flex-col gap-1.5'>
+                    <label className='text-xs font-medium text-muted-foreground'>
+                      Split Passes
+                    </label>
+                    <Input
+                      type='number'
+                      min={1}
+                      value={splitPasses}
+                      onChange={event => {
+                        const next = Number.parseInt(event.target.value, 10)
+                        setSplitPasses(
+                          Number.isFinite(next) && next > 0 ? next : 1
+                        )
+                      }}
+                      className='h-8 w-full max-w-[8rem] text-sm'
+                    />
+                  </div>
+                  <div className='flex flex-col gap-1.5 sm:col-span-2'>
+                    <label className='text-xs font-medium text-muted-foreground'>
+                      Promo
+                    </label>
                     <Select
                       value={splitSelectedPromo}
                       onValueChange={setSplitSelectedPromo}
                     >
-                      <SelectTrigger className='h-8 w-48 text-sm'>
-                        <SelectValue placeholder='None' />
+                      <SelectTrigger className='h-8 w-full text-sm'>
+                        <SelectValue placeholder='Select' />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value='none'>None</SelectItem>
+                        <SelectItem value='none'>Select</SelectItem>
                         {promoOptions.map(p => (
                           <SelectItem key={p.value} value={p.value}>
                             {p.label}
@@ -539,19 +582,6 @@ export function SplitPartyDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className='flex items-center justify-between gap-4'>
-                    <span className='text-sm font-medium text-foreground'>Split Passes</span>
-                    <Input
-                      type='number'
-                      min={1}
-                      value={splitPasses}
-                      onChange={event => {
-                        const next = Number.parseInt(event.target.value, 10)
-                        setSplitPasses(Number.isFinite(next) && next > 0 ? next : 1)
-                      }}
-                      className='h-8 w-24 text-sm'
-                    />
                   </div>
                 </div>
                 <ReservationTotalsCard
@@ -586,14 +616,16 @@ export function SplitPartyDialog({
                   }}
                   paymentAmount={paymentAmountInput}
                   onPaymentAmountChange={setPaymentAmountInput}
-                  paymentDisabled
                   fields={paymentFields}
                   onFieldChange={(key, value) => {
                     setPaymentFields(current => ({ ...current, [key]: value }))
                     setPaymentValidationErrors({})
                     setSubmitError(null)
                   }}
+                  // Desktop: card fields editable; Auth/PNREF visible but
+                  // IsHitTestVisible=False (read-only empty boxes).
                   showAuthFields
+                  authFieldsReadOnly
                   validationErrors={paymentValidationErrors}
                 />
               </SectionCard>

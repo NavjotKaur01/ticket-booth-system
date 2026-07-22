@@ -68,6 +68,8 @@ type DataTableProps<TData> = {
   /** Noun shown in pagination, e.g. "records" or "reservations". */
   entityLabel?: string
   getRowClassName?: (row: TData) => string | undefined
+  /** Keep header label casing (skip CSS uppercase). */
+  preserveHeaderCase?: boolean
 }
 
 export function DataTable<TData>({
@@ -88,6 +90,7 @@ export function DataTable<TData>({
   onRowActivate,
   entityLabel = "records",
   getRowClassName,
+  preserveHeaderCase = false,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [internalRowSelection, setInternalRowSelection] =
@@ -125,7 +128,8 @@ export function DataTable<TData>({
                   <TableHead
                     key={header.id}
                     className={cn(
-                      "h-9 whitespace-nowrap px-3 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase",
+                      "h-9 whitespace-nowrap px-3 text-[10px] font-semibold tracking-wider text-muted-foreground",
+                      !preserveHeaderCase && "uppercase",
                       stickyColumnClass(header.column.columnDef.meta?.sticky, true)
                     )}
                   >

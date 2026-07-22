@@ -11,7 +11,7 @@ function historyColumn(
   return {
     accessorKey,
     header: ({ column }) => (
-      <DataTableColumnHeader label={label} column={column} />
+      <DataTableColumnHeader label={label} column={column} preserveCase />
     ),
     cell: ({ row }) => (
       <span

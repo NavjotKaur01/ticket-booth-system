@@ -809,17 +809,23 @@ function TableAssignmentRow({
 
 function PaymentMetadataField({
   label,
-  value
+  value,
+  className
 }: {
   label: string
   value: string
+  className?: string
 }) {
   return (
-    <div className='min-w-0 space-y-1'>
+    <div className={cn('min-w-0 space-y-1', className)}>
       <span className='text-xs font-medium text-muted-foreground'>
         {label}
       </span>
-      <p className='truncate text-sm font-medium text-foreground'>
+      {/* Desktop TextBoxes show the full Auth/PNREF GUID — do not truncate. */}
+      <p
+        className='break-all font-mono text-xs leading-snug text-foreground'
+        title={value || undefined}
+      >
         {value || '—'}
       </p>
     </div>
@@ -871,12 +877,15 @@ function PaymentMetadataBlock({
 }) {
   return (
     <div className='space-y-2 rounded-lg border border-border/60 p-2.5'>
-      <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
+      {/* Desktop PaymentHistoryPanel WrapPanel layout */}
+      <div className='grid gap-3 sm:grid-cols-[minmax(7rem,9rem)_minmax(7rem,9rem)_minmax(0,1fr)]'>
         <PaymentMetadataField label='Created By' value={createdBy} />
         <PaymentMetadataField label='Status' value={status} />
+        <PaymentMetadataField label='PNREF' value={pnref} />
+      </div>
+      <div className='grid gap-3 sm:grid-cols-[minmax(9rem,11rem)_minmax(0,1fr)]'>
         <PaymentMetadataField label='Create Date' value={createDate} />
         <PaymentMetadataField label='Authorization' value={authorization} />
-        <PaymentMetadataField label='PNREF' value={pnref} />
       </div>
       <div className='flex flex-wrap items-center gap-2 border-t border-border/50 pt-2'>
         <Button
@@ -2432,10 +2441,17 @@ export function AddReservationDialog({
       setPaymentActionBusy('split')
       try {
         if (type === 'party') {
-          await removeReservationPromo({
-            ConnectionString: connectionName,
-            ReservationId: reservation.id
-          }).unwrap()
+          // Desktop removes promo only when a promo is actually applied.
+          const hasPromo =
+            Boolean(reservationDetail?.Promo?.trim()) ||
+            (promo !== 'none' &&
+              promoOptions.some(option => option.value === promo))
+          if (hasPromo) {
+            await removeReservationPromo({
+              ConnectionString: connectionName,
+              ReservationId: reservation.id
+            }).unwrap()
+          }
         } else {
           await updateSplitReservation({
             ConnectionString: connectionName,
@@ -3943,8 +3959,14 @@ export function AddReservationDialog({
                         onPaymentAmountChange={handlePaymentAmountChange}
                         fields={paymentFields}
                         onFieldChange={updatePaymentField}
-                        paymentDisabled={isViewingTransaction}
-                        showAuthFields={isViewingTransaction}
+                        paymentDisabled={
+                          isViewingTransaction &&
+                          !selectedTransactionIsHoldWithCard
+                        }
+                        showAuthFields={
+                          isViewingTransaction &&
+                          !selectedTransactionIsHoldWithCard
+                        }
                         validationErrors={paymentValidationErrors}
                       />
                       {saveReservationError ? (
@@ -3985,6 +4007,7 @@ export function AddReservationDialog({
                               size='sm'
                               variant='outline'
                               onClick={() => handleSplitReservationClick('party')}
+                              disabled={!onSplitParty || paymentActionBusy === 'split'}
                             >
                               Split Party
                             </Button>

@@ -10,6 +10,7 @@ import type { ReservationTotals } from '@/lib/calculate-reservation-totals'
 import { formatUsDateTime } from '@/lib/format-us-datetime'
 import { multiplePromosDiscCalculation } from '@/lib/multiple-promo-calculation'
 import {
+  getReservationOriginLookupCode,
   getReservationPaymentLookupCode,
   PAYMENT_STATUS_PAYMENT
 } from '@/lib/reservation-lookup-codes'
@@ -471,6 +472,7 @@ export function buildSplitPartyUpdateReservationRequest({
   totals,
   paymentAmount,
   promoId,
+  promoCode,
   taxRate,
   detail,
   splitFirstName,
@@ -487,6 +489,7 @@ export function buildSplitPartyUpdateReservationRequest({
   totals: SplitReservationTotals
   paymentAmount: number
   promoId?: string
+  promoCode?: string
   taxRate: number
   detail: ReservationDetail
   splitFirstName?: string
@@ -499,10 +502,25 @@ export function buildSplitPartyUpdateReservationRequest({
     paymentAmount,
     splitTotals: totals,
   })
-  // Desktop sets IsSplitPayment on the payment model for Split Party CC path.
-  paymentModel.IsSplitPayment = true
+  // Desktop sets IsSplitPayment only for non-cash payment types on Split Party.
+  paymentModel.IsSplitPayment = paymentType !== 'cash'
   paymentModel.Taxes = detail.SalesTax ?? 0
   paymentModel.ServiceCharge = detail.SVC ?? 0
+
+  const sourceRaw = (
+    detail.Sources ||
+    detail.ResSource ||
+    detail.LookupSDescSource ||
+    ''
+  ).trim()
+  const sourceLower = sourceRaw.toLowerCase()
+  const lookUpCode = /^SRC\d+/i.test(sourceRaw)
+    ? sourceRaw.toUpperCase()
+    : sourceLower.includes('web')
+      ? getReservationOriginLookupCode('web')
+      : sourceLower.includes('walk')
+        ? getReservationOriginLookupCode('walkup')
+        : getReservationOriginLookupCode('phone')
 
   const request: SaveReservationRequest = {
     ConnectionString: connectionName,
@@ -520,12 +538,12 @@ export function buildSplitPartyUpdateReservationRequest({
     PhoneInFee: detail.PhoneInFee ?? 0,
     WalkUpFee: detail.WalkUpFee ?? 0,
     WebFee: detail.WebFee ?? 0,
-    LookUpCode: detail.LookupSDescSource ?? '',
+    LookUpCode: lookUpCode,
     ReservationSource: detail.ResSource ?? '',
     OrigParty: detail.OrigPartyNo ?? detail.PartyNo ?? 0,
     Party: detail.PartyNo ?? 0,
     PromotionID: promoId && promoId !== 'none' ? promoId : '',
-    PromotionCode: '',
+    PromotionCode: promoCode?.trim() || '',
     Passes: splitPasses,
     SubTotal: detail.SubTotal ?? 0,
     ServiceChage: detail.SVC ?? 0,
@@ -551,6 +569,8 @@ export function buildSplitPartyUpdateReservationRequest({
     SplitCustomerFirstName: splitFirstName?.trim() || undefined,
     SplitCustomerLastName: splitLastName?.trim() || undefined,
     PaymentAmount: roundMoney(paymentAmount),
+    PaymentTypeLookupCode: getReservationPaymentLookupCode(paymentType),
+    IsPaymentLoad: true,
     PaymentModel: paymentModel,
   }
 

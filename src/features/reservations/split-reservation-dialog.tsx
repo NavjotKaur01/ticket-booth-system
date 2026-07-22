@@ -30,7 +30,6 @@ import {
   buildSplitReservationRequest,
   calculateSplitReservationTotals,
   normalizeTaxPercent,
-  sanitizeStoredTotalsForDisplay,
   validateReservationSplit
 } from '@/lib/build-split-reservation-request'
 import { formatReservationMoney, parseReservationMoney } from '@/lib/calculate-reservation-totals'
@@ -227,24 +226,20 @@ export function SplitReservationDialog({
     matchedSection?.showPrice ??
     parseReservationMoney(matchedSection?.price ?? '0')
 
-  const origTotals = sanitizeStoredTotalsForDisplay(
-    {
-      subtotal: detail?.SubTotal ?? 0,
-      serviceCharge: detail?.SVC ?? 0,
-      discount: detail?.Discount ?? 0,
-      taxes: detail?.SalesTax ?? 0,
-      total: detail?.Total ?? parseReservationMoney(reservation?.total ?? '0')
-    },
-    systemTaxPercent,
-    systemDefaults?.lblTaxWithServiceCharge === 'Y'
-  )
+  // Desktop binds raw stored totals (no sanitization) for Reservation Details
+  // and PartyList chip prices (Total / Party).
+  const origTotals = {
+    subtotal: detail?.SubTotal ?? 0,
+    serviceCharge: detail?.SVC ?? 0,
+    discount: detail?.Discount ?? 0,
+    taxes: detail?.SalesTax ?? 0,
+    total: detail?.Total ?? parseReservationMoney(reservation?.total ?? '0')
+  }
 
   const alreadyPaidAmount = parseReservationMoney(reservation?.paid ?? '$0.00')
   const isFullyPaid = origTotals.total > 0 && alreadyPaidAmount >= origTotals.total
 
-  // Desktop PartyList builds each button as `i * (Total / Party)` — a
-  // tax/SVC-inclusive per-ticket share of the full reservation total (uses the
-  // sanitized total so a corrupt stored SalesTax can't inflate the buttons).
+  // Desktop PartyList: each button label is `i * (Total / Party)`.
   const chipPricePerTicket = party > 0 ? origTotals.total / party : unitPrice
 
   const effectiveSplitPromo = splitSelectedPromo !== 'none' ? splitSelectedPromo : null
@@ -534,7 +529,7 @@ export function SplitReservationDialog({
                 </div>
               </SectionCard>
 
-              <SectionCard title='Select Tickets to Split'>
+              <SectionCard title='Click The Number of tickets to Split'>
                 {isSplitFlag ? (
                   <p className='text-sm font-medium text-foreground mb-4'>
                     Split Tickets: {splitCount}
@@ -630,6 +625,7 @@ export function SplitReservationDialog({
                     setSubmitError(null)
                   }}
                   showAuthFields
+                  authFieldsReadOnly
                   validationErrors={paymentValidationErrors}
                 />
               </SectionCard>
