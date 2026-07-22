@@ -2070,16 +2070,13 @@ export function AddReservationDialog({
     reservationDetail?.ResPayments
   ])
   const balanceDue = Math.max(0, totals.total - alreadyPaid)
-  // Desktop GetReservationInfo: PaymentAmount = Total-Paid only when PaymentList has
-  // rows; otherwise PaymentAmount stays 0. Amount Due is shown separately.
-  const hasExistingPaymentRecords = Boolean(
-    reservationDetail?.PaymentList && reservationDetail.PaymentList.length > 0
-  )
+  // Desktop GetReservationInfo:
+  // - PaymentList empty → PaymentAmount = Total
+  // - PaymentList present → PaymentAmount = Total − PaiedAmount
+  // Always use balanceDue (Total − alreadyPaid) for both cases.
   const defaultPaymentAmount = formatReservationMoney(
     isEditMode
-      ? hasExistingPaymentRecords
-        ? balanceDue
-        : 0
+      ? balanceDue
       : totals.total > 0
         ? totals.total
         : 0
@@ -2886,9 +2883,7 @@ export function AddReservationDialog({
       paymentAmountOverride ??
       formatReservationMoney(
         isEditMode
-          ? hasExistingPaymentRecords
-            ? Math.max(0, saveTotals.total - alreadyPaid)
-            : 0
+          ? Math.max(0, saveTotals.total - alreadyPaid)
           : saveTotals.total > 0
             ? saveTotals.total
             : 0
@@ -3004,9 +2999,24 @@ export function AddReservationDialog({
 
     const isFullPayment =
       !shouldApplyPayment ||
-      editPaymentAmount + 0.001 >= saveTotals.total -
-      (isEditMode ? parseReservationMoney(reservation?.paid ?? '$0.00') : 0)
+      editPaymentAmount + 0.001 >=
+        saveTotals.total - (isEditMode ? alreadyPaid : 0)
     const isCashLike = paymentType === 'cash' || paymentType === 'pos'
+    const notSeated = (reservation?.seated ?? 0) <= 0
+
+    // Desktop Cash/POS exact pay: if CheckIn/cmdCheckIn = Y and not seated,
+    // show "Check-In Reservation?" BEFORE SavePaymenInfo (after send-update).
+    if (
+      isEditMode &&
+      isCashLike &&
+      isFullPayment &&
+      editPaymentAmount > 0 &&
+      checkInConfirmEnabled &&
+      notSeated
+    ) {
+      setCheckInConfirmOpen(true)
+      return
+    }
 
     // Desktop ReservationPayment check-in popup rules (Express Walkup → Payment):
     // - Express + cash/POS full pay → auto check-in (no popup)
@@ -3069,9 +3079,7 @@ export function AddReservationDialog({
       paymentAmountOverride ??
       formatReservationMoney(
         isEditMode
-          ? hasExistingPaymentRecords
-            ? Math.max(0, saveTotals.total - alreadyPaid)
-            : 0
+          ? Math.max(0, saveTotals.total - alreadyPaid)
           : saveTotals.total > 0
             ? saveTotals.total
             : 0
@@ -3214,11 +3222,13 @@ export function AddReservationDialog({
         }
 
         // Desktop: when save leaves Amount Due at $0 and party not checked in,
-        // offer Check-In (same prompt as no-change early-exit path).
+        // offer Check-In — but skip if Cash/POS already asked before save
+        // (checkInAfterSave already applied via IsReservationCheckedIn).
         const remainingAfterSave = shouldApplyPayment
           ? Math.max(0, saveTotals.total - alreadyPaid - editPaymentAmount)
           : Math.max(0, saveTotals.total - alreadyPaid)
         if (
+          !checkInAfterSave &&
           (reservation.seated ?? 0) <= 0 &&
           remainingAfterSave <= 0.001 &&
           saveTotals.total > 0
@@ -4387,8 +4397,8 @@ export function AddReservationDialog({
       <ConfirmDialog
         open={checkInConfirmOpen}
         onOpenChange={setCheckInConfirmOpen}
-        title="Check-In"
-        description="Do you want to check this party in"
+        title="CheckIn"
+        description="Check-In Reservation?"
         confirmLabel="Yes"
         cancelLabel="No"
         nested
