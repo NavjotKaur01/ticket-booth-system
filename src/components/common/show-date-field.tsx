@@ -33,6 +33,8 @@ type ShowDateFieldProps = {
   className?: string
   disabled?: boolean
   displayFormat?: string
+  /** Shown when `showDate` is empty (desktop Move DatePicker watermark). */
+  placeholder?: string
   /** `input` = bordered field (forms). `plain` = compact text+icon (toolbars). */
   appearance?: "input" | "plain"
 }
@@ -43,6 +45,7 @@ export function ShowDateField({
   className,
   disabled = false,
   displayFormat,
+  placeholder = "",
   appearance = "input",
 }: ShowDateFieldProps) {
   const selectedDate = parseDateValue(showDate)
@@ -70,7 +73,8 @@ export function ShowDateField({
     }
   }
 
-  const displayValue = formatDateForDisplay(showDate, showDate, displayFormat)
+  const displayValue = formatDateForDisplay(showDate, placeholder, displayFormat)
+  const isPlaceholder = !showDate.trim()
 
   if (disabled) {
     return (
@@ -86,10 +90,12 @@ export function ShowDateField({
         <span
           className={cn(
             "text-sm leading-none",
-            appearance === "plain" ? "text-muted-foreground" : "text-foreground"
+            appearance === "plain" || isPlaceholder
+              ? "text-muted-foreground"
+              : "text-foreground"
           )}
         >
-          {displayValue}
+          {displayValue || placeholder}
         </span>
         <CalendarIcon className="size-4 shrink-0 text-muted-foreground/80" />
       </div>
@@ -109,8 +115,13 @@ export function ShowDateField({
             className
           )}
         >
-          <span className="text-sm leading-none text-foreground">
-            {displayValue}
+          <span
+            className={cn(
+              "text-sm leading-none",
+              isPlaceholder ? "text-muted-foreground" : "text-foreground"
+            )}
+          >
+            {displayValue || placeholder}
           </span>
           <CalendarIcon className="size-4 shrink-0 text-muted-foreground" />
         </Button>

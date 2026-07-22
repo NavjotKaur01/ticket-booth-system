@@ -101,6 +101,53 @@ export function filterUpcomingShowsByDate(
   return shows.filter(show => toIsoShowDate(show.ShowDate) === isoDate)
 }
 
+/** Minutes from midnight for ClubMan ShowTim (ISO or "7:00 PM"). */
+export function showTimeSortMinutes(showTim: string) {
+  const trimmed = showTim?.trim() ?? ''
+  if (!trimmed) {
+    return Number.MAX_SAFE_INTEGER
+  }
+
+  const parsed = new Date(trimmed)
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.getHours() * 60 + parsed.getMinutes()
+  }
+
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i)
+  if (!match) {
+    return Number.MAX_SAFE_INTEGER
+  }
+
+  let hours = Number(match[1])
+  const minutes = Number(match[2])
+  const meridiem = match[3]?.toUpperCase()
+
+  if (meridiem === 'PM' && hours < 12) {
+    hours += 12
+  } else if (meridiem === 'AM' && hours === 12) {
+    hours = 0
+  }
+
+  return hours * 60 + minutes
+}
+
+/**
+ * Desktop GetUpComingShowDetails intends date-then-time order for the Move list.
+ * Sort by ShowDate ascending, then ShowTim ascending (same-day 4:00 PM before 9:00 PM).
+ */
+export function sortUpcomingShowsByDateTime(shows: ShowDetailsByDateItem[]) {
+  return [...shows].sort((left, right) => {
+    const dateCompare = toIsoShowDate(left.ShowDate).localeCompare(
+      toIsoShowDate(right.ShowDate)
+    )
+    if (dateCompare !== 0) {
+      return dateCompare
+    }
+
+    return showTimeSortMinutes(left.ShowTim) - showTimeSortMinutes(right.ShowTim)
+  })
+}
+
 export function getActiveUpcomingShows(shows: ShowDetailsByDateItem[]) {
-  return shows.filter(show => show.IsShowActive)
+  return sortUpcomingShowsByDateTime(shows.filter(show => show.IsShowActive))
 }

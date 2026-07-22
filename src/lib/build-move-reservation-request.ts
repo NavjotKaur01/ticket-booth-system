@@ -2,6 +2,10 @@ import {
   EXPIRATION_MONTHS,
   type ReservationPaymentType,
 } from '@/data/reservation-payment-options'
+import {
+  calculateReservationTotals,
+  type ReservationTotals,
+} from '@/lib/calculate-reservation-totals'
 import { formatUsDateTime } from '@/lib/format-us-datetime'
 import {
   ACTION_FORM_MOVE_RESERVATION,
@@ -9,8 +13,10 @@ import {
   getReservationOriginLookupCode,
   getReservationPaymentLookupCode,
   PAYMENT_STATUS_PAYMENT,
+  PAYMENT_STATUS_PROMO,
 } from '@/lib/reservation-lookup-codes'
 import type { MoveReservationRequest } from '@/types/api/move-reservation'
+import type { ReservationDetailPaymentItem } from '@/types/api/reservation-detail'
 import type { SaveReservationPaymentRequest } from '@/types/api/save-reservation'
 import type { ReservationPaymentFields } from '@/types/reservation-payment'
 import type { ReservationSectionOption } from '@/types/reservation'
@@ -113,6 +119,10 @@ function buildMovePaymentModel({
   return payment
 }
 
+/**
+ * Desktop CalculatePayableAndRefundAmount(OrigTotal, Total) → new − old.
+ * Negative = refund/credit display via accounting currency format.
+ */
 export function calculateMoveReservationDifference(
   originalTotal: number,
   newTotal: number
@@ -122,6 +132,43 @@ export function calculateMoveReservationDifference(
     difference,
     isPayable: difference > 0,
     chargeAmount: difference > 0 ? difference : 0,
+  }
+}
+
+/**
+ * Desktop GetMoveReservationInfo:
+ * OrigTotal = Total − promo payments (PSTAT31)
+ * OrigDiscount = Discount + promo payments
+ */
+export function getMoveOrigAmounts({
+  total,
+  discount,
+  paymentList,
+}: {
+  total: number
+  discount: number
+  paymentList?: ReservationDetailPaymentItem[] | null
+}) {
+  const promoAmount = roundMoney(
+    (paymentList ?? []).reduce((sum, payment) => {
+      const status = (
+        payment.PaymentStatusCode ??
+        payment.PymtStatus ??
+        ''
+      )
+        .trim()
+        .toUpperCase()
+      if (status !== PAYMENT_STATUS_PROMO) {
+        return sum
+      }
+      return sum + (payment.Amount ?? 0)
+    }, 0)
+  )
+
+  return {
+    origTotal: roundMoney(total - promoAmount),
+    origDiscount: roundMoney(discount + promoAmount),
+    promoAmount,
   }
 }
 
@@ -256,29 +303,46 @@ export function buildMoveReservationRequest({
   return request
 }
 
+/**
+ * Desktop CalcMoveReservationTicketTotal → CalcTicketTotal with
+ * IsCalculateMoveDiscount (keep OrigDiscount). SubTotal = ShowPrice × Party
+ * (raw section price, not table display multiplier).
+ */
 export function calculateMoveReservationTotals({
-  sectionPrice,
+  sectionShowPrice,
   party,
   origDiscount,
+  baseSvcAmount,
+  systemTaxRate,
+  taxWithServiceCharge,
+  ccFeePercent,
 }: {
-  sectionPrice: string
+  sectionShowPrice: number
   party: number
   origDiscount: number
-}) {
-  const unitPrice = Number(sectionPrice.replace(/[^0-9.-]/g, '')) || 0
-  const subtotal = unitPrice * party
-  const serviceCharge = subtotal > 0 ? 2 * party : 0
-  const discount = origDiscount
-  const taxable = Math.max(0, subtotal + serviceCharge - discount)
-  const taxes = taxable * 0.08
-  const total = taxable + taxes
+  baseSvcAmount: number
+  systemTaxRate?: number
+  taxWithServiceCharge?: string
+  ccFeePercent?: number
+}): ReservationTotals {
+  const totals = calculateReservationTotals({
+    sectionPrice: sectionShowPrice,
+    party,
+    passes: 1,
+    promo: null,
+    existingDiscount: origDiscount,
+    baseSvcAmount,
+    systemTaxRate,
+    taxWithServiceCharge,
+    ccFeePercent,
+  })
 
   return {
-    subtotal: roundMoney(subtotal),
-    serviceCharge: roundMoney(serviceCharge),
-    discount: roundMoney(discount),
-    taxes: roundMoney(taxes),
-    total: roundMoney(total),
+    subtotal: roundMoney(totals.subtotal),
+    serviceCharge: roundMoney(totals.serviceCharge),
+    discount: roundMoney(totals.discount),
+    taxes: roundMoney(totals.taxes),
+    total: roundMoney(totals.total),
   }
 }
 
