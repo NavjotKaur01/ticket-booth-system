@@ -25,7 +25,6 @@ import { Reservations } from "@/pages/reservations"
 import { SearchCustomer } from "@/pages/search-customer"
 import { ShowTimes } from "@/pages/show-times"
 import { SystemDefaults } from "@/pages/system-defaults"
-import { TicketDefault } from "@/pages/ticket-default"
 import { Transactions } from "@/pages/transactions"
 import { UserAccess } from "@/pages/user-access"
 import { Users } from "@/pages/users"
@@ -79,10 +78,6 @@ function App() {
           <Route path="reports" element={<Reports />} />
           <Route path="transactions" element={<Transactions />} />
           <Route path="calendar" element={<EventCalendar />} />
-
-          <Route path="my-account">
-            <Route path="ticket-default" element={<TicketDefault />} />
-          </Route>
 
           <Route path="administrator">
             <Route path="customers" element={<SearchCustomer />} />

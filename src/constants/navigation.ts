@@ -187,7 +187,7 @@ export const SIDEBAR_NAV_ITEMS: NavItem[] = [
     items: [
       { id: "my-account", label: "My Account" },
       { id: "app-updates", label: "App Updates" },
-      { id: "ticket-default", label: "Ticket Default", href: ROUTES.ticketDefault },
+      { id: "ticket-default", label: "Ticket Default", action: "ticket-default" },
       { id: "change-password", label: "Change Password", action: "change-password" },
     ],
   },

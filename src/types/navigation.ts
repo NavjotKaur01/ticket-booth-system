@@ -5,6 +5,7 @@ export type NavSubItemAction =
   | "search-reservations"
   | "search-payments"
   | "change-password"
+  | "ticket-default"
 
 export type NavSubItem = {
   id: string

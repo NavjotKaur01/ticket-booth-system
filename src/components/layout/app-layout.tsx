@@ -9,6 +9,7 @@ import { AdjustFeesDialog } from "@/features/administrator/adjust-fees-dialog"
 import { ChangePasswordDialog } from "@/features/change-password/change-password-dialog"
 import { PaymentHistoryDialog } from "@/features/search/payment-history-dialog"
 import { SearchReservationDialog } from "@/features/search/search-reservation-dialog"
+import { TicketDefaultsDialog } from "@/features/ticket-default/ticket-defaults-dialog"
 import { useAppSession } from "@/hooks/use-app-session"
 import { usePrefetchDashboard } from "@/hooks/use-prefetch-dashboard"
 import { cn } from "@/lib/utils"
@@ -25,7 +26,8 @@ function handleSubMenuAction(
   setAdjustFeesOpen: (open: boolean) => void,
   setSearchReservationOpen: (open: boolean) => void,
   setPaymentHistoryOpen: (open: boolean) => void,
-  setChangePasswordOpen: (open: boolean) => void
+  setChangePasswordOpen: (open: boolean) => void,
+  setTicketDefaultOpen: (open: boolean) => void
 ) {
   if (action === "adjust-fees") {
     setAdjustFeesOpen(true)
@@ -44,6 +46,11 @@ function handleSubMenuAction(
 
   if (action === "change-password") {
     setChangePasswordOpen(true)
+    return
+  }
+
+  if (action === "ticket-default") {
+    setTicketDefaultOpen(true)
   }
 }
 
@@ -56,6 +63,7 @@ export function AppLayout({ session }: AppLayoutProps) {
   const [searchReservationOpen, setSearchReservationOpen] = useState(false)
   const [paymentHistoryOpen, setPaymentHistoryOpen] = useState(false)
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
+  const [ticketDefaultOpen, setTicketDefaultOpen] = useState(false)
 
   return (
     <div className="flex h-dvh overflow-hidden bg-muted">
@@ -86,7 +94,8 @@ export function AppLayout({ session }: AppLayoutProps) {
               setAdjustFeesOpen,
               setSearchReservationOpen,
               setPaymentHistoryOpen,
-              setChangePasswordOpen
+              setChangePasswordOpen,
+              setTicketDefaultOpen
             )
           }
         />
@@ -108,6 +117,10 @@ export function AppLayout({ session }: AppLayoutProps) {
         <ChangePasswordDialog
           open={changePasswordOpen}
           onOpenChange={setChangePasswordOpen}
+        />
+        <TicketDefaultsDialog
+          open={ticketDefaultOpen}
+          onOpenChange={setTicketDefaultOpen}
         />
         <AppHeader
           session={session}

@@ -59,7 +59,6 @@ export const ROUTES = {
   reports: "/reports",
   transactions: "/transactions",
   myAccount: "/my-account",
-  ticketDefault: "/my-account/ticket-default",
   login: "/login",
 } as const
 
@@ -157,7 +156,6 @@ export const ROUTE_LABELS: Record<string, string> = {
   [ROUTES.giftCertificate]: "Gift Certificate",
   [ROUTES.reports]: "Reports",
   [ROUTES.transactions]: "Transactions",
-  [ROUTES.ticketDefault]: "Ticket Default",
   [ROUTES.login]: "Login",
 }
 
