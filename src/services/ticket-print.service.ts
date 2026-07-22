@@ -200,14 +200,14 @@ function buildCustomerFullName(firstName: string, lastName: string) {
 
 /**
  * Printed customer name.
- * Normal print: Last Name then First Name.
- * Reprint: First Name then Last Name.
+ * Combined/normal: Last Name then First Name.
+ * Reprint or individual tickets: First Name then Last Name.
  */
 function getCustomerNameForTicket(
   customer: { firstName: string; lastName: string; fullName: string },
-  isReprint: boolean
+  options: { isReprint?: boolean; individual?: boolean } = {}
 ) {
-  if (isReprint) {
+  if (options.isReprint || options.individual) {
     const firstLast = [customer.firstName, customer.lastName]
       .filter(Boolean)
       .join(" ")
@@ -293,10 +293,14 @@ function buildTicketMarkup(
   isReprint: boolean,
   qrMarkup: string,
   includeQr: boolean,
-  ticketIndex?: number
+  options: { ticketIndex?: number; individual?: boolean } = {}
 ) {
+  const { ticketIndex, individual = false } = options
   const footerText = isReprint ? ticket.text.reprintFooter : ticket.text.printFooter
-  const customerName = getCustomerNameForTicket(ticket.customer, isReprint)
+  const customerName = getCustomerNameForTicket(ticket.customer, {
+    isReprint,
+    individual,
+  })
   const tablesList = ticket.reservation.tables ? ticket.reservation.tables.split(",").map(s => s.trim()) : []
   const tableNo = ticketIndex !== undefined && tablesList.length > ticketIndex ? tablesList[ticketIndex] : ticket.reservation.tables || ""
 
@@ -376,9 +380,13 @@ async function buildPrintDocument(
 ) {
   const originalCount = Math.max(1, ticket.reservation.partySize)
   const normalizedCount = Math.min(Math.max(1, ticketCount), originalCount)
-  const documentTitle = getCustomerNameForTicket(ticket.customer, isReprint)
+  const isIndividual = layout === "individual"
+  const documentTitle = getCustomerNameForTicket(ticket.customer, {
+    isReprint,
+    individual: isIndividual,
+  })
 
-  const ticketMarkup = layout === "individual"
+  const ticketMarkup = isIndividual
     ? (await Promise.all(
       Array.from({ length: normalizedCount }, async (_, i) => {
         const printedTicket = buildPrintedTicket(ticket, 1)
@@ -386,7 +394,7 @@ async function buildPrintDocument(
           ? await buildQrMarkup(printedTicket.qrValue)
           : ""
 
-        return `<div class="page">${buildTicketMarkup(printedTicket, isReprint, qrMarkup, includeQr, i)}</div>`
+        return `<div class="page">${buildTicketMarkup(printedTicket, isReprint, qrMarkup, includeQr, { ticketIndex: i, individual: true })}</div>`
       })
     )).join("")
     : await (async () => {
@@ -650,8 +658,8 @@ export function createTicketPrintData({
     kind === "receipt"
       ? {
           ...DEFAULT_TICKET_TEXT,
-          printFooter: "--RECEIPT (not TICKET)",
-          reprintFooter: "--RECEIPT (not TICKET)",
+          printFooter: "--RECEIPT (NOT TICKET)",
+          reprintFooter: "--RECEIPT (NOT TICKET)",
         }
       : DEFAULT_TICKET_TEXT
 
@@ -773,7 +781,6 @@ export async function printReservationTicket({
     Math.max(1, ticketCount),
     Math.max(1, ticket.reservation.partySize)
   )
-
 
   const html = await buildPrintDocument(
     ticket,

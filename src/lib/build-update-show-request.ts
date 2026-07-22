@@ -31,9 +31,9 @@ function parseDecimal(value: string, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
-function toGuid(value: string) {
-  return value && value !== "select" && value !== EMPTY_GUID ? value : EMPTY_GUID
-}
+// function toGuid(value: string) {
+//   return value && value !== "select" && value !== EMPTY_GUID ? value : EMPTY_GUID
+// }
 
 function toOptionalGuid(value: string): string | null {
   return value && value !== "select" && value !== EMPTY_GUID ? value : null
@@ -134,7 +134,7 @@ export function buildUpdateShowRequest({
     ShowArrival: toApiDateTime(showArrivalTime),
     LastUpdateDt: formatUsDateTime(new Date()),
     LastUpdateId: username,
-    HeadlinerGuid1: toGuid(form.headlinerId),
+    HeadlinerGuid1: toOptionalGuid(form.headlinerId),
     HeadlinerGuid2: toOptionalGuid(form.headliner2Id),
     FeatureGuid1: toOptionalGuid(form.featureId),
     FeatureGuid2: toOptionalGuid(form.feature2Id),

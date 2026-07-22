@@ -35,9 +35,9 @@ function parseDecimal(value: string, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
-function toGuid(value: string) {
-  return value && value !== "select" && value !== EMPTY_GUID ? value : EMPTY_GUID
-}
+// function toGuid(value: string) {
+//   return value && value !== "select" && value !== EMPTY_GUID ? value : EMPTY_GUID
+// }
 
 function toOptionalGuid(value: string): string | null {
   return value && value !== "select" && value !== EMPTY_GUID ? value : null
@@ -160,7 +160,7 @@ export function buildSaveShowRequest({
         ShowDate: toApiDateTime(resolvedShowDate),
         ShowTim: toApiDateTime(resolvedShowTim),
         ShowArrival: toApiDateTime(resolvedShowArrival),
-        Headliner: toGuid(form.headlinerId),
+        Headliner:toOptionalGuid(form.headlinerId),
         Headliner2: toOptionalGuid(form.headliner2Id),
         Feature: toOptionalGuid(form.featureId),
         Feature2: toOptionalGuid(form.feature2Id),
