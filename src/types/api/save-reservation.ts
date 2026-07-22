@@ -89,6 +89,8 @@ export type SaveReservationRequest = {
   IsTicketPartyUpdate?: boolean
   IsPaymentLoad?: boolean
   ResSelectedPromotionID?: string
+  /** Desktop edit-save prompt: email customer about the update. */
+  IsSendUpdateToCustomer?: boolean
   CustomerModel?: SaveReservationCustomerRequest
   BusinessCustomerModel?: SaveReservationBusinessCustomerRequest
   PaymentModel?: SaveReservationPaymentRequest
