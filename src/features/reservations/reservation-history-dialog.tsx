@@ -75,6 +75,7 @@ export function ReservationHistoryDialog ({
                 emptyMessage='No reservation history found.'
                 entityLabel='history records'
                 pageSize={12}
+                preserveHeaderCase
                 className='rounded-md border border-slate-200 bg-white'
               />
             </div>

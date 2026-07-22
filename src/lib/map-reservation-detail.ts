@@ -56,30 +56,18 @@ function readBoolean(record: Record<string, unknown>, keys: string[]) {
   return value === true
 }
 
-function resolveAuthAndPnref(
-  record: Record<string, unknown>,
-  paymentId: string
-) {
+function resolveAuthAndPnref(record: Record<string, unknown>) {
+  // Desktop binds Auth and PNREF independently — never cross-fill or use PaymentID.
   const auth = readString(record, ['Auth', 'auth', 'AUTH', 'Authorization'])
-  const pnref = readString(record, ['PNREF', 'Pnref', 'pnref', 'PnRef', 'PNRef'])
+  const pnref = readString(record, [
+    'PNREF',
+    'Pnref',
+    'pnref',
+    'PnRef',
+    'PNRef',
+  ])
 
-  if (auth && pnref) {
-    return { auth, pnref }
-  }
-
-  if (auth) {
-    return { auth, pnref: pnref || auth }
-  }
-
-  if (pnref) {
-    return { auth: pnref, pnref }
-  }
-
-  if (paymentId) {
-    return { auth: paymentId, pnref: paymentId }
-  }
-
-  return { auth: '', pnref: '' }
+  return { auth, pnref }
 }
 
 export function mapReservationDetailPayment(
@@ -91,7 +79,7 @@ export function mapReservationDetailPayment(
 
   const record = raw as Record<string, unknown>
   const paymentId = readString(record, ['PaymentID', 'paymentID', 'paymentId'])
-  const { auth, pnref } = resolveAuthAndPnref(record, paymentId)
+  const { auth, pnref } = resolveAuthAndPnref(record)
 
   return {
     PaymentID: paymentId,

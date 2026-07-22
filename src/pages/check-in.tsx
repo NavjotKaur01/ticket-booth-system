@@ -37,6 +37,8 @@ import {
 import { ReservationHistoryDialog } from "@/features/reservations/reservation-history-dialog"
 import { ReservationNoteDialog } from "@/features/reservations/reservation-note-dialog"
 import { SplitReservationDialog } from "@/features/reservations/split-reservation-dialog"
+import { SplitPartyDialog } from "@/features/reservations/split-party-dialog"
+import { ReservationAlreadyPaidAlert } from "@/features/reservations/reservation-already-paid-alert"
 import { useAppSession } from "@/hooks/use-app-session"
 import { useCachedReservationShowData } from "@/hooks/use-cached-reservation-show-data"
 import { useReservationData } from "@/hooks/use-reservation-data"
@@ -204,6 +206,8 @@ export function CheckIn() {
   const [checkInPromoOpen, setCheckInPromoOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [splitOpen, setSplitOpen] = useState(false)
+  const [splitPartyOpen, setSplitPartyOpen] = useState(false)
+  const [alreadyPaidAlertOpen, setAlreadyPaidAlertOpen] = useState(false)
   const [partialOpen, setPartialOpen] = useState(false)
   const [partialMode, setPartialMode] = useState<"check-in" | "unscan">(
     "check-in"
@@ -1305,6 +1309,22 @@ export function CheckIn() {
     setEditOpen(true)
   }
 
+  function handleOpenSplitParty(reservation: Reservation) {
+    setSelectedReservation(reservation)
+    setSplitPartyOpen(true)
+  }
+
+  function handleSplitPartyDialogOpenChange(open: boolean) {
+    setSplitPartyOpen(open)
+    if (!open && !editOpen) {
+      setSelectedReservation(null)
+    }
+  }
+
+  function handleOpenAlreadyPaidAlert() {
+    setAlreadyPaidAlertOpen(true)
+  }
+
   async function handlePrintReservation(
     record: CheckInRecord,
     {
@@ -1763,6 +1783,12 @@ export function CheckIn() {
         showDate={showDate}
         showTime={expressWalkupPaymentSeed?.showTimeId || showTime}
         expressWalkupSeed={expressWalkupPaymentSeed}
+        onSplitReservation={(reservation) => {
+          setSelectedReservation(reservation)
+          setSplitOpen(true)
+        }}
+        onSplitParty={handleOpenSplitParty}
+        onAlreadyPaidAlert={handleOpenAlreadyPaidAlert}
       />
 
       <CancelReservationDialog
@@ -1956,6 +1982,29 @@ export function CheckIn() {
           await refreshReservations()
           toastSuccess("Reservation split")
         }}
+        nested={editOpen}
+      />
+
+      <SplitPartyDialog
+        open={splitPartyOpen}
+        onOpenChange={handleSplitPartyDialogOpenChange}
+        reservation={selectedReservation}
+        connectionName={connectionName}
+        locationId={locationId}
+        username={username}
+        showDate={showDate}
+        currentShowId={showTime}
+        onSplit={async () => {
+          await refreshReservations()
+          toastSuccess("Party split")
+        }}
+        nested={editOpen}
+      />
+
+      <ReservationAlreadyPaidAlert
+        open={alreadyPaidAlertOpen}
+        onOpenChange={setAlreadyPaidAlertOpen}
+        nested={editOpen}
       />
 
       <ExportDataDialog
