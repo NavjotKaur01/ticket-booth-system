@@ -63,4 +63,6 @@ export type ReservationDetail = {
   TixComp?: number | null
   TixDisc?: number | null
   TableNum?: string | null
+  /** Desktop SeatNumbers / ResAssignSeatNumbers — used for Assign Seats Rem. */
+  SeatNumbers?: string | null
 }

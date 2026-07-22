@@ -764,14 +764,36 @@ function cellKey(tableNo: string, seatNo: number) {
   return `${tableNo}:${seatNo}`
 }
 
-/** Desktop FillAssignedSeats display: "LastName- 1". */
-function formatAssignedSeatLabel(lastName: string, seatNo: number) {
-  const name = lastName.trim()
-  if (!name) {
+/**
+ * Desktop FillAssignedSeats / FillRowCells cell text uses LastName only
+ * (e.g. "Carter- 1"), never the full "Ethan Carter" — full name overflows cells.
+ */
+function extractLastNameForSeatLabel(value: string) {
+  const text = value.trim()
+  if (!text) {
     return ""
   }
-  if (/-\s*\d+\s*$/.test(name)) {
-    return name
+  // Already a seat label: "Carter- 1" / "Carter-1"
+  if (/-\s*\d+\s*$/.test(text)) {
+    return text.replace(/-\s*\d+\s*$/, "").trim()
+  }
+  // "Last, First" (desktop Name / payment seed)
+  if (text.includes(",")) {
+    return text.split(",")[0]?.trim() || text
+  }
+  // "First Last" / multi-word — last token is family name
+  const parts = text.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) {
+    return parts[parts.length - 1] ?? text
+  }
+  return text
+}
+
+/** Desktop FillAssignedSeats display: "LastName- 1". */
+function formatAssignedSeatLabel(lastName: string, seatNo: number) {
+  const name = extractLastNameForSeatLabel(lastName)
+  if (!name) {
+    return ""
   }
   return `${name}- ${seatNo}`
 }
@@ -840,11 +862,16 @@ export function applyAssignSeatDetails(
       const matched = lookupReservation(reservationLookup, reservationId)
       const lastName = readString(record, ["LastName", "lastName"])
       const firstName = readString(record, ["FirstName", "firstName"])
+      // Prefer LastName; never pass a full "First Last" through as the cell label.
       const rawName =
         lastName ||
-        readString(record, ["Name", "GuestName", "guestName"]) ||
-        [lastName, firstName].filter(Boolean).join(", ") ||
-        matched?.name ||
+        extractLastNameForSeatLabel(
+          readString(record, ["Name", "GuestName", "guestName"])
+        ) ||
+        extractLastNameForSeatLabel(
+          [lastName, firstName].filter(Boolean).join(" ")
+        ) ||
+        extractLastNameForSeatLabel(matched?.name ?? "") ||
         ""
       const displayName = formatAssignedSeatLabel(rawName, seat.seatNo)
       const source =
@@ -981,9 +1008,6 @@ export function buildAssignSeatsWorkspace({
   return {
     tables,
     reservations: mappedReservations.map((row) => {
-      if (preserveSeedRem) {
-        return row
-      }
       const assigned = tables.reduce(
         (count, table) =>
           count +
@@ -992,6 +1016,17 @@ export function buildAssignSeatsWorkspace({
           ).length,
         0
       )
+
+      if (preserveSeedRem) {
+        // Desktop seeds Rem from SeatNumbers. After Save, payment may still
+        // have empty SeatNumbers on first reopen while chart already has fills
+        // — reconcile Rem from the chart in that case.
+        if (assigned > 0 && row.rem >= row.qty) {
+          return { ...row, rem: Math.max(0, row.qty - assigned) }
+        }
+        return row
+      }
+
       const rem =
         assigned > 0 ? Math.max(0, row.qty - assigned) : Math.max(0, row.rem)
       return {
@@ -1038,6 +1073,11 @@ export function unlockSeatCell(
   })
 }
 
+/**
+ * Desktop CheckInVM.FillRowCells: from the double-clicked column through the
+ * rest of the table row, fill every empty non-readonly seat up to Rem.
+ * Labels use the seat column number (LastName-1, LastName-2, …).
+ */
 export function assignSeatToCell(
   tables: AssignSeatTableRow[],
   reservations: AssignSeatReservationRow[],
@@ -1048,6 +1088,7 @@ export function assignSeatToCell(
   tables: AssignSeatTableRow[]
   reservations: AssignSeatReservationRow[]
   error?: string
+  cellsAffected?: number
 } {
   const reservation = reservations.find((row) =>
     sameReservationId(row.id, reservationId)
@@ -1067,9 +1108,10 @@ export function assignSeatToCell(
     return { tables, reservations, error: "Seat not found." }
   }
 
-  // Desktop: double-click greyed readonly empty → unlock.
+  // Desktop: double-click greyed readonly empty → unlock that seat only.
   if (target.readOnly && !target.reservationId && !target.isHold) {
     workingTables = unlockSeatCell(workingTables, tableNo, seatNo)
+    return { tables: workingTables, reservations, cellsAffected: 0 }
   }
 
   const unlocked = workingTables
@@ -1084,6 +1126,14 @@ export function assignSeatToCell(
     }
   }
 
+  if (unlocked?.reservationId || unlocked?.isHold) {
+    return {
+      tables: workingTables,
+      reservations,
+      error: "Seat is already assigned.",
+    }
+  }
+
   const currentAssigned = workingTables.reduce(
     (count, table) =>
       count +
@@ -1092,13 +1142,8 @@ export function assignSeatToCell(
       ).length,
     0
   )
-
-  const replacingOwnSeat = sameReservationId(
-    unlocked?.reservationId,
-    resolvedReservationId
-  )
-  const needsNewSlot = !replacingOwnSeat
-  if (needsNewSlot && currentAssigned >= reservation.qty) {
+  const rem = Math.max(0, reservation.qty - currentAssigned)
+  if (rem <= 0) {
     return {
       tables: workingTables,
       reservations,
@@ -1114,33 +1159,55 @@ export function assignSeatToCell(
     promo: reservation.promo,
   })
 
-  const lastName =
+  const lastName = extractLastNameForSeatLabel(
     reservation.name.split(",")[0]?.trim() ||
-    reservation.name.split(" ")[0]?.trim() ||
-    reservation.name.trim()
+      reservation.name ||
+      ""
+  )
 
+  let cellsAffected = 0
   const nextTables = workingTables.map((table) => {
     if (table.tableNo !== tableNo) {
       return table
     }
+
+    const nextSeats = table.seats.map((seat) => ({ ...seat }))
+    for (const seat of nextSeats) {
+      if (seat.seatNo < seatNo) {
+        continue
+      }
+      if (cellsAffected >= rem) {
+        break
+      }
+      if (seat.readOnly || seat.reservationId || seat.isHold) {
+        continue
+      }
+      if (seat.seatNo > table.maxSeats) {
+        continue
+      }
+
+      cellsAffected += 1
+      seat.reservationId = resolvedReservationId
+      seat.displayName = formatAssignedSeatLabel(lastName, seat.seatNo)
+      seat.color = color
+      seat.isHold = false
+      seat.readOnly = false
+    }
+
     return {
       ...table,
-      status: "A",
-      seats: table.seats.map((seat) => {
-        if (seat.tableNo === tableNo && seat.seatNo === seatNo) {
-          return {
-            ...seat,
-            reservationId: resolvedReservationId,
-            displayName: formatAssignedSeatLabel(lastName, seatNo),
-            color,
-            isHold: false,
-            readOnly: false,
-          }
-        }
-        return seat
-      }),
+      status: "A" as const,
+      seats: nextSeats,
     }
   })
+
+  if (cellsAffected === 0) {
+    return {
+      tables: workingTables,
+      reservations,
+      error: "No available seats to assign from this column.",
+    }
+  }
 
   const nextReservations = reservations.map((row) => {
     if (!sameReservationId(row.id, resolvedReservationId)) {
@@ -1157,7 +1224,11 @@ export function assignSeatToCell(
     return { ...row, rem: Math.max(0, row.qty - assigned) }
   })
 
-  return { tables: nextTables, reservations: nextReservations }
+  return {
+    tables: nextTables,
+    reservations: nextReservations,
+    cellsAffected,
+  }
 }
 
 export function clearSeatCell(
@@ -1279,10 +1350,33 @@ export function collectTableNumsByReservation(
 
   return [...byReservation.entries()].map(([reservationId, tablesSet]) => ({
     reservationId,
+    // Desktop SaveTableNumberInReservation joins with ',' (no spaces).
     tableNums: [...tablesSet]
       .sort((a, b) => compareTableNos(a, b))
-      .join(", "),
+      .join(","),
   }))
+}
+
+/**
+ * Build comma-separated SeatNumbers tokens for Rem seeding
+ * (desktop ResAssignSeatNumbers / count of ',' + 1).
+ */
+export function collectSeatNumbersForReservation(
+  tables: AssignSeatTableRow[],
+  reservationId: string
+) {
+  const seats = tables
+    .flatMap((table) => table.seats)
+    .filter((seat) => sameReservationId(seat.reservationId, reservationId))
+    .sort((a, b) => {
+      const tableCmp = compareTableNos(a.tableNo, b.tableNo)
+      if (tableCmp !== 0) {
+        return tableCmp
+      }
+      return a.seatNo - b.seatNo
+    })
+
+  return seats.map((seat) => `${seat.tableNo}-${seat.seatNo}`).join(",")
 }
 
 /** Reservation IDs present on Status=="A" tables (desktop touched guests). */

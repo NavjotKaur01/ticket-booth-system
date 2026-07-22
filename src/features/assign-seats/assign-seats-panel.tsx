@@ -20,6 +20,7 @@ import {
   clearAllAssignments,
   clearSeatCell,
   collectAssignments,
+  collectSeatNumbersForReservation,
   collectTableNumsByReservation,
   collectTouchedReservationIds,
   extractClubsAssignSeatDetail,
@@ -53,6 +54,8 @@ import type {
 export type AssignSeatsSaveResult = {
   assignments: ReturnType<typeof collectAssignments>
   tableNumsByReservation: ReturnType<typeof collectTableNumsByReservation>
+  /** Desktop ResAssignSeatNumbers equivalents per touched reservation. */
+  seatNumbersByReservation: Array<{ reservationId: string; seatNumbers: string }>
 }
 
 type AssignSeatsPanelProps = {
@@ -567,7 +570,18 @@ export function AssignSeatsPanel({
       const assignments = collectAssignments(
         tables.filter((table) => table.status === "A")
       )
-      await onSaved?.({ assignments, tableNumsByReservation })
+      const seatNumbersByReservation = tableNumsByReservation.map((row) => ({
+        reservationId: row.reservationId,
+        seatNumbers: collectSeatNumbersForReservation(
+          tables,
+          row.reservationId
+        ),
+      }))
+      await onSaved?.({
+        assignments,
+        tableNumsByReservation,
+        seatNumbersByReservation,
+      })
     } catch (saveError) {
       setErrorMessage(
         saveError instanceof Error
