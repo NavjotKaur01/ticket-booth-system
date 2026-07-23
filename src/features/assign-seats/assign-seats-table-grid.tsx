@@ -47,7 +47,7 @@ export function AssignSeatsTableGrid({
     <div className="flex h-full min-h-0 flex-col bg-background px-3 pt-2 pb-2">
       <p className="shrink-0 pb-1.5 text-xs text-muted-foreground">
         Note: Double-click a cell to assign seats from that column across the
-        row (up to remaining).
+        row (up to remaining). To remove a seat, right-click → Remove from Seat.
       </p>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-border/70 bg-background">
@@ -145,7 +145,8 @@ export function AssignSeatsTableGrid({
                         )}
                         onDoubleClick={() => {
                           if (seat.reservationId || seat.isHold) {
-                            onClearCell(table.tableNo, seat.seatNo)
+                            // Desktop: double-click only fires cmdAssignSeatsToCustomer (assign).
+                            // Removing a seat is right-click → "Remove from Seat" only.
                             return
                           }
                           onAssignCell(table.tableNo, seat.seatNo)
