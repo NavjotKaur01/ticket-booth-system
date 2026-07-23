@@ -164,6 +164,7 @@ export function IconActionButton({
   variant = "outline",
   type = "button",
   tabIndex,
+  disabled = false,
   onClick,
 }: {
   label: string
@@ -171,6 +172,7 @@ export function IconActionButton({
   variant?: "outline" | "default" | "secondary" | "ghost"
   type?: "button" | "submit"
   tabIndex?: number
+  disabled?: boolean
   onClick?: () => void
 }) {
   return (
@@ -182,6 +184,7 @@ export function IconActionButton({
           size="icon-sm"
           aria-label={label}
           tabIndex={tabIndex}
+          disabled={disabled}
           onClick={onClick}
         >
           <Icon className="size-4" />

@@ -1,4 +1,4 @@
-import { LoaderCircle } from "lucide-react"
+import { FileImage, LoaderCircle, Pencil, Plus, Trash2 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import type { SegmentedTab } from "@/components/common/segmented-tab-list"
@@ -7,6 +7,7 @@ import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
 import { PanelCard } from "@/components/common/panel-card"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { ScrollSelectControl } from "@/components/common/scroll-select-control"
+import { IconActionButton } from "@/components/forms/form-fields"
 import {
   AdminPageShell,
   AdminPageTitle,
@@ -293,54 +294,42 @@ export function FoodMenuScreen() {
                   />
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
+                <div className="flex items-center gap-1.5">
+                  <IconActionButton
+                    label="Modify"
+                    icon={Pencil}
                     disabled={!selectedPdf}
                     onClick={() =>
                       handlePdfAction(
                         `Mock action: modify PDF menu ${selectedPdf?.name ?? ""} for ${locationName}.`
                       )
                     }
-                  >
-                    Modify
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
+                  />
+                  <IconActionButton
+                    label="Add"
+                    icon={Plus}
                     onClick={() =>
                       handlePdfAction(
                         `Mock action: add a PDF menu for ${locationName}.`
                       )
                     }
-                  >
-                    Add
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
+                  />
+                  <IconActionButton
+                    label="Delete"
+                    icon={Trash2}
                     disabled={!selectedPdf}
                     onClick={handlePdfDelete}
-                  >
-                    Delete
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
+                  />
+                  <IconActionButton
+                    label="Manage Image"
+                    icon={FileImage}
                     disabled={!selectedPdf}
                     onClick={() =>
                       handlePdfAction(
                         `Mock action: manage image for PDF menu ${selectedPdf?.name ?? ""} in ${locationName}.`
                       )
                     }
-                  >
-                    Manage Image
-                  </Button>
+                  />
                 </div>
               </div>
 
