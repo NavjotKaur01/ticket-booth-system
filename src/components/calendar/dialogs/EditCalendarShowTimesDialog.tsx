@@ -124,7 +124,7 @@ function buildFormFromSeed(
     age21Plus: seed?.age21Plus ?? false,
     hub: seed?.hub ?? false,
     sectionId: "",
-    price: "25.00",
+    price: "0.00",
     walkupFee: "0.00",
     phoneFee: "0.00",
     webFee: "0.00",
@@ -319,7 +319,7 @@ export function EditCalendarShowTimesDialog({
     return {
       ...current,
       sectionId: "",
-      price: "25.00",
+      price: "0.00",
       seats: "",
       walkupFee: "0.00",
       phoneFee: "0.00",
