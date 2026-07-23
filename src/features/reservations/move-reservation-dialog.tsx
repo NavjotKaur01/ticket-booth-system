@@ -481,16 +481,26 @@ export function MoveReservationDialog({
       Array.isArray(showDataPayload) && showDataPayload.length > 0
         ? showDataPayload[0]
         : null
+    const selectedSectionId = selectedSection.id.trim().toLowerCase()
     const sectionData = Array.isArray(showDataPayload)
-      ? showDataPayload.find(row => row.ShowDetID === selectedSection.id)
+      ? showDataPayload.find(
+        row => row.ShowDetID?.trim().toLowerCase() === selectedSectionId
+      )
       : null
 
     // Desktop CalculateServiceCharge: show/section fees × party (no table multiplier).
+    // Prefer GetShowData section SVC; fall back to GetShowSections *SvcCharge
+    // (same fields desktop SelectedSection.WalkupSvcCharge uses).
     let baseSvcAmount = 0
     const svcShowDate =
       destinationDate ||
       toIsoShowDate(originUpcomingShow?.ShowDate ?? '') ||
       todayDateValue()
+    const sectionSvcFees = {
+      phoneSvcCharge: selectedSection.phoneSvcCharge,
+      walkupSvcCharge: selectedSection.walkupSvcCharge,
+      webSvcCharge: selectedSection.webSvcCharge,
+    }
     if (showData) {
       baseSvcAmount = calculateSvcBase({
         originCode: mapOriginToCode(origin),
@@ -499,20 +509,32 @@ export function MoveReservationDialog({
         reservationCreatedDate: reservation?.createdDt ?? null,
         showData,
         sectionData,
+        sectionSvcFees,
         excludePhoneDayOfShow: systemDefaults?.txtDayOfShow2 === 'Y',
         excludeWebDayOfShow: systemDefaults?.txtDayOfShow3 === 'Y',
       })
     } else {
+      // No GetShowData: mirror desktop section-override when section SVC present.
+      const hasSectionSvc =
+        selectedSection.phoneSvcCharge > 0 ||
+        selectedSection.walkupSvcCharge > 0 ||
+        selectedSection.webSvcCharge > 0
       const fee =
         origin === 'phone'
-          ? selectedSection.phoneInFee
+          ? hasSectionSvc
+            ? selectedSection.phoneSvcCharge
+            : selectedSection.phoneInFee
           : origin === 'walkup'
-            ? selectedSection.walkUpFee
-            : selectedSection.webFee
+            ? hasSectionSvc
+              ? selectedSection.walkupSvcCharge
+              : selectedSection.walkUpFee
+            : hasSectionSvc
+              ? selectedSection.webSvcCharge
+              : selectedSection.webFee
       baseSvcAmount = fee * party
     }
 
-    return calculateMoveReservationTotals({
+    const totals = calculateMoveReservationTotals({
       sectionShowPrice: selectedSection.showPrice,
       party,
       origDiscount,
@@ -521,10 +543,35 @@ export function MoveReservationDialog({
       taxWithServiceCharge,
       ccFeePercent: Number(systemDefaults?.cboCC || 0),
     })
+
+    // Desktop same-show move: preserve the stored historic SVC exactly.
+    // The original SVC was calculated at reservation-creation time under
+    // whatever show settings existed then (e.g. UseSectionFee=OFF → $0).
+    // Re-running CalculateServiceCharge today (when UseSectionFee may now
+    // be ON) would wrongly inflate the charge for historic reservations.
+    // The SVCDiff delta approach is insufficient: when both origServiceCharge
+    // and formulaAtLoad are $0, svcDiff=0 so the guard fires no correction
+    // and the freshly-recalculated amount ($110) leaks through unchanged.
+    if (
+      selectedDestinationShowId &&
+      originShowId &&
+      selectedDestinationShowId === originShowId
+    ) {
+      const svcDelta = origServiceCharge - totals.serviceCharge
+      return {
+        ...totals,
+        serviceCharge: origServiceCharge,
+        total: Math.round((totals.total + svcDelta) * 100) / 100,
+      }
+    }
+
+    return totals
   }, [
     destinationDate,
     origDiscount,
+    origServiceCharge,
     origin,
+    originShowId,
     originUpcomingShow?.ShowDate,
     party,
     reservation?.createdDt,

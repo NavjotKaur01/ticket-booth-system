@@ -69,9 +69,14 @@ export type ReservationSectionOption = SectionOption & {
   showPrice: number
   showDinner: string
   dayOfShowFee: number
+  /** Show-level Phone/Walkup/Web charges (used when Use Section Fee is off). */
   phoneInFee: number
   walkUpFee: number
   webFee: number
+  /** Section SVC fees (desktop PhoneSvcCharge / WalkupSvcCharge / WebSvcCharge). */
+  phoneSvcCharge: number
+  walkupSvcCharge: number
+  webSvcCharge: number
   /** Desktop RestrictPromoForSection — hides multi-promo when Y. */
   restrictPromoForSection?: boolean
 }

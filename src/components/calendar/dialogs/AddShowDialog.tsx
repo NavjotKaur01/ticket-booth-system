@@ -98,7 +98,6 @@ type ShowDetailCheckboxField =
   | "dinner"
   | "noPasses"
   | "vipSeating"
-  | "hub"
   | "assignTable"
   | "showOnWeb"
 
@@ -106,7 +105,6 @@ const showDetailCheckboxes: { field: ShowDetailCheckboxField; label: string }[] 
   { field: "dinner", label: "Dinner" },
   { field: "noPasses", label: "No Passes" },
   { field: "vipSeating", label: "VIP Seating" },
-  { field: "hub", label: "Hub" },
   { field: "assignTable", label: "Assign Table" },
   { field: "showOnWeb", label: "Show On Web" },
 ]
@@ -120,7 +118,6 @@ const editOtherCheckboxes: {
     { field: "noPasses", label: "No Passes" },
     { field: "vipSeating", label: "VIP Seating" },
     { field: "ageRestriction", label: "21 and Over", ageFlag: "Y" },
-    { field: "hub", label: "Hub" },
     { field: "isShowSoldOut", label: "Show Sold Out" },
     { field: "showOnWeb", label: "Show On Web" },
     { field: "preSalePrivateShow", label: "Pre-sale Private Show" },

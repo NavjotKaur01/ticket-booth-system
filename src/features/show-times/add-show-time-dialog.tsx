@@ -442,7 +442,6 @@ export function AddShowTimeDialog({
                         ["noPasses", "No Passes"],
                         ["vipSeating", "VIP Seating"],
                         ["age21Plus", "21 and Over"],
-                        ["hub", "Hub"],
                       ] as const
                     ).map(([field, label]) => (
                       <label
