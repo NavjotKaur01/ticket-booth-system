@@ -1,7 +1,11 @@
-import { LoaderCircle, X } from 'lucide-react'
+import { LoaderCircle, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { ShowDateField } from '@/components/common/show-date-field'
+import {
+  createFilterSearchHandlers,
+  IconActionButton
+} from '@/components/forms/form-fields'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -110,6 +114,31 @@ function formatDifferenceMoney(value: number) {
     style: 'currency',
     currency: 'USD',
     currencySign: 'accounting',
+  })
+}
+
+function filterUpcomingShowsForSearch(
+  shows: ShowDetailsByDateItem[],
+  query: string
+): ShowDetailsByDateItem[] {
+  const normalized = query.trim().toLowerCase()
+  if (!normalized) return shows
+
+  return shows.filter(show => {
+    const showOption = mapShowDetailsToOptions([show])[0]
+    const searchableValues = [
+      formatShowDateShort(show.ShowDate),
+      show.ShowDate,
+      showOption?.time ?? show.ShowTim,
+      show.ShowTim,
+      showOption?.headliner ?? show.HeadlinerName ?? ''
+    ]
+
+    return searchableValues.some(value =>
+      String(value ?? '')
+        .toLowerCase()
+        .includes(normalized)
+    )
   })
 }
 
@@ -297,6 +326,8 @@ export function MoveReservationDialog({
   const [upcomingShows, setUpcomingShows] = useState<ShowDetailsByDateItem[]>([])
   const [upcomingLoading, setUpcomingLoading] = useState(false)
   const [upcomingError, setUpcomingError] = useState<string | null>(null)
+  const [draftSearch, setDraftSearch] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
   // Desktop DatePicker style always shows "Select Show Date" text, but Show Time /
   // Section / Available / With Move load from the current reservation show.
   const [destinationDate, setDestinationDate] = useState('')
@@ -366,6 +397,21 @@ export function MoveReservationDialog({
     () => getActiveUpcomingShows(upcomingShows),
     [upcomingShows]
   )
+
+  const filteredUpcomingShows = useMemo(
+    () => filterUpcomingShowsForSearch(activeUpcomingShows, appliedSearch),
+    [activeUpcomingShows, appliedSearch]
+  )
+
+  const { handleSubmit: handleSearchSubmit, handleInputKeyDown } =
+    createFilterSearchHandlers(() => {
+      setAppliedSearch(draftSearch)
+    })
+
+  function handleClearSearch() {
+    setDraftSearch('')
+    setAppliedSearch('')
+  }
 
   const originUpcomingShow = useMemo(
     () =>
@@ -615,6 +661,8 @@ export function MoveReservationDialog({
     if (!open) {
       setUpcomingShows([])
       setUpcomingError(null)
+      setDraftSearch('')
+      setAppliedSearch('')
       setDestinationDate('')
       setDestinationShowId('')
       setDestinationSectionId('')
@@ -1181,6 +1229,37 @@ export function MoveReservationDialog({
                     </div>
                   </div>
 
+                  <div className='space-y-3 border-b border-slate-200 px-3 py-2'>
+                    <form
+                      className='flex w-full flex-wrap items-center gap-2 sm:max-w-md'
+                      onSubmit={handleSearchSubmit}
+                    >
+                      <Input
+                        placeholder='Search upcoming shows...'
+                        value={draftSearch}
+                        onChange={event => setDraftSearch(event.target.value)}
+                        onKeyDown={handleInputKeyDown}
+                        className='min-w-0 flex-1 bg-white'
+                        disabled={isSubmitting || upcomingLoading}
+                      />
+                      <div className='flex items-center gap-1.5'>
+                        <IconActionButton
+                          label='Search'
+                          icon={Search}
+                          variant='default'
+                          type='submit'
+                          disabled={isSubmitting || upcomingLoading}
+                        />
+                        <IconActionButton
+                          label='Clear'
+                          icon={X}
+                          onClick={handleClearSearch}
+                          disabled={isSubmitting || upcomingLoading}
+                        />
+                      </div>
+                    </form>
+                  </div>
+
                   <div className='max-h-52 overflow-auto'>
                     <table className='min-w-full w-full border-collapse text-sm'>
                       <thead>
@@ -1191,17 +1270,19 @@ export function MoveReservationDialog({
                         </tr>
                       </thead>
                       <tbody>
-                        {activeUpcomingShows.length === 0 ? (
+                        {filteredUpcomingShows.length === 0 ? (
                           <tr>
                             <td
                               colSpan={3}
                               className='px-3 py-8 text-center text-muted-foreground'
                             >
-                              No upcoming shows found.
+                              {activeUpcomingShows.length === 0
+                                ? 'No upcoming shows found.'
+                                : 'No shows match your search.'}
                             </td>
                           </tr>
                         ) : (
-                          activeUpcomingShows.map(show => {
+                          filteredUpcomingShows.map(show => {
                             const showOption = mapShowDetailsToOptions([show])[0]
                             const isSelected =
                               show.ShowId === selectedDestinationShowId
