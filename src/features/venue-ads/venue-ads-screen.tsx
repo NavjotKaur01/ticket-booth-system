@@ -1,25 +1,18 @@
 import {
-  CheckCircle2,
-  Circle,
-  ExternalLink,
   ImageIcon,
   LoaderCircle,
-  Plus,
   Trash2,
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
-import { StandardRowActionsMenu } from "@/components/common/standard-row-actions-menu"
+import { PanelCard } from "@/components/common/panel-card"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
-import { Button } from "@/components/ui/button"
 import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  AdminPageShell,
+  AdminPageTitle,
+} from "@/components/layout/admin-page"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -36,14 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { VenueAdDataTable } from "@/features/venue-ads/venue-ad-data-table"
 import {
   createVenueAd,
   deleteVenueAd,
@@ -56,8 +42,8 @@ import { reportError, toastSuccess } from "@/lib/app-toast"
 import type { VenueAdDraft, VenueAdRecord, VenueAdSection } from "@/types/venue-ad"
 
 const ACTIVE_OPTIONS = [
-  { value: "Y", label: "Y" },
-  { value: "N", label: "N" },
+  { value: "Y", label: "Yes" },
+  { value: "N", label: "No" },
 ] as const
 
 const EMPTY_AD_FORM: VenueAdDraft = {
@@ -68,34 +54,6 @@ const EMPTY_AD_FORM: VenueAdDraft = {
   merchant: "",
   imageName: "",
   imagePreviewLabel: "",
-}
-
-function EmptyState({
-  title,
-  description,
-}: {
-  title: string
-  description: string
-}) {
-  return (
-    <div className="rounded-sm border border-dashed border-border bg-muted/20 px-4 py-10 text-center">
-      <p className="text-sm font-medium text-foreground">{title}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-    </div>
-  )
-}
-
-function StatusPill({ active }: { active: boolean }) {
-  return (
-    <span
-      className={active
-        ? "inline-flex min-w-9 items-center justify-center rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
-        : "inline-flex min-w-9 items-center justify-center rounded-full bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground"
-      }
-    >
-      {active ? "Y" : "N"}
-    </span>
-  )
 }
 
 function buildEmptyAd() {
@@ -369,160 +327,77 @@ export function VenueAdsScreen() {
 
   return (
     <>
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <AdminPageShell>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">
-              Venue Ads
-            </h1>
+            <AdminPageTitle>Venue Ads</AdminPageTitle>
             <p className="text-sm text-muted-foreground">
-              Manage venue advertisement links and creative metadata with mock service
-              data until the backend endpoints are ready.
+              Manage venue advertisement links and creative metadata with mock
+              service data until the backend endpoints are ready.
             </p>
           </div>
           <Button
             type="button"
-            size="sm"
-            className="gap-2"
             disabled={!locationId}
             onClick={openCreateDialog}
+            className="w-full sm:w-auto"
           >
-            <Plus className="size-4" />
             New
           </Button>
         </div>
 
-        <Card className="gap-0 py-0">
-          <CardHeader className="border-b bg-muted/40 px-4 py-3">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
-              Venue Ads Management
-            </CardTitle>
-          </CardHeader>
+        <PanelCard>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">Note:</span> Click
+              a row to edit it, or use New to add another.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Records:{" "}
+              <span className="font-semibold tabular-nums text-foreground">
+                {rows.length}
+              </span>
+            </p>
+          </div>
 
-          <CardContent className="space-y-4 px-0 py-0">
-            {error ? (
-              <div className="px-4 pt-4">
-                <p className="rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                  {error}
-                </p>
-              </div>
-            ) : null}
+          {error ? (
+            <p className="border-b px-3 py-2 text-sm text-destructive">{error}</p>
+          ) : null}
 
-            {!locationId ? (
-              <div className="p-4">
-                <VenueNoLocationState featureLabel="Venue ads" />
-              </div>
-            ) : loading ? (
-              <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
-                <LoaderCircle className="size-4 animate-spin" />
-                Loading venue ads...
-              </div>
-            ) : rows.length === 0 ? (
-              <div className="p-4">
-                <EmptyState
-                  title="No ads found for this location."
-                  description="Use New to create the first venue ad entry for this location."
-                />
-              </div>
-            ) : (
-              <div className="w-full">
-                <Table className="table-fixed">
-                  <TableHeader>
-                    <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead className="w-24 px-4">Selected</TableHead>
-                      <TableHead className="w-[58%]">Navigate URL</TableHead>
-                      <TableHead className="w-52">Display Text</TableHead>
-                      <TableHead className="w-28">Active</TableHead>
-                      <TableHead className="w-36 px-4">Section</TableHead>
-                      <TableHead className="w-24 px-4 text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rows.map((row) => {
-                      const isSelected = row.id === selectedAdId
+          {statusMessage ? (
+            <p className="border-b px-3 py-2 text-sm text-muted-foreground">
+              {statusMessage}
+            </p>
+          ) : null}
 
-                      return (
-                        <TableRow
-                          key={row.id}
-                          onClick={() => openEditDialog(row)}
-                          className={isSelected
-                            ? "cursor-pointer bg-primary/10 hover:bg-primary/10"
-                            : "cursor-pointer"
-                          }
-                        >
-                          <TableCell className="px-4">
-                            <button
-                              type="button"
-                              aria-label={isSelected ? "Selected venue ad" : "Select venue ad"}
-                              className="inline-flex items-center justify-center rounded-full text-primary"
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                setSelectedAdId(row.id)
-                              }}
-                            >
-                              {isSelected ? (
-                                <CheckCircle2 className="size-5" />
-                              ) : (
-                                <Circle className="size-5 text-muted-foreground" />
-                              )}
-                            </button>
-                          </TableCell>
-                          <TableCell className="max-w-0">
-                            <div className="flex min-w-0 items-start gap-2">
-                              <ExternalLink className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                              <span className="block truncate text-sm text-foreground" title={row.navigateUrl}>{row.navigateUrl}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {row.displayText || "-"}
-                          </TableCell>
-                          <TableCell>
-                            <StatusPill active={row.active} />
-                          </TableCell>
-                          <TableCell className="px-4">
-                            <span className="font-medium text-foreground">{row.section}</span>
-                          </TableCell>
-                          <TableCell className="px-4" onClick={(event) => event.stopPropagation()}>
-                            <div className="flex items-center justify-end">
-                              <StandardRowActionsMenu
-                                ariaLabel={`Actions for ${row.displayText || row.navigateUrl}`}
-                                hiddenActions={["Add"]}
-                                onAction={(action) => {
-                                  if (action === "Edit") {
-                                    openEditDialog(row)
-                                  }
-                                  if (action === "Delete") {
-                                    openDeleteDialog(row)
-                                  }
-                                }}
-                              />
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-
-          <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 sm:flex-row sm:items-center">
-            <div aria-live="polite" className="text-sm text-muted-foreground">
-              {locationId
-                ? statusMessage ||
-                  `${rows.length} mock ad${rows.length === 1 ? "" : "s"} loaded for ${locationName}. Click a row to edit it or use New to add another.`
-                : "Select a location from the header to begin managing venue ads."}
+          {!locationId ? (
+            <div className="p-4">
+              <VenueNoLocationState featureLabel="Venue ads" />
             </div>
-            {selectedAd ? (
-              <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                <span className="text-foreground">Selected:</span>
-                <span className="max-w-48 truncate">{selectedAd.displayText || selectedAd.navigateUrl}</span>
-              </div>
-            ) : null}
-          </CardFooter>
-        </Card>
-      </div>
+          ) : (
+            <VenueAdDataTable
+              data={rows}
+              selectedAdId={selectedAdId}
+              loading={loading}
+              emptyMessage="No ads found for this location."
+              onSelect={(row) => setSelectedAdId(row.id)}
+              onEdit={openEditDialog}
+              onDelete={openDeleteDialog}
+            />
+          )}
+
+          {selectedAd ? (
+            <div className="border-t px-3 py-2">
+              <p className="text-xs text-muted-foreground">
+                Selected:{" "}
+                <span className="font-medium text-foreground">
+                  {selectedAd.displayText || selectedAd.navigateUrl}
+                </span>
+              </p>
+            </div>
+          ) : null}
+        </PanelCard>
+      </AdminPageShell>
 
       <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
         <DialogContent className="max-w-4xl p-0 sm:max-w-4xl">
@@ -545,7 +420,9 @@ export function VenueAdsScreen() {
                   id="venue-ad-url"
                   type="url"
                   value={form.navigateUrl}
-                  onChange={(event) => updateField("navigateUrl", event.target.value)}
+                  onChange={(event) =>
+                    updateField("navigateUrl", event.target.value)
+                  }
                   placeholder="https://example.com/promo"
                 />
               </div>
@@ -555,7 +432,9 @@ export function VenueAdsScreen() {
                 <Input
                   id="venue-ad-display-text"
                   value={form.displayText}
-                  onChange={(event) => updateField("displayText", event.target.value)}
+                  onChange={(event) =>
+                    updateField("displayText", event.target.value)
+                  }
                   placeholder="Shown when the image is unavailable"
                 />
               </div>
@@ -565,7 +444,9 @@ export function VenueAdsScreen() {
                 <Input
                   id="venue-ad-merchant"
                   value={form.merchant}
-                  onChange={(event) => updateField("merchant", event.target.value)}
+                  onChange={(event) =>
+                    updateField("merchant", event.target.value)
+                  }
                   placeholder="Merchant or sponsor name"
                 />
               </div>
@@ -574,9 +455,14 @@ export function VenueAdsScreen() {
                 <Label htmlFor="venue-ad-active">Active</Label>
                 <Select
                   value={form.active ? "Y" : "N"}
-                  onValueChange={(value) => updateField("active", value === "Y")}
+                  onValueChange={(value) =>
+                    updateField("active", value === "Y")
+                  }
                 >
-                  <SelectTrigger id="venue-ad-active" className="w-full bg-background">
+                  <SelectTrigger
+                    id="venue-ad-active"
+                    className="w-full bg-background"
+                  >
                     <SelectValue placeholder="Select active state" />
                   </SelectTrigger>
                   <SelectContent position="popper">
@@ -593,9 +479,14 @@ export function VenueAdsScreen() {
                 <Label htmlFor="venue-ad-section">Section</Label>
                 <Select
                   value={form.section}
-                  onValueChange={(value) => updateField("section", value as VenueAdSection)}
+                  onValueChange={(value) =>
+                    updateField("section", value as VenueAdSection)
+                  }
                 >
-                  <SelectTrigger id="venue-ad-section" className="w-full bg-background">
+                  <SelectTrigger
+                    id="venue-ad-section"
+                    className="w-full bg-background"
+                  >
                     <SelectValue placeholder="Select section" />
                   </SelectTrigger>
                   <SelectContent className="max-h-72" position="popper">
@@ -613,7 +504,9 @@ export function VenueAdsScreen() {
                 <Input
                   id="venue-ad-image-label"
                   value={form.imagePreviewLabel}
-                  onChange={(event) => updateField("imagePreviewLabel", event.target.value)}
+                  onChange={(event) =>
+                    updateField("imagePreviewLabel", event.target.value)
+                  }
                   placeholder="Preview helper text or creative label"
                 />
               </div>
@@ -624,17 +517,21 @@ export function VenueAdsScreen() {
                   id="venue-ad-image"
                   type="file"
                   accept="image/*"
-                  onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+                  onChange={(event) =>
+                    setImageFile(event.target.files?.[0] ?? null)
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
-                  {imageFile?.name || form.imageName || "Upload an image to preview it here."}
+                  {imageFile?.name ||
+                    form.imageName ||
+                    "Upload an image to preview it here."}
                 </p>
               </div>
             </div>
 
             <div className="space-y-3">
               <Label>Image Preview</Label>
-              <div className="aspect-[16/6] overflow-hidden rounded-lg border border-border bg-background shadow-sm">
+              <div className="aspect-16/6 overflow-hidden rounded-lg border border-border bg-background shadow-sm">
                 {renderPreview()}
               </div>
             </div>
@@ -644,7 +541,6 @@ export function VenueAdsScreen() {
             <Button
               type="button"
               variant="destructive"
-              className="gap-2"
               disabled={!isEditing || saving}
               onClick={() => {
                 if (selectedAd) {
@@ -652,7 +548,7 @@ export function VenueAdsScreen() {
                 }
               }}
             >
-              <Trash2 className="size-4" />
+              {saving ? null : <Trash2 className="size-4" />}
               Delete
             </Button>
 
@@ -667,16 +563,19 @@ export function VenueAdsScreen() {
               </Button>
               <Button
                 type="button"
-                className="gap-2"
                 onClick={() => void handleSave()}
                 disabled={!canSubmit || saving || deleting}
               >
                 {saving ? (
-                  <LoaderCircle className="size-4 animate-spin" />
+                  <>
+                    <LoaderCircle className="size-4 animate-spin" />
+                    {isEditing ? "Update" : "Create"}
+                  </>
+                ) : isEditing ? (
+                  "Update"
                 ) : (
-                  <Plus className="size-4" />
+                  "Create"
                 )}
-                {isEditing ? "Update" : "Create"}
               </Button>
             </div>
           </div>
@@ -692,16 +591,14 @@ export function VenueAdsScreen() {
         }}
         onConfirm={() => void handleDelete()}
         title="Delete venue ad?"
-        description={deletingRow
-          ? `This will remove ${deletingRow.displayText || deletingRow.navigateUrl} from ${locationName}.`
-          : ""}
+        description={
+          deletingRow
+            ? `This will remove ${deletingRow.displayText || deletingRow.navigateUrl} from ${locationName}.`
+            : ""
+        }
         confirmLabel="Delete ad"
         isPending={deleting}
       />
     </>
   )
 }
-
-
-
-
