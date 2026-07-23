@@ -1,47 +1,22 @@
-import {
-  FileImage,
-  FilePlus2,
-  FileText,
-  Eye,
-  LoaderCircle,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react"
+import { LoaderCircle } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import type { SegmentedTab } from "@/components/common/segmented-tab-list"
 import { SegmentedTabList } from "@/components/common/segmented-tab-list"
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
-import { StandardRowActionsMenu } from "@/components/common/standard-row-actions-menu"
+import { PanelCard } from "@/components/common/panel-card"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import { ScrollSelectControl } from "@/components/common/scroll-select-control"
-import { Button } from "@/components/ui/button"
 import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  AdminPageShell,
+  AdminPageTitle,
+} from "@/components/layout/admin-page"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useAppSession } from "@/hooks/use-app-session"
+import { FoodMenuCategoryDataTable } from "@/features/food-menu/food-menu-category-data-table"
 import {
   getFoodMenuCategoriesByLocation,
   getFoodMenuPdfsByLocation,
@@ -71,50 +46,6 @@ function EmptyState({
       <p className="text-sm font-medium text-foreground">{title}</p>
       <p className="mt-1 text-sm text-muted-foreground">{description}</p>
     </div>
-  )
-}
-
-function StatusPill({ active }: { active: boolean }) {
-  return (
-    <span
-      className={active
-        ? "inline-flex min-w-9 items-center justify-center rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
-        : "inline-flex min-w-9 items-center justify-center rounded-full bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground"
-      }
-    >
-      {active ? "Y" : "N"}
-    </span>
-  )
-}
-
-function PdfToolbarButton({
-  label,
-  onClick,
-  icon,
-  disabled = false,
-}: {
-  label: string
-  onClick: () => void
-  icon: React.ReactNode
-  disabled?: boolean
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          onClick={onClick}
-          disabled={disabled}
-          className="text-muted-foreground hover:bg-primary/10 hover:text-primary"
-        >
-          {icon}
-          <span className="sr-only">{label}</span>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="top">{label}</TooltipContent>
-    </Tooltip>
   )
 }
 
@@ -185,6 +116,7 @@ export function FoodMenuScreen() {
         if (isActive) {
           setCategoryRows(categories)
           setPdfRows(pdfs)
+          setSelectedPdfId(pdfs[0]?.id ?? "")
         }
       })
       .catch((requestError: unknown) => {
@@ -210,18 +142,24 @@ export function FoodMenuScreen() {
   useEffect(() => {
     if (!selectedPdf) {
       setPdfDescription("")
+      setReplacementPdfName("")
       return
     }
 
     setPdfDescription(selectedPdf.description)
+    setReplacementPdfName("")
   }, [selectedPdf])
 
   function handleCategoryNew(row: FoodMenuCategory) {
-    setActionMessage(`Mock action: create a new category near ${row.menuName} for ${locationName}.`)
+    setActionMessage(
+      `Mock action: create a new category near ${row.menuName} for ${locationName}.`
+    )
   }
 
   function handleCategoryEdit(row: FoodMenuCategory) {
-    setActionMessage(`Mock action: edit category ${row.menuName} for ${locationName}.`)
+    setActionMessage(
+      `Mock action: edit category ${row.menuName} for ${locationName}.`
+    )
   }
 
   function handleCategoryDelete(row: FoodMenuCategory) {
@@ -233,7 +171,11 @@ export function FoodMenuScreen() {
       return
     }
 
-    setPendingDelete({ kind: "pdf", id: selectedPdf.id, label: selectedPdf.name })
+    setPendingDelete({
+      kind: "pdf",
+      id: selectedPdf.id,
+      label: selectedPdf.name,
+    })
   }
 
   function confirmDelete() {
@@ -242,15 +184,19 @@ export function FoodMenuScreen() {
     }
 
     if (pendingDelete.kind === "category") {
-      setCategoryRows((current) => current.filter((row) => row.id !== pendingDelete.id))
-      setActionMessage(`Removed category ${pendingDelete.label} from ${locationName}.`)
+      setCategoryRows((current) =>
+        current.filter((row) => row.id !== pendingDelete.id)
+      )
+      setActionMessage(
+        `Removed category ${pendingDelete.label} from ${locationName}.`
+      )
     } else {
       const nextRows = pdfRows.filter((row) => row.id !== pendingDelete.id)
       setPdfRows(nextRows)
-      if (selectedPdfId === pendingDelete.id) {
-        setSelectedPdfId(nextRows[0]?.id ?? "")
-      }
-      setActionMessage(`Removed PDF menu ${pendingDelete.label} from ${locationName}.`)
+      setSelectedPdfId(nextRows[0]?.id ?? "")
+      setActionMessage(
+        `Removed PDF menu ${pendingDelete.label} from ${locationName}.`
+      )
     }
 
     setPendingDelete(null)
@@ -261,275 +207,266 @@ export function FoodMenuScreen() {
   }
 
   return (
-    <TooltipProvider>
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <>
+      <AdminPageShell>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">
-              Food Menu
-            </h1>
+            <AdminPageTitle>Food Menu</AdminPageTitle>
             <p className="text-sm text-muted-foreground">
-              Manage venue food menu categories and PDF menu assets with mock data until
-              the backend integration is ready.
+              Manage venue food menu categories and PDF menu assets with mock
+              data until the backend integration is ready.
             </p>
           </div>
           {activeTab === "categories" ? (
             <Button
               type="button"
-              size="sm"
-              className="gap-2"
               disabled={!locationId || loading || categoryRows.length === 0}
               onClick={() => handleCategoryNew(categoryRows[0])}
+              className="w-full sm:w-auto"
             >
-              <Plus className="size-4" />
               Add
             </Button>
           ) : null}
         </div>
 
-        <Card className="gap-0 py-0">
-          <CardHeader className="border-b bg-muted/40 px-4 py-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
-                Food Menu Data
-              </CardTitle>
-              <SegmentedTabList
-                tabs={FOOD_MENU_TABS}
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                ariaLabel="Food menu sections"
-                className="border-border bg-background/70"
+        <PanelCard>
+          <div className="flex flex-col gap-3 border-b px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">Note:</span>{" "}
+              Manage categories in the table, or switch to PDF for menu assets.
+            </p>
+            <SegmentedTabList
+              tabs={FOOD_MENU_TABS}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              ariaLabel="Food menu sections"
+              className="border-border bg-background/70"
+            />
+          </div>
+
+          {error ? (
+            <p className="border-b px-3 py-2 text-sm text-destructive">{error}</p>
+          ) : null}
+
+          {actionMessage ? (
+            <p className="border-b px-3 py-2 text-sm text-muted-foreground">
+              {actionMessage}
+            </p>
+          ) : null}
+
+          {!locationId ? (
+            <div className="p-4">
+              <VenueNoLocationState featureLabel="Food menu data" />
+            </div>
+          ) : activeTab === "categories" ? (
+            <FoodMenuCategoryDataTable
+              data={categoryRows}
+              loading={loading}
+              emptyMessage="No categories found for this location."
+              onEdit={handleCategoryEdit}
+              onDelete={handleCategoryDelete}
+            />
+          ) : loading ? (
+            <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
+              <LoaderCircle className="size-4 animate-spin" />
+              Loading food menu data...
+            </div>
+          ) : pdfRows.length === 0 ? (
+            <div className="p-4">
+              <EmptyState
+                title="No PDF menus found."
+                description="This location does not have mock PDF menu entries yet."
               />
             </div>
-          </CardHeader>
-
-          <CardContent className="space-y-6 px-4 py-5">
-            {error ? (
-              <p className="rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                {error}
-              </p>
-            ) : null}
-
-            {!locationId ? (
-              <VenueNoLocationState featureLabel="Food menu data" />
-            ) : loading ? (
-              <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
-                <LoaderCircle className="size-4 animate-spin" />
-                Loading food menu data...
-              </div>
-            ) : activeTab === "categories" ? (
-              categoryRows.length === 0 ? (
-                <EmptyState
-                  title="No categories found."
-                  description="This location does not have mock food menu categories yet."
-                />
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead className="w-14 px-4">#</TableHead>
-                      <TableHead>Menu Name</TableHead>
-                      <TableHead>Menu Order</TableHead>
-                      <TableHead>Active</TableHead>
-                      <TableHead className="px-4 text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {categoryRows.map((row, index) => (
-                      <TableRow key={row.id}>
-                        <TableCell className="px-4 font-medium tabular-nums text-muted-foreground">
-                          {index + 1}
-                        </TableCell>
-                        <TableCell className="font-medium text-foreground">{row.menuName}</TableCell>
-                        <TableCell className="tabular-nums">{row.menuOrder}</TableCell>
-                        <TableCell><StatusPill active={row.active} /></TableCell>
-                        <TableCell className="px-4">
-                          <div className="flex items-center justify-end">
-                            <StandardRowActionsMenu
-                              ariaLabel={`Actions for ${row.menuName}`}
-                              hiddenActions={["Add"]}
-                              onAction={(action) => {
-                                if (action === "Edit") {
-                                  handleCategoryEdit(row)
-                                }
-                                if (action === "Delete") {
-                                  handleCategoryDelete(row)
-                                }
-                              }}
-                            />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )
-            ) : (
-              <div className="space-y-5">
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,18rem)_1fr]">
-                  <div className="space-y-2">
-                    <Label htmlFor="food-menu-pdf-select">PDF Menus</Label>
-                    <ScrollSelectControl
-                      id="food-menu-pdf-select"
-                      value={selectedPdfId}
-                      onChange={setSelectedPdfId}
-                      options={pdfOptions}
-                      placeholder="Select PDF menu"
-                      disabled={pdfOptions.length === 0}
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-start gap-1 rounded-sm border border-border/70 bg-muted/20 px-2 py-1 lg:justify-end">
-                    <PdfToolbarButton
-                      label="Modify PDF menu"
-                      icon={<Pencil className="size-4" />}
-                      onClick={() =>
-                        handlePdfAction(`Mock action: modify PDF menu ${selectedPdf?.name ?? ""} for ${locationName}.`)
-                      }
-                      disabled={!selectedPdf}
-                    />
-                    <span className="text-muted-foreground/60">|</span>
-                    <PdfToolbarButton
-                      label="Add PDF menu"
-                      icon={<FilePlus2 className="size-4" />}
-                      onClick={() =>
-                        handlePdfAction(`Mock action: add a PDF menu for ${locationName}.`)
-                      }
-                    />
-                    <span className="text-muted-foreground/60">|</span>
-                    <PdfToolbarButton
-                      label="Delete PDF menu"
-                      icon={<Trash2 className="size-4" />}
-                      onClick={handlePdfDelete}
-                      disabled={!selectedPdf}
-                    />
-                    <span className="text-muted-foreground/60">|</span>
-                    <PdfToolbarButton
-                      label="Add image for PDF"
-                      icon={<FileImage className="size-4" />}
-                      onClick={() =>
-                        handlePdfAction(`Mock action: manage image for PDF menu ${selectedPdf?.name ?? ""} in ${locationName}.`)
-                      }
-                      disabled={!selectedPdf}
-                    />
-                  </div>
+          ) : (
+            <div className="space-y-4 px-3 py-4">
+              <div className="flex flex-col gap-3 border-b border-border/70 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                <div className="w-full max-w-xs space-y-1.5">
+                  <Label htmlFor="food-menu-pdf-select">PDF Menu</Label>
+                  <ScrollSelectControl
+                    id="food-menu-pdf-select"
+                    value={selectedPdfId}
+                    onChange={setSelectedPdfId}
+                    options={pdfOptions}
+                    placeholder="Select PDF menu"
+                    disabled={pdfOptions.length === 0}
+                  />
                 </div>
 
-                {pdfRows.length === 0 ? (
-                  <EmptyState
-                    title="No PDF menus found."
-                    description="This location does not have mock PDF menu entries yet."
-                  />
-                ) : (
-                  <div className="grid gap-5 lg:grid-cols-[minmax(0,16rem)_1fr]">
-                    <Card className="gap-0 border border-border/80 py-0 shadow-none">
-                      <CardContent className="space-y-3 px-4 py-4">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-foreground">Current PDF</p>
-                          <p className="text-sm text-muted-foreground">
-                            {selectedPdf?.fileName || "Select a PDF menu to inspect its details."}
-                          </p>
-                        </div>
-
-                        <div className="rounded-sm border border-dashed border-border bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
-                          {selectedPdf?.imageLabel || "No preview image selected yet."}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="gap-0 border border-border/80 py-0 shadow-none">
-                      <CardContent className="grid gap-4 px-4 py-4">
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor="food-menu-pdf-description">Description</Label>
-                            <Textarea
-                              id="food-menu-pdf-description"
-                              value={pdfDescription}
-                              onChange={(event) => setPdfDescription(event.target.value)}
-                              placeholder="Describe the selected PDF menu"
-                              className="min-h-24"
-                              disabled={!selectedPdf}
-                            />
-                          </div>
-
-                          <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor="food-menu-pdf-file">Replacement PDF</Label>
-                            <Input
-                              id="food-menu-pdf-file"
-                              type="file"
-                              accept="application/pdf"
-                              onChange={(event) =>
-                                setReplacementPdfName(event.target.files?.[0]?.name || "")
-                              }
-                              disabled={!selectedPdf}
-                            />
-                            <p className="text-xs text-muted-foreground">
-                              {replacementPdfName || "Choose a PDF file to replace the current document."}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            className="gap-1.5"
-                            disabled={!selectedPdf}
-                            onClick={() =>
-                              handlePdfAction(`Mock action: preview ${selectedPdf?.name ?? ""} for ${locationName}.`)
-                            }
-                          >
-                            <Eye className="size-4" />
-                            Preview
-                          </Button>
-                          <Button
-                            type="button"
-                            className="gap-1.5"
-                            disabled={!selectedPdf}
-                            onClick={() =>
-                              handlePdfAction(`Mock action: save PDF menu changes for ${selectedPdf?.name ?? ""} in ${locationName}.`)
-                            }
-                          >
-                            <FileText className="size-4" />
-                            Modify
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!selectedPdf}
+                    onClick={() =>
+                      handlePdfAction(
+                        `Mock action: modify PDF menu ${selectedPdf?.name ?? ""} for ${locationName}.`
+                      )
+                    }
+                  >
+                    Modify
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handlePdfAction(
+                        `Mock action: add a PDF menu for ${locationName}.`
+                      )
+                    }
+                  >
+                    Add
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!selectedPdf}
+                    onClick={handlePdfDelete}
+                  >
+                    Delete
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!selectedPdf}
+                    onClick={() =>
+                      handlePdfAction(
+                        `Mock action: manage image for PDF menu ${selectedPdf?.name ?? ""} in ${locationName}.`
+                      )
+                    }
+                  >
+                    Manage Image
+                  </Button>
+                </div>
               </div>
-            )}
-          </CardContent>
 
-          <CardFooter className="border-t px-4 py-3">
-            <div aria-live="polite" className="text-sm text-muted-foreground">
-              {locationId
-                ? actionMessage || `Food menu mock data loaded for ${locationName}.`
-                : "Select a location from the header to begin managing the food menu."}
+              <div className="overflow-hidden rounded-sm border border-border">
+                <div className="grid lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
+                  <aside className="space-y-3 border-b bg-muted/20 p-4 lg:border-b-0 lg:border-r">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                        Current PDF
+                      </p>
+                      <p className="wrap-break-word text-sm font-medium text-foreground">
+                        {selectedPdf?.fileName || "Select a PDF menu"}
+                      </p>
+                    </div>
+                    <div className="flex min-h-48 items-center justify-center rounded-sm border border-dashed border-border bg-background px-3 py-8 text-center text-sm text-muted-foreground">
+                      {selectedPdf?.imageLabel ||
+                        "No preview image selected yet."}
+                    </div>
+                    {selectedPdf ? (
+                      <p className="text-xs text-muted-foreground">
+                        Selected:{" "}
+                        <span className="font-medium text-foreground">
+                          {selectedPdf.name}
+                        </span>
+                      </p>
+                    ) : null}
+                  </aside>
+
+                  <div className="flex min-w-0 flex-col gap-4 p-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="food-menu-pdf-description">
+                        Description
+                      </Label>
+                      <Textarea
+                        id="food-menu-pdf-description"
+                        value={pdfDescription}
+                        onChange={(event) =>
+                          setPdfDescription(event.target.value)
+                        }
+                        placeholder="Describe the selected PDF menu"
+                        className="min-h-28 resize-y"
+                        disabled={!selectedPdf}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="food-menu-pdf-file">
+                        Replacement PDF
+                      </Label>
+                      <Input
+                        id="food-menu-pdf-file"
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(event) =>
+                          setReplacementPdfName(
+                            event.target.files?.[0]?.name || ""
+                          )
+                        }
+                        disabled={!selectedPdf}
+                        className="cursor-pointer file:mr-3 file:cursor-pointer"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {replacementPdfName ||
+                          "Choose a PDF file to replace the current document."}
+                      </p>
+                    </div>
+
+                    <div className="mt-auto flex flex-wrap items-center justify-end gap-2 border-t pt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!selectedPdf}
+                        onClick={() =>
+                          handlePdfAction(
+                            `Mock action: preview ${selectedPdf?.name ?? ""} for ${locationName}.`
+                          )
+                        }
+                      >
+                        Preview
+                      </Button>
+                      <Button
+                        type="button"
+                        disabled={!selectedPdf}
+                        onClick={() =>
+                          handlePdfAction(
+                            `Mock action: save PDF menu changes for ${selectedPdf?.name ?? ""} in ${locationName}.`
+                          )
+                        }
+                      >
+                        Modify
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </CardFooter>
-        </Card>
-        <ConfirmDeleteDialog
-          open={Boolean(pendingDelete)}
-          onOpenChange={(open) => {
-            if (!open) {
-              setPendingDelete(null)
-            }
-          }}
-          onConfirm={confirmDelete}
-          title={pendingDelete?.kind === "pdf" ? "Delete PDF menu?" : "Delete category?"}
-          description={pendingDelete
+          )}
+        </PanelCard>
+      </AdminPageShell>
+
+      <ConfirmDeleteDialog
+        open={Boolean(pendingDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDelete(null)
+          }
+        }}
+        onConfirm={confirmDelete}
+        title={
+          pendingDelete?.kind === "pdf"
+            ? "Delete PDF menu?"
+            : "Delete category?"
+        }
+        description={
+          pendingDelete
             ? pendingDelete.kind === "pdf"
               ? `This will remove ${pendingDelete.label} from ${locationName}.`
               : `This will remove the ${pendingDelete.label} category from ${locationName}.`
-            : ""}
-          confirmLabel={pendingDelete?.kind === "pdf" ? "Delete PDF menu" : "Delete category"}
-        />
-      </div>
-    </TooltipProvider>
+            : ""
+        }
+        confirmLabel={
+          pendingDelete?.kind === "pdf"
+            ? "Delete PDF menu"
+            : "Delete category"
+        }
+      />
+    </>
   )
 }
-
-
-
