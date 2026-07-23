@@ -3517,7 +3517,69 @@ export function AddReservationDialog({
    * - Before Save (!IsSaveChanges) → "Cancel without saving?"
    * - After Save (IsSaveChanges) → Due Amount (always; not gated on Amount Due display)
    * Edit (IsCancelRequest=true) → close immediately
+   *
+   * If the user never entered any reservation data, close without prompting.
    */
+  function hasUnsavedAddReservationInput() {
+    if (hasCustomerSearchCriteria(searchType, searchCriteria)) {
+      return true
+    }
+
+    if (selectedCustomerId || editCustomerId) {
+      return true
+    }
+
+    if (partySize > 0) {
+      return true
+    }
+
+    if (notes.trim()) {
+      return true
+    }
+
+    if (dinner) {
+      return true
+    }
+
+    if (promo !== 'none') {
+      return true
+    }
+
+    if (origin !== 'phone') {
+      return true
+    }
+
+    if (passes !== 1) {
+      return true
+    }
+
+    if (paymentAmountOverride != null) {
+      return true
+    }
+
+    if (paymentType !== 'credit-card') {
+      return true
+    }
+
+    if (
+      Object.values(paymentFields).some(
+        value => typeof value === 'string' && value.trim().length > 0
+      )
+    ) {
+      return true
+    }
+
+    if (tableNums.trim() || assignSeatNumbers.trim()) {
+      return true
+    }
+
+    if (expressWalkupSeed) {
+      return true
+    }
+
+    return false
+  }
+
   function requestCloseReservationDialog() {
     if (isSavingReservation || isDueAmountPending) {
       return
@@ -3531,6 +3593,11 @@ export function AddReservationDialog({
     if (hasAttemptedSave) {
       setDueAmountOption('continue-without-payment')
       setDueAmountOpen(true)
+      return
+    }
+
+    if (!hasUnsavedAddReservationInput()) {
+      handleDialogOpenChange(false)
       return
     }
 
