@@ -36,7 +36,18 @@ import ComedianSearchDialog, {
   type ComedianSearchSelection,
 } from "./ComedianSearchDialog"
 import {
+  EditCalendarShowTimesDialog,
+  type EditCalendarShowTimesSaveResult,
+  type EditCalendarShowTimesSeed,
+} from "./EditCalendarShowTimesDialog"
+import {
+  EditAddShowSectionDialog,
+  type EditAddShowSectionSaveResult,
+  type EditAddShowSectionSeed,
+} from "./EditAddShowSectionDialog"
+import {
   buildSaveShowFilterList,
+  mapDefaultShowSectionsToDialogData,
 } from "@/lib/map-default-show-sections"
 import { formatShowTime } from "@/lib/format-show-time"
 import { parseAgeRestrictionValue } from "../service/adjustAge.service"
@@ -49,10 +60,16 @@ import type {
   AddShowFormValues,
   PerformerOption,
   ShowTimeOption,
+  ShowTimeSection,
 } from "@/types/calendar-show"
 import type { RecurrenceState } from "@/types/recurrence"
 import type { CalendarEvent } from "@/types/calendar-event"
 import type { ApiDefaultShowSection } from "@/types/api/save-show"
+import type { SectionLookupItem } from "@/types/api/system-lookup"
+import type { ShowTimeSectionDraft } from "@/types/show-time"
+import { dayOfWeekOptions } from "@/data/show-time-form-options"
+import { toApiDateTime } from "@/lib/recurrence/recurrence-date-utils"
+import { parseApiDateOrFallback } from "@/lib/parse-api-date"
 
 const emptyFormValues: AddShowFormValues = {
   headlinerId: "",
@@ -106,7 +123,7 @@ const showDetailCheckboxes: { field: ShowDetailCheckboxField; label: string }[] 
   { field: "dinner", label: "Dinner" },
   { field: "noPasses", label: "No Passes" },
   { field: "vipSeating", label: "VIP Seating" },
-  { field: "hub", label: "Hub" },
+  // { field: "hub", label: "Hub" },
   { field: "assignTable", label: "Assign Table" },
   { field: "showOnWeb", label: "Show On Web" },
 ]
@@ -120,7 +137,7 @@ const editOtherCheckboxes: {
     { field: "noPasses", label: "No Passes" },
     { field: "vipSeating", label: "VIP Seating" },
     { field: "ageRestriction", label: "21 and Over", ageFlag: "Y" },
-    { field: "hub", label: "Hub" },
+    // { field: "hub", label: "Hub" },
     { field: "isShowSoldOut", label: "Show Sold Out" },
     { field: "showOnWeb", label: "Show On Web" },
     { field: "preSalePrivateShow", label: "Pre-sale Private Show" },
@@ -236,6 +253,17 @@ function getIsShowSoldOut(show: ApiShowData) {
   return isApiBooleanTrue(show.IsShowSoldOut ?? show.IsShowSolidOut)
 }
 
+const EMPTY_GUID = "00000000-0000-0000-0000-000000000000"
+
+/** Treat missing / empty GUID as no selection so CalendarSelect shows "Select". */
+function toOptionalPerformerId(value: string | null | undefined) {
+  const trimmed = value?.trim() ?? ""
+  if (!trimmed || trimmed === EMPTY_GUID || trimmed.toLowerCase() === "select") {
+    return ""
+  }
+  return trimmed
+}
+
 /** Normalize API/display times to CalendarTimeControl format (e.g. "7:35 am"). */
 function toCalendarTimeControlValue(value: string | null | undefined) {
   const formatted = formatShowTime(value, { seconds: false })
@@ -250,6 +278,96 @@ function toCalendarTimeControlValue(value: string | null | undefined) {
   }
 
   return `${Number(match[1])}:${match[2]} ${match[3].toLowerCase()}`
+}
+
+function mapShowDataToSectionRow(row: ApiShowData): ApiDefaultShowSection {
+  return {
+    ShowId: row.ShowId,
+    ShowDetID: row.ShowDetID,
+    ShowDefID: "",
+    ShowDay: "",
+    WeekDay: 0,
+    ShowDate: row.ShowDate,
+    ShowArrival: row.ShowArrival,
+    ShowTim: row.ShowTim,
+    Section: row.Section,
+    ShowPrice: row.ShowPrice,
+    ShowNon: row.ShowNon,
+    ShowSmoking: null,
+    Web: row.Web,
+    Hub: row.Hub,
+    NoPasses: row.NoPasses,
+    VIP: row.VIP,
+    Over21: row.Over21,
+    ShowDinner: row.ShowDinner,
+    ShowDetRestrictPromo: row.ShowDetRestrictPromo,
+    ShowDefDetwalkupsvc: row.ShowDefDetwalkupsvc,
+    ShowDefDetphonesvc: row.ShowDefDetphonesvc,
+    ShowDefDetwebsvc: row.ShowDefDetwebsvc,
+    IsSelected: row.IsSelected,
+  }
+}
+
+function resolveDraftSectionFields(
+  sectionId: string,
+  sectionLookups: SectionLookupItem[]
+) {
+  const byCode = sectionLookups.find((item) => item.code === sectionId)
+  if (byCode) {
+    return { Section: byCode.description, ShowSec: byCode.code }
+  }
+
+  const byDescription = sectionLookups.find(
+    (item) => item.description === sectionId
+  )
+  if (byDescription) {
+    return {
+      Section: byDescription.description,
+      ShowSec: byDescription.code,
+    }
+  }
+
+  return { Section: sectionId, ShowSec: null as string | null }
+}
+
+function mapDraftToSectionRow(
+  draft: ShowTimeSectionDraft,
+  template: ApiDefaultShowSection | null,
+  sectionLookups: SectionLookupItem[],
+  showTim: string,
+  showArrival: string
+): ApiDefaultShowSection {
+  const { Section, ShowSec } = resolveDraftSectionFields(
+    draft.sectionId,
+    sectionLookups
+  )
+
+  return {
+    ShowId: template?.ShowId,
+    ShowDetID: draft.id,
+    ShowDefID: template?.ShowDefID ?? "",
+    ShowDay: template?.ShowDay ?? "",
+    WeekDay: template?.WeekDay ?? 0,
+    ShowDate: template?.ShowDate ?? null,
+    ShowArrival: showArrival || template?.ShowArrival || null,
+    ShowTim: showTim || template?.ShowTim || null,
+    Section,
+    ShowSec,
+    ShowPrice: Number.parseFloat(draft.price) || 0,
+    ShowNon: Number.parseInt(draft.seats, 10) || 0,
+    ShowSmoking: template?.ShowSmoking ?? null,
+    Web: draft.showOnWeb ? "Y" : "N",
+    Hub: template?.Hub ?? null,
+    NoPasses: template?.NoPasses ?? null,
+    VIP: template?.VIP ?? null,
+    Over21: template?.Over21 ?? null,
+    ShowDinner: template?.ShowDinner ?? null,
+    ShowDetRestrictPromo: draft.restrictShowPromo ? "Y" : "N",
+    ShowDefDetwalkupsvc: Number.parseFloat(draft.walkupFee) || 0,
+    ShowDefDetphonesvc: Number.parseFloat(draft.phoneFee) || 0,
+    ShowDefDetwebsvc: Number.parseFloat(draft.webFee) || 0,
+    IsSelected: true,
+  }
 }
 
 function parseCalendarTimeParts(value: string) {
@@ -281,7 +399,40 @@ function combineDateAndCalendarTime(dateYmd: string, timeValue: string) {
   return base.hour(hour).minute(minute).second(0).millisecond(0).toDate()
 }
 
+function dayLabelToId(dayLabel: string | undefined) {
+  const normalized = (dayLabel ?? "").trim().toLowerCase()
+  const match = dayOfWeekOptions.find(
+    (day) =>
+      day.label.toLowerCase() === normalized ||
+      day.label.slice(0, 3).toLowerCase() === normalized.slice(0, 3)
+  )
+  return match?.id ?? "wed"
+}
 
+function dayIdToLabel(dayId: string) {
+  return dayOfWeekOptions.find((day) => day.id === dayId)?.label ?? "Wednesday"
+}
+
+function dayIdToWeekDay(dayId: string) {
+  const order = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
+  const index = order.indexOf(dayId)
+  return index >= 0 ? index : 3
+}
+
+function applyCalendarTimeToApiValue(
+  existing: string | null | undefined,
+  calendarTime: string,
+  fallbackDate: Date
+) {
+  if (!calendarTime.trim()) {
+    return existing ?? null
+  }
+
+  const { hour, minute } = parseCalendarTimeParts(calendarTime)
+  const base = parseApiDateOrFallback(existing, fallbackDate)
+  base.setHours(hour, minute, 0, 0)
+  return toApiDateTime(base)
+}
 
 type AddShowDialogProps = {
   open: boolean
@@ -490,12 +641,19 @@ function ShowTimesTable({
   showTimes,
   selectedShowTimeIds,
   onToggleShowTime,
+  onRowDoubleClick,
+  onSectionDoubleClick,
   showDayLabel = true,
   error,
 }: {
   showTimes: ShowTimeOption[]
   selectedShowTimeIds: string[]
   onToggleShowTime: (showTimeId: string) => void
+  onRowDoubleClick?: (showTime: ShowTimeOption) => void
+  onSectionDoubleClick?: (
+    showTime: ShowTimeOption,
+    section: ShowTimeSection
+  ) => void
   showDayLabel?: boolean
   error?: string
 }) {
@@ -523,7 +681,20 @@ function ShowTimesTable({
         <TableBody>
           {showTimes.map((showTime) =>
             showTime.sections.map((section, index) => (
-              <TableRow key={section.id} className="odd:bg-background even:bg-muted/20">
+              <TableRow
+                key={section.id}
+                className={cn(
+                  "odd:bg-background even:bg-muted/20",
+                  (onRowDoubleClick || onSectionDoubleClick) && "cursor-pointer"
+                )}
+                onDoubleClick={() => {
+                  if (onSectionDoubleClick) {
+                    onSectionDoubleClick(showTime, section)
+                    return
+                  }
+                  onRowDoubleClick?.(showTime)
+                }}
+              >
                 {index === 0 ? (
                   <TableCell className="border px-3 py-2 align-middle" rowSpan={showTime.sections.length}>
                     <div className="flex items-center gap-3">
@@ -531,6 +702,7 @@ function ShowTimesTable({
                         checked={selectedShowTimeIds.includes(showTime.id)}
                         onCheckedChange={() => onToggleShowTime(showTime.id)}
                         aria-label={`Toggle ${showDayLabel ? `${showTime.dayLabel} ` : ""}${showTime.timeRange}`}
+                        onClick={(event) => event.stopPropagation()}
                       />
                       <div className="text-xs leading-5">
                         {showDayLabel ? (
@@ -587,6 +759,19 @@ export default function AddShowDialog({
     useState<PerformerSearchField | null>(null)
   const [openPerformerSelect, setOpenPerformerSelect] =
     useState<PerformerSearchField | null>(null)
+  const [editShowTimesSeed, setEditShowTimesSeed] =
+    useState<EditCalendarShowTimesSeed | null>(null)
+  const [isEditShowTimesOpen, setIsEditShowTimesOpen] = useState(false)
+  const [editAddShowSectionSeed, setEditAddShowSectionSeed] =
+    useState<EditAddShowSectionSeed | null>(null)
+  const [isEditAddShowSectionOpen, setIsEditAddShowSectionOpen] = useState(false)
+  const [editSectionRows, setEditSectionRows] = useState<
+    ApiDefaultShowSection[] | null
+  >(null)
+  const [deletedShowSectionIds, setDeletedShowSectionIds] = useState<string[]>(
+    []
+  )
+  const originalShowDetIdsRef = useRef<Set<string>>(new Set())
   const sessionGenerationRef = useRef(0)
 
   useEffect(() => {
@@ -622,6 +807,13 @@ export default function AddShowDialog({
     setIsComedianSearchOpen(false)
     setSearchTargetField(null)
     setOpenPerformerSelect(null)
+    setIsEditShowTimesOpen(false)
+    setEditShowTimesSeed(null)
+    setIsEditAddShowSectionOpen(false)
+    setEditAddShowSectionSeed(null)
+    setEditSectionRows(null)
+    setDeletedShowSectionIds([])
+    originalShowDetIdsRef.current = new Set()
     onAfterClose?.()
   }
 
@@ -703,11 +895,13 @@ export default function AddShowDialog({
         .map((row) => row.ShowDetID)
       setFormValues({
         ...emptyFormValues,
-        headlinerId: mainShowData.Headliner ?? resolveInitialHeadlinerId(dialogData.performers, initialEvent),
-        featureId: mainShowData.Feature ?? "",
-        openerId: mainShowData.Opener ?? "",
-        headliner2Id: mainShowData.Headliner2 ?? "",
-        feature2Id: mainShowData.Feature2 ?? "",
+        headlinerId:
+          toOptionalPerformerId(mainShowData.Headliner) ||
+          resolveInitialHeadlinerId(dialogData.performers, initialEvent),
+        featureId: toOptionalPerformerId(mainShowData.Feature),
+        openerId: toOptionalPerformerId(mainShowData.Opener),
+        headliner2Id: toOptionalPerformerId(mainShowData.Headliner2),
+        feature2Id: toOptionalPerformerId(mainShowData.Feature2),
         specialNote: mainShowData.specialnotes ?? "",
         dinner: mainShowData.ShowDinner === "Y",
         noPasses: mainShowData.NoPasses === "Y",
@@ -736,6 +930,12 @@ export default function AddShowDialog({
         showTime: toCalendarTimeControlValue(mainShowData.ShowTim),
         arrivalTime: toCalendarTimeControlValue(mainShowData.ShowArrival),
       })
+      const mappedRows = showData.map(mapShowDataToSectionRow)
+      setEditSectionRows(mappedRows)
+      setDeletedShowSectionIds([])
+      originalShowDetIdsRef.current = new Set(
+        showData.map((row) => row.ShowDetID)
+      )
       setIsLoading(false)
     } else if (!isEditMode) {
       setFormValues({
@@ -752,20 +952,25 @@ export default function AddShowDialog({
   let showTimes = dialogData?.showTimes ?? []
   const ageRestrictions = dialogData?.ageRestrictions ?? []
 
-  if (isEditMode && showData && showData.length > 0) {
-    const mainShowData = showData[0]
-    const arrivalTime = formValues.arrivalTime || toCalendarTimeControlValue(mainShowData.ShowArrival)
-    const showTime = formValues.showTime || toCalendarTimeControlValue(mainShowData.ShowTim)
+  if (isEditMode && editSectionRows && editSectionRows.length > 0) {
+    const dayLabel = formValues.startDate
+      ? dayjs(formValues.startDate).format("dddd")
+      : showData?.[0]
+        ? dayjs(showData[0].ShowDate).format("dddd")
+        : ""
+    const arrivalTime = formValues.arrivalTime
+    const showTime = formValues.showTime
 
-    showTimes = showData.map((row) => ({
-        id: row.ShowDetID,
-        dayLabel: dayjs(mainShowData.ShowDate).format("dddd"),
-        timeRange:
-          arrivalTime && showTime
-            ? `${arrivalTime} - ${showTime}`
-            : arrivalTime || showTime || "",
-        enabled: true,
-        sections: [{
+    showTimes = editSectionRows.map((row) => ({
+      id: row.ShowDetID,
+      dayLabel,
+      timeRange:
+        arrivalTime && showTime
+          ? `${arrivalTime} - ${showTime}`
+          : arrivalTime || showTime || "",
+      enabled: true,
+      sections: [
+        {
           id: row.ShowDetID,
           section: row.Section ?? "",
           price: row.ShowPrice ?? 0,
@@ -775,8 +980,39 @@ export default function AddShowDialog({
           walkupFee: row.ShowDefDetwalkupsvc ?? 0,
           phoneFee: row.ShowDefDetphonesvc ?? 0,
           webFee: row.ShowDefDetwebsvc ?? 0,
-        }]
-      }))
+        },
+      ],
+    }))
+  } else if (isEditMode && showData && showData.length > 0) {
+    const mainShowData = showData[0]
+    const arrivalTime =
+      formValues.arrivalTime ||
+      toCalendarTimeControlValue(mainShowData.ShowArrival)
+    const showTime =
+      formValues.showTime || toCalendarTimeControlValue(mainShowData.ShowTim)
+
+    showTimes = showData.map((row) => ({
+      id: row.ShowDetID,
+      dayLabel: dayjs(mainShowData.ShowDate).format("dddd"),
+      timeRange:
+        arrivalTime && showTime
+          ? `${arrivalTime} - ${showTime}`
+          : arrivalTime || showTime || "",
+      enabled: true,
+      sections: [
+        {
+          id: row.ShowDetID,
+          section: row.Section ?? "",
+          price: row.ShowPrice ?? 0,
+          seats: row.ShowNon ?? 0,
+          restrictShowPromo: row.ShowDetRestrictPromo === "Y",
+          web: row.Web === "Y",
+          walkupFee: row.ShowDefDetwalkupsvc ?? 0,
+          phoneFee: row.ShowDefDetphonesvc ?? 0,
+          webFee: row.ShowDefDetwebsvc ?? 0,
+        },
+      ],
+    }))
   }
 
   const selectedCount = useMemo(
@@ -832,6 +1068,218 @@ export default function AddShowDialog({
     }))
   }
 
+  function openEditShowTimes(showTime: ShowTimeOption) {
+    if (!isEditMode) {
+      return
+    }
+
+    const lookups = dialogData?.sectionLookups ?? []
+    const siblingSections = showTimes
+      .filter((item) => item.timeRange === showTime.timeRange)
+      .flatMap((item) => item.sections)
+      .map((section) => {
+        const byCode = lookups.find((item) => item.code === section.section)
+        const byDescription = lookups.find(
+          (item) => item.description === section.section
+        )
+        return {
+          ...section,
+          section: byCode?.code ?? byDescription?.code ?? section.section,
+        }
+      })
+
+    setEditShowTimesSeed({
+      showTime,
+      dayLabel: showTime.dayLabel,
+      showTimeValue: formValues.showTime,
+      arrivalTimeValue: formValues.arrivalTime,
+      dinner: formValues.dinner,
+      noPasses: formValues.noPasses,
+      vipSeating: formValues.vipSeating,
+      hub: formValues.hub,
+      age21Plus:
+        formValues.ageRestriction === "Y" || formValues.ageRestriction === "21",
+      sections: siblingSections.length > 0 ? siblingSections : showTime.sections,
+    })
+    setIsEditShowTimesOpen(true)
+  }
+
+  function openEditAddShowSection(
+    showTime: ShowTimeOption,
+    section: ShowTimeSection
+  ) {
+    if (isEditMode || !dialogData) {
+      return
+    }
+
+    const row = dialogData.sectionRows.find(
+      (item) => item.ShowDetID === section.id
+    )
+
+    setEditAddShowSectionSeed({
+      showTime,
+      section,
+      showTimeValue: toCalendarTimeControlValue(row?.ShowTim),
+      arrivalTimeValue: toCalendarTimeControlValue(row?.ShowArrival),
+      dayOfWeek: dayLabelToId(showTime.dayLabel || row?.ShowDay),
+    })
+    setIsEditAddShowSectionOpen(true)
+  }
+
+  function handleEditAddShowSectionUpdate(
+    result: EditAddShowSectionSaveResult
+  ): string | null {
+    if (!dialogData) {
+      return "Unable to update section."
+    }
+
+    const lookups = dialogData.sectionLookups
+    const { Section, ShowSec } = resolveDraftSectionFields(
+      result.sectionCode,
+      lookups
+    )
+    const showDay = dayIdToLabel(result.dayOfWeek)
+    const weekDay = dayIdToWeekDay(result.dayOfWeek)
+    const sectionName = (Section ?? "").trim().toLowerCase()
+    const sectionCode = result.sectionCode.trim().toLowerCase()
+
+    // Desktop UpdateShowSection (Add Show): block duplicate section within the
+    // same show-time group (ShowDefID), not across other times on that day.
+    const duplicate = dialogData.sectionRows.find((row) => {
+      if (row.ShowDetID === result.sectionId) {
+        return false
+      }
+      if (row.ShowDefID !== result.showDefId) {
+        return false
+      }
+
+      const rowSection = (row.Section ?? "").trim().toLowerCase()
+      const rowSec = (row.ShowSec ?? "").trim().toLowerCase()
+      return (
+        rowSection === sectionName ||
+        rowSec === sectionCode ||
+        rowSection === sectionCode
+      )
+    })
+    if (duplicate) {
+      return "Show section already exist with this data .."
+    }
+
+    const fallbackDate = new Date()
+
+    const nextSectionRows = dialogData.sectionRows.map((row) => {
+      const nextShowTim = applyCalendarTimeToApiValue(
+        row.ShowTim,
+        result.showTime,
+        fallbackDate
+      )
+      const nextShowArrival = applyCalendarTimeToApiValue(
+        row.ShowArrival,
+        result.arrivalTime,
+        fallbackDate
+      )
+
+      if (row.ShowDetID === result.sectionId) {
+        return {
+          ...row,
+          ShowDay: showDay,
+          WeekDay: weekDay,
+          ShowTim: nextShowTim,
+          ShowArrival: nextShowArrival,
+          Section,
+          ShowSec,
+          ShowPrice: Number.parseFloat(result.price) || 0,
+          ShowNon: Number.parseInt(result.seats, 10) || 0,
+          Web: result.showOnWeb ? "Y" : "N",
+          ShowDetRestrictPromo: result.restrictShowPromo ? "Y" : "N",
+          ShowDefDetwalkupsvc: Number.parseFloat(result.walkupFee) || 0,
+          ShowDefDetphonesvc: Number.parseFloat(result.phoneFee) || 0,
+          ShowDefDetwebsvc: Number.parseFloat(result.webFee) || 0,
+          ShowSmoking: row.ShowSmoking ?? 0,
+        }
+      }
+
+      // Desktop: apply new show/arrival time to all sections sharing ShowDefID.
+      if (row.ShowDefID === result.showDefId) {
+        return {
+          ...row,
+          ShowTim: nextShowTim,
+          ShowArrival: nextShowArrival,
+        }
+      }
+
+      return row
+    })
+
+    const mapped = mapDefaultShowSectionsToDialogData(
+      nextSectionRows,
+      dialogData.performers
+    )
+
+    setDialogData({
+      ...dialogData,
+      sectionRows: mapped.sectionRows,
+      showTimes: mapped.showTimes,
+      ageRestrictions: mapped.ageRestrictions,
+    })
+
+    return null
+  }
+
+  /** Desktop: modal Save copies ShowFilterList → ShowList (in memory only). */
+  function handleEditShowTimesSave(result: EditCalendarShowTimesSaveResult) {
+    const lookups = dialogData?.sectionLookups ?? []
+    const template = editSectionRows?.[0] ?? null
+    const previousIds = new Set(
+      (editSectionRows ?? []).map((row) => row.ShowDetID)
+    )
+
+    const nextRows = result.sections.map((draft) => {
+      const existing =
+        editSectionRows?.find((row) => row.ShowDetID === draft.id) ?? null
+      return mapDraftToSectionRow(
+        draft,
+        existing ?? template,
+        lookups,
+        result.showTime,
+        result.arrivalTime
+      )
+    })
+
+    const nextIds = new Set(nextRows.map((row) => row.ShowDetID))
+    const newlyDeleted = [...originalShowDetIdsRef.current].filter(
+      (id) => !nextIds.has(id)
+    )
+
+    setEditSectionRows(nextRows)
+    setDeletedShowSectionIds((current) => [
+      ...new Set([...current, ...newlyDeleted]),
+    ])
+    setFormValues((current) => {
+      const keptSelected = current.selectedShowTimeIds.filter((id) =>
+        nextIds.has(id)
+      )
+      const newlyAdded = nextRows
+        .map((row) => row.ShowDetID)
+        .filter((id) => !previousIds.has(id))
+
+      return {
+        ...current,
+        showTime: result.showTime,
+        arrivalTime: result.arrivalTime,
+        dinner: result.dinner,
+        noPasses: result.noPasses,
+        vipSeating: result.vipSeating,
+        hub: result.hub,
+        ageRestriction: result.age21Plus
+          ? "Y"
+          : current.ageRestriction === "Y"
+            ? "A"
+            : current.ageRestriction,
+        selectedShowTimeIds: [...new Set([...keptSelected, ...newlyAdded])],
+      }
+    })
+  }
 
   function handleSave() {
     if (!dialogData || !recurrence) {
@@ -840,34 +1288,12 @@ export default function AddShowDialog({
 
     let filteredRows: ApiDefaultShowSection[] = []
 
-    if (isEditMode && showData) {
+    if (isEditMode) {
+      const sourceRows =
+        editSectionRows ??
+        (showData ? showData.map(mapShowDataToSectionRow) : [])
       const selectedIds = new Set(formValues.selectedShowTimeIds)
-      filteredRows = showData
-        .filter((row) => selectedIds.has(row.ShowDetID))
-        .map(row => ({
-          ShowId: row.ShowId,
-          ShowDetID: row.ShowDetID,
-          ShowDefID: "",
-          ShowDay: "",
-          WeekDay: 0,
-          ShowDate: row.ShowDate,
-          ShowArrival: row.ShowArrival,
-          ShowTim: row.ShowTim,
-          Section: row.Section,
-          ShowPrice: row.ShowPrice,
-          ShowNon: row.ShowNon,
-          ShowSmoking: null,
-          Web: row.Web,
-          Hub: null,
-          NoPasses: null,
-          VIP: null,
-          Over21: null,
-          ShowDinner: null,
-          ShowDetRestrictPromo: row.ShowDetRestrictPromo,
-          ShowDefDetwalkupsvc: row.ShowDefDetwalkupsvc,
-          ShowDefDetphonesvc: row.ShowDefDetphonesvc,
-          ShowDefDetwebsvc: row.ShowDefDetwebsvc,
-        }))
+      filteredRows = sourceRows.filter((row) => selectedIds.has(row.ShowDetID))
     } else {
       filteredRows = buildSaveShowFilterList(
         dialogData.sectionRows,
@@ -934,6 +1360,10 @@ export default function AddShowDialog({
           sectionRows: rowsToSave,
           sectionLookups: dialogData.sectionLookups,
           showId: showId,
+          existingShowDetIds: originalShowDetIdsRef.current,
+          deleteShowSectionIds: deletedShowSectionIds.filter((id) =>
+            originalShowDetIdsRef.current.has(id)
+          ),
         })
 
         await updateShow(reqPayload).unwrap()
@@ -1434,6 +1864,12 @@ export default function AddShowDialog({
                     showTimes={showTimes}
                     selectedShowTimeIds={formValues.selectedShowTimeIds}
                     onToggleShowTime={toggleShowTime}
+                    onRowDoubleClick={
+                      isEditMode ? openEditShowTimes : undefined
+                    }
+                    onSectionDoubleClick={
+                      !isEditMode ? openEditAddShowSection : undefined
+                    }
                     showDayLabel={!isEditMode}
                     error={visibleValidationErrors.selectedShowTimeIds}
                   />
@@ -1470,6 +1906,34 @@ export default function AddShowDialog({
         onRowsChange={handleVerifyRowsChange}
         onConfirm={() => handleConfirmSave()}
         isSaving={isSaving}
+      />
+
+      <EditCalendarShowTimesDialog
+        open={isEditShowTimesOpen}
+        onOpenChange={(nextOpen) => {
+          setIsEditShowTimesOpen(nextOpen)
+          if (!nextOpen) {
+            setEditShowTimesSeed(null)
+          }
+        }}
+        seed={editShowTimesSeed}
+        sectionLookups={dialogData?.sectionLookups ?? []}
+        nested
+        onSave={handleEditShowTimesSave}
+      />
+
+      <EditAddShowSectionDialog
+        open={isEditAddShowSectionOpen}
+        onOpenChange={(nextOpen) => {
+          setIsEditAddShowSectionOpen(nextOpen)
+          if (!nextOpen) {
+            setEditAddShowSectionSeed(null)
+          }
+        }}
+        seed={editAddShowSectionSeed}
+        sectionLookups={dialogData?.sectionLookups ?? []}
+        nested
+        onUpdate={handleEditAddShowSectionUpdate}
       />
 
       <ComedianSearchDialog

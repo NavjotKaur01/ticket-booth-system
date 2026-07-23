@@ -24,6 +24,8 @@ type BuildUpdateShowRequestParams = {
   sectionRows: ApiDefaultShowSection[]
   sectionLookups: SectionLookupItem[]
   showId: string
+  existingShowDetIds?: ReadonlySet<string>
+  deleteShowSectionIds?: string[]
 }
 
 function parseDecimal(value: string, fallback = 0) {
@@ -78,6 +80,8 @@ export function buildUpdateShowRequest({
   sectionRows,
   sectionLookups,
   showId,
+  existingShowDetIds,
+  deleteShowSectionIds = [],
 }: BuildUpdateShowRequestParams): UpdateShowRequestModel {
   const pendingCustomSections = collectPendingCustomSections(
     sectionRows,
@@ -95,7 +99,11 @@ export function buildUpdateShowRequest({
   )
 
   const sectionList: UpdateShowSectionDetModel[] = resolvedRows.map((row) => ({
-    ShowDetID: row.ShowDetID || null,
+    ShowDetID: existingShowDetIds
+      ? row.ShowDetID && existingShowDetIds.has(row.ShowDetID)
+        ? row.ShowDetID
+        : null
+      : row.ShowDetID || null,
     ShowSec: resolveSectionCode(
       row.Section,
       row.ShowSec,
@@ -110,7 +118,7 @@ export function buildUpdateShowRequest({
     ),
     ShowPrice: row.ShowPrice,
     ShowNon: row.ShowNon,
-    ShowSmoking: row.ShowSmoking,
+    ShowSmoking: row.ShowSmoking ?? 0,
     Web: row.Web,
     ShowAppearing: "Y",
     Active: "Y",
@@ -156,6 +164,6 @@ export function buildUpdateShowRequest({
     specialshownotes: form.specialNote || null,
     SectionList: sectionList,
     NewLookupList: newLookupList,
-    DeleteShowSectionIds: [],
+    DeleteShowSectionIds: deleteShowSectionIds,
   }
 }

@@ -30,7 +30,7 @@ export type ShowSectionDetModel = {
   ShowSecOrder?: number | null
   ShowPrice: number | null
   ShowNon: number | null
-  ShowSmoking: number | null
+  ShowSmoking: number | 0
   Web: string | null
   AssignSeats: string
   RestrictPromoForSection: string | null

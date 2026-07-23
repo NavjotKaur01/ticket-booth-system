@@ -84,7 +84,7 @@ function buildSectionList(
     ),
     ShowPrice: row.ShowPrice,
     ShowNon: row.ShowNon,
-    ShowSmoking: row.ShowSmoking,
+    ShowSmoking: row.ShowSmoking ?? 0 as number,
     Web: row.Web,
     AssignSeats: assignTable ? "Y" : "N",
     RestrictPromoForSection: row.ShowDetRestrictPromo ?? "N",
