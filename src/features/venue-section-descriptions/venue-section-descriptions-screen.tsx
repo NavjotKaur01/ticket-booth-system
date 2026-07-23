@@ -1,32 +1,18 @@
-import {
-  LayoutList,
-  LoaderCircle,
-  Plus,
-  Save,
-} from "lucide-react"
-import { Fragment, useEffect, useState } from "react"
+import { LoaderCircle } from "lucide-react"
+import { useEffect, useState } from "react"
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
-import { StandardRowActionsMenu } from "@/components/common/standard-row-actions-menu"
+import { PanelCard } from "@/components/common/panel-card"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
+import {
+  AdminPageShell,
+  AdminPageTitle,
+} from "@/components/layout/admin-page"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { VenueSectionDescriptionDataTable } from "@/features/venue-section-descriptions/venue-section-description-data-table"
 import {
   createVenueSectionDescription,
   deleteVenueSectionDescription,
@@ -36,99 +22,6 @@ import {
 import { useAppSession } from "@/hooks/use-app-session"
 import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import type { VenueSectionDescriptionRecord } from "@/types/venue-section-description"
-
-function EmptyState({
-  title,
-  description,
-}: {
-  title: string
-  description: string
-}) {
-  return (
-    <div className="rounded-sm border border-dashed border-border bg-muted/20 px-4 py-10 text-center">
-      <p className="text-sm font-medium text-foreground">{title}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-    </div>
-  )
-}
-
-function InlineEditorRow({
-  rowNumber,
-  sectionName,
-  sectionDetail,
-  saving,
-  canSave,
-  mode,
-  onSectionNameChange,
-  onSectionDetailChange,
-  onCancel,
-  onSave,
-}: {
-  rowNumber?: number
-  sectionName: string
-  sectionDetail: string
-  saving: boolean
-  canSave: boolean
-  mode: "create" | "edit"
-  onSectionNameChange: (value: string) => void
-  onSectionDetailChange: (value: string) => void
-  onCancel: () => void
-  onSave: () => void
-}) {
-  return (
-    <TableRow className="bg-muted/20 hover:bg-muted/20">
-      <TableCell className="px-4 align-top font-medium tabular-nums text-muted-foreground">
-        {rowNumber ?? "—"}
-      </TableCell>
-      <TableCell className="align-top px-4">
-        <Input
-          value={sectionName}
-          onChange={(event) => onSectionNameChange(event.target.value)}
-          placeholder="Section name"
-          aria-label="Section name"
-          className="bg-background"
-        />
-      </TableCell>
-      <TableCell className="align-top px-4">
-        <Textarea
-          value={sectionDetail}
-          onChange={(event) => onSectionDetailChange(event.target.value)}
-          placeholder="Section detail"
-          aria-label="Section detail"
-          rows={3}
-          className="min-h-20 bg-background"
-        />
-      </TableCell>
-      <TableCell className="px-4 align-top">
-        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onCancel}
-            disabled={saving}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            className="gap-2"
-            onClick={onSave}
-            disabled={!canSave || saving}
-          >
-            {saving ? (
-              <LoaderCircle className="size-4 animate-spin" />
-            ) : (
-              <Save className="size-4" />
-            )}
-            {mode === "edit" ? "Update" : "Add"}
-          </Button>
-        </div>
-      </TableCell>
-    </TableRow>
-  )
-}
 
 export function VenueSectionDescriptionsScreen() {
   const { locationId, locationName } = useAppSession()
@@ -141,7 +34,9 @@ export function VenueSectionDescriptionsScreen() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [deletingRow, setDeletingRow] = useState<VenueSectionDescriptionRecord | null>(null)
+  const [deletingRow, setDeletingRow] = useState<VenueSectionDescriptionRecord | null>(
+    null
+  )
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
@@ -314,186 +209,162 @@ export function VenueSectionDescriptionsScreen() {
     }
   }
 
-  return (
-    <>
-        <div className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <h1 className="text-xl font-semibold tracking-tight text-foreground">
-                Section Details
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Manage venue section names and descriptions with mock service data
-                until the backend integration is ready.
-              </p>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              className="gap-2"
-              disabled={!locationId || loading}
-              onClick={openCreateEditor}
-            >
-              <Plus className="size-4" />
-              New
-            </Button>
+  function renderEditorPanel() {
+    if (!editorMode) {
+      return null
+    }
+
+    return (
+      <div className="border-b px-3 py-4">
+        <div className="rounded-sm border border-border bg-background p-4">
+          <div className="mb-3">
+            <p className="text-sm font-semibold text-foreground">
+              {editorMode === "edit"
+                ? "Edit Section Description"
+                : "New Section Description"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Set the section name and detail, then save.
+            </p>
           </div>
 
-          <Card className="gap-0 py-0">
-            <CardHeader className="border-b bg-muted/40 px-4 py-3">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
-                Section Details
-              </CardTitle>
-            </CardHeader>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]">
+            <div className="space-y-1.5">
+              <Label htmlFor="venue-section-name">Section Name</Label>
+              <Input
+                id="venue-section-name"
+                value={sectionNameInput}
+                onChange={(event) => setSectionNameInput(event.target.value)}
+                placeholder="Section name"
+                className="bg-background"
+              />
+            </div>
 
-            <CardContent className="space-y-0 px-0 py-0">
-              {error && !editorMode ? (
-                <div className="px-4 pt-4">
-                  <p className="rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                    {error}
-                  </p>
-                </div>
-              ) : null}
+            <div className="space-y-1.5">
+              <Label htmlFor="venue-section-detail">Section Detail</Label>
+              <Textarea
+                id="venue-section-detail"
+                value={sectionDetailInput}
+                onChange={(event) => setSectionDetailInput(event.target.value)}
+                placeholder="Section detail"
+                rows={3}
+                className="min-h-20 bg-background"
+              />
+            </div>
+          </div>
 
-              {!locationId ? (
-                <div className="p-4">
-                  <VenueNoLocationState featureLabel="Section descriptions" />
-                </div>
-              ) : loading ? (
-                <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
+          <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeEditor}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={!canSave || saving}
+            >
+              {saving ? (
+                <>
                   <LoaderCircle className="size-4 animate-spin" />
-                  Loading section descriptions...
-                </div>
-              ) : rows.length === 0 && editorMode !== "create" ? (
-                <div className="p-4">
-                  <EmptyState
-                    title="No section descriptions configured yet."
-                    description="Use New to add the first section for this location."
-                  />
-                </div>
+                  {editorMode === "edit" ? "Update" : "Create"}
+                </>
+              ) : editorMode === "edit" ? (
+                "Update"
               ) : (
-                <div className="overflow-x-auto px-4 py-4">
-                  <Table className="min-w-[48rem]">
-                    <TableHeader>
-                      <TableRow className="bg-muted/40 hover:bg-muted/40">
-                        <TableHead className="w-16 px-4">#</TableHead>
-                        <TableHead className="min-w-48 px-4">Section Name</TableHead>
-                        <TableHead className="min-w-80 px-4">Section Detail</TableHead>
-                        <TableHead className="w-36 px-4 text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {editorMode === "create" ? (
-                        <InlineEditorRow
-                          sectionName={sectionNameInput}
-                          sectionDetail={sectionDetailInput}
-                          saving={saving}
-                          canSave={canSave}
-                          mode="create"
-                          onSectionNameChange={setSectionNameInput}
-                          onSectionDetailChange={setSectionDetailInput}
-                          onCancel={closeEditor}
-                          onSave={() => void handleSave()}
-                        />
-                      ) : null}
-
-                      {rows.map((row, index) => (
-                        <Fragment key={row.id}>
-                          {editorMode === "edit" && editingSectionId === row.id ? (
-                            <InlineEditorRow
-                              rowNumber={index + 1}
-                              sectionName={sectionNameInput}
-                              sectionDetail={sectionDetailInput}
-                              saving={saving}
-                              canSave={canSave}
-                              mode="edit"
-                              onSectionNameChange={setSectionNameInput}
-                              onSectionDetailChange={setSectionDetailInput}
-                              onCancel={closeEditor}
-                              onSave={() => void handleSave()}
-                            />
-                          ) : (
-                            <TableRow
-                              className={editorMode === "edit" && editingSectionId === row.id
-                                ? "bg-primary/5"
-                                : undefined
-                              }
-                            >
-                              <TableCell className="px-4 font-medium tabular-nums text-muted-foreground">
-                                {index + 1}
-                              </TableCell>
-                              <TableCell className="px-4 font-medium text-foreground">
-                                {row.sectionName}
-                              </TableCell>
-                              <TableCell className="px-4 text-sm text-muted-foreground">
-                                {row.sectionDetail}
-                              </TableCell>
-                              <TableCell className="px-4">
-                                <div className="flex items-center justify-end">
-                                  <StandardRowActionsMenu
-                                    ariaLabel={`Actions for ${row.sectionName}`}
-                                    hiddenActions={["Add"]}
-                                    onAction={(action) => {
-                                      if (action === "Edit") {
-                                        openEditEditor(row)
-                                      }
-                                      if (action === "Delete") {
-                                        setDeletingRow(row)
-                                      }
-                                    }}
-                                  />
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </Fragment>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                "Create"
               )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-              {error && editorMode ? (
-                <div className="px-4 pb-4">
-                  <p className="rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                    {error}
-                  </p>
-                </div>
-              ) : null}
-            </CardContent>
-
-            <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 sm:flex-row sm:items-center">
-              <div aria-live="polite" className="text-sm text-muted-foreground">
-                {locationId
-                  ? statusMessage ||
-                    `${rows.length} section description${rows.length === 1 ? "" : "s"} loaded for ${locationName}.`
-                  : "Select a location from the header to begin managing section descriptions."}
-              </div>
-              {locationId && rows.length > 0 ? (
-                <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                  <LayoutList className="size-3.5" />
-                  Mock management mode
-                </div>
-              ) : null}
-            </CardFooter>
-          </Card>
+  return (
+    <>
+      <AdminPageShell>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1">
+            <AdminPageTitle>Section Details</AdminPageTitle>
+            <p className="text-sm text-muted-foreground">
+              Manage venue section names and descriptions with mock service data
+              until the backend integration is ready.
+            </p>
+          </div>
+          <Button
+            type="button"
+            disabled={!locationId || loading}
+            onClick={openCreateEditor}
+            className="w-full sm:w-auto"
+          >
+            New
+          </Button>
         </div>
 
-        <ConfirmDeleteDialog
-          open={Boolean(deletingRow)}
-          onOpenChange={(open) => {
-            if (!open && !deletingId) {
-              setDeletingRow(null)
-            }
-          }}
-          onConfirm={() => void confirmDelete()}
-          title="Delete section description?"
-          description={deletingRow
+        <PanelCard>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">Note:</span> Add
+              with New, or edit a row when a section description changes.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Records:{" "}
+              <span className="font-semibold tabular-nums text-foreground">
+                {rows.length}
+              </span>
+            </p>
+          </div>
+
+          {error ? (
+            <p className="border-b px-3 py-2 text-sm text-destructive">{error}</p>
+          ) : null}
+
+          {statusMessage ? (
+            <p className="border-b px-3 py-2 text-sm text-muted-foreground">
+              {statusMessage}
+            </p>
+          ) : null}
+
+          {!locationId ? (
+            <div className="p-4">
+              <VenueNoLocationState featureLabel="Section descriptions" />
+            </div>
+          ) : (
+            <>
+              {renderEditorPanel()}
+              <VenueSectionDescriptionDataTable
+                data={rows}
+                loading={loading}
+                emptyMessage="No section descriptions found for this location."
+                onEdit={openEditEditor}
+                onDelete={setDeletingRow}
+              />
+            </>
+          )}
+        </PanelCard>
+      </AdminPageShell>
+
+      <ConfirmDeleteDialog
+        open={Boolean(deletingRow)}
+        onOpenChange={(open) => {
+          if (!open && !deletingId) {
+            setDeletingRow(null)
+          }
+        }}
+        onConfirm={() => void confirmDelete()}
+        title="Delete section description?"
+        description={
+          deletingRow
             ? `This will remove ${deletingRow.sectionName} from ${locationName}.`
-            : ""}
-          confirmLabel="Delete section"
-          isPending={Boolean(deletingId)}
-        />
+            : ""
+        }
+        confirmLabel="Delete section"
+        isPending={Boolean(deletingId)}
+      />
     </>
   )
 }

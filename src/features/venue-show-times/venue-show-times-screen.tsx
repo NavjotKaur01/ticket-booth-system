@@ -1,22 +1,14 @@
-﻿import {
-  Clock3,
-  LoaderCircle,
-  Plus,
-  Save,
-} from "lucide-react"
-import { Fragment, useEffect, useState } from "react"
+﻿import { LoaderCircle } from "lucide-react"
+import { useEffect, useState } from "react"
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
-import { StandardRowActionsMenu } from "@/components/common/standard-row-actions-menu"
+import { PanelCard } from "@/components/common/panel-card"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
-import { Button } from "@/components/ui/button"
 import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  AdminPageShell,
+  AdminPageTitle,
+} from "@/components/layout/admin-page"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -26,16 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { useAppSession } from "@/hooks/use-app-session"
 import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
+import { VenueShowTimeDataTable } from "@/features/venue-show-times/venue-show-time-data-table"
 import {
   createVenueShowTime,
   deleteVenueShowTime,
@@ -55,37 +40,9 @@ const DAY_OF_WEEK_OPTIONS = [
 ] as const
 
 const FLAG_OPTIONS = [
-  { value: "Y", label: "Y" },
-  { value: "N", label: "N" },
+  { value: "Y", label: "Yes" },
+  { value: "N", label: "No" },
 ] as const
-
-function EmptyState({
-  title,
-  description,
-}: {
-  title: string
-  description: string
-}) {
-  return (
-    <div className="rounded-sm border border-dashed border-border bg-muted/20 px-4 py-10 text-center">
-      <p className="text-sm font-medium text-foreground">{title}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-    </div>
-  )
-}
-
-function BooleanPill({ value }: { value: boolean }) {
-  return (
-    <span
-      className={value
-        ? "inline-flex min-w-9 items-center justify-center rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
-        : "inline-flex min-w-9 items-center justify-center rounded-full bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground"
-      }
-    >
-      {value ? "Y" : "N"}
-    </span>
-  )
-}
 
 function toFlagValue(value: boolean) {
   return value ? "Y" : "N"
@@ -265,7 +222,11 @@ export function VenueShowTimesScreen() {
         setRows((current) =>
           current
             .map((row) => (row.id === updatedRow.id ? updatedRow : row))
-            .sort((left, right) => left.dayOfWeek.localeCompare(right.dayOfWeek) || left.showTime.localeCompare(right.showTime))
+            .sort(
+              (left, right) =>
+                left.dayOfWeek.localeCompare(right.dayOfWeek) ||
+                left.showTime.localeCompare(right.showTime)
+            )
         )
         const updateMessage = `Updated ${updatedRow.dayOfWeek} ${updatedRow.showTime} for ${locationName}.`
         setStatusMessage(updateMessage)
@@ -286,7 +247,9 @@ export function VenueShowTimesScreen() {
 
         setRows((current) =>
           [createdRow, ...current].sort(
-            (left, right) => left.dayOfWeek.localeCompare(right.dayOfWeek) || left.showTime.localeCompare(right.showTime)
+            (left, right) =>
+              left.dayOfWeek.localeCompare(right.dayOfWeek) ||
+              left.showTime.localeCompare(right.showTime)
           )
         )
         const createMessage = `Added ${createdRow.dayOfWeek} ${createdRow.showTime} for ${locationName}.`
@@ -345,7 +308,7 @@ export function VenueShowTimesScreen() {
     id: string
   }) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label htmlFor={id}>{label}</Label>
         <Select value={value} onValueChange={onChange}>
           <SelectTrigger id={id} className="w-full bg-background">
@@ -363,248 +326,198 @@ export function VenueShowTimesScreen() {
     )
   }
 
-  function renderEditorRow() {
+  function renderEditorPanel() {
+    if (!editorMode) {
+      return null
+    }
+
     return (
-      <TableRow className="bg-muted/20 hover:bg-muted/20">
-        <TableCell colSpan={10} className="p-4 whitespace-normal">
-          <div className="rounded-xl border border-border/70 bg-background/90 p-4 shadow-sm">
-            <div className="grid gap-4 xl:grid-cols-2">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="venue-show-time-day">Day Of Week</Label>
-                  <Select value={dayOfWeekInput} onValueChange={setDayOfWeekInput}>
-                    <SelectTrigger id="venue-show-time-day" className="w-full bg-background">
-                      <SelectValue placeholder="Select day" />
-                    </SelectTrigger>
-                    <SelectContent position="popper">
-                      {DAY_OF_WEEK_OPTIONS.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+      <div className="border-b px-3 py-4">
+        <div className="rounded-sm border border-border bg-background p-4">
+          <div className="mb-3">
+            <p className="text-sm font-semibold text-foreground">
+              {editorMode === "edit" ? "Edit Show Time" : "New Show Time"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Update the show-time rule, then save to apply changes.
+            </p>
+          </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="venue-show-time-show">Show Time</Label>
-                  <Input
-                    id="venue-show-time-show"
-                    value={showTimeInput}
-                    onChange={(event) => setShowTimeInput(event.target.value)}
-                    placeholder="10:00 PM"
-                    className="bg-background"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="venue-show-time-arrival">Arrival Time</Label>
-                  <Input
-                    id="venue-show-time-arrival"
-                    value={arrivalTimeInput}
-                    onChange={(event) => setArrivalTimeInput(event.target.value)}
-                    placeholder="9:45 PM"
-                    className="bg-background"
-                  />
-                </div>
-
-                {renderFlagField({
-                  label: "Dinner",
-                  value: dinnerInput,
-                  onChange: setDinnerInput,
-                  id: "venue-show-time-dinner",
-                })}
-                {renderFlagField({
-                  label: "No Passes",
-                  value: noPassesInput,
-                  onChange: setNoPassesInput,
-                  id: "venue-show-time-no-passes",
-                })}
+          <div className="grid gap-4 xl:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="venue-show-time-day">Day Of Week</Label>
+                <Select value={dayOfWeekInput} onValueChange={setDayOfWeekInput}>
+                  <SelectTrigger
+                    id="venue-show-time-day"
+                    className="w-full bg-background"
+                  >
+                    <SelectValue placeholder="Select day" />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    {DAY_OF_WEEK_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                {renderFlagField({
-                  label: "VIP",
-                  value: vipInput,
-                  onChange: setVipInput,
-                  id: "venue-show-time-vip",
-                })}
-                {renderFlagField({
-                  label: "Over 21",
-                  value: over21Input,
-                  onChange: setOver21Input,
-                  id: "venue-show-time-over-21",
-                })}
-                <div className="space-y-2 sm:col-span-2">
-                  {renderFlagField({
-                    label: "Show Seating Chart",
-                    value: showSeatingChartInput,
-                    onChange: setShowSeatingChartInput,
-                    id: "venue-show-time-seating-chart",
-                  })}
-                </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="venue-show-time-show">Show Time</Label>
+                <Input
+                  id="venue-show-time-show"
+                  value={showTimeInput}
+                  onChange={(event) => setShowTimeInput(event.target.value)}
+                  placeholder="10:00 PM"
+                  className="bg-background"
+                />
               </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="venue-show-time-arrival">Arrival Time</Label>
+                <Input
+                  id="venue-show-time-arrival"
+                  value={arrivalTimeInput}
+                  onChange={(event) => setArrivalTimeInput(event.target.value)}
+                  placeholder="9:45 PM"
+                  className="bg-background"
+                />
+              </div>
+
+              {renderFlagField({
+                label: "Dinner",
+                value: dinnerInput,
+                onChange: setDinnerInput,
+                id: "venue-show-time-dinner",
+              })}
+              {renderFlagField({
+                label: "No Passes",
+                value: noPassesInput,
+                onChange: setNoPassesInput,
+                id: "venue-show-time-no-passes",
+              })}
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-border/70 pt-4">
-              <Button type="button" variant="outline" onClick={closeEditor} disabled={saving}>
-                Cancel
-              </Button>
-              <Button type="button" onClick={() => void handleSave()} disabled={!canSave || saving}>
-                {saving ? (
-                  <LoaderCircle className="mr-2 size-4 animate-spin" />
-                ) : (
-                  <Save className="mr-2 size-4" />
-                )}
-                {editorMode === "edit" ? "Update" : "Create"}
-              </Button>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {renderFlagField({
+                label: "VIP",
+                value: vipInput,
+                onChange: setVipInput,
+                id: "venue-show-time-vip",
+              })}
+              {renderFlagField({
+                label: "Over 21",
+                value: over21Input,
+                onChange: setOver21Input,
+                id: "venue-show-time-over-21",
+              })}
+              <div className="sm:col-span-2">
+                {renderFlagField({
+                  label: "Show Seating Chart",
+                  value: showSeatingChartInput,
+                  onChange: setShowSeatingChartInput,
+                  id: "venue-show-time-seating-chart",
+                })}
+              </div>
             </div>
           </div>
-        </TableCell>
-      </TableRow>
+
+          <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeEditor}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={!canSave || saving}
+            >
+              {saving ? (
+                <>
+                  <LoaderCircle className="size-4 animate-spin" />
+                  {editorMode === "edit" ? "Update" : "Create"}
+                </>
+              ) : editorMode === "edit" ? (
+                "Update"
+              ) : (
+                "Create"
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
     )
   }
 
   return (
     <>
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <AdminPageShell>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">
-              Venue Show Times
-            </h1>
+            <AdminPageTitle>Venue Show Times</AdminPageTitle>
             <p className="text-sm text-muted-foreground">
-              Manage club show-time rules by location with inline editing and mock service
-              data until the backend is wired in.
+              Manage club show-time rules by location with inline editing and mock
+              service data until the backend is wired in.
             </p>
           </div>
           <Button
             type="button"
-            size="sm"
-            className="gap-2"
             disabled={!locationId}
             onClick={openCreateEditor}
+            className="w-full sm:w-auto"
           >
-            <Plus className="size-4" />
             New Show Time
           </Button>
         </div>
 
-        <Card className="gap-0 py-0">
-          <CardContent className="px-4 py-4">
-            <div className="rounded-sm border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-              Use New Show Time to add a row, or edit a specific row inline when a venue
-              rule changes.
+        <PanelCard>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">Note:</span> Add
+              with New Show Time, or edit a row when a venue rule changes.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Records:{" "}
+              <span className="font-semibold tabular-nums text-foreground">
+                {rows.length}
+              </span>
+            </p>
+          </div>
+
+          {error ? (
+            <p className="border-b px-3 py-2 text-sm text-destructive">{error}</p>
+          ) : null}
+
+          {statusMessage ? (
+            <p className="border-b px-3 py-2 text-sm text-muted-foreground">
+              {statusMessage}
+            </p>
+          ) : null}
+
+          {!locationId ? (
+            <div className="p-4">
+              <VenueNoLocationState featureLabel="Venue show times" />
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="gap-0 py-0">
-          <CardHeader className="border-b bg-muted/40 px-4 py-3">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
-              Club Show Times Data
-            </CardTitle>
-          </CardHeader>
-
-            <CardContent className="space-y-4 px-0 py-0">
-              {error ? (
-                <div className="px-4 pt-4">
-                  <p className="rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                    {error}
-                  </p>
-                </div>
-              ) : null}
-
-              {!locationId ? (
-                <div className="p-4">
-                  <VenueNoLocationState featureLabel="Venue show times" />
-                </div>
-              ) : loading ? (
-                <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
-                  <LoaderCircle className="size-4 animate-spin" />
-                  Loading show times...
-                </div>
-              ) : rows.length === 0 && editorMode !== "create" ? (
-                <div className="p-4">
-                  <EmptyState
-                    title="No show times found."
-                    description="Use New Show Time to add the first row for this location."
-                  />
-                </div>
-              ) : (
-                <div className="px-4 py-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/40 hover:bg-muted/40">
-                        <TableHead className="w-14 px-4">#</TableHead>
-                        <TableHead>Day of Week</TableHead>
-                        <TableHead>Show Time</TableHead>
-                        <TableHead>Arrival Time</TableHead>
-                        <TableHead>Dinner</TableHead>
-                        <TableHead>No Passes</TableHead>
-                        <TableHead>VIP</TableHead>
-                        <TableHead>Over 21</TableHead>
-                        <TableHead>Show Seating Chart</TableHead>
-                        <TableHead className="w-28 px-4 text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {editorMode === "create" ? renderEditorRow() : null}
-                      {rows.map((row, index) => (
-                        <Fragment key={row.id}>
-                          <TableRow>
-                            <TableCell className="px-4 font-medium tabular-nums text-muted-foreground">
-                              {index + 1}
-                            </TableCell>
-                            <TableCell>{row.dayOfWeek}</TableCell>
-                            <TableCell className="font-medium text-foreground">{row.showTime}</TableCell>
-                            <TableCell>{row.arrivalTime}</TableCell>
-                            <TableCell><BooleanPill value={row.dinner} /></TableCell>
-                            <TableCell><BooleanPill value={row.noPasses} /></TableCell>
-                            <TableCell><BooleanPill value={row.vip} /></TableCell>
-                            <TableCell><BooleanPill value={row.over21} /></TableCell>
-                            <TableCell><BooleanPill value={row.showSeatingChart} /></TableCell>
-                            <TableCell className="px-4">
-                              <div className="flex items-center justify-end">
-                                <StandardRowActionsMenu
-                                  ariaLabel={`Actions for ${row.dayOfWeek} ${row.showTime}`}
-                                  hiddenActions={["Add"]}
-                                  onAction={(action) => {
-                                    if (action === "Edit") {
-                                      openEditEditor(row)
-                                    }
-                                    if (action === "Delete") {
-                                      setDeletingRow(row)
-                                    }
-                                  }}
-                                />
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                          {editorMode === "edit" && editingShowTimeId === row.id
-                            ? renderEditorRow()
-                            : null}
-                        </Fragment>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-
-            <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 sm:flex-row sm:items-center">
-              <div aria-live="polite" className="text-sm text-muted-foreground">
-                {locationId
-                  ? statusMessage || `${rows.length} mock show-time row${rows.length === 1 ? "" : "s"} loaded for ${locationName}.`
-                  : "Select a location from the header to begin reviewing venue show times."}
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                <Clock3 className="size-3.5" />
-                Mock management mode
-              </div>
-            </CardFooter>
-          </Card>
-        </div>
+          ) : (
+            <>
+              {renderEditorPanel()}
+              <VenueShowTimeDataTable
+                data={rows}
+                loading={loading}
+                emptyMessage="No show times found for this location."
+                onEdit={openEditEditor}
+                onDelete={setDeletingRow}
+              />
+            </>
+          )}
+        </PanelCard>
+      </AdminPageShell>
 
       <ConfirmDeleteDialog
         open={Boolean(deletingRow)}
@@ -615,9 +528,11 @@ export function VenueShowTimesScreen() {
         }}
         onConfirm={() => void confirmDelete()}
         title="Delete show time?"
-        description={deletingRow
-          ? `This will remove ${deletingRow.dayOfWeek} ${deletingRow.showTime} from ${locationName}.`
-          : ""}
+        description={
+          deletingRow
+            ? `This will remove ${deletingRow.dayOfWeek} ${deletingRow.showTime} from ${locationName}.`
+            : ""
+        }
         confirmLabel="Delete show time"
         isPending={Boolean(deletingId)}
       />

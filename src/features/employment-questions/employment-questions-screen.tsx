@@ -1,22 +1,14 @@
-import {
-  HelpCircle,
-  LoaderCircle,
-  Plus,
-} from "lucide-react"
-import { Fragment, useEffect, useState } from "react"
-
+import { LoaderCircle } from "lucide-react"
+import { useEffect, useState } from "react"
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
-import { StandardRowActionsMenu } from "@/components/common/standard-row-actions-menu"
+import { PanelCard } from "@/components/common/panel-card"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
-import { Button } from "@/components/ui/button"
 import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  AdminPageShell,
+  AdminPageTitle,
+} from "@/components/layout/admin-page"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -26,14 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { EmploymentQuestionDataTable } from "@/features/employment-questions/employment-question-data-table"
 import {
   createEmploymentQuestion,
   deleteEmploymentQuestion,
@@ -45,37 +30,9 @@ import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
 import type { EmploymentQuestionRecord } from "@/types/employment-question"
 
 const ACTIVE_OPTIONS = [
-  { value: "Y", label: "Y" },
-  { value: "N", label: "N" },
+  { value: "Y", label: "Yes" },
+  { value: "N", label: "No" },
 ] as const
-
-function EmptyState({
-  title,
-  description,
-}: {
-  title: string
-  description: string
-}) {
-  return (
-    <div className="rounded-sm border border-dashed border-border bg-muted/20 px-4 py-10 text-center">
-      <p className="text-sm font-medium text-foreground">{title}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-    </div>
-  )
-}
-
-function ActivePill({ active }: { active: boolean }) {
-  return (
-    <span
-      className={active
-        ? "inline-flex min-w-9 items-center justify-center rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
-        : "inline-flex min-w-9 items-center justify-center rounded-full bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground"
-      }
-    >
-      {active ? "Y" : "N"}
-    </span>
-  )
-}
 
 export function EmploymentQuestionsScreen() {
   const { locationId, locationName } = useAppSession()
@@ -88,7 +45,9 @@ export function EmploymentQuestionsScreen() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [deletingRow, setDeletingRow] = useState<EmploymentQuestionRecord | null>(null)
+  const [deletingRow, setDeletingRow] = useState<EmploymentQuestionRecord | null>(
+    null
+  )
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
@@ -257,25 +216,42 @@ export function EmploymentQuestionsScreen() {
     }
   }
 
-  function renderEditorRow() {
+  function renderEditorPanel() {
+    if (!editorMode) {
+      return null
+    }
+
     return (
-      <TableRow className="bg-muted/20 hover:bg-muted/20">
-        <TableCell colSpan={4} className="p-4 whitespace-normal">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_auto] lg:items-end">
-            <div className="space-y-2">
+      <div className="border-b px-3 py-4">
+        <div className="rounded-sm border border-border bg-background p-4">
+          <div className="mb-3">
+            <p className="text-sm font-semibold text-foreground">
+              {editorMode === "edit" ? "Edit Question" : "New Question"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Set the question text and active state, then save.
+            </p>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,12rem)] lg:items-end">
+            <div className="space-y-1.5">
               <Label htmlFor="employment-question-input">Question</Label>
               <Input
                 id="employment-question-input"
                 value={questionInput}
                 onChange={(event) => setQuestionInput(event.target.value)}
                 placeholder="Enter employment question"
+                className="bg-background"
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="employment-question-active">Active</Label>
               <Select value={activeInput} onValueChange={setActiveInput}>
-                <SelectTrigger id="employment-question-active" className="w-full bg-background">
+                <SelectTrigger
+                  id="employment-question-active"
+                  className="w-full bg-background"
+                >
                   <SelectValue placeholder="Select active state" />
                 </SelectTrigger>
                 <SelectContent position="popper">
@@ -287,43 +263,45 @@ export function EmploymentQuestionsScreen() {
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeEditor}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                className="gap-2"
-                onClick={() => void handleSave()}
-                disabled={!canSave || saving}
-              >
-                {saving ? (
-                  <LoaderCircle className="size-4 animate-spin" />
-                ) : (
-                  <HelpCircle className="size-4" />
-                )}
-                {editorMode === "edit" ? "Update" : "Create"}
-              </Button>
-            </div>
           </div>
-        </TableCell>
-      </TableRow>
+
+          <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeEditor}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={!canSave || saving}
+            >
+              {saving ? (
+                <>
+                  <LoaderCircle className="size-4 animate-spin" />
+                  {editorMode === "edit" ? "Update" : "Create"}
+                </>
+              ) : editorMode === "edit" ? (
+                "Update"
+              ) : (
+                "Create"
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <>
+      <AdminPageShell>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">
-              Employment Questions
-            </h1>
+            <AdminPageTitle>Employment Questions</AdminPageTitle>
             <p className="text-sm text-muted-foreground">
               Manage employment application questions with mock service data until the
               backend integration for questions is ready.
@@ -331,140 +309,74 @@ export function EmploymentQuestionsScreen() {
           </div>
           <Button
             type="button"
-            size="sm"
-            className="gap-2"
             disabled={!locationId}
             onClick={openCreateEditor}
+            className="w-full sm:w-auto"
           >
-            <Plus className="size-4" />
             New Question
           </Button>
         </div>
 
-        <Card className="gap-0 py-0">
-          <CardHeader className="border-b bg-muted/40 px-4 py-3">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
-              Employment Questions Data
-            </CardTitle>
-          </CardHeader>
+        <PanelCard>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">Note:</span> Add
+              with New Question, or edit a row when a question changes.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Records:{" "}
+              <span className="font-semibold tabular-nums text-foreground">
+                {rows.length}
+              </span>
+            </p>
+          </div>
 
-          <CardContent className="space-y-4 px-0 py-0">
-            {error ? (
-              <div className="px-4 pt-4">
-                <p className="rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                  {error}
-                </p>
-              </div>
-            ) : null}
+          {error ? (
+            <p className="border-b px-3 py-2 text-sm text-destructive">{error}</p>
+          ) : null}
 
-            {!locationId ? (
-              <div className="p-4">
-                <VenueNoLocationState featureLabel="Employment questions" />
-              </div>
-            ) : loading ? (
-              <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
-                <LoaderCircle className="size-4 animate-spin" />
-                Loading employment questions...
-              </div>
-            ) : rows.length === 0 && editorMode !== "create" ? (
-              <div className="p-4">
-                <EmptyState
-                  title="No employment questions configured yet."
-                  description="Use New Question to add the first question for this location."
-                />
-              </div>
-            ) : (
-              <div className="px-4 py-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead className="w-16 px-4">#</TableHead>
-                      <TableHead>Question</TableHead>
-                      <TableHead className="w-28">Active</TableHead>
-                      <TableHead className="w-24 px-4 text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {editorMode === "create" ? renderEditorRow() : null}
-                    {rows.map((row, index) => (
-                      <Fragment key={row.id}>
-                        <TableRow>
-                          <TableCell className="px-4 font-medium tabular-nums text-muted-foreground">
-                            {index + 1}
-                          </TableCell>
-                          <TableCell className="font-medium text-foreground">
-                            {row.question}
-                          </TableCell>
-                          <TableCell>
-                            <ActivePill active={row.active} />
-                          </TableCell>
-                          <TableCell className="px-4">
-                            <div className="flex items-center justify-end">
-                              <StandardRowActionsMenu
-                                ariaLabel={`Actions for ${row.question}`}
-                                hiddenActions={["Add"]}
-                                onAction={(action) => {
-                                  if (action === "Edit") {
-                                    openEditEditor(row)
-                                  }
-                                  if (action === "Delete") {
-                                    setDeletingRow(row)
-                                  }
-                                }}
-                              />
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        {editorMode === "edit" && editingQuestionId === row.id
-                          ? renderEditorRow()
-                          : null}
-                      </Fragment>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
+          {statusMessage ? (
+            <p className="border-b px-3 py-2 text-sm text-muted-foreground">
+              {statusMessage}
+            </p>
+          ) : null}
 
-          <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 sm:flex-row sm:items-center">
-            <div aria-live="polite" className="text-sm text-muted-foreground">
-              {locationId
-                ? statusMessage ||
-                  `${rows.length} employment question${rows.length === 1 ? "" : "s"} loaded for ${locationName}.`
-                : "Select a location from the header to begin managing employment questions."}
+          {!locationId ? (
+            <div className="p-4">
+              <VenueNoLocationState featureLabel="Employment questions" />
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
-              <HelpCircle className="size-3.5" />
-              Mock management mode
-            </div>
-          </CardFooter>
-        </Card>
+          ) : (
+            <>
+              {renderEditorPanel()}
+              <EmploymentQuestionDataTable
+                data={rows}
+                loading={loading}
+                emptyMessage="No employment questions found for this location."
+                onEdit={openEditEditor}
+                onDelete={setDeletingRow}
+              />
+            </>
+          )}
+        </PanelCard>
+      </AdminPageShell>
 
-        <ConfirmDeleteDialog
-          open={Boolean(deletingRow)}
-          onOpenChange={(open) => {
-            if (!open && !deletingId) {
-              setDeletingRow(null)
-            }
-          }}
-          onConfirm={() => void confirmDelete()}
-          title="Delete question?"
-          description={deletingRow
+      <ConfirmDeleteDialog
+        open={Boolean(deletingRow)}
+        onOpenChange={(open) => {
+          if (!open && !deletingId) {
+            setDeletingRow(null)
+          }
+        }}
+        onConfirm={() => void confirmDelete()}
+        title="Delete question?"
+        description={
+          deletingRow
             ? `This will remove "${deletingRow.question}" from ${locationName}.`
-            : ""}
-          confirmLabel="Delete question"
-          isPending={Boolean(deletingId)}
-        />
-    </div>
+            : ""
+        }
+        confirmLabel="Delete question"
+        isPending={Boolean(deletingId)}
+      />
+    </>
   )
 }
-
-
-
-
-
-
-
-
-
-

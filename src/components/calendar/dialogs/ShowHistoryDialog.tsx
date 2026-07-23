@@ -1,11 +1,17 @@
-import { useMemo } from "react"
+import { Search, X } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
 
+import {
+  createFilterSearchHandlers,
+  IconActionButton,
+} from "@/components/forms/form-fields"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -47,6 +53,22 @@ const COLUMNS: { key: keyof ShowHistoryRow; label: string }[] = [
   { key: "vip", label: "VIP" },
   { key: "updatedOn", label: "Updated On" },
 ]
+
+function filterShowHistoryRows(
+  rows: ShowHistoryRow[],
+  query: string
+): ShowHistoryRow[] {
+  const normalized = query.trim().toLowerCase()
+  if (!normalized) return rows
+
+  return rows.filter((row) =>
+    COLUMNS.some((column) =>
+      String(row[column.key] ?? "")
+        .toLowerCase()
+        .includes(normalized)
+    )
+  )
+}
 
 function ShowHistoryTable({ records }: { records: ShowHistoryRow[] }) {
   const isEmpty = records.length === 0
@@ -105,6 +127,8 @@ export default function ShowHistoryDialog({
   connectionString,
   locationId,
 }: ShowHistoryDialogProps) {
+  const [draftSearch, setDraftSearch] = useState("")
+  const [appliedSearch, setAppliedSearch] = useState("")
   const showId = event?.showId || event?.id || ""
   const shouldSkip =
     !open || !event || !connectionString || !locationId || !showId
@@ -119,6 +143,26 @@ export default function ShowHistoryDialog({
   )
 
   const records = useMemo(() => mapShowHistory(data), [data])
+  const filteredRecords = useMemo(
+    () => filterShowHistoryRows(records, appliedSearch),
+    [records, appliedSearch]
+  )
+
+  const { handleSubmit, handleInputKeyDown } = createFilterSearchHandlers(() => {
+    setAppliedSearch(draftSearch)
+  })
+
+  useEffect(() => {
+    if (!open) {
+      setDraftSearch("")
+      setAppliedSearch("")
+    }
+  }, [open])
+
+  function handleClear() {
+    setDraftSearch("")
+    setAppliedSearch("")
+  }
 
   const errorMessage = error ? getClubmanErrorMessage(error) : null
   const showLoading = !shouldSkip && (isLoading || isFetching)
@@ -145,7 +189,32 @@ export default function ShowHistoryDialog({
               {errorMessage ? (
                 <p className="text-sm text-destructive">{errorMessage}</p>
               ) : null}
-              <ShowHistoryTable records={records} />
+              <form
+                className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:max-w-md"
+                onSubmit={handleSubmit}
+              >
+                <Input
+                  placeholder="Search show history..."
+                  value={draftSearch}
+                  onChange={(event) => setDraftSearch(event.target.value)}
+                  onKeyDown={handleInputKeyDown}
+                  className="min-w-0 flex-1"
+                />
+                <div className="flex items-center gap-1.5">
+                  <IconActionButton
+                    label="Search"
+                    icon={Search}
+                    variant="default"
+                    type="submit"
+                  />
+                  <IconActionButton
+                    label="Clear"
+                    icon={X}
+                    onClick={handleClear}
+                  />
+                </div>
+              </form>
+              <ShowHistoryTable records={filteredRecords} />
             </div>
           )}
         </div>

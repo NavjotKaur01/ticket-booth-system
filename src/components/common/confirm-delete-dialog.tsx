@@ -64,7 +64,7 @@ export function ConfirmDeleteDialog({
             {isPending ? (
               <LoaderCircle className="mr-2 size-4 animate-spin" />
             ) : (
-              <Trash2 className="mr-2 size-4" />
+              <Trash2 className="size-4" />
             )}
             {confirmLabel}
           </Button>

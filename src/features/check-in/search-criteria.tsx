@@ -1,7 +1,7 @@
-import { CreditCard, Search, Wallet, X } from "lucide-react"
+import { Search, X } from "lucide-react"
 
 import { IconActionButton } from "@/components/forms/form-fields"
-import { Button } from "@/components/ui/button"
+// import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
@@ -80,7 +80,7 @@ export function CheckInSearchCriteria({
 
       <TooltipProvider delayDuration={200}>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-          <Button
+          {/* <Button
             type="button"
             variant="outline"
             size="sm"
@@ -97,7 +97,7 @@ export function CheckInSearchCriteria({
           >
             <Wallet className="size-3.5" />
             Cash Drawer
-          </Button>
+          </Button> */}
           <IconActionButton
             label="Search"
             icon={Search}
