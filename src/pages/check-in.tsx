@@ -619,7 +619,6 @@ export function CheckIn() {
             validation.error ??
             "Amount due is greater than zero. Cannot Check-in."
           setWarningMessage(message)
-          toastWarning(message)
           return
         }
 
@@ -1465,15 +1464,25 @@ export function CheckIn() {
         connectionName,
         reservationId: record.id,
       })
-      const validation = validateReservationCheckIn(detail)
-      if (!validation.canCheckIn) {
-        const message = validation.error?.includes("Amount due")
-          ? "Amount due greater than zero, Cannot check in"
-          : (validation.error ??
-            "Amount due greater than zero, Cannot check in")
-        setWarningMessage(message)
-        toastWarning(message)
-        return
+      // Desktop AssignSeatsAndCheckIn guard (line 34203): only block when
+      // Total > ResPayments (amount unpaid). Unlike regular Check-In, it does
+      // NOT block when the entire party is already checked-in — it still opens
+      // the Assign Seats dialog so the user can reassign seats even for
+      // fully checked-in reservations. A reservation cannot reach checked-in
+      // state without payment, so payment validation is redundant here.
+      const party = detail.PartyNo ?? 0
+      const checkedIn = detail.CheckedIn ?? 0
+      const alreadyCheckedIn = party > 0 && party === checkedIn
+      if (!alreadyCheckedIn) {
+        const validation = validateReservationCheckIn(detail)
+        if (!validation.canCheckIn) {
+          const message = validation.error?.includes("Amount due")
+            ? "Amount due greater than zero, Cannot check in"
+            : (validation.error ??
+              "Amount due greater than zero, Cannot check in")
+          setWarningMessage(message)
+          return
+        }
       }
       openAssignSeats(resolveReservation(record), true)
     } catch (requestError) {
@@ -1482,7 +1491,6 @@ export function CheckIn() {
           ? requestError.message
           : "Payment detail no found"
       setWarningMessage(message)
-      toastError(message)
     }
   }
 
@@ -1538,31 +1546,41 @@ export function CheckIn() {
         connectionName,
         reservationId: targetReservationId,
       })
-      const validation = validateReservationCheckIn(detail)
-      if (!validation.canCheckIn) {
-        setAssignSeatsOpen(false)
-        const message = validation.error?.includes("Amount due")
-          ? "Amount due greater than zero, Cannot check in"
-          : (validation.error ??
-            "Amount due greater than zero, Cannot check in")
-        setWarningMessage(message)
-        toastWarning(message)
-        return
+
+      // Desktop: after assign seats, calls UpdateReservationCheckedIn
+      // regardless. If party is already fully checked-in, the check-in
+      // call is a no-op on the server side; don't block with a warning.
+      const savedParty = detail.PartyNo ?? 0
+      const savedCheckedIn = detail.CheckedIn ?? 0
+      const alreadyCheckedIn = savedParty > 0 && savedParty === savedCheckedIn
+
+      if (!alreadyCheckedIn) {
+        const validation = validateReservationCheckIn(detail)
+        if (!validation.canCheckIn) {
+          setAssignSeatsOpen(false)
+          const message = validation.error?.includes("Amount due")
+            ? "Amount due greater than zero, Cannot check in"
+            : (validation.error ??
+              "Amount due greater than zero, Cannot check in")
+          setWarningMessage(message)
+          return
+        }
+
+        if (needsPromoValidation(detail)) {
+          setPendingCheckInDetail(detail)
+          setSelectedReservation(
+            reservations.find((row) => row.id === targetReservationId) ??
+              selectedReservation
+          )
+          setAssignSeatsOpen(false)
+          setPromoIntent("check-in")
+          setCheckInPromoOpen(true)
+          return
+        }
+
+        await submitReservationCheckIn(targetReservationId)
       }
 
-      if (needsPromoValidation(detail)) {
-        setPendingCheckInDetail(detail)
-        setSelectedReservation(
-          reservations.find((row) => row.id === targetReservationId) ??
-            selectedReservation
-        )
-        setAssignSeatsOpen(false)
-        setPromoIntent("check-in")
-        setCheckInPromoOpen(true)
-        return
-      }
-
-      await submitReservationCheckIn(targetReservationId)
       setAssignSeatsOpen(false)
     } catch (requestError) {
       reportError(setAssignSeatsError, requestError, "Failed to assign seats")
