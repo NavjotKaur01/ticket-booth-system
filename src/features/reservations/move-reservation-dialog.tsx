@@ -689,6 +689,18 @@ export function MoveReservationDialog({
     setDinner(detail.Dinner?.trim().toUpperCase() === 'Y')
   }, [detail, open])
 
+  // Seed Show Date from origin show once (desktop defaults to reservation's date).
+  // Do not overwrite after the user picks a move date.
+  useEffect(() => {
+    if (!open || hasPickedMoveDate || destinationDate) {
+      return
+    }
+    const originIso = toIsoShowDate(originUpcomingShow?.ShowDate ?? '')
+    if (originIso) {
+      setDestinationDate(originIso)
+    }
+  }, [destinationDate, hasPickedMoveDate, open, originUpcomingShow?.ShowDate])
+
   // Seed Show Time from reservation show once (desktop GetMoveReservationInfo).
   // Do not overwrite after the user changes show time or picks a move date.
   useEffect(() => {
