@@ -1,16 +1,15 @@
-﻿import {
-  Filter,
-  LoaderCircle,
-  MoreVertical,
-  Pencil,
-} from "lucide-react"
+﻿import { CheckCheck, LoaderCircle, X } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import CalendarDatePickerControl from "@/components/calendar/controls/CalendarDatePickerControl"
+import { PanelCard } from "@/components/common/panel-card"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import {
+  AdminPageShell,
+  AdminPageTitle,
+} from "@/components/layout/admin-page"
+import { IconActionButton } from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
@@ -20,12 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -36,15 +29,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  ApplicantStatusPill,
+  formatShortDate,
+} from "@/features/employment-applicants/employment-applicant-columns"
+import { EmploymentApplicantDataTable } from "@/features/employment-applicants/employment-applicant-data-table"
 import {
   getEmploymentApplicantFilterGroupsByLocation,
   getEmploymentApplicantsByLocation,
@@ -70,22 +60,6 @@ const REVIEW_OPTIONS = [
   { value: "N", label: "Pending review" },
 ] as const
 
-function EmptyState({
-  title,
-  description,
-}: {
-  title: string
-  description: string
-}) {
-  return (
-    <div className="rounded-sm border border-dashed border-border bg-muted/20 px-4 py-10 text-center">
-      <p className="text-sm font-medium text-foreground">{title}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-    </div>
-  )
-}
-
-
 function FilterChecklistPanel({
   title,
   options,
@@ -106,7 +80,7 @@ function FilterChecklistPanel({
   const selectedCount = selectedValues.length
 
   return (
-    <section className="flex min-w-0 flex-col gap-2.5 px-4 py-3">
+    <section className="flex min-w-0 flex-col gap-2.5 px-3 py-3">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <Label className="text-sm font-semibold text-foreground">{title}</Label>
@@ -117,26 +91,18 @@ function FilterChecklistPanel({
           ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs"
+          <IconActionButton
+            label="Select all"
+            icon={CheckCheck}
             disabled={disabled || options.length === 0}
             onClick={onSelectAll}
-          >
-            All
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs"
+          />
+          <IconActionButton
+            label="Clear selection"
+            icon={X}
             disabled={disabled || selectedCount === 0}
             onClick={onClearAll}
-          >
-            Clear
-          </Button>
+          />
         </div>
       </div>
 
@@ -152,11 +118,12 @@ function FilterChecklistPanel({
             return (
               <li key={option.value} className="shrink-0">
                 <label
-                  className={disabled
-                    ? "inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-border/60 px-2.5 py-1.5 opacity-60"
-                    : checked
-                      ? "inline-flex cursor-pointer items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2.5 py-1.5"
-                      : "inline-flex cursor-pointer items-center gap-2 rounded-md border border-border/60 px-2.5 py-1.5 transition-colors hover:border-primary/40 hover:bg-muted/30"
+                  className={
+                    disabled
+                      ? "inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-border/60 px-2.5 py-1.5 opacity-60"
+                      : checked
+                        ? "inline-flex cursor-pointer items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2.5 py-1.5"
+                        : "inline-flex cursor-pointer items-center gap-2 rounded-md border border-border/60 px-2.5 py-1.5 transition-colors hover:border-primary/40 hover:bg-muted/30"
                   }
                 >
                   <Checkbox
@@ -164,7 +131,9 @@ function FilterChecklistPanel({
                     disabled={disabled}
                     onCheckedChange={() => onToggle(option.value)}
                   />
-                  <span className="whitespace-nowrap text-sm text-foreground">{option.label}</span>
+                  <span className="whitespace-nowrap text-sm text-foreground">
+                    {option.label}
+                  </span>
                 </label>
               </li>
             )
@@ -173,39 +142,6 @@ function FilterChecklistPanel({
       )}
     </section>
   )
-}
-
-function ApplicantStatusPill({ reviewed }: { reviewed: boolean }) {
-  return reviewed ? (
-    <span className="inline-flex min-w-24 items-center justify-center rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-      Reviewed
-    </span>
-  ) : (
-    <span className="inline-flex min-w-24 items-center justify-center rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
-      Pending
-    </span>
-  )
-}
-
-function formatShortDate(value: string | null) {
-  if (!value) {
-    return "-"
-  }
-
-  const parsed = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(parsed.getTime())) {
-    return value
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "numeric",
-    day: "numeric",
-    year: "numeric",
-  }).format(parsed)
-}
-
-function getInitials(firstName: string, lastName: string) {
-  return `${firstName.slice(0, 1)}${lastName.slice(0, 1)}`.toUpperCase()
 }
 
 function normalizeText(value: string) {
@@ -232,7 +168,9 @@ function buildOpportunityOptions(rows: EmploymentOpeningRecord[]): ChecklistOpti
 export function EmploymentApplicantsScreen() {
   const { locationId, locationName } = useAppSession()
 
-  const [positionGroups, setPositionGroups] = useState<EmploymentApplicantFilterGroup[]>([])
+  const [positionGroups, setPositionGroups] = useState<EmploymentApplicantFilterGroup[]>(
+    []
+  )
   const [openings, setOpenings] = useState<EmploymentOpeningRecord[]>([])
   const [rows, setRows] = useState<EmploymentApplicantRecord[]>([])
   const [draftPositionIds, setDraftPositionIds] = useState<string[]>([])
@@ -244,10 +182,12 @@ export function EmploymentApplicantsScreen() {
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [editingApplicantId, setEditingApplicantId] = useState<string | null>(null)
-  const [editDialogApplicant, setEditDialogApplicant] = useState<EmploymentApplicantRecord | null>(null)
+  const [editDialogApplicant, setEditDialogApplicant] =
+    useState<EmploymentApplicantRecord | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [previewApplicantId, setPreviewApplicantId] = useState<string | null>(null)
-  const [previewDialogApplicant, setPreviewDialogApplicant] = useState<EmploymentApplicantRecord | null>(null)
+  const [previewDialogApplicant, setPreviewDialogApplicant] =
+    useState<EmploymentApplicantRecord | null>(null)
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false)
   const [reviewedInput, setReviewedInput] = useState("N")
   const [reviewedByInput, setReviewedByInput] = useState("")
@@ -360,11 +300,17 @@ export function EmploymentApplicantsScreen() {
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
-      if (appliedPositionIds.length > 0 && !appliedPositionIds.includes(row.positionGroupId)) {
+      if (
+        appliedPositionIds.length > 0 &&
+        !appliedPositionIds.includes(row.positionGroupId)
+      ) {
         return false
       }
 
-      if (appliedOpportunityIds.length > 0 && !appliedOpportunityIds.includes(row.opportunityId)) {
+      if (
+        appliedOpportunityIds.length > 0 &&
+        !appliedOpportunityIds.includes(row.opportunityId)
+      ) {
         return false
       }
 
@@ -405,6 +351,12 @@ export function EmploymentApplicantsScreen() {
     setDismissalDateInput(row.dismissalDate ?? "")
     setNotesInput(row.notes)
     setError(null)
+  }
+
+  function openPreviewDialog(row: EmploymentApplicantRecord) {
+    setPreviewApplicantId(row.id)
+    setPreviewDialogApplicant(row)
+    setIsPreviewDialogOpen(true)
   }
 
   function closeEditDialog() {
@@ -453,222 +405,123 @@ export function EmploymentApplicantsScreen() {
 
   return (
     <>
-      <div className="space-y-4">
+      <AdminPageShell>
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            Employment Applicants
-          </h1>
+          <AdminPageTitle>Employment Applicants</AdminPageTitle>
           <p className="text-sm text-muted-foreground">
             Review applicant submissions, narrow them by employment category or opening,
-            and keep mock hiring data organized until the backend applicant endpoints are ready.
+            and keep mock hiring data organized until the backend applicant endpoints are
+            ready.
           </p>
         </div>
 
-        <Card className="gap-0 py-0">
-          <CardHeader className="border-b bg-muted/40 px-4 py-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
-                  Optional Filters
-                </CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Refine applicants by position family and by specific opening.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {appliedFilterCount > 0 ? (
-                  <span className="inline-flex items-center rounded-full bg-background px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm ring-1 ring-border/70">
-                    {appliedFilterCount} active filter{appliedFilterCount === 1 ? "" : "s"}
-                  </span>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="gap-2"
-                  disabled={!locationId || loading || !hasDraftChanges}
-                  onClick={applyFilters}
-                >
-                  <Filter className="size-4" />
-                  Apply Filter
-                </Button>
-              </div>
+        <PanelCard>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Filters:</span> Refine
+                applicants by position family and by specific opening.
+              </p>
             </div>
-          </CardHeader>
-
-          <CardContent className="p-0">
-            <div className="grid divide-y lg:grid-cols-2 lg:divide-x lg:divide-y-0">
-              <FilterChecklistPanel
-                title="Positions"
-                options={positionOptions}
-                selectedValues={draftPositionIds}
-                onToggle={(value) => setDraftPositionIds((current) => toggleValue(current, value))}
-                onSelectAll={() => setDraftPositionIds(positionOptions.map((option) => option.value))}
-                onClearAll={() => setDraftPositionIds([])}
-                disabled={!locationId || loading}
-              />
-              <FilterChecklistPanel
-                title="Other Opportunities"
-                options={opportunityOptions}
-                selectedValues={draftOpportunityIds}
-                onToggle={(value) => setDraftOpportunityIds((current) => toggleValue(current, value))}
-                onSelectAll={() => setDraftOpportunityIds(opportunityOptions.map((option) => option.value))}
-                onClearAll={() => setDraftOpportunityIds([])}
-                disabled={!locationId || loading}
-              />
+            <div className="flex flex-wrap items-center gap-2">
+              {appliedFilterCount > 0 ? (
+                <span className="text-xs text-muted-foreground">
+                  {appliedFilterCount} active filter
+                  {appliedFilterCount === 1 ? "" : "s"}
+                </span>
+              ) : null}
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={!locationId || loading || !hasDraftChanges}
+                onClick={applyFilters}
+              >
+                Apply Filter
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card className="gap-0 py-0">
-          <CardHeader className="border-b bg-muted/40 px-4 py-3">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
-                Employment Applicants Data
-              </CardTitle>
-              <div className="inline-flex items-center gap-2 rounded-full bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm ring-1 ring-border/70">
-                <span className="text-foreground">Visible rows:</span>
-                <span>{filteredRows.length}</span>
-              </div>
+          <div className="grid divide-y lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+            <FilterChecklistPanel
+              title="Positions"
+              options={positionOptions}
+              selectedValues={draftPositionIds}
+              onToggle={(value) =>
+                setDraftPositionIds((current) => toggleValue(current, value))
+              }
+              onSelectAll={() =>
+                setDraftPositionIds(positionOptions.map((option) => option.value))
+              }
+              onClearAll={() => setDraftPositionIds([])}
+              disabled={!locationId || loading}
+            />
+            <FilterChecklistPanel
+              title="Other Opportunities"
+              options={opportunityOptions}
+              selectedValues={draftOpportunityIds}
+              onToggle={(value) =>
+                setDraftOpportunityIds((current) => toggleValue(current, value))
+              }
+              onSelectAll={() =>
+                setDraftOpportunityIds(opportunityOptions.map((option) => option.value))
+              }
+              onClearAll={() => setDraftOpportunityIds([])}
+              disabled={!locationId || loading}
+            />
+          </div>
+        </PanelCard>
+
+        <PanelCard>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">Note:</span> Use Edit to
+              maintain reviewed and hiring state, or PDF for a mock preview.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Visible:{" "}
+              <span className="font-semibold tabular-nums text-foreground">
+                {filteredRows.length}
+              </span>
+            </p>
+          </div>
+
+          {error ? (
+            <p className="border-b px-3 py-2 text-sm text-destructive">{error}</p>
+          ) : null}
+
+          {statusMessage ? (
+            <p className="border-b px-3 py-2 text-sm text-muted-foreground">
+              {statusMessage}
+            </p>
+          ) : null}
+
+          {!locationId ? (
+            <div className="p-4">
+              <VenueNoLocationState featureLabel="Employment applicants" />
             </div>
-          </CardHeader>
+          ) : (
+            <EmploymentApplicantDataTable
+              data={filteredRows}
+              loading={loading}
+              emptyMessage="No applicants match the current filter selection."
+              onEdit={openEditDialog}
+              onPreviewPdf={openPreviewDialog}
+            />
+          )}
+        </PanelCard>
+      </AdminPageShell>
 
-          <CardContent className="space-y-4 px-0 py-0">
-            {error ? (
-              <div className="px-4 pt-4">
-                <p className="rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                  {error}
-                </p>
-              </div>
-            ) : null}
-
-            {!locationId ? (
-              <div className="p-4">
-                <VenueNoLocationState featureLabel="Employment applicants" />
-              </div>
-            ) : loading ? (
-              <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
-                <LoaderCircle className="size-4 animate-spin" />
-                Loading applicants and employment filters...
-              </div>
-            ) : filteredRows.length === 0 ? (
-              <div className="p-4">
-                <EmptyState
-                  title="No applicants match the current filter selection."
-                  description="Adjust the draft filters and apply them again, or clear the filters to view every applicant for this location."
-                />
-              </div>
-            ) : (
-              <div className="overflow-x-auto px-4 py-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead className="w-16 px-4">#</TableHead>
-                      <TableHead className="min-w-64">Applicant</TableHead>
-                      <TableHead className="min-w-44">Opportunity</TableHead>
-                      <TableHead className="w-32">Submitted</TableHead>
-                      <TableHead className="w-32">Reviewed</TableHead>
-                      <TableHead className="min-w-40">Reviewed By</TableHead>
-                      <TableHead className="w-32">Hire Date</TableHead>
-                      <TableHead className="w-32">Dismissal Date</TableHead>
-                      <TableHead className="w-32 px-4 text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRows.map((row, index) => (
-                      <TableRow key={row.id}>
-                        <TableCell className="px-4 font-medium tabular-nums text-muted-foreground">
-                          {index + 1}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarFallback>{getInitials(row.firstName, row.lastName)}</AvatarFallback>
-                            </Avatar>
-                            <div className="space-y-0.5">
-                              <p className="font-medium text-foreground">
-                                {row.firstName} {row.lastName}
-                              </p>
-                              <p className="text-sm text-muted-foreground">{row.email}</p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-0.5">
-                            <p className="font-medium text-foreground">{row.opportunityTitle}</p>
-                            <p className="text-sm text-muted-foreground">{row.positionGroupLabel}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-foreground">
-                          {formatShortDate(row.submittedOn)}
-                        </TableCell>
-                        <TableCell>
-                          <ApplicantStatusPill reviewed={row.reviewed} />
-                        </TableCell>
-                        <TableCell className="text-sm text-foreground">
-                          {row.reviewedBy || "-"}
-                        </TableCell>
-                        <TableCell className="text-sm text-foreground">
-                          {formatShortDate(row.hireDate)}
-                        </TableCell>
-                        <TableCell className="text-sm text-foreground">
-                          {formatShortDate(row.dismissalDate)}
-                        </TableCell>
-                        <TableCell className="px-4">
-                          <div className="flex items-center justify-end">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  className="bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
-                                  aria-label={`Actions for ${row.firstName} ${row.lastName}`}
-                                >
-                                  <MoreVertical className="size-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="min-w-[8rem]">
-                                <DropdownMenuItem onClick={() => openEditDialog(row)}>
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setPreviewApplicantId(row.id)
-                                    setPreviewDialogApplicant(row)
-                                    setIsPreviewDialogOpen(true)
-                                  }}
-                                >
-                                  PDF
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-
-          <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 lg:flex-row lg:items-center">
-            <div aria-live="polite" className="text-sm text-muted-foreground">
-              {locationId
-                ? statusMessage ||
-                  `${filteredRows.length} applicant${filteredRows.length === 1 ? "" : "s"} visible for ${locationName}. Use Edit to maintain reviewed and hiring state.`
-                : "Select a location from the header to begin reviewing employment applicants."}
-            </div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
-              <span className="text-foreground">Mock mode:</span>
-              <span>Applicants and PDF preview use local service data</span>
-            </div>
-          </CardFooter>
-        </Card>
-      </div>
-
-      <Dialog open={isEditDialogOpen} onOpenChange={(open) => { if (!open) { closeEditDialog() } else { setIsEditDialogOpen(true) } }}>
+      <Dialog
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeEditDialog()
+          } else {
+            setIsEditDialogOpen(true)
+          }
+        }}
+      >
         <DialogContent className="max-w-3xl p-0 sm:max-w-3xl">
           <DialogHeader className="border-b bg-muted/40 px-5 py-4">
             <DialogTitle className="text-base font-semibold text-foreground">
@@ -689,8 +542,12 @@ export function EmploymentApplicantsScreen() {
                   <p className="mt-2 text-lg font-semibold text-foreground">
                     {editingApplicant.firstName} {editingApplicant.lastName}
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">{editingApplicant.email}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{editingApplicant.phone}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {editingApplicant.email}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {editingApplicant.phone}
+                  </p>
                 </div>
 
                 <div className="rounded-lg border border-border/80 bg-muted/20 px-4 py-4">
@@ -715,7 +572,10 @@ export function EmploymentApplicantsScreen() {
                 <div className="space-y-2">
                   <Label htmlFor="employment-applicant-reviewed">Reviewed</Label>
                   <Select value={reviewedInput} onValueChange={setReviewedInput}>
-                    <SelectTrigger id="employment-applicant-reviewed" className="w-full bg-background">
+                    <SelectTrigger
+                      id="employment-applicant-reviewed"
+                      className="w-full bg-background"
+                    >
                       <SelectValue placeholder="Select review state" />
                     </SelectTrigger>
                     <SelectContent position="popper">
@@ -750,7 +610,9 @@ export function EmploymentApplicantsScreen() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="employment-applicant-dismissal-date">Dismissal Date</Label>
+                  <Label htmlFor="employment-applicant-dismissal-date">
+                    Dismissal Date
+                  </Label>
                   <CalendarDatePickerControl
                     id="employment-applicant-dismissal-date"
                     value={dismissalDateInput}
@@ -775,25 +637,50 @@ export function EmploymentApplicantsScreen() {
           ) : null}
 
           <DialogFooter className="border-t px-5 py-4">
-            <Button type="button" variant="outline" onClick={closeEditDialog} disabled={saving}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeEditDialog}
+              disabled={saving}
+            >
               Cancel
             </Button>
-            <Button type="button" className="gap-2" onClick={() => void handleSaveApplicant()} disabled={saving}>
-              {saving ? <LoaderCircle className="size-4 animate-spin" /> : <Pencil className="size-4" />}
-              Update Applicant
+            <Button
+              type="button"
+              onClick={() => void handleSaveApplicant()}
+              disabled={saving}
+            >
+              {saving ? (
+                <>
+                  <LoaderCircle className="size-4 animate-spin" />
+                  Update Applicant
+                </>
+              ) : (
+                "Update Applicant"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isPreviewDialogOpen} onOpenChange={(open) => { if (!open) { setIsPreviewDialogOpen(false) } else { setIsPreviewDialogOpen(true) } }}>
+      <Dialog
+        open={isPreviewDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsPreviewDialogOpen(false)
+          } else {
+            setIsPreviewDialogOpen(true)
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl p-0 sm:max-w-2xl">
           <DialogHeader className="border-b bg-muted/40 px-5 py-4">
             <DialogTitle className="text-base font-semibold text-foreground">
               Applicant PDF Preview
             </DialogTitle>
             <DialogDescription>
-              Mock preview using the current applicant payload until the real document endpoint is connected.
+              Mock preview using the current applicant payload until the real document
+              endpoint is connected.
             </DialogDescription>
           </DialogHeader>
 
@@ -819,33 +706,55 @@ export function EmploymentApplicantsScreen() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Email</p>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                      Email
+                    </p>
                     <p className="mt-1 text-sm text-foreground">{previewApplicant.email}</p>
                   </div>
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Phone</p>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                      Phone
+                    </p>
                     <p className="mt-1 text-sm text-foreground">{previewApplicant.phone}</p>
                   </div>
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Submitted</p>
-                    <p className="mt-1 text-sm text-foreground">{formatShortDate(previewApplicant.submittedOn)}</p>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                      Submitted
+                    </p>
+                    <p className="mt-1 text-sm text-foreground">
+                      {formatShortDate(previewApplicant.submittedOn)}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Reviewed By</p>
-                    <p className="mt-1 text-sm text-foreground">{previewApplicant.reviewedBy || "-"}</p>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                      Reviewed By
+                    </p>
+                    <p className="mt-1 text-sm text-foreground">
+                      {previewApplicant.reviewedBy || "—"}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Hire Date</p>
-                    <p className="mt-1 text-sm text-foreground">{formatShortDate(previewApplicant.hireDate)}</p>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                      Hire Date
+                    </p>
+                    <p className="mt-1 text-sm text-foreground">
+                      {formatShortDate(previewApplicant.hireDate)}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Dismissal Date</p>
-                    <p className="mt-1 text-sm text-foreground">{formatShortDate(previewApplicant.dismissalDate)}</p>
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                      Dismissal Date
+                    </p>
+                    <p className="mt-1 text-sm text-foreground">
+                      {formatShortDate(previewApplicant.dismissalDate)}
+                    </p>
                   </div>
                 </div>
 
                 <div className="mt-4 rounded-lg border border-border/70 bg-muted/20 px-4 py-4">
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Notes</p>
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                    Notes
+                  </p>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">
                     {previewApplicant.notes || "No internal notes added yet."}
                   </p>
@@ -855,7 +764,11 @@ export function EmploymentApplicantsScreen() {
           ) : null}
 
           <DialogFooter className="border-t px-5 py-4">
-            <Button type="button" variant="outline" onClick={() => setIsPreviewDialogOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsPreviewDialogOpen(false)}
+            >
               Close
             </Button>
           </DialogFooter>
@@ -864,10 +777,3 @@ export function EmploymentApplicantsScreen() {
     </>
   )
 }
-
-
-
-
-
-
-
