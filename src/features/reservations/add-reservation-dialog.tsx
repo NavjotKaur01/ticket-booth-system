@@ -1885,8 +1885,18 @@ export function AddReservationDialog({
 
       const originCode = mapOriginToCode(origin)
       const isShowDataArray = Array.isArray(showDataPayload)
-      const rawSection = isShowDataArray ? showDataPayload.find(s => s.ShowDetID === section) : null
+      const sectionKey = section.trim().toLowerCase()
+      const rawSection = isShowDataArray
+        ? showDataPayload.find(s => s.ShowDetID?.trim().toLowerCase() === sectionKey)
+        : null
       const showData = isShowDataArray && showDataPayload.length > 0 ? showDataPayload[0] : null
+      const sectionSvcFees = selectedSection
+        ? {
+          phoneSvcCharge: selectedSection.phoneSvcCharge,
+          walkupSvcCharge: selectedSection.walkupSvcCharge,
+          webSvcCharge: selectedSection.webSvcCharge,
+        }
+        : null
 
       let baseSvcAmount = calculateSvcBase({
         originCode,
@@ -1895,6 +1905,7 @@ export function AddReservationDialog({
         reservationCreatedDate: isEditMode ? reservationDetail?.CreatedDate ?? null : null,
         showData: showData,
         sectionData: rawSection ?? null,
+        sectionSvcFees,
         excludePhoneDayOfShow: systemDefaults?.txtDayOfShow2 === 'Y',
         excludeWebDayOfShow: systemDefaults?.txtDayOfShow3 === 'Y'
       }) * (selectedSection?.priceMultiplier ?? 1)
@@ -1940,6 +1951,7 @@ export function AddReservationDialog({
             reservationCreatedDate: reservationDetail?.CreatedDate ?? null,
             showData: showData,
             sectionData: rawSection ?? null,
+            sectionSvcFees,
             excludePhoneDayOfShow: systemDefaults?.txtDayOfShow2 === 'Y',
             excludeWebDayOfShow: systemDefaults?.txtDayOfShow3 === 'Y'
           }) * (selectedSection?.priceMultiplier ?? 1)
@@ -2050,7 +2062,7 @@ export function AddReservationDialog({
           return (
             paymentResId.toLowerCase() === reservation.id.trim().toLowerCase() ||
             paymentResId.replace(/-/g, '').toLowerCase() ===
-              reservation.id.replace(/-/g, '').toLowerCase()
+            reservation.id.replace(/-/g, '').toLowerCase()
           )
         })
         .reduce((sum: number, p: (typeof payments)[number]) => sum + (p.Amount ?? 0), 0)
@@ -2328,11 +2340,11 @@ export function AddReservationDialog({
     // seats (that copied clark's 11–14 onto the payment form).
     const match = targetId
       ? payload.result.tableNumsByReservation.find(row =>
-          row.reservationId.trim().toLowerCase() ===
-            targetId.trim().toLowerCase() ||
-          row.reservationId.replace(/-/g, '').toLowerCase() ===
-            targetId.replace(/-/g, '').toLowerCase()
-        )
+        row.reservationId.trim().toLowerCase() ===
+        targetId.trim().toLowerCase() ||
+        row.reservationId.replace(/-/g, '').toLowerCase() ===
+        targetId.replace(/-/g, '').toLowerCase()
+      )
       : undefined
 
     if (match?.tableNums) {
@@ -2341,12 +2353,12 @@ export function AddReservationDialog({
 
     const seatMatch = targetId
       ? payload.result.seatNumbersByReservation?.find(
-          row =>
-            row.reservationId.trim().toLowerCase() ===
-              targetId.trim().toLowerCase() ||
-            row.reservationId.replace(/-/g, '').toLowerCase() ===
-              targetId.replace(/-/g, '').toLowerCase()
-        )
+        row =>
+          row.reservationId.trim().toLowerCase() ===
+          targetId.trim().toLowerCase() ||
+          row.reservationId.replace(/-/g, '').toLowerCase() ===
+          targetId.replace(/-/g, '').toLowerCase()
+      )
       : undefined
     if (seatMatch?.seatNumbers) {
       setAssignSeatNumbers(seatMatch.seatNumbers)
@@ -2355,9 +2367,9 @@ export function AddReservationDialog({
         .filter(
           row =>
             row.ReservationId.trim().toLowerCase() ===
-              targetId.trim().toLowerCase() ||
+            targetId.trim().toLowerCase() ||
             row.ReservationId.replace(/-/g, '').toLowerCase() ===
-              targetId.replace(/-/g, '').toLowerCase()
+            targetId.replace(/-/g, '').toLowerCase()
         )
         .sort((a, b) =>
           a.TableNo === b.TableNo
@@ -2388,7 +2400,7 @@ export function AddReservationDialog({
         (payment: (typeof payments)[number]) =>
           (payment.PaymentStatusCode?.trim() ?? '') === PAYMENT_STATUS_PAYMENT &&
           (payment.PaymentTypeCode?.trim().toUpperCase() ?? '') !==
-            HOLD_WITH_CARD_PAYMENT_CODE
+          HOLD_WITH_CARD_PAYMENT_CODE
       )
       .map((payment: (typeof payments)[number]) => {
         const parts = [
@@ -3002,7 +3014,7 @@ export function AddReservationDialog({
     const isFullPayment =
       !shouldApplyPayment ||
       editPaymentAmount + 0.001 >=
-        saveTotals.total - (isEditMode ? alreadyPaid : 0)
+      saveTotals.total - (isEditMode ? alreadyPaid : 0)
     const isCashLike = paymentType === 'cash' || paymentType === 'pos'
     const notSeated = (reservation?.seated ?? 0) <= 0
 
@@ -3678,20 +3690,20 @@ export function AddReservationDialog({
       effectivePromo === 'none' ? null : promoById.get(effectivePromo) ?? null
     const saveTotals = isEditMode
       ? calculateReservationTotals({
-          sectionPrice: saveSection.price ?? '$0.00',
-          sectionShowPrice: saveSection.showPrice,
-          sectionPriceMultiplier: saveSection.priceMultiplier ?? 1,
-          party: saveParty,
-          passes,
-          promo: savePromo,
-          existingServiceCharge: reservationDetail?.SVC,
-          existingDiscount: reservationDetail?.Discount,
-          existingSalesTax: reservationDetail?.SalesTax,
-          systemTaxRate: Number(systemDefaults?.lblTaxes || 0),
-          taxWithServiceCharge:
-            systemDefaults?.lblTaxWithServiceCharge ?? undefined,
-          ccFeePercent: Number(systemDefaults?.cboCC || 0)
-        })
+        sectionPrice: saveSection.price ?? '$0.00',
+        sectionShowPrice: saveSection.showPrice,
+        sectionPriceMultiplier: saveSection.priceMultiplier ?? 1,
+        party: saveParty,
+        passes,
+        promo: savePromo,
+        existingServiceCharge: reservationDetail?.SVC,
+        existingDiscount: reservationDetail?.Discount,
+        existingSalesTax: reservationDetail?.SalesTax,
+        systemTaxRate: Number(systemDefaults?.lblTaxes || 0),
+        taxWithServiceCharge:
+          systemDefaults?.lblTaxWithServiceCharge ?? undefined,
+        ccFeePercent: Number(systemDefaults?.cboCC || 0)
+      })
       : totals
 
     const customerDetails = getSelectedCustomerDetails()

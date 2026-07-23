@@ -94,6 +94,7 @@ function detectCreditCardType(cardNumber: string) {
 
 function buildTicketCounts(party: number, promo: ReservationPromo | null) {
   if (!promo) {
+
     return { tixPaid: party, tixComp: 0, tixDisc: 0 }
   }
 

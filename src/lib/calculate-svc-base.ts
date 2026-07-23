@@ -3,6 +3,18 @@ import type { ReservationPromo } from "@/types/reservation-promo"
 
 export type OriginCode = "SRC01" | "SRC02" | "SRC03"
 
+/** Desktop: ShowSectionFee == "Y" → IsShowSectionFee. API may send bool or Y/N. */
+export function isShowSectionFeeEnabled(
+  value: boolean | string | number | null | undefined
+): boolean {
+  if (value === true || value === 1) return true
+  if (typeof value === "string") {
+    const normalized = value.trim().toUpperCase()
+    return normalized === "Y" || normalized === "TRUE" || normalized === "1"
+  }
+  return false
+}
+
 export function mapOriginToCode(origin: "phone" | "walkup" | "web"): OriginCode {
   if (origin === "web") return "SRC03"
   if (origin === "walkup") return "SRC02"
@@ -18,6 +30,8 @@ export function calculateSvcBase({
   sectionData,
   excludePhoneDayOfShow = false,
   excludeWebDayOfShow = false,
+  /** Optional override from GetShowSections (PhoneSvcCharge / WalkupSvcCharge / WebSvcCharge). */
+  sectionSvcFees,
 }: {
   originCode: OriginCode
   partySize: number
@@ -27,24 +41,38 @@ export function calculateSvcBase({
   sectionData: ApiShowData | null | undefined
   excludePhoneDayOfShow?: boolean
   excludeWebDayOfShow?: boolean
+  sectionSvcFees?: {
+    phoneSvcCharge?: number | null
+    walkupSvcCharge?: number | null
+    webSvcCharge?: number | null
+  } | null
 }): number {
   if (!showData) return 0
 
-  const isUseSectionFee = showData.IsUseSectionFee
+  const isUseSectionFee = isShowSectionFeeEnabled(showData.IsUseSectionFee)
+
+  // Desktop CalculateServiceCharge: when Use Section Fee, prefer section SVC
+  // (GetShowData ShowDefDet*svc, else GetShowSections *SvcCharge), else show-level.
+  const sectionPhoneFee =
+    sectionData?.ShowDefDetphonesvc ?? sectionSvcFees?.phoneSvcCharge ?? null
+  const sectionWalkupFee =
+    sectionData?.ShowDefDetwalkupsvc ?? sectionSvcFees?.walkupSvcCharge ?? null
+  const sectionWebFee =
+    sectionData?.ShowDefDetwebsvc ?? sectionSvcFees?.webSvcCharge ?? null
 
   // 1 & 2. Pick the base fee
   let sourceFee = 0
   if (originCode === "SRC01") {
     sourceFee = isUseSectionFee
-      ? sectionData?.ShowDefDetphonesvc ?? showData.PhoneCharge
+      ? sectionPhoneFee ?? showData.PhoneCharge
       : showData.PhoneCharge
   } else if (originCode === "SRC02") {
     sourceFee = isUseSectionFee
-      ? sectionData?.ShowDefDetwalkupsvc ?? showData.WalkupCharge
+      ? sectionWalkupFee ?? showData.WalkupCharge
       : showData.WalkupCharge
   } else if (originCode === "SRC03") {
     sourceFee = isUseSectionFee
-      ? sectionData?.ShowDefDetwebsvc ?? showData.WebCharge
+      ? sectionWebFee ?? showData.WebCharge
       : showData.WebCharge
   }
 
@@ -119,7 +147,7 @@ export function calculatePromoFeeAdjustment({
     return 0
   }
 
-  const isUseSectionFee = showData.IsUseSectionFee
+  const isUseSectionFee = isShowSectionFeeEnabled(showData.IsUseSectionFee)
 
   // Pick the base fee
   let showSourceFee = 0

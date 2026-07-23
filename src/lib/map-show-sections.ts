@@ -5,11 +5,11 @@ import {
 import type { ShowSectionItem } from '@/types/api/show-sections'
 import type { ReservationSectionOption } from '@/types/reservation'
 
-function sectionTone (name: string): ReservationSectionOption['tone'] {
+function sectionTone(name: string): ReservationSectionOption['tone'] {
   return name.toLowerCase().includes('vip') ? 'vip' : 'regular'
 }
 
-export function mapShowSectionsToOptions (
+export function mapShowSectionsToOptions(
   sections: ShowSectionItem[]
 ): ReservationSectionOption[] {
   return sections.map(section => {
@@ -24,7 +24,7 @@ export function mapShowSectionsToOptions (
     } else if (['SECT10'].includes(secCode)) {
       priceMultiplier = 6
     }
-    
+
     const effectivePriceValue = priceValue * priceMultiplier
     const price = formatSectionDesktopPrice(
       effectivePriceValue.toLocaleString('en-US', {
@@ -60,6 +60,10 @@ export function mapShowSectionsToOptions (
       phoneInFee: section.PhoneCharge ?? 0,
       walkUpFee: section.WalkupCharge ?? 0,
       webFee: section.WebCharge ?? 0,
+      // Desktop AdjustSeatModel section SVC (used when ShowSectionFee / Use Section Fee = Y)
+      phoneSvcCharge: section.PhoneSvcCharge ?? 0,
+      walkupSvcCharge: section.WalkupSvcCharge ?? 0,
+      webSvcCharge: section.WebSvcCharge ?? 0,
       restrictPromoForSection:
         (section.RestrictPromoForSection ?? section.ShowDetRestrictPromo ?? "")
           .trim()
