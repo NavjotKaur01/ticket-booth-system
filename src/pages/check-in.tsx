@@ -92,7 +92,6 @@ import {
   reportErrorMessage,
   toastError,
   toastSuccess,
-  toastWarning,
 } from "@/lib/app-toast"
 import { confirmDialog } from "@/lib/app-dialog"
 import {
@@ -1570,7 +1569,7 @@ export function CheckIn() {
           setPendingCheckInDetail(detail)
           setSelectedReservation(
             reservations.find((row) => row.id === targetReservationId) ??
-              selectedReservation
+            selectedReservation
           )
           setAssignSeatsOpen(false)
           setPromoIntent("check-in")
@@ -1716,18 +1715,18 @@ export function CheckIn() {
           signaturePrintError ||
           resendError ||
           expressError) && (
-          <div className="space-y-1 border-b px-2.5 py-2 text-sm text-destructive lg:px-3">
-            {checkInError ? <p>{checkInError}</p> : null}
-            {uncancelReservationError ? (
-              <p>{uncancelReservationError}</p>
-            ) : null}
-            {reservationsError ? <p>{reservationsError}</p> : null}
-            {reservationPrintError ? <p>{reservationPrintError}</p> : null}
-            {signaturePrintError ? <p>{signaturePrintError}</p> : null}
-            {resendError ? <p>{resendError}</p> : null}
-            {expressError ? <p>{expressError}</p> : null}
-          </div>
-        )}
+            <div className="space-y-1 border-b px-2.5 py-2 text-sm text-destructive lg:px-3">
+              {checkInError ? <p>{checkInError}</p> : null}
+              {uncancelReservationError ? (
+                <p>{uncancelReservationError}</p>
+              ) : null}
+              {reservationsError ? <p>{reservationsError}</p> : null}
+              {reservationPrintError ? <p>{reservationPrintError}</p> : null}
+              {signaturePrintError ? <p>{signaturePrintError}</p> : null}
+              {resendError ? <p>{resendError}</p> : null}
+              {expressError ? <p>{expressError}</p> : null}
+            </div>
+          )}
         <CheckInDataTable
           data={filteredRecords}
           loading={reservationsLoading}
