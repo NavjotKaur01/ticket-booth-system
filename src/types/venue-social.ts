@@ -15,15 +15,3 @@ export type VenueSocialRecord = {
 }
 
 export type VenueSocialDraft = Omit<VenueSocialRecord, "id" | "locationId">
-
-export type VenueSocialFilters = {
-  social: string
-  displayOrder: string
-  url: string
-}
-
-export const EMPTY_VENUE_SOCIAL_FILTERS: VenueSocialFilters = {
-  social: "",
-  displayOrder: "",
-  url: "",
-}

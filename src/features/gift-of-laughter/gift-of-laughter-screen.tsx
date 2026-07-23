@@ -1,16 +1,20 @@
-import { FileDown, LoaderCircle } from "lucide-react"
+import {
+  FileDown,
+  FileSpreadsheet,
+  FileText,
+  LoaderCircle,
+  X,
+} from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import CalendarDatePickerControl from "@/components/calendar/controls/CalendarDatePickerControl"
+import { PanelCard } from "@/components/common/panel-card"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
-import { Button } from "@/components/ui/button"
+import { IconActionButton } from "@/components/forms/form-fields"
 import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  AdminPageShell,
+  AdminPageTitle,
+} from "@/components/layout/admin-page"
 import { Input } from "@/components/ui/input"
 import {
   Table,
@@ -25,6 +29,7 @@ import { useAppSession } from "@/hooks/use-app-session"
 import { reportError, toastSuccess } from "@/lib/app-toast"
 import { downloadCsv } from "@/lib/download-csv"
 import { buildExportMatrix, type ExportColumn } from "@/lib/export-table-data"
+import { cn } from "@/lib/utils"
 import type {
   GiftOfLaughterFilters,
   GiftOfLaughterRecord,
@@ -53,6 +58,9 @@ const EXPORT_COLUMNS: ExportColumn<GiftOfLaughterRecord>[] = [
   { header: "Trans ID", value: (row) => row.transId },
 ]
 
+const HEADER_CLASS =
+  "h-9 whitespace-nowrap px-3 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
+
 type FilterKey = keyof GiftOfLaughterFilters
 
 function formatCurrency(value: number) {
@@ -65,7 +73,7 @@ function formatCurrency(value: number) {
 
 function formatDisplayDate(value: string) {
   if (!value) {
-    return "-"
+    return "—"
   }
 
   const parsed = new Date(`${value}T00:00:00`)
@@ -94,7 +102,10 @@ function matchesAmountFilter(value: number, query: string) {
   }
 
   const normalized = query.trim().replace(/[$,]/g, "")
-  return String(value).includes(normalized) || formatCurrency(value).includes(query.trim())
+  return (
+    String(value).includes(normalized) ||
+    formatCurrency(value).includes(query.trim())
+  )
 }
 
 function filterGiftOfLaughterRows(
@@ -103,16 +114,24 @@ function filterGiftOfLaughterRows(
 ) {
   return rows.filter((row) => {
     if (!matchesTextFilter(row.giftType, filters.giftType)) return false
-    if (!matchesTextFilter(row.senderFirstName, filters.senderFirstName)) return false
-    if (!matchesTextFilter(row.senderLastName, filters.senderLastName)) return false
+    if (!matchesTextFilter(row.senderFirstName, filters.senderFirstName))
+      return false
+    if (!matchesTextFilter(row.senderLastName, filters.senderLastName))
+      return false
     if (!matchesTextFilter(row.senderEmail, filters.senderEmail)) return false
-    if (!matchesTextFilter(row.receiverFirstName, filters.receiverFirstName)) return false
-    if (!matchesTextFilter(row.receiverLastName, filters.receiverLastName)) return false
-    if (!matchesTextFilter(row.receiverAddress, filters.receiverAddress)) return false
-    if (!matchesTextFilter(row.receiverEmail, filters.receiverEmail)) return false
+    if (!matchesTextFilter(row.receiverFirstName, filters.receiverFirstName))
+      return false
+    if (!matchesTextFilter(row.receiverLastName, filters.receiverLastName))
+      return false
+    if (!matchesTextFilter(row.receiverAddress, filters.receiverAddress))
+      return false
+    if (!matchesTextFilter(row.receiverEmail, filters.receiverEmail))
+      return false
     if (!matchesTextFilter(row.shippedBy, filters.shippedBy)) return false
-    if (!matchesAmountFilter(row.originalAmount, filters.originalAmount)) return false
-    if (!matchesAmountFilter(row.remainingBalance, filters.remainingBalance)) return false
+    if (!matchesAmountFilter(row.originalAmount, filters.originalAmount))
+      return false
+    if (!matchesAmountFilter(row.remainingBalance, filters.remainingBalance))
+      return false
     if (!matchesTextFilter(row.transId, filters.transId)) return false
 
     if (filters.dateCreated.trim()) {
@@ -131,10 +150,11 @@ function downloadWorkbook(
   filename: string,
   mimeType: string
 ) {
-  const content = [headers.join("\t"), ...rows.map((row) => row.join("\t"))].join("\n")
-  // Add BOM for UTF-8 compatibility
+  const content = [headers.join("\t"), ...rows.map((row) => row.join("\t"))].join(
+    "\n"
+  )
   const blob = new Blob(["\ufeff", content], { type: mimeType })
-  
+
   if (typeof (navigator as any).msSaveOrOpenBlob === "function") {
     ;(navigator as any).msSaveOrOpenBlob(blob, filename)
     return
@@ -144,11 +164,11 @@ function downloadWorkbook(
   const link = document.createElement("a")
   link.href = url
   link.download = filename
-  
+
   document.body.appendChild(link)
   link.click()
   link.remove()
-  
+
   window.setTimeout(() => {
     URL.revokeObjectURL(url)
   }, 100)
@@ -193,6 +213,9 @@ export function GiftOfLaughterScreen() {
     [filters]
   )
 
+  const exportDisabled =
+    !locationId || loading || filteredRows.length === 0 || exportingFormat != null
+
   useEffect(() => {
     if (!locationId) {
       setRows([])
@@ -221,7 +244,11 @@ export function GiftOfLaughterScreen() {
       })
       .catch((requestError: unknown) => {
         if (isActive) {
-          reportError(setError, requestError, "Unable to load Gift of Laughter records.")
+          reportError(
+            setError,
+            requestError,
+            "Unable to load Gift of Laughter records."
+          )
         }
       })
       .finally(() => {
@@ -235,7 +262,10 @@ export function GiftOfLaughterScreen() {
     }
   }, [locationId, locationName])
 
-  function updateFilter<K extends FilterKey>(key: K, value: GiftOfLaughterFilters[K]) {
+  function updateFilter<K extends FilterKey>(
+    key: K,
+    value: GiftOfLaughterFilters[K]
+  ) {
     setFilters((current) => ({ ...current, [key]: value }))
     setStatusMessage(null)
   }
@@ -247,7 +277,9 @@ export function GiftOfLaughterScreen() {
 
   async function handleExport(format: "xls" | "xlsx" | "csv") {
     if (filteredRows.length === 0) {
-      setStatusMessage("No rows available to export for the current filter selection.")
+      setStatusMessage(
+        "No rows available to export for the current filter selection."
+      )
       return
     }
 
@@ -302,227 +334,251 @@ export function GiftOfLaughterScreen() {
   }
 
   return (
-    <div className="space-y-4">
+    <AdminPageShell>
       <div className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Location Gift of Laughter Management
-        </h1>
+        <AdminPageTitle>Gift of Laughter</AdminPageTitle>
         <p className="text-sm text-muted-foreground">
           Review Gift of Laughter purchases and balances for the header-selected
           location using mock service data until the backend is connected.
         </p>
       </div>
 
-      <Card className="gap-0 py-0">
-        <CardHeader className="border-b bg-muted/40 px-4 py-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
-              Location Gift of Laughter Management
-            </CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="gap-2"
-                disabled={!locationId || loading || filteredRows.length === 0 || exportingFormat != null}
-                onClick={() => void handleExport("xls")}
-              >
-                {exportingFormat === "xls" ? (
-                  <LoaderCircle className="size-4 animate-spin" />
-                ) : (
-                  <FileDown className="size-4" />
-                )}
-                Export to XLS
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="gap-2"
-                disabled={!locationId || loading || filteredRows.length === 0 || exportingFormat != null}
-                onClick={() => void handleExport("xlsx")}
-              >
-                {exportingFormat === "xlsx" ? (
-                  <LoaderCircle className="size-4 animate-spin" />
-                ) : (
-                  <FileDown className="size-4" />
-                )}
-                Export to XLSX
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="gap-2"
-                disabled={!locationId || loading || filteredRows.length === 0 || exportingFormat != null}
-                onClick={() => void handleExport("csv")}
-              >
-                {exportingFormat === "csv" ? (
-                  <LoaderCircle className="size-4 animate-spin" />
-                ) : (
-                  <FileDown className="size-4" />
-                )}
-                Export to CSV
-              </Button>
-              {hasActiveFilters ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={!locationId || loading}
-                  onClick={clearFilters}
-                >
-                  Clear Filters
-                </Button>
+      <PanelCard>
+        <div className="flex flex-col gap-3 border-b px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">Note:</span> Use
+              column filters to narrow results, then export the filtered set.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Records:{" "}
+              <span className="font-semibold tabular-nums text-foreground">
+                {filteredRows.length}
+              </span>
+              {rows.length !== filteredRows.length ? (
+                <span className="text-muted-foreground">
+                  {" "}
+                  of {rows.length}
+                </span>
               ) : null}
-            </div>
+            </p>
           </div>
-        </CardHeader>
 
-        <CardContent className="space-y-0 px-0 py-0">
-          {error ? (
-            <div className="px-4 pt-4">
-              <p className="rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                {error}
-              </p>
-            </div>
-          ) : null}
+          <div className="flex items-center gap-1.5">
+            {hasActiveFilters ? (
+              <IconActionButton
+                label="Clear Filters"
+                icon={X}
+                disabled={!locationId || loading}
+                onClick={clearFilters}
+              />
+            ) : null}
+            <IconActionButton
+              label="Export XLS"
+              icon={FileSpreadsheet}
+              disabled={exportDisabled}
+              onClick={() => void handleExport("xls")}
+            />
+            <IconActionButton
+              label="Export XLSX"
+              icon={FileDown}
+              disabled={exportDisabled}
+              onClick={() => void handleExport("xlsx")}
+            />
+            <IconActionButton
+              label="Export CSV"
+              icon={FileText}
+              disabled={exportDisabled}
+              onClick={() => void handleExport("csv")}
+            />
+          </div>
+        </div>
 
-          {!locationId ? (
-            <div className="p-4">
-              <VenueNoLocationState featureLabel="Gift of Laughter records" />
-            </div>
-          ) : loading ? (
-            <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
-              <LoaderCircle className="size-4 animate-spin" />
-              Loading Gift of Laughter records...
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table className="min-w-[96rem]">
-                <TableHeader>
-                  <TableRow className="bg-muted/40 hover:bg-muted/40">
-                    <TableHead className="min-w-36 px-3">Gift Type</TableHead>
-                    <TableHead className="min-w-36 px-3">Sender&apos;s First Name</TableHead>
-                    <TableHead className="min-w-36 px-3">Sender&apos;s Last Name</TableHead>
-                    <TableHead className="min-w-44 px-3">Sender&apos;s Email</TableHead>
-                    <TableHead className="min-w-40 px-3">Receiver&apos;s First Name</TableHead>
-                    <TableHead className="min-w-40 px-3">Receiver&apos;s Last Name</TableHead>
-                    <TableHead className="min-w-56 px-3">Receiver&apos;s Address</TableHead>
-                    <TableHead className="min-w-44 px-3">Receiver&apos;s Email</TableHead>
-                    <TableHead className="min-w-28 px-3">Shipped By</TableHead>
-                    <TableHead className="min-w-32 px-3">Original Amount</TableHead>
-                    <TableHead className="min-w-36 px-3">Remaining Balance</TableHead>
-                    <TableHead className="min-w-32 px-3">Date Created</TableHead>
-                    <TableHead className="min-w-32 px-3">Trans ID</TableHead>
-                  </TableRow>
-                  <TableRow className="bg-background hover:bg-background">
-                    <TableCell className="px-3 py-2">
-                      {renderFilterInput("giftType", "Filter gift type")}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      {renderFilterInput("senderFirstName", "Filter first name")}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      {renderFilterInput("senderLastName", "Filter last name")}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      {renderFilterInput("senderEmail", "Filter email")}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      {renderFilterInput("receiverFirstName", "Filter first name")}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      {renderFilterInput("receiverLastName", "Filter last name")}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      {renderFilterInput("receiverAddress", "Filter address")}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      {renderFilterInput("receiverEmail", "Filter email")}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      {renderFilterInput("shippedBy", "Filter ship method")}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      {renderFilterInput("originalAmount", "Filter amount")}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      {renderFilterInput("remainingBalance", "Filter balance")}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      <CalendarDatePickerControl
-                        id="gift-of-laughter-date-created-filter"
-                        value={filters.dateCreated}
-                        onChange={(value) => updateFilter("dateCreated", value)}
-                        placeholder="Filter date"
-                        className="h-8 w-full min-w-[9rem] text-xs"
+        {error ? (
+          <p className="border-b px-3 py-2 text-sm text-destructive">{error}</p>
+        ) : null}
+
+        {statusMessage ? (
+          <p className="border-b px-3 py-2 text-sm text-muted-foreground">
+            {statusMessage}
+          </p>
+        ) : null}
+
+        {!locationId ? (
+          <div className="p-4">
+            <VenueNoLocationState featureLabel="Gift of Laughter records" />
+          </div>
+        ) : loading ? (
+          <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
+            <LoaderCircle className="size-4 animate-spin" />
+            Loading Gift of Laughter records...
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table
+              className="min-w-384"
+              containerClassName="overflow-x-visible"
+            >
+              <TableHeader>
+                <TableRow className="border-b hover:bg-transparent">
+                  <TableHead className={cn(HEADER_CLASS, "min-w-36")}>
+                    Gift Type
+                  </TableHead>
+                  <TableHead className={cn(HEADER_CLASS, "min-w-36")}>
+                    Sender&apos;s First Name
+                  </TableHead>
+                  <TableHead className={cn(HEADER_CLASS, "min-w-36")}>
+                    Sender&apos;s Last Name
+                  </TableHead>
+                  <TableHead className={cn(HEADER_CLASS, "min-w-44")}>
+                    Sender&apos;s Email
+                  </TableHead>
+                  <TableHead className={cn(HEADER_CLASS, "min-w-40")}>
+                    Receiver&apos;s First Name
+                  </TableHead>
+                  <TableHead className={cn(HEADER_CLASS, "min-w-40")}>
+                    Receiver&apos;s Last Name
+                  </TableHead>
+                  <TableHead className={cn(HEADER_CLASS, "min-w-56")}>
+                    Receiver&apos;s Address
+                  </TableHead>
+                  <TableHead className={cn(HEADER_CLASS, "min-w-44")}>
+                    Receiver&apos;s Email
+                  </TableHead>
+                  <TableHead className={cn(HEADER_CLASS, "min-w-28")}>
+                    Shipped By
+                  </TableHead>
+                  <TableHead className={cn(HEADER_CLASS, "min-w-32")}>
+                    Original Amount
+                  </TableHead>
+                  <TableHead className={cn(HEADER_CLASS, "min-w-36")}>
+                    Remaining Balance
+                  </TableHead>
+                  <TableHead className={cn(HEADER_CLASS, "min-w-32")}>
+                    Date Created
+                  </TableHead>
+                  <TableHead className={cn(HEADER_CLASS, "min-w-32")}>
+                    Trans ID
+                  </TableHead>
+                </TableRow>
+                <TableRow className="bg-muted/20 hover:bg-muted/20">
+                  <TableCell className="px-3 py-2">
+                    {renderFilterInput("giftType", "Filter gift type")}
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    {renderFilterInput("senderFirstName", "Filter first name")}
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    {renderFilterInput("senderLastName", "Filter last name")}
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    {renderFilterInput("senderEmail", "Filter email")}
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    {renderFilterInput(
+                      "receiverFirstName",
+                      "Filter first name"
+                    )}
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    {renderFilterInput("receiverLastName", "Filter last name")}
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    {renderFilterInput("receiverAddress", "Filter address")}
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    {renderFilterInput("receiverEmail", "Filter email")}
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    {renderFilterInput("shippedBy", "Filter ship method")}
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    {renderFilterInput("originalAmount", "Filter amount")}
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    {renderFilterInput("remainingBalance", "Filter balance")}
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    <CalendarDatePickerControl
+                      id="gift-of-laughter-date-created-filter"
+                      value={filters.dateCreated}
+                      onChange={(value) => updateFilter("dateCreated", value)}
+                      placeholder="Filter date"
+                      className="h-8 w-full min-w-36 text-xs"
+                    />
+                  </TableCell>
+                  <TableCell className="px-3 py-2">
+                    {renderFilterInput("transId", "Filter trans ID")}
+                  </TableCell>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRows.length === 0 ? (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={13} className="px-4 py-10 text-center">
+                      <EmptyState
+                        title="No data to display"
+                        description={
+                          rows.length === 0
+                            ? "This location does not have Gift of Laughter records in the mock service yet."
+                            : "Adjust the column filters to find matching Gift of Laughter records."
+                        }
                       />
                     </TableCell>
-                    <TableCell className="px-3 py-2">
-                      {renderFilterInput("transId", "Filter trans ID")}
-                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRows.length === 0 ? (
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={13} className="px-4 py-10 text-center">
-                        <EmptyState
-                          title="No data to display"
-                          description={
-                            rows.length === 0
-                              ? "This location does not have Gift of Laughter records in the mock service yet."
-                              : "Adjust the column filters to find matching Gift of Laughter records."
-                          }
-                        />
+                ) : (
+                  filteredRows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      className="group border-b last:border-0 hover:bg-muted/40"
+                    >
+                      <TableCell className="px-3 py-2 font-medium text-foreground">
+                        {row.giftType}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm">
+                        {row.senderFirstName}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm">
+                        {row.senderLastName}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm">
+                        {row.senderEmail}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm">
+                        {row.receiverFirstName}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm">
+                        {row.receiverLastName}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm">
+                        {row.receiverAddress}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm">
+                        {row.receiverEmail}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm">
+                        {row.shippedBy}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm tabular-nums">
+                        {formatCurrency(row.originalAmount)}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm tabular-nums">
+                        {formatCurrency(row.remainingBalance)}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm tabular-nums">
+                        {formatDisplayDate(row.dateCreated)}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-sm font-medium text-foreground">
+                        {row.transId}
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    filteredRows.map((row) => (
-                      <TableRow key={row.id}>
-                        <TableCell className="px-3 font-medium text-foreground">
-                          {row.giftType}
-                        </TableCell>
-                        <TableCell className="px-3">{row.senderFirstName}</TableCell>
-                        <TableCell className="px-3">{row.senderLastName}</TableCell>
-                        <TableCell className="px-3">{row.senderEmail}</TableCell>
-                        <TableCell className="px-3">{row.receiverFirstName}</TableCell>
-                        <TableCell className="px-3">{row.receiverLastName}</TableCell>
-                        <TableCell className="px-3">{row.receiverAddress}</TableCell>
-                        <TableCell className="px-3">{row.receiverEmail}</TableCell>
-                        <TableCell className="px-3">{row.shippedBy}</TableCell>
-                        <TableCell className="px-3 tabular-nums">
-                          {formatCurrency(row.originalAmount)}
-                        </TableCell>
-                        <TableCell className="px-3 tabular-nums">
-                          {formatCurrency(row.remainingBalance)}
-                        </TableCell>
-                        <TableCell className="px-3 tabular-nums">
-                          {formatDisplayDate(row.dateCreated)}
-                        </TableCell>
-                        <TableCell className="px-3 font-medium text-foreground">
-                          {row.transId}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-
-        <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 sm:flex-row sm:items-center">
-          <div aria-live="polite" className="text-sm text-muted-foreground">
-            {locationId
-              ? statusMessage ||
-                `${filteredRows.length} of ${rows.length} Gift of Laughter record${rows.length === 1 ? "" : "s"} shown for ${locationName}.`
-              : "Select a location from the header to begin reviewing Gift of Laughter records."}
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-        </CardFooter>
-      </Card>
-    </div>
+        )}
+      </PanelCard>
+    </AdminPageShell>
   )
 }

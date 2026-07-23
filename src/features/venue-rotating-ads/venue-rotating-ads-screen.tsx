@@ -1,24 +1,17 @@
-import {
-  Eye,
-  LoaderCircle,
-  Plus,
-  Save,
-} from "lucide-react"
+import { Eye, LoaderCircle } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
+import { PanelCard } from "@/components/common/panel-card"
 import { RichTextEditor } from "@/components/common/rich-text-editor"
-import { StandardRowActionsMenu } from "@/components/common/standard-row-actions-menu"
 import { VenueNoLocationState } from "@/components/common/venue-no-location-state"
 import CalendarDatePickerControl from "@/components/calendar/controls/CalendarDatePickerControl"
-import { Button } from "@/components/ui/button"
+import { IconActionButton } from "@/components/forms/form-fields"
 import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  AdminPageShell,
+  AdminPageTitle,
+} from "@/components/layout/admin-page"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -36,14 +29,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { ActivePill } from "@/features/venue-rotating-ads/venue-rotating-ad-columns"
+import { VenueRotatingAdDataTable } from "@/features/venue-rotating-ads/venue-rotating-ad-data-table"
 import {
   createVenueRotatingAd,
   deleteVenueRotatingAd,
@@ -52,11 +39,14 @@ import {
 } from "@/features/venue-rotating-ads/venue-rotating-ads.service"
 import { useAppSession } from "@/hooks/use-app-session"
 import { reportError, toastSuccess } from "@/lib/app-toast"
-import type { VenueRotatingAdDraft, VenueRotatingAdRecord } from "@/types/venue-rotating-ad"
+import type {
+  VenueRotatingAdDraft,
+  VenueRotatingAdRecord,
+} from "@/types/venue-rotating-ad"
 
 const ACTIVE_OPTIONS = [
-  { value: "Y", label: "Y" },
-  { value: "N", label: "N" },
+  { value: "Y", label: "Yes" },
+  { value: "N", label: "No" },
 ] as const
 
 const EMPTY_AD_FORM: VenueRotatingAdDraft = {
@@ -68,51 +58,6 @@ const EMPTY_AD_FORM: VenueRotatingAdDraft = {
   adName: "",
   navigateUrl: "",
   adText: "<p></p>",
-}
-
-function EmptyState({
-  title,
-  description,
-}: {
-  title: string
-  description: string
-}) {
-  return (
-    <div className="rounded-sm border border-dashed border-border bg-muted/20 px-4 py-10 text-center">
-      <p className="text-sm font-medium text-foreground">{title}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-    </div>
-  )
-}
-
-function ActivePill({ active }: { active: boolean }) {
-  return (
-    <span
-      className={active
-        ? "inline-flex min-w-9 items-center justify-center rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
-        : "inline-flex min-w-9 items-center justify-center rounded-full bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground"
-      }
-    >
-      {active ? "Y" : "N"}
-    </span>
-  )
-}
-
-function formatDisplayDate(value: string) {
-  if (!value) {
-    return "-"
-  }
-
-  const parsed = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(parsed.getTime())) {
-    return value
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "numeric",
-    day: "numeric",
-    year: "numeric",
-  }).format(parsed)
 }
 
 function buildEmptyAd(): VenueRotatingAdDraft {
@@ -143,16 +88,15 @@ export function VenueRotatingAdsScreen() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [deletingRow, setDeletingRow] = useState<VenueRotatingAdRecord | null>(null)
+  const [deletingRow, setDeletingRow] = useState<VenueRotatingAdRecord | null>(
+    null
+  )
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
   const isEditing = editingAdId != null
 
-  const previewAd = useMemo(
-    () => (rows.length > 0 ? rows[0] : null),
-    [rows]
-  )
+  const previewAd = useMemo(() => (rows.length > 0 ? rows[0] : null), [rows])
 
   const canSubmit =
     locationId.length > 0 &&
@@ -223,7 +167,10 @@ export function VenueRotatingAdsScreen() {
     setEditingAdId(null)
     setForm({
       ...buildEmptyAd(),
-      displayOrder: rows.length > 0 ? Math.max(...rows.map((row) => row.displayOrder)) + 1 : 1,
+      displayOrder:
+        rows.length > 0
+          ? Math.max(...rows.map((row) => row.displayOrder)) + 1
+          : 1,
     })
     setDialogOpen(true)
     setError(null)
@@ -341,348 +288,313 @@ export function VenueRotatingAdsScreen() {
 
   return (
     <>
-        <div className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <h1 className="text-xl font-semibold tracking-tight text-foreground">
-                Location Rotating Ads
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Manage venue rotating advertisement slots with mock service data until the
-                backend integration is ready.
-              </p>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              className="gap-2"
-              disabled={!locationId}
-              onClick={openCreateDialog}
-            >
-              <Plus className="size-4" />
-              Add New Ad
-            </Button>
+      <AdminPageShell>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1">
+            <AdminPageTitle>Location Rotating Ads</AdminPageTitle>
+            <p className="text-sm text-muted-foreground">
+              Manage venue rotating advertisement slots with mock service data
+              until the backend integration is ready.
+            </p>
           </div>
-
-          <Card className="gap-0 py-0">
-            <CardHeader className="border-b bg-muted/40 px-4 py-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-foreground">
-                  Location Rotating Ads Management
-                </CardTitle>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="gap-2"
-                  disabled={!locationId || rows.length === 0}
-                  onClick={() => setPreviewOpen(true)}
-                >
-                  <Eye className="size-4" />
-                  Preview
-                </Button>
-              </div>
-            </CardHeader>
-
-            <CardContent className="space-y-4 px-0 py-0">
-              {error ? (
-                <div className="px-4 pt-4">
-                  <p className="rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                    {error}
-                  </p>
-                </div>
-              ) : null}
-
-              {!locationId ? (
-                <div className="p-4">
-                  <VenueNoLocationState featureLabel="Location rotating ads" />
-                </div>
-              ) : loading ? (
-                <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
-                  <LoaderCircle className="size-4 animate-spin" />
-                  Loading rotating ads...
-                </div>
-              ) : rows.length === 0 ? (
-                <div className="p-4">
-                  <EmptyState
-                    title="No rotating ads found for this location."
-                    description="Use Add New Ad to create the first rotating ad entry."
-                  />
-                </div>
-              ) : (
-                <div className="overflow-x-auto px-4 py-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/40 hover:bg-muted/40">
-                        <TableHead>Alternate Text</TableHead>
-                        <TableHead className="w-32">Display Order</TableHead>
-                        <TableHead className="w-24">Active</TableHead>
-                        <TableHead className="w-36">Starting Date</TableHead>
-                        <TableHead className="w-36">Ending Date</TableHead>
-                        <TableHead className="w-24 px-4 text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {rows.map((row) => (
-                        <TableRow key={row.id}>
-                          <TableCell className="font-medium text-foreground">
-                            {row.alternateText || row.adName}
-                          </TableCell>
-                          <TableCell className="tabular-nums text-muted-foreground">
-                            {row.displayOrder}
-                          </TableCell>
-                          <TableCell>
-                            <ActivePill active={row.active} />
-                          </TableCell>
-                          <TableCell>{formatDisplayDate(row.startingDate)}</TableCell>
-                          <TableCell>{formatDisplayDate(row.endingDate)}</TableCell>
-                          <TableCell className="px-4">
-                            <div className="flex items-center justify-end">
-                              <StandardRowActionsMenu
-                                ariaLabel={`Actions for ${row.adName || row.alternateText}`}
-                                hiddenActions={["Add"]}
-                                onAction={(action) => {
-                                  if (action === "Edit") {
-                                    openEditDialog(row)
-                                  }
-                                  if (action === "Delete") {
-                                    setDeletingRow(row)
-                                  }
-                                }}
-                              />
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-
-            <CardFooter className="flex flex-col items-start justify-between gap-3 border-t px-4 py-3 sm:flex-row sm:items-center">
-              <div aria-live="polite" className="text-sm text-muted-foreground">
-                {locationId
-                  ? statusMessage ||
-                    `${rows.length} rotating ad${rows.length === 1 ? "" : "s"} loaded for ${locationName}.`
-                  : "Select a location from the header to begin managing rotating ads."}
-              </div>
-            </CardFooter>
-          </Card>
+          <Button
+            type="button"
+            disabled={!locationId}
+            onClick={openCreateDialog}
+            className="w-full sm:w-auto"
+          >
+            Add New Ad
+          </Button>
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
-          <DialogContent className="max-w-4xl p-0 sm:max-w-4xl">
-            <DialogHeader className="border-b bg-muted/40 px-5 py-4">
-              <DialogTitle className="text-base font-semibold text-foreground">
-                Location Rotating Ads
-              </DialogTitle>
-              <DialogDescription>
-                {isEditing
-                  ? `Update the rotating ad details for ${locationName}.`
-                  : `Create a new rotating ad for ${locationName}.`}
-              </DialogDescription>
-            </DialogHeader>
+        <PanelCard>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-3 py-2">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <p className="text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Note:</span> Use
+                Add New Ad to create a row, or edit from the action menu.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Records:{" "}
+                <span className="font-semibold tabular-nums text-foreground">
+                  {rows.length}
+                </span>
+              </p>
+            </div>
+            <IconActionButton
+              label="Preview"
+              icon={Eye}
+              disabled={!locationId || rows.length === 0}
+              onClick={() => setPreviewOpen(true)}
+            />
+          </div>
 
-            <div className="max-h-[75vh] space-y-5 overflow-y-auto px-5 py-5">
-              {error && dialogOpen ? (
-                <p className="rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                  {error}
-                </p>
-              ) : null}
+          {error && !dialogOpen ? (
+            <p className="border-b px-3 py-2 text-sm text-destructive">{error}</p>
+          ) : null}
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="rotating-ad-display-order">Display Order</Label>
-                  <Input
-                    id="rotating-ad-display-order"
-                    type="number"
-                    min={0}
-                    value={form.displayOrder}
-                    onChange={(event) =>
-                      updateField(
-                        "displayOrder",
-                        Number.parseInt(event.target.value, 10) || 0
-                      )
-                    }
-                  />
-                </div>
+          {statusMessage ? (
+            <p className="border-b px-3 py-2 text-sm text-muted-foreground">
+              {statusMessage}
+            </p>
+          ) : null}
 
-                <div className="space-y-2">
-                  <Label htmlFor="rotating-ad-active">Active</Label>
-                  <Select
-                    value={form.active ? "Y" : "N"}
-                    onValueChange={(value) => updateField("active", value === "Y")}
-                  >
-                    <SelectTrigger id="rotating-ad-active" className="w-full bg-background">
-                      <SelectValue placeholder="Select active state" />
-                    </SelectTrigger>
-                    <SelectContent position="popper">
-                      {ACTIVE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          {!locationId ? (
+            <div className="p-4">
+              <VenueNoLocationState featureLabel="Location rotating ads" />
+            </div>
+          ) : (
+            <VenueRotatingAdDataTable
+              data={rows}
+              loading={loading}
+              emptyMessage="No rotating ads found for this location."
+              onEdit={openEditDialog}
+              onDelete={setDeletingRow}
+            />
+          )}
+        </PanelCard>
+      </AdminPageShell>
 
-                <div className="space-y-2">
-                  <Label htmlFor="rotating-ad-name">Ad Name</Label>
-                  <Input
-                    id="rotating-ad-name"
-                    value={form.adName}
-                    onChange={(event) => updateField("adName", event.target.value)}
-                    placeholder="Enter ad name"
-                  />
-                </div>
+      <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
+        <DialogContent className="max-w-4xl p-0 sm:max-w-4xl">
+          <DialogHeader className="border-b bg-muted/40 px-5 py-4">
+            <DialogTitle className="text-base font-semibold text-foreground">
+              Location Rotating Ads
+            </DialogTitle>
+            <DialogDescription>
+              {isEditing
+                ? `Update the rotating ad details for ${locationName}.`
+                : `Create a new rotating ad for ${locationName}.`}
+            </DialogDescription>
+          </DialogHeader>
 
-                <div className="space-y-2">
-                  <Label htmlFor="rotating-ad-alternate-text">Alternate Text</Label>
-                  <Input
-                    id="rotating-ad-alternate-text"
-                    value={form.alternateText}
-                    onChange={(event) => updateField("alternateText", event.target.value)}
-                    placeholder="Alternate text for accessibility"
-                  />
-                </div>
+          <div className="max-h-[75vh] space-y-5 overflow-y-auto px-5 py-5">
+            {error && dialogOpen ? (
+              <p className="rounded-sm border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
 
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="rotating-ad-url">Navigate URL</Label>
-                  <Input
-                    id="rotating-ad-url"
-                    type="url"
-                    value={form.navigateUrl}
-                    onChange={(event) => updateField("navigateUrl", event.target.value)}
-                    placeholder="https://example.com/promo"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="rotating-ad-start-date">Starting Date</Label>
-                  <CalendarDatePickerControl
-                    id="rotating-ad-start-date"
-                    value={form.startingDate}
-                    onChange={(value) => updateField("startingDate", value)}
-                    placeholder="Select starting date"
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="rotating-ad-end-date">Ending Date</Label>
-                  <CalendarDatePickerControl
-                    id="rotating-ad-end-date"
-                    value={form.endingDate}
-                    onChange={(value) => updateField("endingDate", value)}
-                    placeholder="Select ending date"
-                    className="w-full"
-                  />
-                </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="rotating-ad-display-order">Display Order</Label>
+                <Input
+                  id="rotating-ad-display-order"
+                  type="number"
+                  min={0}
+                  value={form.displayOrder}
+                  onChange={(event) =>
+                    updateField(
+                      "displayOrder",
+                      Number.parseInt(event.target.value, 10) || 0
+                    )
+                  }
+                />
               </div>
 
               <div className="space-y-2">
-                <Label>Ad Text</Label>
-                <RichTextEditor
-                  value={form.adText}
-                  onChange={(value) => updateField("adText", value)}
-                  onClear={() => updateField("adText", "<p></p>")}
-                  previewLabel={form.adName || "Rotating ad preview"}
-                  minHeightClassName="min-h-[16rem]"
+                <Label htmlFor="rotating-ad-active">Active</Label>
+                <Select
+                  value={form.active ? "Y" : "N"}
+                  onValueChange={(value) =>
+                    updateField("active", value === "Y")
+                  }
+                >
+                  <SelectTrigger
+                    id="rotating-ad-active"
+                    className="w-full bg-background"
+                  >
+                    <SelectValue placeholder="Select active state" />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    {ACTIVE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="rotating-ad-name">Ad Name</Label>
+                <Input
+                  id="rotating-ad-name"
+                  value={form.adName}
+                  onChange={(event) =>
+                    updateField("adName", event.target.value)
+                  }
+                  placeholder="Enter ad name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="rotating-ad-alternate-text">
+                  Alternate Text
+                </Label>
+                <Input
+                  id="rotating-ad-alternate-text"
+                  value={form.alternateText}
+                  onChange={(event) =>
+                    updateField("alternateText", event.target.value)
+                  }
+                  placeholder="Alternate text for accessibility"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="rotating-ad-url">Navigate URL</Label>
+                <Input
+                  id="rotating-ad-url"
+                  type="url"
+                  value={form.navigateUrl}
+                  onChange={(event) =>
+                    updateField("navigateUrl", event.target.value)
+                  }
+                  placeholder="https://example.com/promo"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="rotating-ad-start-date">Starting Date</Label>
+                <CalendarDatePickerControl
+                  id="rotating-ad-start-date"
+                  value={form.startingDate}
+                  onChange={(value) => updateField("startingDate", value)}
+                  placeholder="Select starting date"
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="rotating-ad-end-date">Ending Date</Label>
+                <CalendarDatePickerControl
+                  id="rotating-ad-end-date"
+                  value={form.endingDate}
+                  onChange={(value) => updateField("endingDate", value)}
+                  placeholder="Select ending date"
+                  className="w-full"
                 />
               </div>
             </div>
 
-            <DialogFooter className="border-t px-5 py-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleDialogChange(false)}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                className="gap-2"
-                onClick={() => void handleSave()}
-                disabled={!canSubmit || saving}
-              >
-                {saving ? (
+            <div className="space-y-2">
+              <Label>Ad Text</Label>
+              <RichTextEditor
+                value={form.adText}
+                onChange={(value) => updateField("adText", value)}
+                onClear={() => updateField("adText", "<p></p>")}
+                previewLabel={form.adName || "Rotating ad preview"}
+                minHeightClassName="min-h-[16rem]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="border-t px-5 py-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleDialogChange(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={!canSubmit || saving}
+            >
+              {saving ? (
+                <>
                   <LoaderCircle className="size-4 animate-spin" />
-                ) : (
-                  <Save className="size-4" />
-                )}
-                {isEditing ? "Update" : "Add"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                  {isEditing ? "Update" : "Add"}
+                </>
+              ) : isEditing ? (
+                "Update"
+              ) : (
+                "Add"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-          <DialogContent className="max-w-3xl p-0 sm:max-w-3xl">
-            <DialogHeader className="border-b bg-muted/40 px-5 py-4">
-              <DialogTitle className="text-base font-semibold text-foreground">
-                Rotating Ad Preview
-              </DialogTitle>
-              <DialogDescription>
-                Mock preview of the first rotating ad for {locationName}.
-              </DialogDescription>
-            </DialogHeader>
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-3xl p-0 sm:max-w-3xl">
+          <DialogHeader className="border-b bg-muted/40 px-5 py-4">
+            <DialogTitle className="text-base font-semibold text-foreground">
+              Rotating Ad Preview
+            </DialogTitle>
+            <DialogDescription>
+              Mock preview of the first rotating ad for {locationName}.
+            </DialogDescription>
+          </DialogHeader>
 
-            {previewAd ? (
-              <div className="space-y-4 px-5 py-5">
-                <div className="grid gap-3 text-sm sm:grid-cols-2">
-                  <div>
-                    <span className="text-muted-foreground">Ad Name:</span>{" "}
-                    <span className="font-medium text-foreground">{previewAd.adName}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Navigate URL:</span>{" "}
-                    <span className="font-medium text-foreground">{previewAd.navigateUrl}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Display Order:</span>{" "}
-                    <span className="font-medium text-foreground">{previewAd.displayOrder}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Active:</span>{" "}
-                    <ActivePill active={previewAd.active} />
-                  </div>
+          {previewAd ? (
+            <div className="space-y-4 px-5 py-5">
+              <div className="grid gap-3 text-sm sm:grid-cols-2">
+                <div>
+                  <span className="text-muted-foreground">Ad Name:</span>{" "}
+                  <span className="font-medium text-foreground">
+                    {previewAd.adName}
+                  </span>
                 </div>
-
-                <div className="rounded-md border border-border/70 bg-muted/20 p-4">
-                  <div
-                    className="prose prose-sm max-w-none dark:prose-invert"
-                    dangerouslySetInnerHTML={{ __html: previewAd.adText }}
-                  />
+                <div>
+                  <span className="text-muted-foreground">Navigate URL:</span>{" "}
+                  <span className="font-medium text-foreground">
+                    {previewAd.navigateUrl}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Display Order:</span>{" "}
+                  <span className="font-medium text-foreground">
+                    {previewAd.displayOrder}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Active:</span>
+                  <ActivePill active={previewAd.active} />
                 </div>
               </div>
-            ) : null}
 
-            <DialogFooter className="border-t px-5 py-4">
-              <Button type="button" variant="outline" onClick={() => setPreviewOpen(false)}>
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <div className="rounded-md border border-border/70 bg-muted/20 p-4">
+                <div
+                  className="prose prose-sm max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: previewAd.adText }}
+                />
+              </div>
+            </div>
+          ) : null}
 
-        <ConfirmDeleteDialog
-          open={Boolean(deletingRow)}
-          onOpenChange={(open) => {
-            if (!open && !deletingId) {
-              setDeletingRow(null)
-            }
-          }}
-          onConfirm={() => void confirmDelete()}
-          title="Delete rotating ad?"
-          description={deletingRow
+          <DialogFooter className="border-t px-5 py-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPreviewOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDeleteDialog
+        open={Boolean(deletingRow)}
+        onOpenChange={(open) => {
+          if (!open && !deletingId) {
+            setDeletingRow(null)
+          }
+        }}
+        onConfirm={() => void confirmDelete()}
+        title="Delete rotating ad?"
+        description={
+          deletingRow
             ? `This will remove "${deletingRow.adName || deletingRow.alternateText}" from ${locationName}.`
-            : ""}
-          confirmLabel="Delete rotating ad"
-          isPending={Boolean(deletingId)}
-        />
+            : ""
+        }
+        confirmLabel="Delete rotating ad"
+        isPending={Boolean(deletingId)}
+      />
     </>
   )
 }
