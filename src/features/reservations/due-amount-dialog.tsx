@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -9,7 +8,6 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { X } from 'lucide-react'
 
 export type DueAmountOption =
   | 'additional-payment'
@@ -26,8 +24,8 @@ type DueAmountDialogProps = {
 }
 
 /**
- * Desktop ReservationPayment dueAmountPop — shown when Cancel/X is used
- * while amount is still due (and in some incomplete-payment save paths).
+ * Shown when Cancel/X is used while amount is still due
+ * (and in some incomplete-payment save paths).
  */
 export function DueAmountDialog({
   open,
@@ -41,30 +39,23 @@ export function DueAmountDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         nested
-        showCloseButton={false}
+        showCloseButton
         disableOutsideDismiss
         className='flex max-w-md flex-col gap-0 overflow-hidden p-0 sm:max-w-md'
       >
-        <DialogHeader className='shrink-0 flex-row items-center justify-between gap-3 border-b border-border/50 bg-[#155abb] px-4 py-3 text-white'>
-          <DialogTitle className='text-base font-semibold text-white'>
+        <DialogHeader className='shrink-0 border-b border-border/50 px-4 py-3 pr-12'>
+          <DialogTitle className='text-base font-semibold'>
             Due Amount
           </DialogTitle>
-          <DialogClose
-            disabled={isPending}
-            className='flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/15 hover:text-white focus:ring-2 focus:ring-white/40 focus:outline-none disabled:opacity-50'
-          >
-            <X className='size-3.5' />
-            <span className='sr-only'>Close</span>
-          </DialogClose>
         </DialogHeader>
 
         <div className='space-y-3 px-4 py-4'>
-          <p className='text-sm font-semibold text-foreground'>
+          <p className='text-sm text-foreground'>
             Amount still due. What action would you like?
           </p>
 
           <div className='rounded-md border border-border/70 bg-muted/20 p-3'>
-            <p className='mb-2 text-xs font-semibold text-muted-foreground'>
+            <p className='mb-2 text-xs font-medium text-muted-foreground'>
               Options
             </p>
             <RadioGroup
@@ -116,23 +107,21 @@ export function DueAmountDialog({
           </div>
         </div>
 
-        <DialogFooter className='shrink-0 border-t border-border/50 bg-muted/40 px-4 py-3 sm:justify-start'>
+        <DialogFooter className='shrink-0 border-t border-border/50 bg-muted/40 px-4 py-3'>
           <Button
             type='button'
-            className='bg-emerald-600 hover:bg-emerald-700'
-            disabled={isPending}
-            onClick={() => void onConfirm()}
-          >
-            {isPending ? 'Please wait...' : 'Ok'}
-          </Button>
-          <Button
-            type='button'
-            variant='ghost'
-            className='text-primary'
+            variant='outline'
             disabled={isPending}
             onClick={() => onOpenChange(false)}
           >
             Cancel
+          </Button>
+          <Button
+            type='button'
+            disabled={isPending}
+            onClick={() => void onConfirm()}
+          >
+            {isPending ? 'Please wait...' : 'Ok'}
           </Button>
         </DialogFooter>
       </DialogContent>
