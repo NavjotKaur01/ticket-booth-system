@@ -2,6 +2,7 @@ import { dispatchEndpoint } from "@/lib/api/dispatch-endpoint"
 import { clubmanApi } from "@/store/api/clubmanApi"
 import type {
   ApiSystemUser,
+  ArchiveSystemCustomerRequest,
   SaveSystemUserRequest,
   UpdateSystemUserRequest,
 } from "@/types/api/system-users"
@@ -35,6 +36,13 @@ export function saveSystemUser(request: SaveSystemUserRequest) {
 export function updateSystemUser(request: UpdateSystemUserRequest) {
   return dispatchEndpoint<boolean, UpdateSystemUserRequest>(
     clubmanApi.endpoints.updateSystemUser,
+    request
+  )
+}
+
+export function archiveSystemCustomer(request: ArchiveSystemCustomerRequest) {
+  return dispatchEndpoint<boolean, ArchiveSystemCustomerRequest>(
+    clubmanApi.endpoints.archiveSystemCustomer,
     request
   )
 }

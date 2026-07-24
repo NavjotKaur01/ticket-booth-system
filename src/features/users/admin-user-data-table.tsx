@@ -8,14 +8,19 @@ type AdminUserDataTableProps = {
   data: AdminUser[]
   loading?: boolean
   onEdit: (user: AdminUser) => void
+  onDelete: (user: AdminUser) => void
 }
 
 export function AdminUserDataTable({
   data,
   loading = false,
   onEdit,
+  onDelete,
 }: AdminUserDataTableProps) {
-  const columns = useMemo(() => getAdminUserColumns({ onEdit }), [onEdit])
+  const columns = useMemo(
+    () => getAdminUserColumns({ onEdit, onDelete }),
+    [onEdit, onDelete]
+  )
 
   return (
     <DataTable

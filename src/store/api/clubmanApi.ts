@@ -154,6 +154,7 @@ import type {
 import type { ShowSectionItem } from "@/types/api/show-sections"
 import type {
   ApiSystemUser,
+  ArchiveSystemCustomerRequest,
   SaveSystemUserRequest,
   UpdateSystemUserRequest,
 } from "@/types/api/system-users"
@@ -636,6 +637,17 @@ export const clubmanApi = createApi({
         method: "PUT",
         body: request,
       }),
+      invalidatesTags: ["SystemUser"],
+    }),
+
+    /** ClubMan UserVM.DeleteUser → PUT Adminstrator/ArchiveSystemCustomer */
+    archiveSystemCustomer: builder.mutation({
+      query: (request: ArchiveSystemCustomerRequest) => ({
+        url: administratorApiPath("ArchiveSystemCustomer"),
+        method: "PUT",
+        body: request,
+      }),
+      transformResponse: (response: unknown) => Boolean(response),
       invalidatesTags: ["SystemUser"],
     }),
 
@@ -2239,6 +2251,7 @@ export const {
   useGetSystemUsersQuery,
   useSaveSystemUserMutation,
   useUpdateSystemUserMutation,
+  useArchiveSystemCustomerMutation,
   useSearchPromotionsMutation,
   useSavePromotionMutation,
   useGetPromotionDetailsMutation,
