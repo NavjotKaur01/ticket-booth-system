@@ -3979,7 +3979,7 @@ export function AddReservationDialog({
       address: '',
       city: '',
       status: '',
-      banned: false
+      banned: selectedCustomerSearchResult.banned
     } satisfies Customer)
     : null
 

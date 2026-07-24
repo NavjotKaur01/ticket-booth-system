@@ -9,6 +9,7 @@ export type ReservationCustomerSearchResult = {
   phone1: string
   phone2: string
   email: string
+  banned: boolean
 }
 
 export type ReservationBusinessSearchResult = {
@@ -43,28 +44,32 @@ export const reservationCustomerSearchResults: ReservationCustomerSearchResult[]
       lastName: 'Smith',
       firstName: 'John',
       phoneNo: '(614) 555-0101',
-      email: 'john.smith@email.com'
+      email: 'john.smith@email.com',
+      banned: false
     }),
     withPhoneParts({
       id: 'c2',
       lastName: 'Smith',
       firstName: 'Jonathan',
       phoneNo: '(614) 555-0182',
-      email: 'jonathan.smith@email.com'
+      email: 'jonathan.smith@email.com',
+      banned: false
     }),
     withPhoneParts({
       id: 'c3',
       lastName: 'Smithson',
       firstName: 'Mary',
       phoneNo: '(614) 555-0144',
-      email: 'mary.smithson@email.com'
+      email: 'mary.smithson@email.com',
+      banned: false
     }),
     withPhoneParts({
       id: 'c4',
       lastName: 'Smyth',
       firstName: 'Robert',
       phoneNo: '(614) 555-0199',
-      email: 'robert.smyth@email.com'
+      email: 'robert.smyth@email.com',
+      banned: false
     })
   ]
 

@@ -42,7 +42,8 @@ export function useReservationTransactions({
     if (paymentList && paymentList.length > 0) {
       return paymentList.map((payment, index) => ({
         id: payment.PaymentID || `${reservation.id}-${index}`,
-        transaction: 'Payment',
+        // Desktop Transactions grid Transaction column binds PymtStatus.
+        transaction: payment.PymtStatus?.trim() || '',
         lastName: payment.LastName ?? reservation.lastName,
         firstName: payment.FirstName ?? reservation.firstName,
         payment: payment.PymtType ?? '',

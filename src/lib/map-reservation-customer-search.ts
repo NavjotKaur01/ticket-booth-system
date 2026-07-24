@@ -2,6 +2,7 @@ import type {
   ReservationBusinessSearchResult,
   ReservationCustomerSearchResult
 } from '@/data/reservation-search-results'
+import { isBannedFlag } from '@/lib/map-customer-search'
 import { normalizePhoneSearchParts } from '@/lib/parse-phone-search-parts'
 import type { ReservationCustomerSearchItem } from '@/types/api/reservation-customer-search'
 
@@ -47,7 +48,8 @@ export function mapReservationCustomerSearchResults (
       areaCode: phone.areaCode,
       phone1: phone.phone1,
       phone2: phone.phone2,
-      email: normalizeText(item.Email1)
+      email: normalizeText(item.Email1),
+      banned: isBannedFlag(item.Banned)
     }
   })
 }
