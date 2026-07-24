@@ -45,12 +45,12 @@ function mapAddress(item: ApiCustomerSearchItem) {
   return address1 || address2
 }
 
-function isBannedFlag(value: unknown) {
+/** ClubMan stores "Y"/"N"; Search.xaml binds Banned directly as a brush ("Red"/"White"). */
+export function isBannedFlag(value: unknown) {
   if (value === true || value === 1) return true
   if (value === false || value == null) return false
 
   const normalized = String(value).replace(/\s+/g, " ").trim().toUpperCase()
-  // ClubMan stores "Y"/"N"; Search.xaml binds Banned directly as a brush ("Red"/"White").
   return normalized === "Y" || normalized === "RED" || normalized === "TRUE"
 }
 

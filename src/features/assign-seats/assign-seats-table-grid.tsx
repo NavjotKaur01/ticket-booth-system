@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { createPortal } from "react-dom"
 
 import {
   DropdownMenu,
@@ -124,6 +125,8 @@ export function AssignSeatsTableGrid({
                           seatNo: seat.seatNo,
                           reservationId: seat.reservationId,
                         })
+                        // Viewport coords — menu anchor is portaled to body so
+                        // dialog transform does not offset position:fixed.
                         setMenuPos({ x: event.clientX, y: event.clientY })
                         setMenuOpen(true)
                       }}
@@ -163,55 +166,65 @@ export function AssignSeatsTableGrid({
         </table>
       </div>
 
-      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            className="fixed size-0 overflow-hidden opacity-0"
-            style={{ left: menuPos.x, top: menuPos.y }}
-            aria-hidden
-          />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-[11rem]">
-          <DropdownMenuItem
-            onSelect={() => {
-              if (contextTarget) {
-                onHoldSeat(contextTarget.tableNo, contextTarget.seatNo)
-              }
-            }}
-          >
-            Hold
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={() => {
-              if (contextTarget) {
-                onClearCell(contextTarget.tableNo, contextTarget.seatNo)
-              }
-            }}
-          >
-            Remove from Seat
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={() => {
-              if (contextTarget) {
-                onRemoveFromTable(contextTarget.tableNo)
-              }
-            }}
-          >
-            Remove from Table
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={!contextTarget?.reservationId}
-            onSelect={() => {
-              if (contextTarget?.reservationId) {
-                onRemoveReservation(contextTarget.reservationId)
-              }
-            }}
-          >
-            Remove Reservation
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {typeof document !== "undefined"
+        ? createPortal(
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="pointer-events-none fixed z-[80] size-px overflow-hidden opacity-0"
+                  style={{ left: menuPos.x, top: menuPos.y }}
+                  aria-hidden
+                />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side="right"
+                align="start"
+                sideOffset={2}
+                className="min-w-[11rem]"
+              >
+                <DropdownMenuItem
+                  onSelect={() => {
+                    if (contextTarget) {
+                      onHoldSeat(contextTarget.tableNo, contextTarget.seatNo)
+                    }
+                  }}
+                >
+                  Hold
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => {
+                    if (contextTarget) {
+                      onClearCell(contextTarget.tableNo, contextTarget.seatNo)
+                    }
+                  }}
+                >
+                  Remove from Seat
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => {
+                    if (contextTarget) {
+                      onRemoveFromTable(contextTarget.tableNo)
+                    }
+                  }}
+                >
+                  Remove from Table
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={!contextTarget?.reservationId}
+                  onSelect={() => {
+                    if (contextTarget?.reservationId) {
+                      onRemoveReservation(contextTarget.reservationId)
+                    }
+                  }}
+                >
+                  Remove Reservation
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>,
+            document.body
+          )
+        : null}
     </div>
   )
 }
