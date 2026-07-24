@@ -77,10 +77,14 @@ function buildMovePaymentModel({
   paymentType,
   paymentFields,
   paymentAmount,
+  paymentCustomerFirstName,
+  paymentCustomerLastName,
 }: {
   paymentType: ReservationPaymentType
   paymentFields: ReservationPaymentFields
   paymentAmount: number
+  paymentCustomerFirstName?: string
+  paymentCustomerLastName?: string
 }): SaveReservationPaymentRequest {
   const lookupCode = getReservationPaymentLookupCode(paymentType)
   const payment: SaveReservationPaymentRequest = {
@@ -109,11 +113,16 @@ function buildMovePaymentModel({
   }
 
   if (paymentType !== 'cash') {
-    payment.CCType = detectCreditCardType(paymentFields.cardNumber)
-    payment.CreditCardNubmer = paymentFields.cardNumber.trim()
+    const cardNumber = paymentFields.cardNumber.replace(/\D/g, '')
+    payment.CCType = detectCreditCardType(cardNumber)
+    payment.CreditCardNubmer = cardNumber
     payment.CCExpYear = paymentFields.expYear
     payment.CCExpMonth = getExpirationMonthNumber(paymentFields.expMonth)
-    payment.SecurityCode = paymentFields.cvv.trim()
+
+    payment.CustomerFirstName = paymentCustomerFirstName?.trim() || ''
+    payment.CustomerLastName = paymentCustomerLastName?.trim() || ''
+    payment.GiftCardNumber = cardNumber
+    payment.WebGiftCertificateNumber = cardNumber
   }
 
   return payment
@@ -229,6 +238,8 @@ type BuildMoveReservationRequestParams = {
   appendMovedNoChangesNote?: boolean
   paymentType?: ReservationPaymentType
   paymentFields?: ReservationPaymentFields
+  paymentCustomerFirstName?: string
+  paymentCustomerLastName?: string
 }
 
 export function buildMoveReservationRequest({
@@ -251,6 +262,8 @@ export function buildMoveReservationRequest({
   appendMovedNoChangesNote = false,
   paymentType,
   paymentFields,
+  paymentCustomerFirstName,
+  paymentCustomerLastName,
 }: BuildMoveReservationRequestParams): MoveReservationRequest {
   let noteStr = reservationNotes.trim()
 
@@ -297,6 +310,8 @@ export function buildMoveReservationRequest({
       paymentType,
       paymentFields,
       paymentAmount: extraAmount,
+      paymentCustomerFirstName,
+      paymentCustomerLastName,
     })
   }
 

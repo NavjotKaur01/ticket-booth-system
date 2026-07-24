@@ -304,7 +304,7 @@ export function MoveReservationDialog({
   const [destinationSectionId, setDestinationSectionId] = useState('')
   const [hasPickedMoveDate, setHasPickedMoveDate] = useState(false)
   const [dinner, setDinner] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [, setSubmitError] = useState<string | null>(null)
   const [paymentValidationErrors, setPaymentValidationErrors] =
     useState<ReservationPaymentValidationErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -315,6 +315,10 @@ export function MoveReservationDialog({
   const [paymentFields, setPaymentFields] = useState<ReservationPaymentFields>(
     () => createEmptyReservationPaymentFields()
   )
+  // Desktop: payment popup shows Customer Information (Last Name / First Name)
+  // pre-filled from the existing payment record.
+  const [paymentCustomerFirstName, setPaymentCustomerFirstName] = useState('')
+  const [paymentCustomerLastName, setPaymentCustomerLastName] = useState('')
   const [displayedMoveTotals, setDisplayedMoveTotals] = useState({
     subtotal: 0,
     serviceCharge: 0,
@@ -626,6 +630,8 @@ export function MoveReservationDialog({
       setPaymentDialogOpen(false)
       setPaymentType('credit-card')
       setPaymentFields(createEmptyReservationPaymentFields())
+      setPaymentCustomerFirstName('')
+      setPaymentCustomerLastName('')
       setDisplayedMoveTotals({
         subtotal: 0,
         serviceCharge: 0,
@@ -896,7 +902,9 @@ export function MoveReservationDialog({
           isPaymentWindowRequest,
           appendMovedNoChangesNote,
           paymentType: includePayment ? paymentType : undefined,
-          paymentFields: includePayment ? paymentFields : undefined
+          paymentFields: includePayment ? paymentFields : undefined,
+          paymentCustomerFirstName: includePayment ? paymentCustomerFirstName : undefined,
+          paymentCustomerLastName: includePayment ? paymentCustomerLastName : undefined
         })
       )
 
@@ -930,6 +938,46 @@ export function MoveReservationDialog({
 
   function handleOpenPaymentDialog() {
     setChargeConfirmOpen(false)
+
+    // Desktop ChargeMoveShowAmount: pre-populate payment form from existing CC/HC
+    // payment record on the reservation (customer name, card number, expiry,
+    // billing address, zip). If no existing CC/HC entries, open with empty form.
+    const paymentList = detail?.PaymentList ?? []
+    const ccEntry = paymentList.find(
+      (p: any) => p.PaymentTypeCode?.trim() === 'CC'
+    )
+    const hcEntry = paymentList.find(
+      (p: any) => p.PaymentTypeCode?.trim() === 'HC'
+    )
+    const existingPayment = ccEntry ?? hcEntry
+
+    if (existingPayment) {
+      // Pre-fill customer info (desktop: CustLastName / CustFirstName)
+      setPaymentCustomerLastName(existingPayment.LastName?.trim() ?? '')
+      setPaymentCustomerFirstName(existingPayment.FirstName?.trim() ?? '')
+
+      // Pre-fill card fields from existing payment record
+      setPaymentType('credit-card')
+      setPaymentFields(prev => ({
+        ...prev,
+        // CardNum is the masked/decrypted number stored on the payment record
+        cardNumber: existingPayment.CardNum?.trim() ?? '',
+        expMonth: existingPayment.ExpMo?.trim() ?? '',
+        expYear: existingPayment.ExpYr?.trim() ?? '',
+        billingAddress: existingPayment.BillAddr?.trim() ?? '',
+        zipCode: existingPayment.BillZip?.trim() ?? '',
+        cardType: existingPayment.CCType?.trim() ?? '',
+        // CVV is intentionally blank — desktop does not store/restore CVV
+        cvv: '',
+      }))
+    } else {
+      // No existing CC/HC — open with empty form (desktop: open payment popup)
+      setPaymentCustomerFirstName('')
+      setPaymentCustomerLastName('')
+      setPaymentType('credit-card')
+      setPaymentFields(createEmptyReservationPaymentFields())
+    }
+
     setPaymentDialogOpen(true)
   }
 
@@ -1234,10 +1282,6 @@ export function MoveReservationDialog({
                     </table>
                   </div>
                 </section>
-
-                {submitError ? (
-                  <p className='text-sm text-destructive'>{submitError}</p>
-                ) : null}
               </>
             ) : null}
           </div>
@@ -1297,10 +1341,6 @@ export function MoveReservationDialog({
                 className='h-9 max-w-40 bg-white shadow-xs'
               />
             </div>
-
-            {submitError ? (
-              <p className='mt-4 text-sm text-destructive'>{submitError}</p>
-            ) : null}
           </div>
 
           <DialogFooter className='shrink-0 border-t bg-muted/15 px-4 py-3 sm:justify-center sm:gap-3'>
@@ -1348,15 +1388,31 @@ export function MoveReservationDialog({
           </DialogHeader>
 
           <div className='min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4'>
-            <div className='space-y-1.5'>
-              <span className='text-sm font-medium text-foreground'>
-                Payment Amount
-              </span>
-              <Input
-                readOnly
-                value={formatReservationMoney(chargeAmount)}
-                className='bg-white shadow-xs'
-              />
+            {/* Desktop: Customer Information group (Last Name / First Name read-only) */}
+            <div className='rounded-md border border-slate-200 bg-slate-50/60 p-3'>
+              <h3 className='mb-3 text-sm font-medium text-foreground'>
+                Customer Information
+              </h3>
+              <div className='grid grid-cols-2 gap-3'>
+                <div className='space-y-1'>
+                  <span className='text-xs font-semibold text-foreground'>Last Name</span>
+                  <Input
+                    readOnly
+                    value={paymentCustomerLastName}
+                    className={READONLY_FIELD_CLASS}
+                    placeholder='—'
+                  />
+                </div>
+                <div className='space-y-1'>
+                  <span className='text-xs font-semibold text-foreground'>First Name</span>
+                  <Input
+                    readOnly
+                    value={paymentCustomerFirstName}
+                    className={READONLY_FIELD_CLASS}
+                    placeholder='—'
+                  />
+                </div>
+              </div>
             </div>
 
             <ReservationPaymentPanel
@@ -1375,13 +1431,8 @@ export function MoveReservationDialog({
                 setPaymentValidationErrors({})
                 setSubmitError(null)
               }}
-              paymentDisabled
               validationErrors={paymentValidationErrors}
             />
-
-            {submitError && Object.keys(paymentValidationErrors).length === 0 ? (
-              <p className='text-sm text-destructive'>{submitError}</p>
-            ) : null}
           </div>
 
           <DialogFooter className='shrink-0 border-t bg-muted/15 px-4 py-3 sm:justify-start'>
@@ -1399,10 +1450,10 @@ export function MoveReservationDialog({
               {isSubmitting ? (
                 <>
                   <LoaderCircle className='size-4 animate-spin' />
-                  Charging...
+                  Saving...
                 </>
               ) : (
-                'Charge'
+                'Save'
               )}
             </Button>
             <Button

@@ -22,6 +22,8 @@ export type SaveReservationPaymentRequest = {
   /** @deprecated Prefer SplitServiceChage for desktop binder parity. */
   SplitServiceCharge?: number
   SplitTotal?: number
+  CustomerFirstName?: string
+  CustomerLastName?: string
 }
 
 export type SaveReservationCustomerRequest = {
