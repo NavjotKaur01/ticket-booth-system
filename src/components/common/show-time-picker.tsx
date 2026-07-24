@@ -33,6 +33,7 @@ export function ShowTimePicker({
     >
       {shows.map((show) => {
         const isSelected = showTime === show.id
+        const isCancelled = Boolean(show.isCancelled)
 
         return (
           <button
@@ -44,9 +45,12 @@ export function ShowTimePicker({
             onKeyDown={(event) => onShowTimeKeyDown?.(event, show)}
             className={cn(
               "flex w-[5.75rem] shrink-0 flex-col rounded-lg px-2 py-1.5 text-left transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none sm:w-[6.75rem] sm:px-2.5 sm:py-2",
-              isSelected
-                ? "bg-primary text-primary-foreground"
-                : "border border-border/60 bg-background text-foreground hover:bg-muted/30"
+              isSelected &&
+                (isCancelled
+                  ? "bg-red-600 text-white hover:bg-red-700"
+                  : "bg-primary text-primary-foreground"),
+              !isSelected &&
+                "border border-border/60 bg-background text-foreground hover:bg-muted/30"
             )}
           >
             <span className="truncate text-xs font-semibold sm:text-sm">
@@ -57,7 +61,9 @@ export function ShowTimePicker({
                 className={cn(
                   "truncate text-[11px] sm:text-xs",
                   isSelected
-                    ? "text-primary-foreground/85"
+                    ? isCancelled
+                      ? "text-white/85"
+                      : "text-primary-foreground/85"
                     : "text-muted-foreground"
                 )}
               >

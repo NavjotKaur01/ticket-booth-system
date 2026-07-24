@@ -47,6 +47,8 @@ export type ShowOption = {
   /** Headliner comedian GUID from GetShowDetailsByDate (Comic Info). */
   comicId?: string
   noPasses?: string
+  /** True when GetShowDetailsByDate ForgroundColor is RED. */
+  isCancelled?: boolean
 }
 
 export type SectionTone = 'regular' | 'vip'

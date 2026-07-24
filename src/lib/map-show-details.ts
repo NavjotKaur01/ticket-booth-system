@@ -49,6 +49,10 @@ export function mapShowDetailsToOptions(
       subtitle: headliner || undefined,
       headliner: headliner || undefined,
       comicId: show.ComicId || undefined,
+      isCancelled:
+        String(show.ForgroundColor ?? "")
+          .trim()
+          .toUpperCase() === "RED",
     }
   })
 }

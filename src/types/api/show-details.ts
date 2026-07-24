@@ -7,6 +7,8 @@ export type ShowDetailsByDateItem = {
   IsShowActive: boolean
   IsShowSoldOut: boolean
   IsPrivate: boolean
+  /** Desktop brush name (e.g. "RED") — selected show chip uses red. */
+  ForgroundColor?: string | null
 }
 
 export type GetShowDetailsByDateRequest = {

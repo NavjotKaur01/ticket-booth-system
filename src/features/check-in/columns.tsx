@@ -2,6 +2,11 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
 import { RowActionsMenu } from "@/components/common/row-actions-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { CheckInStatusIcon } from "@/features/check-in/status-legend"
 import type { CheckInRecord } from "@/types/check-in"
 import { formatAssignSeatNumbers } from "@/lib/format-assign-seat-numbers"
@@ -56,6 +61,59 @@ function groupDelimitedValues(value: string) {
 
   if (line) lines.push(line)
   return lines.join("\n")
+}
+
+/** First group of values + … when more exist; full list on hover. */
+function TruncatedGroupedCell({
+  value,
+  className,
+}: {
+  value: string
+  className?: string
+}) {
+  const full = value.trim()
+  if (!full) {
+    return <span className="text-muted-foreground">—</span>
+  }
+
+  const lines = full.split("\n").filter(Boolean)
+  const isTruncated = lines.length > 1
+  const preview = isTruncated ? `${lines[0]}…` : lines[0]
+
+  if (!isTruncated) {
+    return (
+      <span
+        className={cn(
+          "block max-w-56 truncate text-muted-foreground",
+          className
+        )}
+      >
+        {preview}
+      </span>
+    )
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className={cn(
+            "block max-w-56 cursor-default truncate text-muted-foreground",
+            className
+          )}
+        >
+          {preview}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        align="start"
+        className="max-w-sm whitespace-pre-line text-left"
+      >
+        {full}
+      </TooltipContent>
+    </Tooltip>
+  )
 }
 
 export function createCheckInColumns({
@@ -151,9 +209,9 @@ export function createCheckInColumns({
       accessorKey: "tables",
       header: "Table(s)",
       cell: ({ row }) => (
-        <span className="block w-56 whitespace-pre-line leading-relaxed text-muted-foreground">
-          {groupDelimitedValues(row.original.tables)}
-        </span>
+        <TruncatedGroupedCell
+          value={groupDelimitedValues(row.original.tables)}
+        />
       ),
     },
     {
@@ -192,9 +250,12 @@ export function createCheckInColumns({
       accessorKey: "seatNo",
       header: "SeatNo",
       cell: ({ row }) => (
-        <span className="block w-64 whitespace-pre-line leading-relaxed text-muted-foreground">
-          {groupDelimitedValues(formatAssignSeatNumbers(row.original.seatNo))}
-        </span>
+        <TruncatedGroupedCell
+          className="max-w-64"
+          value={groupDelimitedValues(
+            formatAssignSeatNumbers(row.original.seatNo)
+          )}
+        />
       ),
     },
     {

@@ -37,11 +37,12 @@ function mapBirthMonth(month: number | string | null | undefined) {
   }
 
   const numeric = Number(month)
-  if (Number.isFinite(numeric) && numeric > 0) {
-    return String(numeric).padStart(2, "0")
+  // API often returns 0 when DOB month is unset — do not show "0" in the Month dropdown.
+  if (!Number.isFinite(numeric) || numeric < 1 || numeric > 12) {
+    return ""
   }
 
-  return String(month).trim()
+  return String(numeric).padStart(2, "0")
 }
 
 function mapDobDayYear(year: number | null | undefined) {
