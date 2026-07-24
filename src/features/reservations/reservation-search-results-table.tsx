@@ -162,6 +162,18 @@ export function ReservationSearchResultsTable ({
           columns={reservationCustomerSearchColumns}
           data={customerResults}
           {...tableProps}
+          getRowClassName={(row) =>
+            // ClubMan Search.xaml: banned rows use Brushes.Red (background), text stays dark.
+            row.banned
+              ? [
+                  "!bg-red-600 !text-black",
+                  "hover:!bg-red-700",
+                  "data-[state=selected]:!bg-red-700",
+                  "[&_td]:!bg-red-600 hover:[&_td]:!bg-red-700",
+                  "[&_td]:!text-black [&_span]:!text-black [&_a]:!text-black",
+                ].join(" ")
+              : undefined
+          }
           onRowClick={(row) => selectResultRow(row)}
           onRowActivate={(row) => selectResultRow(row)}
         />

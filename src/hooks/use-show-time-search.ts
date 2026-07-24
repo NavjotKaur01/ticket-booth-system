@@ -7,7 +7,11 @@ import { mapSearchDefShowResults } from "@/lib/map-search-def-show"
 import { mapSystemLookupsToSectionItems } from "@/lib/section-lookup"
 import { getClubmanErrorMessage } from "@/store/api/baseQuery"
 import { useGetSystemLookupQuery } from "@/store/api/clubmanApi"
+import type { ApiSystemLookupItem } from "@/types/api/system-lookup"
 import type { ShowTimeFilters, ShowTimeRow } from "@/types/show-time"
+
+/** Stable fallback — inline `= []` creates a new array every render. */
+const EMPTY_SYSTEM_LOOKUPS: ApiSystemLookupItem[] = []
 
 type UseShowTimeSearchParams = {
   connectionName: string
@@ -38,9 +42,10 @@ export function useShowTimeSearch({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { data: systemLookups = [] } = useGetSystemLookupQuery(connectionName, {
+  const { data: systemLookupsData } = useGetSystemLookupQuery(connectionName, {
     skip: !enabled || !connectionName,
   })
+  const systemLookups = systemLookupsData ?? EMPTY_SYSTEM_LOOKUPS
 
   const search = useCallback(
     async (filters: ShowTimeFilters) => {

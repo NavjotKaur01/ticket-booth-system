@@ -2965,19 +2965,6 @@ export function AddReservationDialog({
     }
 
     if (needsNewPayment) {
-      // Desktop Hold-CC / Credit Card with empty card + amount still due →
-      // Due Amount popup (Continue without payment / Cancel / Additional),
-      // not hard field validation errors.
-      const cardMissing =
-        (paymentType === 'hold-cc' || paymentType === 'credit-card') &&
-        !paymentFields.cardNumber.trim()
-      if (cardMissing) {
-        setHasAttemptedSave(true)
-        setDueAmountOption('continue-without-payment')
-        setDueAmountOpen(true)
-        return
-      }
-
       const nextPaymentErrors = validateReservationPaymentFields({
         paymentType,
         fields: paymentFields,
@@ -3992,7 +3979,7 @@ export function AddReservationDialog({
       address: '',
       city: '',
       status: '',
-      banned: false
+      banned: selectedCustomerSearchResult.banned
     } satisfies Customer)
     : null
 

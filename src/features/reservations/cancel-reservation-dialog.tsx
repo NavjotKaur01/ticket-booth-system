@@ -1,6 +1,10 @@
-import { LoaderCircle, X } from 'lucide-react'
+import { LoaderCircle, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
+import {
+  createFilterSearchHandlers,
+  IconActionButton
+} from '@/components/forms/form-fields'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -11,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useReservationDetail } from '@/hooks/use-reservation-detail'
 import { prepareCancelReservationPayments } from '@/lib/prepare-cancel-reservation-payments'
@@ -85,6 +90,36 @@ const paymentTableColumns = [
   { key: 'split', label: 'Split', className: 'min-w-20' }
 ] as const
 
+function filterCancelReservationPayments(
+  rows: CancelReservationPaymentRow[],
+  query: string
+): CancelReservationPaymentRow[] {
+  const normalized = query.trim().toLowerCase()
+  if (!normalized) return rows
+
+  return rows.filter(payment => {
+    const searchableValues = [
+      payment.pymtStatus,
+      payment.lastName,
+      payment.firstName,
+      payment.pymtType,
+      payment.ccType,
+      payment.cardNum,
+      formatCurrency(payment.amount),
+      String(payment.amount),
+      payment.auth,
+      payment.pnref,
+      payment.split
+    ]
+
+    return searchableValues.some(value =>
+      String(value ?? '')
+        .toLowerCase()
+        .includes(normalized)
+    )
+  })
+}
+
 export function CancelReservationDialog ({
   open,
   onOpenChange,
@@ -107,11 +142,15 @@ export function CancelReservationDialog ({
 
   const [payments, setPayments] = useState<CancelReservationPaymentRow[]>([])
   const [reservationNote, setReservationNote] = useState('')
+  const [draftSearch, setDraftSearch] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
 
   useEffect(() => {
     if (!open) {
       setPayments([])
       setReservationNote('')
+      setDraftSearch('')
+      setAppliedSearch('')
       return
     }
 
@@ -121,7 +160,23 @@ export function CancelReservationDialog ({
 
     setPayments(prepareCancelReservationPayments(detail.PaymentList, userRight))
     setReservationNote('')
+    setDraftSearch('')
+    setAppliedSearch('')
   }, [detail, open, userRight])
+
+  const filteredPayments = useMemo(
+    () => filterCancelReservationPayments(payments, appliedSearch),
+    [payments, appliedSearch]
+  )
+
+  const { handleSubmit, handleInputKeyDown } = createFilterSearchHandlers(() => {
+    setAppliedSearch(draftSearch)
+  })
+
+  function handleClearSearch() {
+    setDraftSearch('')
+    setAppliedSearch('')
+  }
 
   const paidAmount = useMemo(() => {
     if (detail?.ResPayments != null) {
@@ -207,73 +262,105 @@ export function CancelReservationDialog ({
                 Loading payments...
               </div>
             ) : (
-              <div className='mt-3 overflow-x-auto rounded-md border border-slate-200 bg-white'>
-                <table className='min-w-[1100px] w-full border-collapse text-sm'>
-                  <thead>
-                    <tr className='border-b border-slate-200 bg-muted/40 text-left text-xs font-semibold text-foreground'>
-                      {paymentTableColumns.map((column) => (
-                        <th
-                          key={column.key}
-                          className={cn('h-10 px-3 py-2', column.className)}
-                        >
-                          {column.label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payments.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={paymentTableColumns.length}
-                          className='px-3 py-8 text-center text-sm text-muted-foreground'
-                        >
-                          No payments found for this reservation.
-                        </td>
+              <div className='mt-3 space-y-3'>
+                <form
+                  className='flex w-full shrink-0 flex-wrap items-center gap-2 sm:max-w-md'
+                  onSubmit={handleSubmit}
+                >
+                  <Input
+                    placeholder='Search payments...'
+                    value={draftSearch}
+                    onChange={event => setDraftSearch(event.target.value)}
+                    onKeyDown={handleInputKeyDown}
+                    className='min-w-0 flex-1 bg-white'
+                    disabled={isSubmitting}
+                  />
+                  <div className='flex items-center gap-1.5'>
+                    <IconActionButton
+                      label='Search'
+                      icon={Search}
+                      variant='default'
+                      type='submit'
+                      disabled={isSubmitting}
+                    />
+                    <IconActionButton
+                      label='Clear'
+                      icon={X}
+                      onClick={handleClearSearch}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                </form>
+                <div className='overflow-x-auto rounded-md border border-slate-200 bg-white'>
+                  <table className='min-w-[1100px] w-full border-collapse text-sm'>
+                    <thead>
+                      <tr className='border-b border-slate-200 bg-muted/40 text-left text-xs font-semibold text-foreground'>
+                        {paymentTableColumns.map(column => (
+                          <th
+                            key={column.key}
+                            className={cn('h-10 px-3 py-2', column.className)}
+                          >
+                            {column.label}
+                          </th>
+                        ))}
                       </tr>
-                    ) : (
-                      payments.map((payment, index) => (
-                        <tr
-                          key={payment.paymentId}
-                          className={cn(
-                            'border-b border-slate-200 last:border-b-0',
-                            index % 2 === 1 && 'bg-muted/20'
-                          )}
-                        >
-                          <td className='px-3 py-2'>
-                            <Checkbox
-                              checked={payment.isSelected}
-                              disabled={!payment.canSelect || isSubmitting}
-                              onCheckedChange={(checked) =>
-                                togglePayment(
-                                  payment.paymentId,
-                                  checked === true
-                                )
-                              }
-                              aria-label={`Select payment ${payment.pymtType}`}
-                            />
+                    </thead>
+                    <tbody>
+                      {filteredPayments.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={paymentTableColumns.length}
+                            className='px-3 py-8 text-center text-sm text-muted-foreground'
+                          >
+                            {payments.length === 0
+                              ? 'No payments found for this reservation.'
+                              : 'No payments match your search.'}
                           </td>
-                          <td className='px-3 py-2'>{payment.pymtStatus}</td>
-                          <td className='px-3 py-2'>{payment.lastName}</td>
-                          <td className='px-3 py-2'>{payment.firstName}</td>
-                          <td className='px-3 py-2'>{payment.pymtType}</td>
-                          <td className='px-3 py-2'>{payment.ccType}</td>
-                          <td className='px-3 py-2'>{payment.cardNum}</td>
-                          <td className='px-3 py-2'>
-                            {formatCurrency(payment.amount)}
-                          </td>
-                          <td className='px-3 py-2 font-mono text-xs whitespace-nowrap'>
-                            {payment.auth}
-                          </td>
-                          <td className='px-3 py-2 font-mono text-xs whitespace-nowrap'>
-                            {payment.pnref}
-                          </td>
-                          <td className='px-3 py-2'>{payment.split}</td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        filteredPayments.map((payment, index) => (
+                          <tr
+                            key={payment.paymentId}
+                            className={cn(
+                              'border-b border-slate-200 last:border-b-0',
+                              index % 2 === 1 && 'bg-muted/20'
+                            )}
+                          >
+                            <td className='px-3 py-2'>
+                              <Checkbox
+                                checked={payment.isSelected}
+                                disabled={!payment.canSelect || isSubmitting}
+                                onCheckedChange={checked =>
+                                  togglePayment(
+                                    payment.paymentId,
+                                    checked === true
+                                  )
+                                }
+                                aria-label={`Select payment ${payment.pymtType}`}
+                              />
+                            </td>
+                            <td className='px-3 py-2'>{payment.pymtStatus}</td>
+                            <td className='px-3 py-2'>{payment.lastName}</td>
+                            <td className='px-3 py-2'>{payment.firstName}</td>
+                            <td className='px-3 py-2'>{payment.pymtType}</td>
+                            <td className='px-3 py-2'>{payment.ccType}</td>
+                            <td className='px-3 py-2'>{payment.cardNum}</td>
+                            <td className='px-3 py-2'>
+                              {formatCurrency(payment.amount)}
+                            </td>
+                            <td className='px-3 py-2 font-mono text-xs whitespace-nowrap'>
+                              {payment.auth}
+                            </td>
+                            <td className='px-3 py-2 font-mono text-xs whitespace-nowrap'>
+                              {payment.pnref}
+                            </td>
+                            <td className='px-3 py-2'>{payment.split}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </section>

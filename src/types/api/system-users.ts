@@ -52,3 +52,10 @@ export type UpdateSystemUserRequest = {
   UserRight: string
   Active: string
 }
+
+/** ClubMan UserVM.DeleteUser → PUT Adminstrator/ArchiveSystemCustomer */
+export type ArchiveSystemCustomerRequest = {
+  ConnectionName: string
+  LocationID: string
+  UserId: string
+}

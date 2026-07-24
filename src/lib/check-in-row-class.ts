@@ -5,10 +5,10 @@ import type { CheckInRecord } from "@/types/check-in"
 export function getCheckInRowClassName(record: CheckInRecord) {
   if (record.isCancelled) {
     return cn(
-      "bg-red-50 hover:!bg-red-100",
-      "dark:bg-red-950/25 dark:hover:!bg-red-950/35",
-      "[&_td]:!bg-red-50 [&_td]:hover:!bg-red-100",
-      "dark:[&_td]:!bg-red-950/25 dark:[&_td]:hover:!bg-red-950/35"
+      "bg-red-200 hover:!bg-red-300",
+      "dark:bg-red-950/45 dark:hover:!bg-red-950/55",
+      "[&_td]:!bg-red-200 [&_td]:hover:!bg-red-300",
+      "dark:[&_td]:!bg-red-950/45 dark:[&_td]:hover:!bg-red-950/55"
     )
   }
 

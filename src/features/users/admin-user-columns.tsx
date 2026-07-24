@@ -6,10 +6,12 @@ import type { AdminUser } from "@/types/user-admin"
 
 type GetAdminUserColumnsParams = {
   onEdit: (user: AdminUser) => void
+  onDelete: (user: AdminUser) => void
 }
 
 export function getAdminUserColumns({
   onEdit,
+  onDelete,
 }: GetAdminUserColumnsParams): ColumnDef<AdminUser>[] {
   return [
     {
@@ -77,7 +79,11 @@ export function getAdminUserColumns({
       enableSorting: false,
       meta: { sticky: "right" },
       cell: ({ row }) => (
-        <AdminUserRowActionsMenu user={row.original} onEdit={onEdit} />
+        <AdminUserRowActionsMenu
+          user={row.original}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       ),
     },
   ]

@@ -41,12 +41,16 @@ import {
 import { mapDefShowInfoToForm } from "@/lib/map-def-show-info"
 import { mapSystemLookupsToSectionItems } from "@/lib/section-lookup"
 import { useGetSystemLookupQuery } from "@/store/api/clubmanApi"
+import type { ApiSystemLookupItem } from "@/types/api/system-lookup"
 import {
   createEmptyShowTimeForm,
   EMPTY_ALSO_APPLIES_TO,
   type ShowTimeFormValues,
   type ShowTimeSectionDraft,
 } from "@/types/show-time"
+
+/** Stable fallback — inline `= []` creates a new array every render and can loop. */
+const EMPTY_SYSTEM_LOOKUPS: ApiSystemLookupItem[] = []
 
 type AddShowTimeDialogProps = {
   open: boolean
@@ -154,9 +158,10 @@ export function AddShowTimeDialog({
   const [saving, setSaving] = useState(false)
   const [loadingDetails, setLoadingDetails] = useState(false)
 
-  const { data: systemLookups = [] } = useGetSystemLookupQuery(connectionName, {
+  const { data: systemLookupsData } = useGetSystemLookupQuery(connectionName, {
     skip: !open || !connectionName,
   })
+  const systemLookups = systemLookupsData ?? EMPTY_SYSTEM_LOOKUPS
   const sectionLookups = useMemo(
     () => mapSystemLookupsToSectionItems(systemLookups),
     [systemLookups]
@@ -167,14 +172,17 @@ export function AddShowTimeDialog({
     [sectionLookups]
   )
 
+  // Reset only when the dialog closes / default day changes — not when lookups identity churns.
   useEffect(() => {
-    if (!open) {
-      setForm(buildInitialForm(defaultDayOfWeek))
-      setError(null)
-      setSaving(false)
-      setLoadingDetails(false)
-      return
-    }
+    if (open) return
+    setForm(buildInitialForm(defaultDayOfWeek))
+    setError(null)
+    setSaving(false)
+    setLoadingDetails(false)
+  }, [open, defaultDayOfWeek])
+
+  useEffect(() => {
+    if (!open) return
 
     if (!editingShowDefId || !connectionName) {
       setForm(buildInitialForm(defaultDayOfWeek))

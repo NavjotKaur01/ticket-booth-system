@@ -12,11 +12,13 @@ import type { AdminUser } from "@/types/user-admin"
 type AdminUserRowActionsMenuProps = {
   user: AdminUser
   onEdit: (user: AdminUser) => void
+  onDelete: (user: AdminUser) => void
 }
 
 export function AdminUserRowActionsMenu({
   user,
   onEdit,
+  onDelete,
 }: AdminUserRowActionsMenuProps) {
   return (
     <DropdownMenu>
@@ -33,7 +35,7 @@ export function AdminUserRowActionsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[8rem]">
         <DropdownMenuItem onClick={() => onEdit(user)}>Edit</DropdownMenuItem>
-        <DropdownMenuItem>Delete</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onDelete(user)}>Delete</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

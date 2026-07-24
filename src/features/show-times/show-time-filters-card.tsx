@@ -44,7 +44,7 @@ export function ShowTimeFiltersCard({
             <SelectTrigger className={FILTER_SELECT_CLASS}>
               <SelectValue placeholder="Day Of Week" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper">
               {dayOfWeekFilterOptions.map((option) => (
                 <SelectItem key={option.id} value={option.id}>
                   {option.label}

@@ -20,4 +20,6 @@ export type ReservationCustomerSearchItem = {
   Phone2: string | null
   BusinessName?: string | null
   BusName?: string | null
+  /** ClubMan: "Y"/"N" or brush name "Red"/"White". */
+  Banned?: string | null
 }

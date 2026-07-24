@@ -1,6 +1,11 @@
-import { LoaderCircle, X } from 'lucide-react'
+import { LoaderCircle, Search, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { DataTable } from '@/components/data-table/data-table'
+import {
+  createFilterSearchHandlers,
+  IconActionButton
+} from '@/components/forms/form-fields'
 import {
   Dialog,
   DialogClose,
@@ -8,9 +13,11 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { reservationHistoryColumns } from '@/features/reservations/reservation-history-columns'
 import { useReservationHistory } from '@/hooks/use-reservation-history'
 import type { Reservation } from '@/types/reservation'
+import type { ReservationHistoryRow } from '@/types/reservation-history'
 
 type ReservationHistoryDialogProps = {
   open: boolean
@@ -19,18 +26,57 @@ type ReservationHistoryDialogProps = {
   connectionName: string
 }
 
-export function ReservationHistoryDialog ({
+function filterReservationHistoryRows(
+  rows: ReservationHistoryRow[],
+  query: string
+): ReservationHistoryRow[] {
+  const normalized = query.trim().toLowerCase()
+  if (!normalized) return rows
+
+  return rows.filter(row =>
+    Object.values(row).some(value =>
+      String(value ?? '')
+        .toLowerCase()
+        .includes(normalized)
+    )
+  )
+}
+
+export function ReservationHistoryDialog({
   open,
   onOpenChange,
   reservation,
   connectionName
 }: ReservationHistoryDialogProps) {
+  const [draftSearch, setDraftSearch] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
   const reservationId = reservation?.id ?? ''
   const { rows, loading, error } = useReservationHistory(
     connectionName,
     reservationId,
     open && Boolean(reservationId)
   )
+
+  const filteredRows = useMemo(
+    () => filterReservationHistoryRows(rows, appliedSearch),
+    [rows, appliedSearch]
+  )
+
+  const { handleSubmit, handleInputKeyDown } = createFilterSearchHandlers(() => {
+    setAppliedSearch(draftSearch)
+  })
+
+  useEffect(() => {
+    if (!open) {
+      setDraftSearch('')
+      setAppliedSearch('')
+    }
+  }, [open])
+
+  function handleClear() {
+    setDraftSearch('')
+    setAppliedSearch('')
+  }
 
   const guestName = reservation
     ? `${reservation.firstName} ${reservation.lastName}`.trim()
@@ -68,10 +114,35 @@ export function ReservationHistoryDialog ({
               Loading reservation history...
             </div>
           ) : (
-            <div className='rounded-md border border-slate-200 bg-slate-50/60 p-3'>
+            <div className='space-y-3 rounded-md border border-slate-200 bg-slate-50/60 p-3'>
+              <form
+                className='flex w-full shrink-0 flex-wrap items-center gap-2 sm:max-w-md'
+                onSubmit={handleSubmit}
+              >
+                <Input
+                  placeholder='Search reservation history...'
+                  value={draftSearch}
+                  onChange={event => setDraftSearch(event.target.value)}
+                  onKeyDown={handleInputKeyDown}
+                  className='min-w-0 flex-1 bg-white'
+                />
+                <div className='flex items-center gap-1.5'>
+                  <IconActionButton
+                    label='Search'
+                    icon={Search}
+                    variant='default'
+                    type='submit'
+                  />
+                  <IconActionButton
+                    label='Clear'
+                    icon={X}
+                    onClick={handleClear}
+                  />
+                </div>
+              </form>
               <DataTable
                 columns={reservationHistoryColumns}
-                data={rows}
+                data={filteredRows}
                 emptyMessage='No reservation history found.'
                 entityLabel='history records'
                 pageSize={12}

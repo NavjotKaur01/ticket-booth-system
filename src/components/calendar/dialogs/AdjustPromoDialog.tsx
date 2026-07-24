@@ -1,5 +1,10 @@
-import { useEffect, useRef, useState } from "react"
+import { Search, X } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
+import {
+  createFilterSearchHandlers,
+  IconActionButton,
+} from "@/components/forms/form-fields"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -9,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -56,6 +62,36 @@ const COLUMNS = [
   { key: "managerOnly", label: "Manager Only" },
   { key: "ccReq", label: "CCReq" },
 ] as const
+
+const SEARCHABLE_KEYS = [
+  "code",
+  "name",
+  "startDate",
+  "endDate",
+  "weekDays",
+  "discountType",
+  "walkUp",
+  "web",
+  "phoneIn",
+  "managerOnly",
+  "ccReq",
+] as const satisfies ReadonlyArray<keyof AdjustPromoRow>
+
+function filterAdjustPromoRows(
+  rows: AdjustPromoRow[],
+  query: string
+): AdjustPromoRow[] {
+  const normalized = query.trim().toLowerCase()
+  if (!normalized) return rows
+
+  return rows.filter((row) =>
+    SEARCHABLE_KEYS.some((key) =>
+      String(row[key] ?? "")
+        .toLowerCase()
+        .includes(normalized)
+    )
+  )
+}
 
 function PromoTable({
   rows,
@@ -163,6 +199,8 @@ export default function AdjustPromoDialog({
 }: AdjustPromoDialogProps) {
   const { connectionName, locationId, username } = useAppSession()
   const [rows, setRows] = useState<AdjustPromoRow[]>([])
+  const [draftSearch, setDraftSearch] = useState("")
+  const [appliedSearch, setAppliedSearch] = useState("")
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [hasLoaded, setHasLoaded] = useState(false)
   const sessionGenerationRef = useRef(0)
@@ -172,11 +210,27 @@ export default function AdjustPromoDialog({
   const [saveShowPromotion, { isLoading: isSaving }] =
     useSaveShowPromotionMutation()
 
+  const filteredRows = useMemo(
+    () => filterAdjustPromoRows(rows, appliedSearch),
+    [rows, appliedSearch]
+  )
+
+  const { handleSubmit, handleInputKeyDown } = createFilterSearchHandlers(() => {
+    setAppliedSearch(draftSearch)
+  })
+
   function resetDialogSession() {
     setRows([])
+    setDraftSearch("")
+    setAppliedSearch("")
     setErrorMessage(null)
     setHasLoaded(false)
     onAfterClose?.()
+  }
+
+  function handleClearSearch() {
+    setDraftSearch("")
+    setAppliedSearch("")
   }
 
   useEffect(() => {
@@ -292,8 +346,36 @@ export default function AdjustPromoDialog({
               {errorMessage ? (
                 <p className="text-sm text-destructive">{errorMessage}</p>
               ) : null}
+              <form
+                className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:max-w-md"
+                onSubmit={handleSubmit}
+              >
+                <Input
+                  placeholder="Search promotions..."
+                  value={draftSearch}
+                  onChange={(event) => setDraftSearch(event.target.value)}
+                  onKeyDown={handleInputKeyDown}
+                  className="min-w-0 flex-1"
+                  disabled={!canInteract}
+                />
+                <div className="flex items-center gap-1.5">
+                  <IconActionButton
+                    label="Search"
+                    icon={Search}
+                    variant="default"
+                    type="submit"
+                    disabled={!canInteract}
+                  />
+                  <IconActionButton
+                    label="Clear"
+                    icon={X}
+                    onClick={handleClearSearch}
+                    disabled={!canInteract}
+                  />
+                </div>
+              </form>
               <PromoTable
-                rows={rows}
+                rows={filteredRows}
                 disabled={!canInteract}
                 onToggle={handleToggle}
               />

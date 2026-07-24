@@ -36,8 +36,6 @@ export function PromotionRowActionsMenu({
         <DropdownMenuItem onSelect={() => onEdit?.(promotion)}>
           Edit
         </DropdownMenuItem>
-        {/* Desktop Delete is also a UI stub with no API */}
-        <DropdownMenuItem>Delete</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
