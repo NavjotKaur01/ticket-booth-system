@@ -2,6 +2,11 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import { RowActionsMenu } from "@/components/common/row-actions-menu"
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import type { Reservation } from "@/types/reservation"
 
@@ -61,6 +66,59 @@ function formatTableNumbers(value: string) {
     .filter(Boolean)
 
   return groupValues(tableNumbers, ", ")
+}
+
+/** First group of values + … when more exist; full list on hover. */
+function TruncatedGroupedCell({
+  value,
+  className,
+}: {
+  value: string
+  className?: string
+}) {
+  const full = value.trim()
+  if (!full) {
+    return <span className="text-muted-foreground">—</span>
+  }
+
+  const lines = full.split("\n").filter(Boolean)
+  const isTruncated = lines.length > 1
+  const preview = isTruncated ? `${lines[0]}…` : lines[0]
+
+  if (!isTruncated) {
+    return (
+      <span
+        className={cn(
+          "block max-w-56 truncate text-muted-foreground",
+          className
+        )}
+      >
+        {preview}
+      </span>
+    )
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className={cn(
+            "block max-w-56 cursor-default truncate text-muted-foreground",
+            className
+          )}
+        >
+          {preview}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        align="start"
+        className="max-w-sm whitespace-pre-line text-left"
+      >
+        {full}
+      </TooltipContent>
+    </Tooltip>
+  )
 }
 
 /** Column definitions aligned with desktop ClubMan reservation grid. */
@@ -175,9 +233,7 @@ export function createReservationColumns({
         <DataTableColumnHeader label="Table(s)" column={column} />
       ),
       cell: ({ row }) => (
-        <span className="block w-56 whitespace-pre-line leading-relaxed text-muted-foreground">
-          {emptyCell(formatTableNumbers(row.original.tables))}
-        </span>
+        <TruncatedGroupedCell value={formatTableNumbers(row.original.tables)} />
       ),
     },
     {
@@ -186,9 +242,10 @@ export function createReservationColumns({
         <DataTableColumnHeader label="SeatNo" column={column} />
       ),
       cell: ({ row }) => (
-        <span className="block w-64 whitespace-pre-line leading-relaxed text-muted-foreground">
-          {emptyCell(formatSeatNumbers(row.original.seatNo))}
-        </span>
+        <TruncatedGroupedCell
+          value={formatSeatNumbers(row.original.seatNo)}
+          className="max-w-64"
+        />
       ),
     },
     {

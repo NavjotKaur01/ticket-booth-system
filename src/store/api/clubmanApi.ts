@@ -865,7 +865,8 @@ export const clubmanApi = createApi({
           body,
         }
       },
-      transformResponse: (response: ShowDetailsByDateItem[]) => response,
+      transformResponse: (response: unknown) =>
+        coerceApiArray<ShowDetailsByDateItem>(response),
       providesTags: (_result, _error, arg) => [
         { type: "ShowDetails", id: `${arg.locationId}:${arg.showDate}:${arg.isCancelledShow}` },
       ],

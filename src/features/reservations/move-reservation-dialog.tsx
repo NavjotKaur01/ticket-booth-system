@@ -962,6 +962,11 @@ export function MoveReservationDialog({
       await onMoved?.()
       toastSuccess('Reservation moved')
     } catch (error) {
+      if (includePayment && paymentType === 'credit-card') {
+        reportErrorMessage(setSubmitError, 'Credit card payment failed.')
+        return
+      }
+
       reportError(setSubmitError, error, 'Failed to move reservation')
     } finally {
       setIsSubmitting(false)
