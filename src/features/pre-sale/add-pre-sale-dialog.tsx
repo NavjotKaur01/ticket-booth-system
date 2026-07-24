@@ -213,7 +213,7 @@ export function AddPreSaleDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton
-        className="flex max-h-[92vh] max-w-3xl flex-col overflow-hidden sm:max-w-3xl"
+        className="flex max-h-[92vh] w-full max-w-[calc(100%-2rem)] flex-col overflow-hidden sm:max-w-4xl"
       >
         <DialogHeader className="shrink-0 gap-0 border-b px-4 py-3 pr-12">
           <DialogTitle className="text-lg leading-snug font-normal">
@@ -237,6 +237,7 @@ export function AddPreSaleDialog({
                 id="pre-sale-show-date"
                 value={form.showDate}
                 onChange={(value) => updateField("showDate", value)}
+                className="w-full"
               />
             </FormField>
 
@@ -257,7 +258,7 @@ export function AddPreSaleDialog({
                     }
                   />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper">
                   {comicOptions.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
                       {option.label}
@@ -286,7 +287,7 @@ export function AddPreSaleDialog({
                     }
                   />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper">
                   {showOptions.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
                       {option.label}
@@ -312,6 +313,7 @@ export function AddPreSaleDialog({
                 id="pre-sale-start-date"
                 value={form.startDate}
                 onChange={(value) => updateField("startDate", value)}
+                className="w-full"
               />
             </FormField>
 
@@ -332,6 +334,7 @@ export function AddPreSaleDialog({
                 id="pre-sale-end-date"
                 value={form.endDate}
                 onChange={(value) => updateField("endDate", value)}
+                className="w-full"
               />
             </FormField>
 

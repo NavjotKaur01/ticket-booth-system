@@ -23,7 +23,7 @@ export function PreSaleRowActionsMenu({ onDelete }: { onDelete: () => void }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[8rem]">
-        <DropdownMenuItem onClick={onDelete}>Delete</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onDelete()}>Delete</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

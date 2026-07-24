@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react"
 import { useState } from "react"
 
+import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog"
 import { PanelCard } from "@/components/common/panel-card"
 import { Button } from "@/components/ui/button"
 import { AddPreSaleDialog } from "@/features/pre-sale/add-pre-sale-dialog"
@@ -8,7 +9,6 @@ import { PreSaleDataTable } from "@/features/pre-sale/pre-sale-data-table"
 import { useAppSession } from "@/hooks/use-app-session"
 import { usePrivateShowLinks } from "@/hooks/use-private-show-links"
 import { reportError, reportErrorMessage, toastSuccess } from "@/lib/app-toast"
-import { confirmDialog } from "@/lib/app-dialog"
 import { deletePrivateShowLink } from "@/lib/api/private-show-links"
 import { buildDeletePrivateShowLinkRequest } from "@/lib/build-private-show-link-request"
 import { copyTextToClipboard } from "@/lib/export-table-data"
@@ -24,6 +24,10 @@ export function PreSalePrivateShow() {
 
   const [addOpen, setAddOpen] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [deletingRecord, setDeletingRecord] = useState<PreSaleRecord | null>(
+    null
+  )
+  const [deleting, setDeleting] = useState(false)
 
   async function handleSaved() {
     setActionError(null)
@@ -47,34 +51,35 @@ export function PreSalePrivateShow() {
     }
   }
 
-  async function handleDelete(record: PreSaleRecord) {
+  async function handleConfirmDelete() {
+    if (!deletingRecord) return
+
     if (!isReady || !connectionName || !locationId) {
       reportErrorMessage(
         setActionError,
         "Location is required before deleting a private show link."
       )
+      setDeletingRecord(null)
       return
     }
 
-    const confirmed = await confirmDialog({
-      title: "Delete Private Show Link",
-      description: "Are you sure you want to delete?",
-    })
-    if (!confirmed) return
-
+    setDeleting(true)
     setActionError(null)
     try {
       await deletePrivateShowLink(
         buildDeletePrivateShowLinkRequest({
           connectionName,
           locationId,
-          privateKeyId: record.id,
+          privateKeyId: deletingRecord.id,
         })
       )
+      setDeletingRecord(null)
       await refresh()
       toastSuccess("Private show link deleted")
     } catch (deleteError) {
       reportError(setActionError, deleteError, "Unable to delete private show link.")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -113,7 +118,7 @@ export function PreSalePrivateShow() {
           data={records}
           emptyMessage={loading ? "Loading private show links..." : "No record found"}
           onCopy={(record) => void handleCopy(record)}
-          onDelete={(record) => void handleDelete(record)}
+          onDelete={setDeletingRecord}
         />
       </PanelCard>
 
@@ -121,6 +126,21 @@ export function PreSalePrivateShow() {
         open={addOpen}
         onOpenChange={setAddOpen}
         onSaved={handleSaved}
+      />
+
+      <ConfirmDeleteDialog
+        open={Boolean(deletingRecord)}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            setDeletingRecord(null)
+          }
+        }}
+        onConfirm={() => void handleConfirmDelete()}
+        title="Delete Private Show Link"
+        description="Are you sure you want to delete?"
+        confirmLabel="Yes"
+        cancelLabel="No"
+        isPending={deleting}
       />
     </div>
   )

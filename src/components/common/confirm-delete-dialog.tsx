@@ -1,4 +1,4 @@
-﻿import { AlertTriangle, LoaderCircle, Trash2 } from "lucide-react"
+﻿import { LoaderCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -21,6 +21,9 @@ type ConfirmDeleteDialogProps = {
   isPending?: boolean
 }
 
+/**
+ * Delete confirmation matching app ConfirmDialog chrome (title, body, Cancel/Delete).
+ */
 export function ConfirmDeleteDialog({
   open,
   onOpenChange,
@@ -33,20 +36,21 @@ export function ConfirmDeleteDialog({
 }: ConfirmDeleteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" showCloseButton={!isPending}>
-        <DialogHeader className="border-b bg-muted/30 px-5 py-4">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 inline-flex size-10 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-              <AlertTriangle className="size-5" />
-            </div>
-            <div className="space-y-1">
-              <DialogTitle className="text-lg">{title}</DialogTitle>
-              <DialogDescription>{description}</DialogDescription>
-            </div>
-          </div>
+      <DialogContent
+        className="flex w-full max-w-md flex-col gap-0 overflow-hidden p-0 sm:max-w-md"
+        showCloseButton={!isPending}
+      >
+        <DialogHeader className="shrink-0 border-b border-border/50 px-4 py-3">
+          <DialogTitle className="text-base font-semibold text-foreground">
+            {title}
+          </DialogTitle>
         </DialogHeader>
 
-        <DialogFooter className="px-5 py-4">
+        <DialogDescription className="px-4 py-5 text-sm text-foreground">
+          {description}
+        </DialogDescription>
+
+        <DialogFooter className="shrink-0 border-t border-border/50 bg-muted/40 px-4 py-3 sm:justify-end">
           <Button
             type="button"
             variant="outline"
@@ -62,11 +66,13 @@ export function ConfirmDeleteDialog({
             disabled={isPending}
           >
             {isPending ? (
-              <LoaderCircle className="mr-2 size-4 animate-spin" />
+              <>
+                <LoaderCircle className="size-4 animate-spin" />
+                Please wait…
+              </>
             ) : (
-              <Trash2 className="size-4" />
+              confirmLabel
             )}
-            {confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
